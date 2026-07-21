@@ -24,7 +24,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *pnpm-lock.yaml) echo 'pnpm-lock.yaml is generated - run pnpm commands instead of editing it' >&2; exit 2;; esac"
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *pnpm-lock.yaml) echo 'pnpm-lock.yaml is generated - run pnpm commands instead of editing it' >&2; exit 2;; *.env.example) ;; *.env|*.env.*) echo '.env files hold secrets - the user edits these by hand' >&2; exit 2;; *.pem|*.key|*.p12|*/id_rsa*|*/id_ed25519*) echo 'key material is never edited by Claude' >&2; exit 2;; esac"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "c=$(jq -r '.tool_input.command // empty'); case \"$c\" in *--no-verify*|*--no-gpg-sign*) echo 'hook bypass flags are blocked - fix the failing gate instead of skipping it' >&2; exit 2;; esac"
           }
         ]
       }
@@ -38,6 +47,13 @@
             "timeout": 240,
             "model": "claude-opus-4-8",
             "statusMessage": "Rules-compliance review (Opus)"
+          },
+          {
+            "type": "agent",
+            "prompt": "You are a STRICT security reviewer running as a Stop hook for recompose, an Electron app that stores AI provider API keys. Determine what changed since the last security review: run `git diff HEAD` plus `git ls-files --others --exclude-standard` for uncommitted work, and read the marker `cat .git/claude-security-reviewed 2>/dev/null`; if the marker exists and differs from `git rev-parse HEAD`, also run `git diff $(cat .git/claude-security-reviewed)..HEAD`. If the marker is missing, treat HEAD as the baseline (write it with `git rev-parse HEAD > .git/claude-security-reviewed`) and review only uncommitted work. If the combined diff is empty, or you cannot run git, respond exactly {\"ok\": true}. Otherwise review ONLY that diff for security issues: (1) Electron posture — enabling nodeIntegration, disabling contextIsolation or sandbox, webSecurity: false, allowRunningInsecureContent, loosening CSP, shell.openExternal or loadURL with unvalidated input; (2) IPC surface — handlers trusting renderer input without validation, preload bridges exposing broad primitives (raw ipcRenderer, fs, child_process) instead of narrow functions; (3) secret discipline — provider API keys or tokens logged, committed, stored outside Electron safeStorage, or leaked into error messages, telemetry, or renderer-visible state; (4) committed secrets of any kind; (5) unsafe patterns — eval/new Function, dangerouslySetInnerHTML with untrusted input, disabled TLS verification. Do NOT report style, naming, or architecture — a separate reviewer owns those. Report only real vulnerabilities with concrete impact, not theoretical hardening. If there is at least one finding respond {\"ok\": false, \"reason\": \"<numbered list, each: file:line — issue — fix>\"} and do NOT update the marker; otherwise run `git rev-parse HEAD > .git/claude-security-reviewed` and respond {\"ok\": true}.",
+            "timeout": 240,
+            "model": "claude-opus-4-8",
+            "statusMessage": "Security review (Opus)"
           }
         ]
       }
