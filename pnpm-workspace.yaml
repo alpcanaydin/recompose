@@ -4,5 +4,6 @@ packages:
 
 allowBuilds:
   electron: true
+  lefthook: true
   electron-winstaller: true
   esbuild: true
