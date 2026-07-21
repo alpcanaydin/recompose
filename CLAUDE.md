@@ -25,6 +25,7 @@
 ## Feature development
 
 - Every feature is developed through the `superpowers` workflow (`using-superpowers` entry point): brainstorm → plan → TDD implementation → verification.
+- Trivial work (config tweaks, docs, single-file fixes) skips the full cycle — just do it. The workflow is for features.
 
 ## TDD/BDD
 
