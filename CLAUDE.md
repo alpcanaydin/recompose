@@ -14,6 +14,10 @@
 
 - Every technical decision is recorded as an ADR under `docs/adr/`, written via the `architecture-decision-records` skill. No undocumented decisions.
 
+## README
+
+- Whenever README.md is created or updated, use the `create-readme` skill.
+
 ## Commits
 
 - Every commit goes through the `caveman-commit` skill. No exceptions.
