@@ -55,6 +55,11 @@
 - `vercel-react-view-transitions` — when implementing UI transitions/animations between views or states (screen switches, drawer open/close, node focus).
 - `writing-guidelines` — when writing any user-facing copy, docs, or README text.
 
+## Long-form writing
+
+- `writing-fragments` — explore: mine raw fragments by interviewing the user before any structure exists (blog posts, announcements, essays).
+- `writing-shape` — exploit: shape an existing raw-material file into a finished article, paragraph by paragraph. Explore first, then shape.
+
 ## TypeScript
 
 - Maximum strictness, always: `strict: true` plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`, `noPropertyAccessFromIndexSignature`.
