@@ -42,6 +42,7 @@
 
 ## Design system
 
+- Before any UI/UX design decision, search the Mobbin MCP for similar-concept designs and use them as reference.
 - The design system is built with Tailwind; its source of truth is the Claude Design project **"recompose-design-system"**.
 - Use the `design-system-patterns` skill for design-system architecture (tokens, variants, component structure).
 - Use the `tailwind-design-system` skill for the Tailwind implementation.
