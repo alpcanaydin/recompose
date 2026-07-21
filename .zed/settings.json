@@ -1,0 +1,61 @@
+{
+  "languages": {
+    "TypeScript": {
+      "language_servers": ["tsgo", "!vtsls", "!typescript-language-server", "!eslint", "..."],
+      "formatter": [
+        { "code_action": "source.fixAll.oxc" },
+        {
+          "external": {
+            "command": "./node_modules/.bin/oxfmt",
+            "arguments": ["--stdin-filepath", "{buffer_path}"]
+          }
+        }
+      ],
+      "format_on_save": "on"
+    },
+    "TSX": {
+      "language_servers": ["tsgo", "!vtsls", "!typescript-language-server", "!eslint", "..."],
+      "formatter": [
+        { "code_action": "source.fixAll.oxc" },
+        {
+          "external": {
+            "command": "./node_modules/.bin/oxfmt",
+            "arguments": ["--stdin-filepath", "{buffer_path}"]
+          }
+        }
+      ],
+      "format_on_save": "on"
+    },
+    "JavaScript": {
+      "language_servers": ["!eslint", "..."],
+      "formatter": [
+        { "code_action": "source.fixAll.oxc" },
+        {
+          "external": {
+            "command": "./node_modules/.bin/oxfmt",
+            "arguments": ["--stdin-filepath", "{buffer_path}"]
+          }
+        }
+      ],
+      "format_on_save": "on"
+    },
+    "JSON": {
+      "formatter": {
+        "external": {
+          "command": "./node_modules/.bin/oxfmt",
+          "arguments": ["--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on"
+    },
+    "JSONC": {
+      "formatter": {
+        "external": {
+          "command": "./node_modules/.bin/oxfmt",
+          "arguments": ["--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "format_on_save": "on"
+    }
+  }
+}
