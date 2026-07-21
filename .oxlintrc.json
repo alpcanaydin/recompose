@@ -114,7 +114,7 @@
       }
     ],
     "typescript/consistent-type-exports": "error",
-    "typescript/dot-notation": "error",
+    "typescript/dot-notation": ["error", { "allowIndexSignaturePropertyAccess": true }],
     "typescript/no-array-delete": "error",
     "typescript/no-base-to-string": "error",
     "typescript/no-confusing-void-expression": "error",

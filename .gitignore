@@ -3,3 +3,6 @@ node_modules
 design-system
 .DS_Store
 .claude/settings.local.json
+.turbo
+.turbo
+out
