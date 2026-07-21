@@ -7,6 +7,8 @@ recompose is a free, open-source desktop app that composes your AI providers int
 > [!IMPORTANT]
 > recompose is in early development. There are no releases yet.
 
+![The gateway canvas: virtual models wired through routers to provider targets](docs/assets/gateway-canvas.png)
+
 ## Features
 
 - **One endpoint for every client**: each gateway serves both API dialects on a single base URL, `/v1/messages` (Anthropic) and `/v1/chat/completions` (OpenAI). The request path disambiguates; there is nothing to configure per client.
