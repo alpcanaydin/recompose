@@ -3,7 +3,7 @@
 ## Skills
 
 - Use the `ponytail` skill for everything — every task starts by invoking it.
-- Every session starts by invoking `andrej-karpathy-skills:karpathy-guidelines` — before any other work.
+- Every session starts by invoking `karpathy-guidelines` — before any other work.
 
 ## Comments
 
