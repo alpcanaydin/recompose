@@ -4,9 +4,6 @@ Wire up your own AI network.
 
 recompose is a free, open-source desktop app that composes your AI providers into local gateways. You define virtual models, wire them to real providers on a node canvas, and point clients such as Claude Code, Codex, and Cursor at one local endpoint.
 
-> [!IMPORTANT]
-> recompose is in early development. There are no releases yet.
-
 ![The gateway canvas: virtual models wired through routers to provider targets](docs/assets/gateway-canvas.png)
 
 ## Features
