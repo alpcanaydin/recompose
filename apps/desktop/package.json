@@ -12,12 +12,12 @@
     "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "build": "pnpm run typecheck && electron-vite build",
+    "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
-    "build:unpack": "pnpm run build && electron-builder --dir",
-    "build:win": "pnpm run build && electron-builder --win",
-    "build:mac": "pnpm run build && electron-builder --mac",
-    "build:linux": "pnpm run build && electron-builder --linux"
+    "build:unpack": "pnpm run typecheck && pnpm run build && electron-builder --dir",
+    "build:win": "pnpm run typecheck && pnpm run build && electron-builder --win",
+    "build:mac": "pnpm run typecheck && pnpm run build && electron-builder --mac",
+    "build:linux": "pnpm run typecheck && pnpm run build && electron-builder --linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
