@@ -25,6 +25,18 @@
       "skillPath": "plugins/developer-essentials/skills/e2e-testing-patterns/SKILL.md",
       "computedHash": "6daed3254a84348588532aca327ec82a57cafefd7c97c50e75879788f7c1a18d"
     },
+    "electron": {
+      "source": "full-stack-skills/electron-skills",
+      "sourceType": "github",
+      "skillPath": "skills/electron/SKILL.md",
+      "computedHash": "2fa0c3292a8b844fbd9a6947e6816616be8996051e547514c95f6416f67cfc93"
+    },
+    "electron-egg": {
+      "source": "full-stack-skills/electron-skills",
+      "sourceType": "github",
+      "skillPath": "skills/electron-egg/SKILL.md",
+      "computedHash": "711e3d8c74e80458b74b604cc65fd1526195546825b762612e6eca76b5f82ba0"
+    },
     "error-handling-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",
@@ -108,6 +120,12 @@
       "sourceType": "github",
       "skillPath": "skills/turborepo/SKILL.md",
       "computedHash": "c26ba0ea4c53e9db1dd8de86dfbf196158992f36061627ae63bba90891cc6939"
+    },
+    "upgradeLink": {
+      "source": "full-stack-skills/electron-skills",
+      "sourceType": "github",
+      "skillPath": "skills/upgradeLink/SKILL.md",
+      "computedHash": "cfffc3867dac11ebf1507219bd339e78a3f2d594635cac7b64a5616d66d1dfc1"
     },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
