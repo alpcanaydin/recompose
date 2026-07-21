@@ -16,5 +16,41 @@
         "repo": "DietrichGebert/ponytail"
       }
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *pnpm-lock.yaml) echo 'pnpm-lock.yaml is generated - run pnpm commands instead of editing it' >&2; exit 2;; esac"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); echo \"$input\" | jq -e '.stop_hook_active == true' >/dev/null 2>&1 && exit 0; git diff --quiet HEAD -- '*.ts' '*.tsx' 2>/dev/null && [ -z \"$(git ls-files --others --exclude-standard -- '*.ts' '*.tsx')\" ] && exit 0; echo 'Uncommitted TS changes at turn end: run the rules-reviewer subagent on the diff, apply its findings, then commit via caveman-commit.' >&2; exit 2"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) ./node_modules/.bin/oxfmt \"$f\" >/dev/null 2>&1 || true; out=$(./node_modules/.bin/oxlint \"$f\" 2>&1) || { echo \"$out\" >&2; exit 2; };; esac",
+            "timeout": 60,
+            "statusMessage": "oxfmt + oxlint"
+          }
+        ]
+      }
+    ]
   }
 }

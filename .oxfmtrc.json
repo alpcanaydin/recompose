@@ -15,8 +15,8 @@
   "jsxSingleQuote": false,
   "sortTailwindcss": {
     "preserveDuplicates": false,
-    "functions": ["clsx", "cn", "cva", "tw"],
-    "stylesheet": "src/styles/globals.css"
+    "functions": ["clsx", "cn", "cva", "tw"]
+    // restore when Tailwind lands: "stylesheet": "src/styles/globals.css"
   },
   "sortImports": {
     "groups": [
