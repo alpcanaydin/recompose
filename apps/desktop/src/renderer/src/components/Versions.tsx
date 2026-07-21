@@ -1,4 +1,4 @@
-const versions = window.electron.process.versions
+const versions = window.electron.process.versions;
 
 function Versions(): React.JSX.Element {
   return (
@@ -7,7 +7,7 @@ function Versions(): React.JSX.Element {
       <li className="chrome-version">Chromium v{versions['chrome']}</li>
       <li className="node-version">Node v{versions['node']}</li>
     </ul>
-  )
+  );
 }
 
-export default Versions
+export default Versions;

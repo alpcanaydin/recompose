@@ -1,13 +1,12 @@
 {
   "name": "recompose",
   "version": "1.0.0",
+  "private": true,
   "description": "",
   "keywords": [],
   "license": "MIT",
   "author": "Alpcan Aydin <alpcan@alpcanaydin.com>",
   "type": "module",
-  "private": true,
-  "packageManager": "pnpm@11.15.1",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -33,5 +32,6 @@
       "version": "11.15.1",
       "onFail": "download"
     }
-  }
+  },
+  "packageManager": "pnpm@11.15.1"
 }

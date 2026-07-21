@@ -1,7 +1,8 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import { app, shell, BrowserWindow, ipcMain } from 'electron';
+import { join } from 'path';
+
+import icon from '../../resources/icon.png?asset';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -12,51 +13,51 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
-    }
-  })
+      sandbox: false,
+    },
+  });
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
+    mainWindow.show();
+  });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    void shell.openExternal(details.url)
+    void shell.openExternal(details.url);
 
-    return { action: 'deny' }
-  })
+    return { action: 'deny' };
+  });
 
-  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env
+  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
 
   if (is.dev && rendererUrl) {
-    void mainWindow.loadURL(rendererUrl)
+    void mainWindow.loadURL(rendererUrl);
   } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 }
 
 void app.whenReady().then(() => {
-  electronApp.setAppUserModelId('sh.recompose.app')
+  electronApp.setAppUserModelId('sh.recompose.app');
 
   app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+    optimizer.watchWindowShortcuts(window);
+  });
 
   ipcMain.on('ping', () => {
-    console.log('pong')
-  })
+    console.log('pong');
+  });
 
-  createWindow()
+  createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createWindow();
     }
-  })
-})
+  });
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit()
+    app.quit();
   }
-})
+});

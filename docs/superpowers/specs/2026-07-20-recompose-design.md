@@ -16,6 +16,7 @@
 **Thesis:** the essence is **orchestration/composition** (routing/pooling across accounts → beating rate limits), not a mere "gateway". Backend protocol translation is a solved commodity (opencodex/cliproxyapi/ccproxy) — adapted later.
 
 **Principles:**
+
 - Strictly **OSS**, no commercial intent.
 - **UI-first**: the visual/UX is fully designed first; the backend is wired in afterwards.
 - **Offline-first, no signup**: no accounts, no cloud. Clients connect via env vars (`ANTHROPIC_BASE_URL`, `ANTHROPIC_MODEL`, `OPENAI_BASE_URL`) or config files (`~/.claude/settings.json`).
@@ -89,9 +90,11 @@ The Canvas/Logs/Config tabs were eliminated; the log panel opens from the toolba
 ## 4. Canvas & routing composition
 
 ### 4.1 The chain (the heart)
+
 ```
 Gateway (endpoint) → Virtual Model → [Router (optional)] → Target (Account · real model)
 ```
+
 - A gateway serves **multiple Virtual Models** — the canonical screen shows **3 VMs** (`creative`, `fast`, `code`) fanning out from the Gateway node. Reference: Writer (closest), OpenAI Agent Builder, Runway.
 - **Only the SELECTED VM expands its full chain** (Router → Targets); unselected VMs **collapse to a stub wire + chip** ("▸ 2 targets" / moon-icon "1 target"). Selected-node emphasis is strong: 2px colored border + double-ring glow.
 - **Router** is an explicit, optional, chainable node. **Each router is single-mode**, carrying a **mode pill** (`⇄ round-robin` / `↓ failover`). The failover visual = **numbered slots (#1/#2) + a dashed "standby" wire** (Calendly + Cal.com). Nested / multi-mode = chain routers. Targets are always separate "Account·model" cards.
@@ -99,11 +102,13 @@ Gateway (endpoint) → Virtual Model → [Router (optional)] → Target (Account
 - **Color coding (full-tint node borders):** Gateway **teal** `#40c8e0` · Virtual Model blue `#0a84ff` · Router orange `#ff9f0a` · Target purple `#bf5af2`. (The old gray gateway was eliminated.) Other tokens: green `#32d74b`, red `#ff453a`, yellow `#ffd60a`; light-theme equivalents live in the DS tokens (`#007aff`, `#28cd41`, teal light `#30b0c7`…).
 
 ### 4.2 Building nodes / wiring
+
 - **Primary:** drag from a port → on release, a "what should I connect?" menu (n8n logic).
 - **Power user:** **⌘K** command palette to search-insert nodes.
 - NO left palette.
 
 ### 4.3 Node/wire status language (Mobbin: n8n, Retool)
+
 - **Healthy:** green flowing dots.
 - **High latency:** yellow slow dots + clock chip (`⏱ 2.8s`).
 - **Error:** flat red wire (no flow) + a white ✕ pill badge at the midpoint.
@@ -111,7 +116,9 @@ Gateway (endpoint) → Virtual Model → [Router (optional)] → Target (Account
 - On rate-limit, traffic shifts to the failover target; the failover story is visual.
 
 ### 4.4 Crowding / scale
+
 The graph is fixed-layered (Gateway·VM·[Router]·Target). Crowding comes from parallel VM count.
+
 - **Baseline = free drag** (manual positioning).
 - **Zoom cluster (− 100% + expand) bottom-left of the canvas**, **minimap bottom-right** (moving zoom into the status bar was tried and reverted).
 - **Tidy:** the toolbar auto-tidy button → automatic layered layout (dagre), one click (scatter-and-spring animation).
@@ -123,6 +130,7 @@ The graph is fixed-layered (Gateway·VM·[Router]·Target). Crowding comes from 
 ## 5. Node inspectors & gateway drawer
 
 ### 5.1 Gateway node → **Overview / Connect** (two tabs only — the Logs tab was eliminated 2026-07-21; logs live in the bottom panel, §7). Template: `templates/gateway-detail/`.
+
 - **Overview = aggregate NUMBERS** (the canvas already shows live routing health, so the target list is NOT repeated):
   - **Endpoint** box: Base URL `http://localhost:8397/my-gateway` + Status `Running · 3d 4h`.
   - **Last 24h** 2×2 KPI grid: `12.4k requests · 8.2M tokens · 0.3% errors · 1.1s p95`.
@@ -131,17 +139,20 @@ The graph is fixed-layered (Gateway·VM·[Router]·Target). Crowding comes from 
 - **Connect** = client hookup (§6 below).
 
 ### 5.2 Virtual Model inspector (solved on the canonical screen)
+
 - **Basics:** Display name · Slug · Routing mode (Round-robin/Failover segmented).
 - **Targets · N:** each row avatar + `account · model` + subline `provider · status` + status dot + **% weight**. A failing row carries an inline **"Reconnect" chip** (red pill — the inline action of §8.2.3). "+ Add target…" below.
 - **Usage block:** **Session** quota bar (`62% · resets 6:00 PM`) + **Weekly** quota bar (`41% · resets Mon 9:00 AM`) + a **"View detailed usage"** link → opens the Usage drawer model-scoped (without highlighting the sidebar Usage item). Quota/reset pattern (Mobbin): Glide (closest), StackAI, Vercel, LangChain.
 
 ### 5.3 Other node inspectors
+
 - Router and Target nodes → their own right drawers (name, mapping, mode, account/model selection, etc.).
 
 ### 5.4 Usage drawer (usage lives in three places)
+
 1. **Sidebar → System → Usage** and 2. **the status-bar tok/min·$ chip** → open the right **Usage drawer** (replacing the inspector): green gauge header · last-24h spend chart · 2×2 activity KPI grid · per-provider bars · scope subtitle (`#usgscope` — All gateways / model-scoped).
-3. **The Usage block in the VM inspector** (§5.2) opens the same drawer model-scoped.
-Reference: OpenAI Platform.
+2. **The Usage block in the VM inspector** (§5.2) opens the same drawer model-scoped.
+   Reference: OpenAI Platform.
 
 ---
 
@@ -176,9 +187,11 @@ There is NO separate top-level Logs page **and NO Logs tab in the inspector** �
 ## 8. Lifecycle, error states, empty states
 
 ### 8.0 Port model — **single port + path-per-gateway**
+
 One server port (**:8397**); each gateway is a URL path (`http://localhost:8397/my-gateway`). The gateway node subtitle is `/my-gateway · :8397`. A per-gateway custom port override is **deferred to an advanced gateway setting**. (The old port-per-gateway model and the "port +1" duplicate behavior were eliminated.)
 
 ### 8.1 Gateway lifecycle — A+B+C all (companion: `gateway-lifecycle.html`)
+
 - **Sidebar (speed):** the status dot is a one-click start/stop toggle; hover `⋯` (right-click same) → Start/Stop · Rename · Duplicate · Delete. Rename also via double-click inline.
 - **Toolbar (authority):** the left-capsule start/stop toggle + the **`⋯` menu** (Rename · Duplicate · Delete…) — present on the canonical screen.
 - **Duplicate:** clones the config, appends "-copy" to the name (new path on the same port) → shareable-template feel.
@@ -186,23 +199,29 @@ One server port (**:8397**); each gateway is a URL path (`http://localhost:8397/
 - Reference: Coda, Toggl, Lemni.
 
 ### 8.2 Error states (companion: `error-states.html`) — A in-place + B banner/toast
+
 NO full-page takeover (Buffer/VEED/Monarch anti-pattern). Taxonomy:
+
 1. **Node/wire (routing)** — 429/500/target down → the wire/badge language (§4.3) + failover.
 2. **App-level** — port taken, OAuth exhausted, offline → **banner/toast** + inline action (Change port / Reconnect).
 3. **Provider/account** — auth expired, invalid key → row badge + **inline "Reconnect" chip** (on the canonical screen: the failing row in the inspector target list) + drawer "Reconnect".
 4. **Catastrophic crash** (rare) → full-screen fallback (the single exception).
+
 - **C (a separate health center) was eliminated** — the sidebar dots + canvas status language already aggregate health.
 - Reference (right direction): Better Stack, Google Meet inline instructions.
 
 ### 8.3 Empty states
+
 - Solved in onboarding: empty canvas + **checklist + ghost chain**. Other gaps (no providers → "Connect" CTA, no logs → "Waiting for the first request") use the same quiet inline language.
 
 ### 8.4 Local auth & network exposure (locked 2026-07-21 — LM Studio model)
+
 Research-driven (Ollama's no-auth stance + CVE-2024-28224 DNS rebinding; LM Studio's flat token toggle). Three layers:
+
 1. **No API key in the default UI** — localhost use needs zero ceremony.
 2. **Invisible engine hardening:** the gateway validates Origin/Host headers against DNS rebinding (the Ollama CVE fix pattern). Spec text only; no UI.
 3. **One flat, always-visible switch:** Settings › Server › **"Require API token"**, OFF by default ("Clients must send it as a Bearer token · recommended when serving on LAN"). ON reveals the token row (§9) and grows the Connect tab (§6). Unlike Ollama, recompose fronts **paid accounts** — LAN exposure without a token would mean quota theft, hence the toggle exists.
-The contextual-key idea (key auto-required only when bind = LAN) was rejected as too hard to explain.
+   The contextual-key idea (key auto-required only when bind = LAN) was rejected as too hard to explain.
 
 ---
 
@@ -211,6 +230,7 @@ The contextual-key idea (key auto-required only when bind = LAN) was rejected as
 The main sidebar "Settings" surface → a **single scrollable grouped page** in the content area (macOS grouped-card language, 560px column). **`⌘,`** focuses this surface, no separate window. C (a separate Preferences window) was eliminated; if content grows, promoting to A (category rail) is easy. Reference (Mobbin): Substack/Vercel row anatomy, Google Drive Settings, Linear Preferences, macOS System Settings.
 
 Groups (as in the DS template — source of truth):
+
 - **General:** Launch at login · Show in menu bar · Start gateways on launch.
 - **Server:** Default port (`8397` — single port, §8.0) · Bind address (segmented: Localhost only / LAN) · **Require API token** (switch, §8.4) → when ON, reveals the **API token** row: mono `rc-local-••••••••3f9a` + Copy + Regenerate.
 - **Appearance:** Theme (System/Light/Dark segmented) · **Reduce wire motion** (the signature flowing-dot effect; low-power mode).
@@ -223,6 +243,7 @@ Deferred (decided earlier but not in DS template v1): accent-color picker, confi
 ## 10. Mockup index
 
 **Canonical (source of truth):** the Claude Design project **recompose-design-system** (`design-system/library/`):
+
 - **Templates (screens):** `templates/gateway/` (full canvas composition) · `templates/onboarding/` (3 beats: checklist+ghost graph, create-gateway sheet, connect-provider sheet) · `templates/gateway-detail/` (4 screens: Overview, Connect, Connect·Token required, Logs panel) · `templates/settings/`.
 - **Cards:** node cards · wire states · controls · colors/materials · type/spacing · iconography · app shell · inspector & usage drawer.
 
@@ -235,6 +256,7 @@ Deferred (decided earlier but not in DS template v1): accent-color picker, confi
 ## 11. Open items (handoff to implementation)
 
 **Screens/states not yet mocked** (decisions are in this document, visuals pending — natural prototype-phase work):
+
 - Failover visual language on the canvas (#1/#2 slots + dashed standby wire, §4.1).
 - ⌘K command palette + the drag-from-port connect menu (§4.2).
 - Provider catalog + the OAuth/API-key drawer (§6) — the onboarding connect sheet covers the entry beat only.
@@ -245,6 +267,7 @@ Deferred (decided earlier but not in DS template v1): accent-color picker, confi
 **Done since the first version:** gateway inspector Overview + Connect (incl. token variant) · bottom Logs panel · Settings page · onboarding (3 beats) · dual-protocol decision · local-auth model.
 
 **Other:**
+
 - Backend protocol translation (adapting opencodex/cliproxyapi/ccproxy) — after the UI locks.
 - ~~Electrobun maturity validation~~ **DECIDED: pivoted to Electron** (see §2).
 - ~~Router multi-mode visual language~~ **CLOSED (A):** single-mode routers + chaining (§4.1).
