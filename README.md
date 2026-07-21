@@ -1,4 +1,7 @@
-# recompose
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="recompose logo" width="128">
+</p>
+<h1 align="center">recompose</h1>
 
 Wire up your own AI network.
 
