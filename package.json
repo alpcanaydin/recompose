@@ -6,19 +6,24 @@
   "license": "MIT",
   "author": "Alpcan Aydin <alpcan@alpcanaydin.com>",
   "type": "module",
-  "main": "index.js",
+  "private": true,
+  "packageManager": "pnpm@11.15.1",
   "scripts": {
-    "lint": "oxlint",
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "lint:root": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "fmt:check": "oxfmt --check"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",
-    "oxlint-plugin-react-doctor": "^0.8.1"
+    "oxlint-plugin-react-doctor": "^0.8.1",
+    "turbo": "^2.10.5"
   },
   "devEngines": {
     "packageManager": {
