@@ -11,3 +11,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0003](0003-scaffold-with-electron-vite.md)       | Scaffold with electron-vite                         | Accepted | 2026-07-21 |
 | [0004](0004-pnpm-workspaces-turborepo.md)         | pnpm Workspaces + Turborepo                         | Accepted | 2026-07-21 |
 | [0005](0005-single-port-path-per-gateway.md)      | Single Port, Path per Gateway, Both Dialects Always | Accepted | 2026-07-21 |
+| [0006](0006-local-quality-gate-layer.md)          | Local Quality Gate Layer                            | Accepted | 2026-07-21 |
