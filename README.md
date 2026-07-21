@@ -1,11 +1,25 @@
-<div align="center">
-  <img src="docs/assets/logo.svg" alt="recompose logo" width="128">
-  <h1>recompose</h1>
-</div>
+<!-- LOGO -->
+<h1>
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="Logo" width="128">
+  <br>recompose
+</h1>
+  <p align="center">
+    Wire up your own AI network.
+    <br />
+    A free, open-source desktop app that composes your AI providers into local gateways.
+    <br />
+    <a href="#features">Features</a>
+    ·
+    <a href="#how-it-works">How it works</a>
+    ·
+    <a href="#building-from-source">Building from source</a>
+    ·
+    <a href="#architecture">Architecture</a>
+  </p>
+</p>
 
-Wire up your own AI network.
-
-recompose is a free, open-source desktop app that composes your AI providers into local gateways. You define virtual models, wire them to real providers on a node canvas, and point clients such as Claude Code, Codex, and Cursor at one local endpoint.
+You define virtual models, wire them to real providers on a node canvas, and point clients such as Claude Code, Codex, and Cursor at one local endpoint.
 
 ![The gateway canvas: virtual models wired through routers to provider targets](docs/assets/gateway-canvas.png)
 
