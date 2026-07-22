@@ -27,7 +27,8 @@
     "oxlint": "1.74.0",
     "oxlint-plugin-react-doctor": "0.8.1",
     "oxlint-tsgolint": "0.25.0",
-    "turbo": "2.10.5"
+    "turbo": "2.10.5",
+    "vitest": "4.1.10"
   },
   "devEngines": {
     "packageManager": {

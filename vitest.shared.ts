@@ -1,4 +1,6 @@
-export const coverageDefaults = {
+import type { CoverageOptions } from 'vitest/node';
+
+export const coverageDefaults: CoverageOptions = {
   provider: 'v8',
   reporter: ['text', 'lcov'],
   thresholds: {

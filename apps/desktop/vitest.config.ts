@@ -2,17 +2,12 @@ import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
 import { defaultExclude, defineConfig } from 'vitest/config';
 
+import { coverageDefaults } from '../../vitest.shared';
+
 export default defineConfig({
   test: {
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov'],
-      thresholds: {
-        lines: 90,
-        branches: 90,
-        functions: 90,
-        statements: 90,
-      },
+      ...coverageDefaults,
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/**/*.test.*',
