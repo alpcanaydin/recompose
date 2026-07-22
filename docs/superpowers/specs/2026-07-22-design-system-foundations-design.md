@@ -16,8 +16,11 @@ conventions — the Design project shows what things look like, not how they are
 1. **Two-tier token architecture** (industry standard): primitive → semantic.
    - Primitives are raw, theme-agnostic values. They never appear in component code
      and never become Tailwind utilities.
-   - Semantic tokens carry intent (`surface-content`, `text-secondary`) and are the
-     only tokens components touch. All theming happens at this tier via `light-dark()`.
+   - Semantic tokens carry intent (`surface-content`, `ink-secondary`) and are the
+     only tokens components touch. Text tokens are named `ink` and borders `line`
+     so the generated utilities read naturally (`text-ink-secondary`,
+     `border-line-subtle`) — a `--color-text-*` token would generate a stuttering
+     `text-text-*` utility. All theming happens at this tier via `light-dark()`.
    - Dependency flow is one-way: primitive → semantic. Never the reverse.
    - **No component-token tier.** Components consume semantic tokens directly.
      Component tokens multiply token count ~10× and pay off only at enterprise
@@ -67,7 +70,7 @@ dark-theme variant (higher number = darker holds for every pair):
 | `--red-500`    | `#ff453a` | `--red-600`    | `#ff3b30` |
 | `--yellow-500` | `#ffd60a` | `--yellow-600` | `#c79000` |
 
-Ink (alpha) scales for text and lines, names approximate percent opacity; the two
+Alpha scales for text and lines, names approximate percent opacity; the two
 scales are not symmetric — each lists exactly the steps the semantic tier consumes:
 
 - White (dark theme): `--white-a90` (90%), `--white-a55` (55%), `--white-a28` (28%),
@@ -99,12 +102,12 @@ Colors — every value is `light-dark(<light primitive>, <dark primitive>)`:
 | `--color-surface-content` | `--gray-50`     | `--gray-950`     |
 | `--color-surface-card`    | `--white`       | `--gray-900`     |
 | `--color-surface-raised`  | `--white`       | `--gray-850`     |
-| `--color-text-primary`    | `--black-a88`   | `--white-a90`    |
-| `--color-text-secondary`  | `--black-a52`   | `--white-a55`    |
-| `--color-text-tertiary`   | `--black-a28`   | `--white-a28`    |
-| `--color-border-subtle`   | `--black-a09`   | `--white-a08`    |
-| `--color-border-faint`    | `--black-a06`   | `--white-a06`    |
-| `--color-border-strong`   | `--black-a28`   | `--white-a13`    |
+| `--color-ink`             | `--black-a88`   | `--white-a90`    |
+| `--color-ink-secondary`   | `--black-a52`   | `--white-a55`    |
+| `--color-ink-tertiary`    | `--black-a28`   | `--white-a28`    |
+| `--color-line-subtle`     | `--black-a09`   | `--white-a08`    |
+| `--color-line-faint`      | `--black-a06`   | `--white-a06`    |
+| `--color-line-strong`     | `--black-a28`   | `--white-a13`    |
 | `--color-accent`          | `--blue-600`    | `--blue-500`     |
 | `--color-success`         | `--green-600`   | `--green-500`    |
 | `--color-warning`         | `--orange-600`  | `--orange-500`   |
@@ -154,7 +157,7 @@ regions and the transparent html/body rules the liquid glass window requires.
 
 `App.tsx`'s placeholder shell is rewritten with semantic utilities: sidebar
 `bg-surface-sidebar` (translucent over glass), content `bg-surface-content`,
-text `text-primary` / `text-secondary`, divider `border-subtle`, heading `text-title`.
+text `text-ink` / `text-ink-secondary`, divider `border-line-subtle`, heading `text-title`.
 No behavior change; the glass window chrome (ADR 0008) is untouched.
 
 ## Verification
