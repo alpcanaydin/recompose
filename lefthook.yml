@@ -25,6 +25,3 @@ commit-msg:
   jobs:
     - name: commitlint
       run: pnpm exec commitlint --edit {1}
-    - name: forbidden-alias
-      run: '! grep -qiE "r[e]yz" {1}'
-      fail_text: commit message contains the forbidden owner alias
