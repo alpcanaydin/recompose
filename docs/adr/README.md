@@ -14,3 +14,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0006](0006-local-quality-gate-layer.md)          | Local Quality Gate Layer                             | Accepted | 2026-07-21 |
 | [0007](0007-ci-layer.md)                          | CI Layer                                             | Accepted | 2026-07-22 |
 | [0008](0008-liquid-glass-window-chrome.md)        | Liquid Glass Window Chrome via electron-liquid-glass | Accepted | 2026-07-22 |
+| [0009](0009-two-tier-design-tokens.md)            | Two-Tier Design Tokens on Tailwind v4                | Accepted | 2026-07-22 |
