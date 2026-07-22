@@ -16,7 +16,7 @@
   "sortTailwindcss": {
     "preserveDuplicates": false,
     "functions": ["clsx", "cn", "cva", "tw"],
-    "stylesheet": "apps/desktop/src/renderer/src/assets/main.css"
+    "stylesheet": "apps/desktop/src/renderer/src/app/styles/main.css"
   },
   "sortImports": {
     "groups": [
