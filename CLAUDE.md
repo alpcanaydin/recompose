@@ -58,7 +58,7 @@
 - Use the `design-system-patterns` skill for design-system architecture (tokens, variants, component structure).
 - Use the `tailwind-design-system` skill for the Tailwind implementation.
 
-## Frontend (renderer) — Vercel skills
+## Frontend (renderer) skills
 
 - `feature-sliced-design` — before creating or moving ANY file in the renderer: the skill's decision tree determines its layer/slice/segment placement (FSD v2.1, see ADR-0010).
 - `vercel-react-best-practices` — before writing or reviewing ANY React code in the renderer.

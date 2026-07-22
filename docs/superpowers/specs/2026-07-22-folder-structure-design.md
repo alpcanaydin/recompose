@@ -1,7 +1,7 @@
 # Folder Structure — Design
 
 **Date:** 2026-07-22
-**Status:** Approved in brainstorm; pending implementation plan
+**Status:** Approved; implemented via `docs/superpowers/plans/2026-07-22-folder-structure.md` (ADR-0010)
 
 ## Goal
 
@@ -18,11 +18,11 @@ Two published conventions, one tool each, zero overlap:
 
 ```
 apps/
-└─ desktop/            # Electron app — exists today; the gateway server is spawned from here
+├─ desktop/            # Electron app — exists today; the gateway server is spawned from here
+└─ headless/           # reserved, may never open — CLI mode ("recompose serve")
 packages/
 ├─ engine/             # reserved — pure-TS gateway engine (ADR-0002); opens with its first real code
 └─ contracts/          # reserved — domain types + zod schemas: the IPC and engine message contract
-apps/headless/         # reserved, may never open — CLI mode ("recompose serve")
 design-system/         # Claude Design library (exists, unchanged)
 docs/adr/              # exists, unchanged
 ```

@@ -16,7 +16,7 @@
 - File and folder names: kebab-case (`main-window.ts`, `app.tsx`).
 - TypeScript maximum strictness is already configured — do not weaken any tsconfig.
 - Commit messages: Conventional Commits, terse, why over what (caveman-commit style).
-- All commands run from the worktree root: `/Users/reyz/Projects/recompose/.claude/worktrees/folder-structure-spec`.
+- All commands run from the worktree root.
 
 ---
 
