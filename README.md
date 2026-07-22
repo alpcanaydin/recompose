@@ -1,7 +1,7 @@
 <!-- LOGO -->
 <h1>
 <p align="center">
-  <img src="docs/assets/logo.svg" alt="Logo" width="128">
+  <img src="docs/assets/icon.png" alt="Logo" width="128">
   <br>recompose
 </h1>
   <p align="center">
