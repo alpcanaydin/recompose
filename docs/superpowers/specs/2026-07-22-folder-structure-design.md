@@ -16,7 +16,7 @@ Two published conventions, one tool each, zero overlap:
 
 ## 1. Monorepo map
 
-```
+```text
 apps/
 ├─ desktop/            # Electron app — exists today; the gateway server is spawned from here
 └─ headless/           # reserved, may never open — CLI mode ("recompose serve")
@@ -29,7 +29,7 @@ docs/adr/              # exists, unchanged
 
 Reserved packages are named now so their boundary rules exist before their first file does. No empty scaffolds (YAGNI): a package opens when its first real code lands, and `packages/engine` gets its own internal-structure ADR at that moment (its shape depends on which OSS gateway code gets adapted — designing it earlier is speculation).
 
-**Dependency direction (dependency-cruiser rules, active from day one):**
+**Dependency direction (target state — machine enforcement lands with the deferred dependency-cruiser/Steiger queue item):**
 
 - `apps/desktop` → `packages/contracts` ← `packages/engine`
 - `packages/engine` must never import `electron` or any workspace package other than `contracts` (regular npm dependencies are fine)
@@ -39,7 +39,7 @@ Reserved packages are named now so their boundary rules exist before their first
 
 ## 2. Electron process layout (`apps/desktop/src`)
 
-```
+```text
 src/
 ├─ main/
 │  ├─ index.ts          # bootstrap only: app lifecycle, composition, ordering
@@ -64,7 +64,7 @@ src/
 
 Root: `src/renderer/src/`. Standard FSD layers, no custom layers:
 
-```
+```text
 app/          # providers, router setup, global styles
 │  └─ routes/  # TanStack Router file-based route files — thin, delegate to pages
 pages/        # one slice per screen/surface: gateway-canvas, providers, settings, …
@@ -78,7 +78,7 @@ Layer import rule (enforced by Steiger): a layer may import only from layers **b
 
 **Segments** inside every slice — purpose-named, never essence-named (`components/`, `hooks/`, `types/`, `utils/` are forbidden as folder names):
 
-```
+```text
 entities/gateway/
 ├─ ui/       # components + hooks
 ├─ model/    # state, schemas, behavior
