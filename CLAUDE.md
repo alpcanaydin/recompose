@@ -1,5 +1,10 @@
 # recompose — Project Rules
 
+## Before starting any work
+
+- Research current industry best practices for the topic (web search), independent of this codebase.
+- If a clear standard path exists, bring the codebase into conformance with it first, then do the work.
+
 ## Skills
 
 - Use the `ponytail` skill for everything — every task starts by invoking it.
