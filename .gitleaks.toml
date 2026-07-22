@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "forbidden-owner-alias"
+description = "Repository owner's private alias must never appear in any artifact"
+regex = '''(?i)r[e]yz'''
+
+[[rules.allowlists]]
+paths = ['''^pnpm-lock\.yaml$''']
