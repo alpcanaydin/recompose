@@ -16,7 +16,7 @@ Prior decisions that bind this design: tests are colocated with source; TDD/BDD 
 - **Renderer DOM tests run in a real browser: Vitest Browser Mode** (stable in v4), provider `playwright()` from `@vitest/browser-playwright`, single instance `{ browser: 'chromium' }`, rendering via `vitest-browser-react`. No jsdom/happy-dom anywhere — no simulation layer. Chosen deliberately over the lighter option: this app is a node-based canvas UI where simulated-DOM fidelity is weakest.
 - **Property-based testing: fast-check v4 via `@fast-check/vitest`** (`test.prop` API, seed replay, shrinking).
 - **Coverage: `@vitest/coverage-v8` with a CI-enforced gate** — thresholds `lines/branches/functions/statements ≥ 90` defined once in `vitest.shared.ts`. Below threshold → vitest exits 1 → turbo → CI red.
-- **No test hook in lefthook.** Browser Mode per commit is too heavy; the gate is CI (`check` job already runs `turbo run test` — zero pipeline changes).
+- **No test hook in lefthook.** Browser Mode per commit is too heavy; lefthook stays unchanged. The gate is CI: the `check` job already runs `turbo run test`, and gains one step installing Chromium for Browser Mode (see the plan and ADR-0012).
 
 ## Environment split (`projects` inside apps/desktop)
 
