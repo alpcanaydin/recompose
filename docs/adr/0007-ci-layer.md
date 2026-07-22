@@ -13,14 +13,14 @@ Add a CI layer on top of the local gates: one workflow, branch protection as cod
 
 - **Single `ci.yml` with a `ci-success` aggregate job**: `changes` (dorny/paths-filter) / `check` / `gitleaks` / `audit` / `zizmor` / `actionlint` / `commitlint-pr`, all `needs`-ed by `ci-success` with `if: always()`, which fails on any `failure`/`cancelled` result and treats `skipped` as success. Branch protection requires only `ci-success`, so adding, removing, or renaming a job never touches the ruleset.
 - **Ruleset JSON + `gh api` over Terraform or the manual UI**: `.github/rulesets/main.json` applied idempotently by `scripts/apply-ruleset.sh` (update-if-found-by-name, create otherwise). Versioned and re-appliable without a state file or an extra toolchain; Terraform would add a backend and provider for a single ruleset, and the UI leaves no diff-able record.
-- **Hosted Renovate GitHub App over self-hosted Renovate or Dependabot**: only `renovate.json` lives in the repo, so there is no bot token or runner to maintain. Dependabot was rejected specifically because it has no `minimumReleaseAge` equivalent — it cannot enforce a supply-chain cooldown window.
-- **All third-party actions SHA-pinned**, `permissions: contents: read` at workflow level, escalated per job only where needed.
+- **Hosted Renovate GitHub App over self-hosted Renovate or Dependabot**: only `renovate.json` lives in the repo, so there is no bot token or runner to maintain. Dependabot was rejected in favor of Renovate's finer automerge granularity (devDependency minor/patch only), weekly `lockFileMaintenance` for the pnpm lockfile, and the `config:best-practices` presets, which include action-digest pinning.
+- **All third-party actions SHA-pinned**, `permissions: contents: read` at workflow level, may be escalated per job if one ever needs it; none does today.
 
 ## Alternatives
 
 - **Per-concern required-checks list** (list every job name in branch protection instead of one aggregate): rejected — the required-check list has to be hand-maintained in lockstep with the workflow, and a renamed job silently stops being enforced until someone notices.
 - **Merge queue**: rejected — single maintainer, low PR volume; nothing queues.
-- **Dependabot**: rejected — no `minimumReleaseAge`, so it cannot delay a PR long enough for a compromised release to be caught and yanked upstream.
+- **Dependabot**: rejected — coarser automerge rules, no built-in lockfile-maintenance schedule, and no equivalent to the `config:best-practices` preset bundle Renovate ships with.
 - **Terraform for branch protection**: rejected — a state backend and provider for one ruleset is disproportionate; a checked-in JSON file applied via `gh api` gives the same versioning without the toolchain.
 
 ## Consequences
