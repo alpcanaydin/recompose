@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - run: pipx run zizmor --min-severity medium .github/workflows/
+      - run: pipx run zizmor==1.28.0 --min-severity medium .github/workflows/
 
   actionlint:
     needs: changes
