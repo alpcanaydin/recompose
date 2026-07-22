@@ -12,5 +12,23 @@
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": ["pipx run zizmor==(?<currentValue>[0-9.]+)"],
+      "depNameTemplate": "zizmor",
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "go run github\\.com/rhysd/actionlint/cmd/actionlint@(?<currentValue>v[0-9.]+)"
+      ],
+      "depNameTemplate": "rhysd/actionlint",
+      "datasourceTemplate": "github-releases"
+    }
   ]
 }

@@ -33,7 +33,7 @@
       "type": "required_status_checks",
       "parameters": {
         "strict_required_status_checks_policy": false,
-        "required_status_checks": [{ "context": "ci-success" }]
+        "required_status_checks": [{ "context": "ci-success", "integration_id": 15368 }]
       }
     }
   ]
