@@ -1,59 +1,7 @@
-import { electronApp, optimizer, is } from '@electron-toolkit/utils';
-import { app, shell, BrowserWindow } from 'electron';
-import liquidGlass from 'electron-liquid-glass';
-import { join } from 'path';
+import { electronApp, optimizer } from '@electron-toolkit/utils';
+import { app, BrowserWindow } from 'electron';
 
-import icon from '../../resources/icon.png?asset';
-
-const isMac = process.platform === 'darwin';
-
-function applyGlassBackdrop(window: BrowserWindow): void {
-  window.webContents.once('did-finish-load', () => {
-    liquidGlass.addView(window.getNativeWindowHandle(), { opaque: false });
-  });
-}
-
-function createWindow(): void {
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: true,
-    ...(isMac
-      ? {
-          transparent: true,
-          titleBarStyle: 'hiddenInset' as const,
-        }
-      : {}),
-    ...(process.platform === 'linux' ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-    },
-  });
-
-  if (isMac) {
-    applyGlassBackdrop(mainWindow);
-  }
-
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    void shell.openExternal(details.url);
-
-    return { action: 'deny' };
-  });
-
-  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
-
-  if (is.dev && rendererUrl) {
-    void mainWindow.loadURL(rendererUrl);
-  } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
-  }
-}
+import { createMainWindow } from './windows/main-window';
 
 void app.whenReady().then(() => {
   electronApp.setAppUserModelId('sh.recompose.app');
@@ -62,11 +10,11 @@ void app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  createWindow();
+  createMainWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createMainWindow();
     }
   });
 });
