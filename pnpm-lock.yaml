@@ -208,31 +208,31 @@ importers:
   .:
     devDependencies:
       '@commitlint/cli':
-        specifier: ^21.2.1
+        specifier: 21.2.1
         version: 21.2.1(@types/node@22.20.1)(conventional-commits-parser@7.1.0)(typescript@5.9.3)
       '@commitlint/config-conventional':
-        specifier: ^21.2.0
+        specifier: 21.2.0
         version: 21.2.0
       '@stylistic/eslint-plugin':
-        specifier: ^5.10.0
+        specifier: 5.10.0
         version: 5.10.0(eslint@10.7.0(jiti@2.7.0)(supports-color@7.2.0))
       lefthook:
-        specifier: ^2.1.10
+        specifier: 2.1.10
         version: 2.1.10
       oxfmt:
-        specifier: ^0.59.0
+        specifier: 0.59.0
         version: 0.59.0
       oxlint:
-        specifier: ^1.74.0
+        specifier: 1.74.0
         version: 1.74.0(oxlint-tsgolint@0.25.0)
       oxlint-plugin-react-doctor:
-        specifier: ^0.8.1
+        specifier: 0.8.1
         version: 0.8.1
       oxlint-tsgolint:
-        specifier: ^0.25.0
+        specifier: 0.25.0
         version: 0.25.0
       turbo:
-        specifier: ^2.10.5
+        specifier: 2.10.5
         version: 2.10.5
 
   apps/desktop:
@@ -245,10 +245,10 @@ importers:
         version: 4.0.0(electron@39.8.10(supports-color@7.2.0))
     devDependencies:
       '@electron-toolkit/tsconfig':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0(@types/node@22.20.1)
       '@types/node':
-        specifier: ^22.19.1
+        specifier: 22.20.1
         version: 22.20.1
       '@types/react':
         specifier: ^19.2.7
@@ -257,34 +257,34 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.17)
       '@vitejs/plugin-react':
-        specifier: ^5.1.1
+        specifier: 5.2.0
         version: 5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0))
       electron:
-        specifier: ^39.2.6
+        specifier: 39.8.10
         version: 39.8.10(supports-color@7.2.0)
       electron-builder:
-        specifier: ^26.0.12
+        specifier: 26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)(supports-color@7.2.0)
       electron-vite:
-        specifier: ^5.0.0
+        specifier: 5.0.0
         version: 5.0.0(supports-color@7.2.0)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0))
       oxlint:
-        specifier: ^1.74.0
+        specifier: 1.74.0
         version: 1.74.0(oxlint-tsgolint@0.25.0)
       oxlint-tsgolint:
-        specifier: ^0.25.0
+        specifier: 0.25.0
         version: 0.25.0
       react:
-        specifier: ^19.2.1
+        specifier: 19.2.7
         version: 19.2.7
       react-dom:
-        specifier: ^19.2.1
+        specifier: 19.2.7
         version: 19.2.7(react@19.2.7)
       typescript:
-        specifier: ^5.9.3
+        specifier: 5.9.3
         version: 5.9.3
       vite:
-        specifier: ^7.2.6
+        specifier: 7.3.6
         version: 7.3.6(@types/node@22.20.1)(jiti@2.7.0)
 
 packages:
