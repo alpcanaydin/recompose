@@ -4,6 +4,7 @@ import liquidGlass from 'electron-liquid-glass';
 import { join } from 'path';
 
 import icon from '../../../resources/icon.png?asset';
+import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
 
@@ -14,23 +15,9 @@ function applyGlassBackdrop(window: BrowserWindow): void {
 }
 
 export function createMainWindow(): void {
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: true,
-    ...(isMac
-      ? {
-          transparent: true,
-          titleBarStyle: 'hiddenInset' as const,
-        }
-      : {}),
-    ...(process.platform === 'linux' ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-    },
-  });
+  const mainWindow = new BrowserWindow(
+    windowOptionsFor(process.platform, join(__dirname, '../preload/index.js'), icon),
+  );
 
   if (isMac) {
     applyGlassBackdrop(mainWindow);
