@@ -7,4 +7,4 @@ description = "Repository owner's private alias must never appear in any artifac
 regex = '''(?i)r[e]yz'''
 
 [[rules.allowlists]]
-paths = ['''pnpm-lock\.yaml''']
+paths = ['''^pnpm-lock\.yaml$''']

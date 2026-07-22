@@ -19,7 +19,7 @@ Spec: `docs/superpowers/specs/2026-07-22-design-system-foundations-design.md`
 - Dependency versions are exact-pinned (`-E`).
 - Component code uses only semantic utilities — never a primitive variable, never a raw hex.
 - A PostToolUse hook runs oxfmt+oxlint on every TS edit and blocks on errors; fix immediately.
-- The repository owner's private alias (enforced by the `forbidden-owner-alias` rule in `.gitleaks.toml`) must not appear in any artifact.
+- The repository owner's private alias must not appear in any artifact. File contents are checked by the `forbidden-owner-alias` rule in `.gitleaks.toml`; coverage of other surfaces is per ADR-0011.
 
 ---
 

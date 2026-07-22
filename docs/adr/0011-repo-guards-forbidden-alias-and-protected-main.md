@@ -24,6 +24,6 @@ Encode both rules into the existing gate layers (ADR-0006 local, ADR-0007 CI) �
 
 ## Consequences
 
-**Good**: both previously prose-only rules are now machine-checked at commit time and in CI; the alias cannot reach a commit body, a commit message, or a PR diff unnoticed; local `main` refuses commits in every worktree, closing the gap remote protection cannot cover.
+**Good**: both previously prose-only rules now have machine checks — file contents are scanned at commit time and again in CI on every PR diff; commit messages are checked by the local commit-msg hook; local `main` refuses commits in every worktree, closing the gap remote protection cannot cover.
 
-**Bad**: the banned pattern is encoded twice (gitleaks regex and commit-msg grep) because gitleaks cannot see commit messages; any future lockfile-style generated file that trips the rule needs its own allowlist line; branch names and PR titles remain unscanned — accepted as low-risk until proven otherwise.
+**Bad**: the banned pattern is encoded twice (gitleaks regex and commit-msg grep) because gitleaks cannot see commit messages; commit messages have no CI net — the local hook is bypassable with `--no-verify`, accepted because file contents (the surface that actually ships) are double-covered; any future lockfile-style generated file that trips the rule needs its own allowlist line; branch names and PR titles remain unscanned — accepted as low-risk until proven otherwise.
