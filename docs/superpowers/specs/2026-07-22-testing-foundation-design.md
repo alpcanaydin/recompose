@@ -41,7 +41,7 @@ The rule an implementer follows: touches the DOM → `.browser.test.tsx`; doesn'
 ## Coverage gate details
 
 - Provider: V8. Reporters: `text` (local) + `lcov` (CI artifact/upload-ready).
-- Excluded from coverage: config files (`*.config.*`), `out/`, `dist/`, test files themselves, type-declaration files.
+- Excluded from coverage: config files (`*.config.*`), `out/`, `dist/`, test files themselves, type-declaration files, and process boundary wiring files (entry points that only compose — the corollary rule: logic never lives in them, it is extracted to tested modules).
 - Thresholds live in `vitest.shared.ts` only — a package cannot silently lower them without touching the shared file.
 
 ## Proof tests

@@ -14,7 +14,7 @@
 - All dependency versions exactly as listed above (`pnpm add -D -E`).
 - Filename boundary: DOM-touching tests are `*.browser.test.tsx`; everything else is `*.test.ts`. Tests are colocated with source.
 - Coverage thresholds: `lines/branches/functions/statements ≥ 90`, defined only in `vitest.shared.ts`.
-- Process entry-point wiring files (`src/main/index.ts`, `src/preload/index.ts`, `src/renderer/src/main.tsx`) are excluded from coverage; consequently no logic may live in them — logic is extracted to tested modules.
+- Process boundary wiring files (`src/main/index.ts`, `src/main/windows/main-window.ts`, `src/preload/index.ts`, `src/renderer/src/app/main.tsx`) are excluded from coverage; consequently no logic may live in them — logic is extracted to tested modules.
 - TypeScript max strictness is already on (`tsconfig.strict.json`); no `any`, no `as` casts to silence errors.
 - **Never write code comments** (project rule).
 - The repository owner's private alias must not appear in any artifact (gitleaks `forbidden-owner-alias` enforces file contents; keep it out of commit messages and branch names manually).
@@ -31,14 +31,14 @@
 - Modify: `apps/desktop/package.json` (devDependencies, `test` script)
 - Create: `apps/desktop/vitest.config.ts`
 - Modify: `apps/desktop/tsconfig.node.json` (include)
-- Create: `apps/desktop/src/main/window-options.ts`
-- Test: `apps/desktop/src/main/window-options.test.ts`
-- Modify: `apps/desktop/src/main/index.ts`
+- Create: `apps/desktop/src/main/windows/window-options.ts`
+- Test: `apps/desktop/src/main/windows/window-options.test.ts`
+- Modify: `apps/desktop/src/main/windows/main-window.ts`
 
 **Interfaces:**
 
 - Consumes: nothing from earlier tasks.
-- Produces: `windowOptionsFor(platform: NodeJS.Platform, preloadPath: string, iconPath: string): BrowserWindowConstructorOptions` in `apps/desktop/src/main/window-options.ts`; `apps/desktop/vitest.config.ts` with a `unit` project that Task 2 extends with a `browser` project; `test` script that Task 3 extends with `--coverage`.
+- Produces: `windowOptionsFor(platform: NodeJS.Platform, preloadPath: string, iconPath: string): BrowserWindowConstructorOptions` in `apps/desktop/src/main/windows/window-options.ts`; `apps/desktop/vitest.config.ts` with a `unit` project that Task 2 extends with a `browser` project; `test` script that Task 3 extends with `--coverage`.
 
 - [ ] **Step 1: Install unit-layer dependencies and add the test script**
 
@@ -88,7 +88,7 @@ Expected: PASS (vitest.config.ts compiles; nothing else changed yet).
 
 - [ ] **Step 4: Write the failing behavior specs (examples + property)**
 
-Create `apps/desktop/src/main/window-options.test.ts`:
+Create `apps/desktop/src/main/windows/window-options.test.ts`:
 
 ```ts
 import { fc, test } from '@fast-check/vitest';
@@ -161,7 +161,7 @@ Expected: FAIL — `Cannot find module './window-options'` (or equivalent resolv
 
 - [ ] **Step 6: Implement the extraction**
 
-Create `apps/desktop/src/main/window-options.ts`:
+Create `apps/desktop/src/main/windows/window-options.ts`:
 
 ```ts
 import type { BrowserWindowConstructorOptions } from 'electron';
@@ -196,15 +196,15 @@ export function windowOptionsFor(
 Run: `pnpm --filter @recompose/desktop run test`
 Expected: PASS — 4 passed (the property spec runs 100 generated cases internally).
 
-- [ ] **Step 8: Point the entry wiring at the extraction**
+- [ ] **Step 8: Point the window wiring at the extraction**
 
-In `apps/desktop/src/main/index.ts`, add the import (after the `icon` import):
+In `apps/desktop/src/main/windows/main-window.ts`, add the import (after the `icon` import):
 
 ```ts
 import { windowOptionsFor } from './window-options';
 ```
 
-and replace the whole `const mainWindow = new BrowserWindow({ ... });` object literal (currently lines 17–33) with:
+and replace the whole `const mainWindow = new BrowserWindow({ ... });` object literal inside `createMainWindow` with:
 
 ```ts
 const mainWindow = new BrowserWindow(
@@ -235,7 +235,7 @@ git commit -m "test(desktop): add vitest unit project, extract window options"
 - Modify: `apps/desktop/package.json` (devDependencies)
 - Modify: `apps/desktop/vitest.config.ts` (add `browser` project)
 - Modify: `apps/desktop/tsconfig.web.json` (types)
-- Test: `apps/desktop/src/renderer/src/App.browser.test.tsx`
+- Test: `apps/desktop/src/renderer/src/app/app.browser.test.tsx`
 - Modify: `.github/workflows/ci.yml` (Chromium install step in `check` job)
 
 **Interfaces:**
@@ -298,13 +298,13 @@ In `apps/desktop/tsconfig.web.json`, add to `compilerOptions`:
 
 - [ ] **Step 4: Write the renderer shell spec**
 
-Create `apps/desktop/src/renderer/src/App.browser.test.tsx`:
+Create `apps/desktop/src/renderer/src/app/app.browser.test.tsx` (colocated with `app.tsx` in the FSD app layer — the test travels with its slice):
 
 ```tsx
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
-import App from './App';
+import App from './app';
 
 test('the shell presents a sidebar beside the main area', async () => {
   const screen = render(<App />);
@@ -410,13 +410,14 @@ and add a `coverage` block inside `test` (before `projects`):
         'src/**/*.browser.test.*',
         'src/**/*.d.ts',
         'src/main/index.ts',
+        'src/main/windows/main-window.ts',
         'src/preload/index.ts',
-        'src/renderer/src/main.tsx',
+        'src/renderer/src/app/main.tsx',
       ],
     },
 ```
 
-The three excluded source files are process entry points: pure composition wiring at the Electron boundary. The rule this encodes: logic never lives in an entry file — it gets extracted (as `window-options.ts` was) and tested.
+The four excluded source files are process boundary wiring: pure composition at the Electron edge (app lifecycle, `BrowserWindow`/`contextBridge` construction, DOM mount). The rule this encodes: logic never lives in a wiring file — it gets extracted (as `window-options.ts` was) and tested.
 
 In `apps/desktop/tsconfig.node.json`, extend `include`:
 
@@ -443,7 +444,7 @@ Append `coverage` on its own line to `apps/desktop/.gitignore`.
 - [ ] **Step 5: Run and verify the gate passes**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS, with a coverage table showing `window-options.ts` and `App.tsx` at 100% and no threshold errors.
+Expected: PASS, with a coverage table showing `window-options.ts` and `app.tsx` at 100% and no threshold errors.
 
 - [ ] **Step 6: Prove the gate fails when thresholds are not met**
 
@@ -508,7 +509,7 @@ The infrastructure queue reached the unit/integration layers of the test pyramid
 
 - **Vitest 4** as the runner, configured per package with a `projects` split inside `apps/desktop`: `unit` (node environment — main, preload, renderer pure logic) and `browser` (Browser Mode on real Chromium via `@vitest/browser-playwright`, rendering with `vitest-browser-react`). No jsdom/happy-dom anywhere; the filename decides the environment (`*.browser.test.tsx` vs `*.test.ts`).
 - **fast-check v4 via `@fast-check/vitest`** for property-based testing, colocated in the same spec files (`test.prop`). Core domain logic gets example and property specs.
-- **Coverage gate**: `@vitest/coverage-v8` with `lines/branches/functions/statements ≥ 90`, thresholds defined once in the root `vitest.shared.ts`. `coverage.include` spans all of `src/`, so an untested (or misnamed) file counts against the gate. Process entry files (`src/main/index.ts`, `src/preload/index.ts`, `src/renderer/src/main.tsx`) are excluded as pure composition wiring — the corollary rule is that logic never lives in them.
+- **Coverage gate**: `@vitest/coverage-v8` with `lines/branches/functions/statements ≥ 90`, thresholds defined once in the root `vitest.shared.ts`. `coverage.include` spans all of `src/`, so an untested (or misnamed) file counts against the gate. Process boundary wiring files (`src/main/index.ts`, `src/main/windows/main-window.ts`, `src/preload/index.ts`, `src/renderer/src/app/main.tsx`) are excluded as pure composition — the corollary rule is that logic never lives in them.
 - **Turbo wiring**: per-package `test` script (Turborepo guidance over root-level projects), `coverage/**` cached as task output. CI gains one step: `playwright install --with-deps chromium`.
 
 ## Alternatives
@@ -526,7 +527,7 @@ The infrastructure queue reached the unit/integration layers of the test pyramid
 
 - [ ] **Step 2: Add the index row**
 
-In `docs/adr/README.md`, append after the 0011 row (or after 0009 if 0011 is not yet on this branch):
+In `docs/adr/README.md`, append after the 0011 row:
 
 ```markdown
 | [0012](0012-vitest-testing-foundation.md) | Vitest Testing Foundation with Browser Mode and Property Testing | Accepted | 2026-07-22 |
