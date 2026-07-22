@@ -1,8 +1,17 @@
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
-import { app, shell, BrowserWindow, ipcMain } from 'electron';
+import { app, shell, BrowserWindow } from 'electron';
+import liquidGlass from 'electron-liquid-glass';
 import { join } from 'path';
 
 import icon from '../../resources/icon.png?asset';
+
+const isMac = process.platform === 'darwin';
+
+function applyGlassBackdrop(window: BrowserWindow): void {
+  window.webContents.once('did-finish-load', () => {
+    liquidGlass.addView(window.getNativeWindowHandle(), { opaque: false });
+  });
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -10,12 +19,22 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: true,
+    ...(isMac
+      ? {
+          transparent: true,
+          titleBarStyle: 'hiddenInset' as const,
+        }
+      : {}),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
     },
   });
+
+  if (isMac) {
+    applyGlassBackdrop(mainWindow);
+  }
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show();
@@ -41,10 +60,6 @@ void app.whenReady().then(() => {
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window);
-  });
-
-  ipcMain.on('ping', () => {
-    console.log('pong');
   });
 
   createWindow();
