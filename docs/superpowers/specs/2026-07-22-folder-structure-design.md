@@ -88,14 +88,17 @@ entities/gateway/
 
 A segment opens when its first file lands. Each slice exposes a public API `index.ts`; deeper imports are blocked by Steiger. Segment-level barrel files are not used (Vite tree-shaking).
 
-**FSD placement cheat-sheet** (the three questions, pre-answered):
+**Placement rule (FSD v2.1 — "start simple, extract when needed"):** new code goes into the `pages/` slice it serves. It moves down a layer only when the same code is _currently_ used in 2+ places, the usages don't always change together, and the boundary is stable — never for hypothetical reuse. The minimal valid tree is `app/ + pages/ + shared/`; `widgets/`, `features/`, `entities/` open at their first confirmed multi-use, like every other folder in this spec.
 
-| It is a…                                  | It goes to  |
-| ----------------------------------------- | ----------- |
-| domain object (data + its representation) | `entities/` |
-| user action on a domain object            | `features/` |
-| self-sufficient block composing the above | `widgets/`  |
-| screen wiring widgets to a route          | `pages/`    |
+| It is a…                                                                    | It goes to         |
+| --------------------------------------------------------------------------- | ------------------ |
+| anything single-use, or in doubt                                            | its `pages/` slice |
+| domain model used by 2+ pages/widgets **today**                             | `entities/`        |
+| user interaction used by 2+ pages/widgets **today**                         | `features/`        |
+| composite block reused across pages **today**                               | `widgets/`         |
+| infrastructure with zero business logic (ui kit, IPC client, CRUD plumbing) | `shared/`          |
+
+`shared/` exposes a public API per segment (`shared/ui/index.ts`, `shared/api/index.ts`) — no top-level `shared/index.ts`. Every placement decision for a new renderer file goes through the `feature-sliced-design` skill's decision tree (rule recorded in `CLAUDE.md`).
 
 **TanStack Router fit:** file-based route files live in `app/routes/`; each route file only mounts a `pages/` slice. This is the documented FSD + TanStack combination; if the route-file location fights the router's generator, TanStack's Virtual File Routes are the sanctioned escape hatch.
 

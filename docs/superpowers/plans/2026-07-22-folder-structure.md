@@ -270,11 +270,15 @@ design: `docs/superpowers/specs/2026-07-22-folder-structure-design.md`.
   `windows/`, `ipc/`, `engine-host/` (utilityProcess spawn + engine
   entry). `preload/` stays a single file by design — growth there means
   the exposed API surface is too wide.
-- **Renderer**: full Feature-Sliced Design — layers
-  `app/pages/widgets/features/entities/shared`, purpose-named segments
+- **Renderer**: Feature-Sliced Design v2.1 — layers
+  `app/pages/widgets/features/entities/shared`, opened on demand
+  (minimal valid tree: `app + pages + shared`). Placement follows
+  v2.1 "start simple": new code lands in its `pages/` slice and moves
+  down only on confirmed multi-use, decided via the
+  `feature-sliced-design` skill. Purpose-named segments
   `ui/model/api/lib` (essence names `components/hooks/types/utils`
-  forbidden), slice public API via `index.ts`, TanStack route files in
-  `app/routes/` delegating to `pages/`.
+  forbidden), slice public API via `index.ts` (`shared/` per segment),
+  TanStack route files in `app/routes/` delegating to `pages/`.
 - **Tests**: colocated `*.test.ts`; Playwright e2e in `apps/desktop/e2e/`.
 - **Enforcement**: Steiger for FSD rules, dependency-cruiser for package
   direction, process boundaries, engine purity, and import cycles —
