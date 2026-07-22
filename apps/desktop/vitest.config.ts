@@ -32,7 +32,7 @@ export default defineConfig({
         plugins: [react()],
         test: {
           name: 'browser',
-          include: ['src/renderer/**/*.browser.test.tsx'],
+          include: ['src/renderer/**/*.browser.test.{ts,tsx}'],
           browser: {
             enabled: true,
             headless: true,
