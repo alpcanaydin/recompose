@@ -26,7 +26,7 @@ through `light-dark(<light primitive>, <dark primitive>)`; theming follows
 `:root { color-scheme: light dark }` with zero JS and zero IPC. Text and
 border tokens are named `ink` and `line` rather than `text`/`border`, so the
 generated utilities read naturally instead of stuttering (`text-text-*`).
-Tailwind's default `--color-*`, `--text-*`, and `--radius-*` namespaces are
+Tailwind's default `--color-*`, `--text-*`, `--font-*`, and `--radius-*` namespaces are
 reset to `initial` wherever we own the scale, so a primitive utility
 (`bg-red-500`) is structurally impossible — only semantic utilities exist.
 Tailwind's default spacing scale is kept as-is: it already matches the
