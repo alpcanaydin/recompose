@@ -27,3 +27,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0019](0019-vercel-remote-cache-for-turbo.md)                  | Vercel Remote Cache for Turborepo                                | Accepted | 2026-07-23 |
 | [0020](0020-jscpd-duplicate-code-gate.md)                      | jscpd Duplicate-Code Gate at Zero Threshold                      | Accepted | 2026-07-23 |
 | [0021](0021-cyclomatic-complexity-ceiling.md)                  | Cyclomatic Complexity Ceiling of 5 via oxlint                    | Accepted | 2026-07-23 |
+| [0022](0022-codecov-patch-coverage-gate.md)                    | Patch Coverage Gate via Codecov                                  | Accepted | 2026-07-23 |
