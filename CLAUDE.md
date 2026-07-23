@@ -10,6 +10,12 @@
 - `main` is protected. Never commit to it, locally or remotely.
 - Every job — feature, fix, docs, config, skills — gets its own worktree and branch, and lands through a PR. One job = one branch.
 
+## CodeRabbit reviews
+
+- Judge every finding against official docs and the actual code before acting — never apply blindly.
+- Addressed a finding → reply on its thread naming the fixing commit, then resolve the thread immediately.
+- Rejecting or deferring a finding → reply with the reasoning and leave the thread unresolved so CodeRabbit can respond; resolve only when the exchange settles.
+
 ## Skills
 
 - Use the `ponytail` skill for everything — every task starts by invoking it.
