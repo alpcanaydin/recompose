@@ -14,7 +14,7 @@
   "categories": {},
   "rules": {
     "eslint/no-unused-vars": "error",
-    "complexity": ["error", { "max": 10 }],
+    "complexity": ["error", { "max": 5 }],
     "max-depth": ["error", 3],
     "max-lines": ["error", { "max": 300 }],
     "max-nested-callbacks": ["error", 3],
