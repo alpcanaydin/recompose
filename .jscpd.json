@@ -1,5 +1,6 @@
 {
-  "format": ["typescript", "tsx"],
+  "format": ["typescript"],
+  "formatsExts": { "typescript": ["ts", "tsx"] },
   "ignore": ["**/*.gen.ts", "**/*.test.ts", "**/*.test.tsx"],
   "minTokens": 50,
   "minLines": 5,
