@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    "apps/desktop": {
+      "ignoreDependencies": ["fast-check"]
+    },
+    ".": {
+      "entry": ["steiger.config.ts"],
+      "ignoreDependencies": ["@steiger/toolkit", "@swc/core"]
+    }
+  }
+}

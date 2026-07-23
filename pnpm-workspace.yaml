@@ -8,3 +8,13 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   '@swc/core': true
+
+minimumReleaseAge: 4320
+
+minimumReleaseAgeExclude:
+  - knip@6.29.0
+  - '@typescript-eslint/types@8.65.0'
+  - baseline-browser-mapping@2.10.44
+
+overrides:
+  fast-check: 4.9.0

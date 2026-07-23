@@ -18,6 +18,9 @@ pre-commit:
     - name: fsd
       priority: 1
       run: pnpm run lint:fsd
+    - name: dead
+      priority: 1
+      run: pnpm run lint:dead
     - name: fmt
       priority: 2
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'

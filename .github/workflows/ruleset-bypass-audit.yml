@@ -1,0 +1,49 @@
+name: ruleset-bypass-audit
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - name: Guard RULESET_AUDIT_TOKEN
+        run: |
+          if [ -z "${{ secrets.RULESET_AUDIT_TOKEN }}" ]; then
+            echo "RULESET_AUDIT_TOKEN secret missing (fine-grained PAT, Administration:read)"
+            exit 1
+          fi
+      - id: query
+        env:
+          GH_TOKEN: ${{ secrets.RULESET_AUDIT_TOKEN }}
+        run: |
+          bypasses=$(gh api "repos/${{ github.repository }}/rulesets/rule-suites?rule_suite_result=bypass&time_period=week" --paginate --slurp)
+          count=$(echo "$bypasses" | jq 'add | length')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then
+            body=$(echo "$bypasses" | jq -r 'add | .[] | "- \(.actor_name // "unknown") bypassed `\(.ref)` at \(.pushed_at)"')
+            {
+              echo "body<<BODY_EOF"
+              echo "$body"
+              echo "BODY_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.query.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: ${{ steps.query.outputs.body }}
+        run: |
+          existing=$(gh issue list -R ${{ github.repository }} --state open --search 'Ruleset bypass audit in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment -R ${{ github.repository }} "$existing" --body "$BODY"
+          else
+            gh issue create -R ${{ github.repository }} --title "Ruleset bypass audit" --body "$BODY"
+          fi

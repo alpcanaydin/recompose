@@ -20,3 +20,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0012](0012-vitest-testing-foundation.md)                      | Vitest Testing Foundation with Browser Mode and Property Testing | Accepted | 2026-07-23 |
 | [0013](0013-coderabbit-required-status-check.md)               | CodeRabbit Review as Required Status Check                       | Accepted | 2026-07-23 |
 | [0014](0014-dependency-boundaries-enforcement.md)              | Dependency Boundaries Enforced by dependency-cruiser and Steiger | Accepted | 2026-07-23 |
+| [0015](0015-repo-hardening-layer.md)                           | Repo Hardening Layer                                             | Accepted | 2026-07-23 |
