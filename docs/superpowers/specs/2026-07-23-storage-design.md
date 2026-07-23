@@ -19,16 +19,20 @@ Fourth infrastructure-queue item. recompose is local and offline-first: no cloud
 ```text
 <userData>/
 ├─ gateways/<slug>.json   single gateway config + canvas layout, schemaVersion'd
+├─ accounts.json          provider-account registry (label, provider, kind, credentialRef), schemaVersion'd
 ├─ settings.json          app preferences, schemaVersion'd
 ├─ vault.bin              safeStorage-encrypted secret map
 └─ usage.db               node:sqlite, engine-owned request/usage log
 ```
+
+Accounts are cross-gateway entities (one subscription serves many gateways), so they live in their own registry; gateway targets reference them by `accountId`, and the account row carries the `credentialRef` into the vault.
 
 ## Ownership and concurrency (single-writer principle)
 
 | Data              | Writer      | Readers                                                            | Change propagation                                                                                                                                                                                     |
 | ----------------- | ----------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `gateways/*.json` | main only   | main; engine (via message)                                         | main writes atomically (tmp + rename), then sends the parsed config to the engine — the engine never watches or reads the files itself, so there is exactly one source of truth and no read/write race |
+| `accounts.json`   | main only   | main; engine (via message)                                         | same atomic-write + message flow as gateway configs                                                                                                                                                    |
 | `settings.json`   | main only   | main                                                               | n/a                                                                                                                                                                                                    |
 | `vault.bin`       | main only   | main (decrypt)                                                     | decrypted secrets handed to the engine in memory at spawn and on change                                                                                                                                |
 | `usage.db`        | engine only | main via a read-only connection (serves the Usage drawer over IPC) | n/a                                                                                                                                                                                                    |
