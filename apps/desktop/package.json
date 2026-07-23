@@ -21,7 +21,6 @@
     "build:linux": "pnpm run typecheck && pnpm run build && electron-builder --linux"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tanstack/react-router": "1.170.18",
     "electron-liquid-glass": "^1.1.1"
