@@ -17,3 +17,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0009](0009-two-tier-design-tokens.md)                         | Two-Tier Design Tokens on Tailwind v4                      | Accepted | 2026-07-22 |
 | [0010](0010-folder-structure-fsd-and-enforced-boundaries.md)   | Folder Structure — FSD Renderer, Enforced Boundaries       | Accepted | 2026-07-22 |
 | [0011](0011-repo-guards-forbidden-alias-and-protected-main.md) | Repo Guards: Forbidden Owner Alias, Locally Protected Main | Accepted | 2026-07-22 |
+| [0013](0013-coderabbit-required-status-check.md)               | CodeRabbit Review as Required Status Check                 | Accepted | 2026-07-23 |
