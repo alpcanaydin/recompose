@@ -16,16 +16,38 @@ module.exports = {
       },
     },
     {
+      name: 'renderer-isolated-transitive',
+      severity: 'error',
+      from: { path: '^apps/desktop/src/renderer/' },
+      to: {
+        path: '^apps/desktop/src/(main|preload)/',
+        pathNot: '^apps/desktop/src/preload/index\\.d\\.ts$',
+        reachable: true,
+      },
+    },
+    {
       name: 'main-not-into-renderer',
       severity: 'error',
       from: { path: '^apps/desktop/src/main/' },
       to: { path: '^apps/desktop/src/renderer/' },
     },
     {
+      name: 'main-not-into-renderer-transitive',
+      severity: 'error',
+      from: { path: '^apps/desktop/src/main/' },
+      to: { path: '^apps/desktop/src/renderer/', reachable: true },
+    },
+    {
       name: 'preload-isolated',
       severity: 'error',
       from: { path: '^apps/desktop/src/preload/' },
       to: { path: '^apps/desktop/src/(main|renderer)/' },
+    },
+    {
+      name: 'preload-isolated-transitive',
+      severity: 'error',
+      from: { path: '^apps/desktop/src/preload/' },
+      to: { path: '^apps/desktop/src/(main|renderer)/', reachable: true },
     },
     {
       name: 'engine-no-electron',
