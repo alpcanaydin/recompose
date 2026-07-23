@@ -1554,3 +1554,11 @@ In `docs/adr/README.md`, append after the 0015 row:
 git add docs/adr
 git commit -m "docs(adr): record storage architecture (ADR-0016)"
 ```
+
+---
+
+## Deviations discovered in execution
+
+- **`@recompose/contracts` must be a `devDependency` of `@recompose/desktop`, not a `dependency`.** Task 4 Step 1 (`pnpm --filter @recompose/desktop add "@recompose/contracts@workspace:*"`) lands it in `dependencies`, which electron-vite externalizes for the main bundle — the built `out/main/index.js` then does `require("@recompose/contracts")`, unresolvable under Electron's Node at runtime (the app cannot boot). Contracts is TS-source-only and consumed entirely at build time; it belongs in `devDependencies` so electron-vite inlines it (zod included) instead of externalizing it.
+- **Settings, accounts, and gateway configs now share one quarantine path.** The plan's Task 4 snippets have `loadSettingsFile`/`loadAccountsFile` call `loadSettings`/`loadAccountsDocument` directly after `readJsonWithQuarantine`, so a syntactically-valid-but-schema-invalid document throws instead of being quarantined — inconsistent with gateway-store's per-file handling and with the spec's "unreadable or invalid input is quarantined" rule. `json-file.ts` gained `readDocumentWithQuarantine<T>(filePath, parse, onCorrupt): Promise<T | undefined>`, which quarantines on both JSON syntax errors and schema-validation failures; `settings-store.ts`, `accounts-store.ts`, and `gateway-store.ts` are all rewired through it.
+- **Vault documents that fail structural validation are now quarantined, not silently emptied — except a newer `schemaVersion`, which throws.** The plan's `loadVaultFile` returns `emptyVault` for any document that fails `isVaultDocument`, including a syntactically fine file with a bad shape; the next save would silently overwrite it with an empty vault, losing secrets. `vault.ts` now quarantines the file (matching the other stores) when the document is structurally invalid and `schemaVersion` is absent or `1`; when `schemaVersion` is an integer greater than `1`, it throws instead, naming both versions, so an app downgrade cannot silently wipe a newer vault.
