@@ -1,5 +1,11 @@
 reviews:
   request_changes_workflow: true
+  path_filters:
+    - '!.agents/skills/**'
+    - '!.claude/skills/**'
+    - '!skills-lock.json'
+    - '!**/routeTree.gen.ts'
+    - '!pnpm-lock.yaml'
   tools:
     biome:
       enabled: false
