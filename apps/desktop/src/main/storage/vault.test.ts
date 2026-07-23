@@ -87,7 +87,9 @@ describe('loading a structurally invalid vault file', () => {
   async function expectQuarantined(dir: string, file: string): Promise<void> {
     const seen: string[] = [];
 
-    const loaded = await loadVaultFile(file, (p) => seen.push(p));
+    const loaded = await loadVaultFile(file, (p) => {
+      seen.push(p);
+    });
 
     expect(loaded).toEqual({ schemaVersion: 1, entries: {} });
     expect(seen).toHaveLength(1);

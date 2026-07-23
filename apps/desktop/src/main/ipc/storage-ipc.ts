@@ -201,12 +201,12 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): IpcHandlers {
   const paths = storagePathsFor(ctx.userDataPath);
 
   return {
-    'gateways:list': () => listGateways(ctx, paths),
-    'gateways:save': (config) => saveGateway(ctx, paths, config),
-    'settings:get': () => getSettings(ctx, paths),
-    'settings:save': (settings) => saveSettings(ctx, paths, settings),
-    'accounts:list': () => listAccounts(ctx, paths),
-    'accounts:connect': (request) => connectAccount(ctx, paths, request),
-    'accounts:remove': (request) => removeAccount(ctx, paths, request),
+    'gateways:list': async () => listGateways(ctx, paths),
+    'gateways:save': async (config) => saveGateway(ctx, paths, config),
+    'settings:get': async () => getSettings(ctx, paths),
+    'settings:save': async (settings) => saveSettings(ctx, paths, settings),
+    'accounts:list': async () => listAccounts(ctx, paths),
+    'accounts:connect': async (request) => connectAccount(ctx, paths, request),
+    'accounts:remove': async (request) => removeAccount(ctx, paths, request),
   };
 }

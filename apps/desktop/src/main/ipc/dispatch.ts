@@ -21,7 +21,7 @@ export const ipcChannelNames: readonly IpcChannel[] = [
   'accounts:remove',
 ];
 
-function callHandler<Channel extends IpcChannel>(
+async function callHandler<Channel extends IpcChannel>(
   handlers: IpcHandlers,
   channel: Channel,
   request: IpcRequest<Channel>,

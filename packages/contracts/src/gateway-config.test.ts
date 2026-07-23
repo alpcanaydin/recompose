@@ -173,8 +173,10 @@ describe('gateway config schema: layout node keys', () => {
 
     const parsed = gatewayConfigSchema.parse(hostileLayout);
 
+    const nodesPrototype: unknown = Object.getPrototypeOf(parsed.layout.nodes);
+
     expect(Object.keys(parsed.layout.nodes)).toEqual(Object.keys(validConfig.layout.nodes));
-    expect(Object.getPrototypeOf(parsed.layout.nodes)).not.toHaveProperty('x');
+    expect(nodesPrototype).not.toHaveProperty('x');
   });
 });
 

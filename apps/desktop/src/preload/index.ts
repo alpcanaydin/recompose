@@ -3,7 +3,7 @@ import type { IpcRequest, IpcResponse, RecomposeIpc } from '@recompose/contracts
 import { contextBridge, ipcRenderer } from 'electron';
 
 function bridgeEntry<Channel extends keyof RecomposeIpc>(channel: Channel) {
-  return (request: IpcRequest<Channel>): Promise<IpcResponse<Channel>> =>
+  return async (request: IpcRequest<Channel>): Promise<IpcResponse<Channel>> =>
     ipcRenderer.invoke(channel, request);
 }
 

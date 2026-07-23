@@ -35,7 +35,7 @@ export function createMainWindow(): void {
 
   const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
 
-  if (is.dev && rendererUrl) {
+  if (is.dev && rendererUrl !== undefined && rendererUrl !== '') {
     void mainWindow.loadURL(rendererUrl);
   } else {
     void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));

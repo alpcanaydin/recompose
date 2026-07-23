@@ -33,7 +33,9 @@ describe('settings store', () => {
     );
     const seen: string[] = [];
 
-    const settings = await loadSettingsFile(file, (p) => seen.push(p));
+    const settings = await loadSettingsFile(file, (p) => {
+      seen.push(p);
+    });
 
     expect(settings).toEqual(defaultSettings());
     expect(seen).toHaveLength(1);

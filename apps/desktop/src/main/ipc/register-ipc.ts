@@ -17,14 +17,14 @@ function senderFromEvent(event: IpcMainInvokeEvent): TrustedSender {
 function devServerOrigin(): string | undefined {
   const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
 
-  return rendererUrl === undefined ? undefined : new URL(rendererUrl).origin;
+  return rendererUrl === undefined || rendererUrl === '' ? undefined : new URL(rendererUrl).origin;
 }
 
 export function registerIpcHandlers(handlers: IpcHandlers): void {
   const allowedOrigins: AllowedOrigins = { devServerOrigin: devServerOrigin() };
 
   for (const channel of ipcChannelNames) {
-    ipcMain.handle(channel, (event, payload: unknown) =>
+    ipcMain.handle(channel, async (event, payload: unknown) =>
       dispatchIpc(handlers, channel, payload, senderFromEvent(event), allowedOrigins),
     );
   }
