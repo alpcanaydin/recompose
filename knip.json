@@ -5,7 +5,7 @@
       "ignoreDependencies": ["fast-check"]
     },
     "packages/contracts": {
-      "ignoreDependencies": ["zod", "fast-check"]
+      "ignoreDependencies": ["fast-check"]
     },
     ".": {
       "entry": ["steiger.config.ts"],
