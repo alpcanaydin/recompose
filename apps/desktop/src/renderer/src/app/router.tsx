@@ -1,11 +1,13 @@
-import { createRouter, type RouterHistory } from '@tanstack/react-router';
+import { createHashHistory, createRouter, type RouterHistory } from '@tanstack/react-router';
 
 import { routeTree } from './routeTree.gen';
 
 export function createAppRouter(history?: RouterHistory) {
+  const resolvedHistory = history ?? (import.meta.env.PROD ? createHashHistory() : undefined);
+
   return createRouter({
     routeTree,
-    ...(history === undefined ? {} : { history }),
+    ...(resolvedHistory === undefined ? {} : { history: resolvedHistory }),
   });
 }
 

@@ -522,3 +522,11 @@ In `docs/adr/README.md`, append after the 0016 row:
 git add docs/adr
 git commit -m "docs(adr): record router integration (ADR-0017)"
 ```
+
+---
+
+## Deviations discovered in execution
+
+- **Invalid-slug handling** does not use the `beforeLoad` contingency this plan sketches in Task 2 Step 4 — a `beforeLoad` hook runs after `params.parse`, so it cannot catch a parse failure there. The shipped route (`apps/desktop/src/renderer/src/app/routes/gateways.$slug.tsx`) instead runs `gatewaySlugSchema.safeParse` directly inside `params.parse` and throws `notFound()` on failure, keeping the schema as the single validation source without needing a second hook.
+- **Production history is hash-based, not browser history.** `apps/desktop/src/renderer/src/app/router.tsx`'s `createAppRouter` factory defaults to `createHashHistory()` when `import.meta.env.PROD` is true and no explicit history is passed. The packaged/preview app loads `renderer/index.html` over `file://`, where browser-history pathnames resolve as filesystem paths and always miss every route; hash history keeps the route state in the fragment, which `file://` navigation does not touch. Explicit-history callers (tests passing `createMemoryHistory`) are unaffected.
+- **Sidebar links needed an explicit no-drag carve-out.** The `<aside>` in `__root.tsx` carries `app-drag` (`-webkit-app-region: drag`) for window dragging; without an override, its child `<nav>` links inherit the drag region and don't receive clicks in the real window. `apps/desktop/src/renderer/src/app/styles/main.css` adds `.app-no-drag { -webkit-app-region: no-drag; }`, and `__root.tsx`'s `<nav>` carries `app-no-drag` alongside its layout classes.

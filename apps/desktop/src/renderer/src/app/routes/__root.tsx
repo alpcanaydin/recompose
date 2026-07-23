@@ -19,7 +19,7 @@ function RootLayout() {
   return (
     <div className="flex h-full">
       <aside className="app-drag w-60 bg-surface-sidebar px-4 pt-13 pb-4 text-body text-ink-secondary">
-        <nav className="flex flex-col gap-2">
+        <nav className="app-no-drag flex flex-col gap-2">
           <Link to="/">Gateways</Link>
           <Link to="/providers">Providers</Link>
         </nav>
