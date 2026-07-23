@@ -14,13 +14,27 @@
   "categories": {},
   "rules": {
     "eslint/no-unused-vars": "error",
-    "complexity": ["error", { "max": 5 }],
+    "complexity": [
+      "error",
+      {
+        "max": 5
+      }
+    ],
     "max-depth": ["error", 3],
-    "max-lines": ["error", { "max": 300 }],
+    "max-lines": [
+      "error",
+      {
+        "max": 300
+      }
+    ],
     "max-nested-callbacks": ["error", 3],
     "max-lines-per-function": [
       "error",
-      { "max": 50, "skipBlankLines": true, "skipComments": true }
+      {
+        "max": 50,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
     ],
     "@stylistic/padding-line-between-statements": [
       "error",
@@ -114,7 +128,12 @@
       }
     ],
     "typescript/consistent-type-exports": "error",
-    "typescript/dot-notation": ["error", { "allowIndexSignaturePropertyAccess": true }],
+    "typescript/dot-notation": [
+      "error",
+      {
+        "allowIndexSignaturePropertyAccess": true
+      }
+    ],
     "typescript/no-array-delete": "error",
     "typescript/no-base-to-string": "error",
     "typescript/no-confusing-void-expression": "error",
@@ -137,6 +156,7 @@
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-conversion": "error",
     "typescript/no-unnecessary-type-parameters": "error",
+    "typescript/no-non-null-assertion": "error",
     "typescript/no-unsafe-argument": "error",
     "typescript/no-unsafe-assignment": "error",
     "typescript/no-unsafe-call": "error",
@@ -527,7 +547,14 @@
     "react-doctor/zod-v4-no-deprecated-error-apis": "error",
     "react-doctor/zod-v4-no-deprecated-error-customization": "error",
     "react-doctor/zod-v4-no-deprecated-schema-apis": "error",
-    "react-doctor/zod-v4-prefer-top-level-string-formats": "error"
+    "react-doctor/zod-v4-prefer-top-level-string-formats": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/non-nullable-type-assertion-style": "error",
+    "typescript/prefer-nullish-coalescing": "error",
+    "typescript/promise-function-async": "error",
+    "typescript/strict-boolean-expressions": "error",
+    "typescript/strict-void-return": "error",
+    "typescript/prefer-readonly-parameter-types": "off"
   },
   "options": {
     "typeAware": true,
@@ -574,5 +601,13 @@
     ".superpowers/**",
     "docs/**",
     "**/routeTree.gen.ts"
+  ],
+  "overrides": [
+    {
+      "files": ["apps/desktop/src/preload/index.ts"],
+      "rules": {
+        "typescript/no-unsafe-return": "off"
+      }
+    }
   ]
 }

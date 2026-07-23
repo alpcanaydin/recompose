@@ -5,7 +5,7 @@ import { Suspense, lazy } from 'react';
 
 const RouterDevtools =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? lazy(() =>
+    ? lazy(async () =>
         import('@tanstack/react-router-devtools').then((module) => ({
           default: module.TanStackRouterDevtools,
         })),
@@ -14,7 +14,7 @@ const RouterDevtools =
 
 const QueryDevtools =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? lazy(() =>
+    ? lazy(async () =>
         import('@tanstack/react-query-devtools').then((module) => ({
           default: module.ReactQueryDevtools,
         })),

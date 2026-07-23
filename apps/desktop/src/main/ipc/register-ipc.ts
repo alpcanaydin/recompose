@@ -24,7 +24,7 @@ export function registerIpcHandlers(handlers: IpcHandlers): void {
   const allowedOrigins: AllowedOrigins = { devServerOrigin: devServerOrigin() };
 
   for (const channel of ipcChannelNames) {
-    ipcMain.handle(channel, (event, payload: unknown) =>
+    ipcMain.handle(channel, async (event, payload: unknown) =>
       dispatchIpc(handlers, channel, payload, senderFromEvent(event), allowedOrigins),
     );
   }

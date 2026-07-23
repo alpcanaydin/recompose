@@ -24,16 +24,16 @@ function bridgeWith(overrides: Partial<RecomposeIpc> = {}, initial: AccountsDocu
   let registry = initial;
 
   window.recompose = {
-    'gateways:list': () => Promise.resolve({ ok: true, value: [] }),
-    'gateways:save': () => Promise.resolve({ ok: true, value: [] }),
-    'settings:get': () =>
+    'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
+    'gateways:save': async () => Promise.resolve({ ok: true, value: [] }),
+    'settings:get': async () =>
       Promise.resolve({
         ok: true,
         value: { schemaVersion: 1, theme: 'system', enginePort: 8397 },
       }),
-    'settings:save': (settings) => Promise.resolve({ ok: true, value: settings }),
-    'accounts:list': () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': (request) => {
+    'settings:save': async (settings) => Promise.resolve({ ok: true, value: settings }),
+    'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
+    'accounts:connect': async (request) => {
       registry = {
         ...registry,
         accounts: [
@@ -50,7 +50,7 @@ function bridgeWith(overrides: Partial<RecomposeIpc> = {}, initial: AccountsDocu
 
       return Promise.resolve({ ok: true, value: registry });
     },
-    'accounts:remove': (request) => {
+    'accounts:remove': async (request) => {
       registry = {
         ...registry,
         accounts: registry.accounts.filter((row) => row.id !== request.id),
@@ -62,7 +62,7 @@ function bridgeWith(overrides: Partial<RecomposeIpc> = {}, initial: AccountsDocu
   };
 }
 
-function renderProviders() {
+async function renderProviders() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -128,7 +128,7 @@ test('removing an account deletes its row', async () => {
 
 test('a storage-failed remove surfaces as a visible error', async () => {
   bridgeWith({
-    'accounts:remove': () =>
+    'accounts:remove': async () =>
       Promise.resolve({
         ok: false,
         error: { code: 'storage-failed', message: 'Could not write the accounts file' },
@@ -146,7 +146,7 @@ test('a storage-failed remove surfaces as a visible error', async () => {
 
 test('a vault-unavailable failure surfaces as a visible error', async () => {
   bridgeWith({
-    'accounts:connect': () =>
+    'accounts:connect': async () =>
       Promise.resolve({
         ok: false,
         error: { code: 'vault-unavailable', message: 'OS secret encryption is unavailable' },

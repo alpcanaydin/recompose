@@ -8,7 +8,7 @@ export async function saveGatewayConfig(dir: string, config: GatewayConfig): Pro
   await writeJsonAtomic(join(dir, `${config.slug}.json`), config);
 }
 
-function loadOneGatewayConfig(
+async function loadOneGatewayConfig(
   filePath: string,
   onCorrupt: (quarantinedPath: string) => void,
 ): Promise<GatewayConfig | undefined> {
@@ -23,7 +23,7 @@ export async function listGatewayConfigs(
   const entries = await readdir(dir);
   const jsonEntries = entries.filter((name) => name.endsWith('.json')).sort();
   const loaded = await Promise.all(
-    jsonEntries.map((entry) => loadOneGatewayConfig(join(dir, entry), onCorrupt)),
+    jsonEntries.map(async (entry) => loadOneGatewayConfig(join(dir, entry), onCorrupt)),
   );
 
   return loaded.filter((config): config is GatewayConfig => config !== undefined);

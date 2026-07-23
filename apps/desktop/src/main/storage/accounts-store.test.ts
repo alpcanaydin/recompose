@@ -52,7 +52,9 @@ describe('accounts store', () => {
     await writeFile(file, JSON.stringify(invalid), 'utf8');
     const seen: string[] = [];
 
-    const accounts = await loadAccountsFile(file, (p) => seen.push(p));
+    const accounts = await loadAccountsFile(file, (p) => {
+      seen.push(p);
+    });
 
     expect(accounts).toEqual(defaultAccountsDocument());
     expect(seen).toHaveLength(1);

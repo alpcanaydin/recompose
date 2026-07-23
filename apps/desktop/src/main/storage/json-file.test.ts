@@ -39,7 +39,9 @@ describe('json file shell', () => {
     const dir = await freshDir();
     const seen: string[] = [];
 
-    const result = await readJsonWithQuarantine(join(dir, 'missing.json'), (p) => seen.push(p));
+    const result = await readJsonWithQuarantine(join(dir, 'missing.json'), (p) => {
+      seen.push(p);
+    });
 
     expect(result).toBeUndefined();
     expect(seen).toEqual([]);
@@ -52,7 +54,9 @@ describe('json file shell', () => {
     await writeFile(file, '{ not json', 'utf8');
     const seen: string[] = [];
 
-    const result = await readJsonWithQuarantine(file, (p) => seen.push(p));
+    const result = await readJsonWithQuarantine(file, (p) => {
+      seen.push(p);
+    });
 
     expect(result).toBeUndefined();
     expect(seen).toHaveLength(1);
@@ -72,7 +76,9 @@ describe('reading a document with schema validation: success paths', () => {
     const result = await readDocumentWithQuarantine(
       join(dir, 'missing.json'),
       parseEvenNumber,
-      (p) => seen.push(p),
+      (p) => {
+        seen.push(p);
+      },
     );
 
     expect(result).toBeUndefined();
@@ -99,7 +105,9 @@ describe('reading a document with schema validation: quarantine paths', () => {
     await writeJsonAtomic(file, 3);
     const seen: string[] = [];
 
-    const result = await readDocumentWithQuarantine(file, parseEvenNumber, (p) => seen.push(p));
+    const result = await readDocumentWithQuarantine(file, parseEvenNumber, (p) => {
+      seen.push(p);
+    });
 
     expect(result).toBeUndefined();
     expect(seen).toHaveLength(1);
@@ -121,7 +129,9 @@ describe('reading a document with schema validation: quarantine paths', () => {
       (): number => {
         throw new Error('parse should not run for syntactically invalid JSON');
       },
-      (p) => seen.push(p),
+      (p) => {
+        seen.push(p);
+      },
     );
 
     expect(result).toBeUndefined();

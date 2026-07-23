@@ -16,7 +16,7 @@ const trustedSender: TrustedSender = {
 const allowedOrigins: AllowedOrigins = { devServerOrigin: undefined };
 
 function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
-  const reject = (): Promise<never> => Promise.reject(new Error('not under test'));
+  const reject = async (): Promise<never> => Promise.reject(new Error('not under test'));
   const base: IpcHandlers = {
     'gateways:list': reject,
     'gateways:save': reject,
@@ -32,13 +32,13 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
 
 function alwaysSucceedingHandlers(): IpcHandlers {
   return {
-    'gateways:list': () => Promise.resolve({ ok: true, value: [] }),
-    'gateways:save': () => Promise.resolve({ ok: true, value: [] }),
-    'settings:get': () => Promise.resolve({ ok: true, value: settings }),
-    'settings:save': () => Promise.resolve({ ok: true, value: settings }),
-    'accounts:list': () => Promise.resolve({ ok: true, value: emptyAccounts }),
-    'accounts:connect': () => Promise.resolve({ ok: true, value: emptyAccounts }),
-    'accounts:remove': () => Promise.resolve({ ok: true, value: emptyAccounts }),
+    'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
+    'gateways:save': async () => Promise.resolve({ ok: true, value: [] }),
+    'settings:get': async () => Promise.resolve({ ok: true, value: settings }),
+    'settings:save': async () => Promise.resolve({ ok: true, value: settings }),
+    'accounts:list': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
+    'accounts:connect': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
+    'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
   };
 }
 
@@ -69,7 +69,7 @@ describe('ipc dispatch', () => {
 
   test('a valid payload reaches the handler and its result passes through', async () => {
     const handlers = handlersWith({
-      'settings:save': (request) => Promise.resolve({ ok: true, value: request }),
+      'settings:save': async (request) => Promise.resolve({ ok: true, value: request }),
     });
 
     const result = await dispatchIpc(
@@ -86,7 +86,7 @@ describe('ipc dispatch', () => {
   test('a handler result that violates the response contract is rejected loudly', async () => {
     const outOfRangePort = 70000;
     const handlers = handlersWith({
-      'settings:get': () =>
+      'settings:get': async () =>
         Promise.resolve({ ok: true, value: { ...settings, enginePort: outOfRangePort } }),
     });
 
@@ -100,7 +100,7 @@ describe('ipc dispatch: sender trust rejects', () => {
   test('an untrusted sender is rejected before the handler ever runs', async () => {
     const calls: string[] = [];
     const handlers = handlersWith({
-      'settings:save': (request) => {
+      'settings:save': async (request) => {
         calls.push('settings:save');
 
         return Promise.resolve({ ok: true, value: request });
@@ -129,7 +129,7 @@ describe('ipc dispatch: sender trust rejects', () => {
   test('a non-main frame at an otherwise trusted origin is rejected', async () => {
     const calls: string[] = [];
     const handlers = handlersWith({
-      'settings:get': () => {
+      'settings:get': async () => {
         calls.push('settings:get');
 
         return Promise.resolve({ ok: true, value: settings });
@@ -151,7 +151,7 @@ describe('ipc dispatch: sender trust rejects', () => {
 describe('ipc dispatch: sender trust accepts', () => {
   test('the packaged app and the configured dev server both reach the handler', async () => {
     const handlers = handlersWith({
-      'settings:get': () => Promise.resolve({ ok: true, value: settings }),
+      'settings:get': async () => Promise.resolve({ ok: true, value: settings }),
     });
     const devSender: TrustedSender = { frameUrl: 'http://localhost:5173/', isMainFrame: true };
     const devOrigins: AllowedOrigins = { devServerOrigin: 'http://localhost:5173' };

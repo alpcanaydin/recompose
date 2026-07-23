@@ -32,16 +32,16 @@ function installFakeBridge(initial: AccountsDocument = emptyAccounts()) {
   let registry = initial;
 
   window.recompose = {
-    'gateways:list': () => Promise.resolve({ ok: true, value: [] }),
-    'gateways:save': () => Promise.resolve({ ok: true, value: [] }),
-    'settings:get': () =>
+    'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
+    'gateways:save': async () => Promise.resolve({ ok: true, value: [] }),
+    'settings:get': async () =>
       Promise.resolve({
         ok: true,
         value: { schemaVersion: 1, theme: 'system', enginePort: 8397 },
       }),
-    'settings:save': (settings) => Promise.resolve({ ok: true, value: settings }),
-    'accounts:list': () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': (request) => {
+    'settings:save': async (settings) => Promise.resolve({ ok: true, value: settings }),
+    'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
+    'accounts:connect': async (request) => {
       registry = {
         ...registry,
         accounts: [
@@ -58,7 +58,7 @@ function installFakeBridge(initial: AccountsDocument = emptyAccounts()) {
 
       return Promise.resolve({ ok: true, value: registry });
     },
-    'accounts:remove': (request) => {
+    'accounts:remove': async (request) => {
       registry = {
         ...registry,
         accounts: registry.accounts.filter((row) => row.id !== request.id),

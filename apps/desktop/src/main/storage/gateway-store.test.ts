@@ -52,7 +52,9 @@ describe('gateway store', () => {
     await writeFile(join(dir, 'broken.json'), 'not json', 'utf8');
     const seen: string[] = [];
 
-    const loaded = await listGatewayConfigs(dir, (p) => seen.push(p));
+    const loaded = await listGatewayConfigs(dir, (p) => {
+      seen.push(p);
+    });
 
     expect(loaded).toEqual([config]);
     expect(seen).toHaveLength(1);
@@ -68,7 +70,9 @@ describe('gateway store', () => {
     );
     const seen: string[] = [];
 
-    const loaded = await listGatewayConfigs(dir, (p) => seen.push(p));
+    const loaded = await listGatewayConfigs(dir, (p) => {
+      seen.push(p);
+    });
 
     expect(loaded).toEqual([]);
     expect(seen).toHaveLength(1);
