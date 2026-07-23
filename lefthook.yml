@@ -12,6 +12,12 @@ pre-commit:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
       run: ./node_modules/.bin/oxlint --fix --deny-warnings --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
+    - name: boundaries
+      priority: 1
+      run: pnpm run lint:boundaries
+    - name: fsd
+      priority: 1
+      run: pnpm run lint:fsd
     - name: fmt
       priority: 2
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'

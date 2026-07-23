@@ -52,6 +52,7 @@ jobs:
       - run: pnpm --filter @recompose/desktop exec playwright install --with-deps chromium
       - run: pnpm run fmt:check
       - run: pnpm exec turbo run lint typecheck build test
+      - run: pnpm run lint:boundaries && pnpm run lint:fsd
 
   gitleaks:
     runs-on: ubuntu-latest
