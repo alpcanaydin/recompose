@@ -7,3 +7,4 @@ allowBuilds:
   lefthook: true
   electron-winstaller: true
   esbuild: true
+  '@swc/core': true

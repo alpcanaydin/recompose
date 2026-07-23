@@ -4,6 +4,7 @@
     "electron.vite.config.*",
     "vitest.config.*",
     "../../vitest.shared.ts",
+    "../../steiger.config.ts",
     "src/main/**/*",
     "src/preload/**/*"
   ],
