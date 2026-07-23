@@ -104,20 +104,22 @@ describe('storage ipc handlers: accounts connect logs nothing', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const handlers = createStorageIpcHandlers(await freshContext());
-    const noEncryptionHandlers = createStorageIpcHandlers(
-      await freshContext({ isEncryptionAvailable: () => false }),
-    );
+    try {
+      const handlers = createStorageIpcHandlers(await freshContext());
+      const noEncryptionHandlers = createStorageIpcHandlers(
+        await freshContext({ isEncryptionAvailable: () => false }),
+      );
 
-    await handlers['accounts:connect'](connectRequest);
-    await noEncryptionHandlers['accounts:connect'](connectRequest);
+      await handlers['accounts:connect'](connectRequest);
+      await noEncryptionHandlers['accounts:connect'](connectRequest);
 
-    expect(logSpy).not.toHaveBeenCalled();
-    expect(warnSpy).not.toHaveBeenCalled();
-    expect(errorSpy).not.toHaveBeenCalled();
-
-    logSpy.mockRestore();
-    warnSpy.mockRestore();
-    errorSpy.mockRestore();
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
   });
 });
