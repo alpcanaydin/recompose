@@ -1,4 +1,14 @@
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router';
+import { Suspense, lazy } from 'react';
+
+const RouterDevtools =
+  import.meta.env.DEV && import.meta.env.MODE !== 'test'
+    ? lazy(() =>
+        import('@tanstack/react-router-devtools').then((module) => ({
+          default: module.TanStackRouterDevtools,
+        })),
+      )
+    : () => null;
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -17,6 +27,9 @@ function RootLayout() {
       <main className="flex-1 bg-surface-content px-6 pt-13 pb-6 text-body">
         <Outlet />
       </main>
+      <Suspense>
+        <RouterDevtools />
+      </Suspense>
     </div>
   );
 }
