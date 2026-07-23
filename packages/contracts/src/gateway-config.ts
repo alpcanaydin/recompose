@@ -46,7 +46,7 @@ const virtualModelSchema = z.strictObject({
 });
 
 const layoutSchema = z.strictObject({
-  nodes: z.record(z.string().min(1), z.strictObject({ x: z.number(), y: z.number() })),
+  nodes: z.record(gatewaySlugSchema, z.strictObject({ x: z.number(), y: z.number() })),
   viewport: z
     .strictObject({ x: z.number(), y: z.number(), zoom: z.number().positive() })
     .optional(),
