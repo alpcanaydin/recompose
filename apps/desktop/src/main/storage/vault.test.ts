@@ -102,4 +102,12 @@ describe('loading a vault file', () => {
 
     expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
   });
+
+  test('a vault file whose entries hold a non-string value loads as the empty vault', async () => {
+    const file = await freshVaultFile();
+
+    await writeFile(file, JSON.stringify({ schemaVersion: 1, entries: { a: 5 } }), 'utf8');
+
+    expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
+  });
 });

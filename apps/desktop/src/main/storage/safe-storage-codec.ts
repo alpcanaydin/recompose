@@ -6,10 +6,11 @@ export type SecretCodec = {
   isPlaintextFallback: boolean;
 };
 
-export function createSafeStorageCodec(): SecretCodec {
+export function createSafeStorageCodec(platform: NodeJS.Platform = process.platform): SecretCodec {
   return {
     encrypt: (plain) => safeStorage.encryptString(plain).toString('base64'),
     decrypt: (encryptedBase64) => safeStorage.decryptString(Buffer.from(encryptedBase64, 'base64')),
-    isPlaintextFallback: safeStorage.getSelectedStorageBackend() === 'basic_text',
+    isPlaintextFallback:
+      platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text',
   };
 }

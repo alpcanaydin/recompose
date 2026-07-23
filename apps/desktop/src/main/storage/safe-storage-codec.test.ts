@@ -25,6 +25,15 @@ describe('safeStorage codec', () => {
     vi.resetModules();
     const { createSafeStorageCodec } = await import('./safe-storage-codec');
 
-    expect(createSafeStorageCodec().isPlaintextFallback).toBe(true);
+    expect(createSafeStorageCodec('linux').isPlaintextFallback).toBe(true);
+  });
+
+  test('off Linux, the fallback probe is never called', async () => {
+    getSelectedStorageBackend.mockClear();
+    vi.resetModules();
+    const { createSafeStorageCodec } = await import('./safe-storage-codec');
+
+    expect(createSafeStorageCodec('darwin').isPlaintextFallback).toBe(false);
+    expect(getSelectedStorageBackend).not.toHaveBeenCalled();
   });
 });
