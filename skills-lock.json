@@ -139,6 +139,24 @@
       "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
       "computedHash": "cd61afd28f594e8b6712b61749209cbb4466e3eec4e4223793bbd97fc85c1b63"
     },
+    "tanstack-devtools": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/tanstack-devtools/skills/tanstack-devtools/SKILL.md",
+      "computedHash": "ecb51f9902ae6de9f512b299e6c16bd4befc3ff2c62f8cd1ece07e31b1c73dfe"
+    },
+    "tanstack-query": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/tanstack-query/skills/tanstack-query/SKILL.md",
+      "computedHash": "b8a0477cd4d7bf8fa54d27f8e64d82388402f0d502591db50a357df5b9995c75"
+    },
+    "tanstack-router": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/tanstack-router/skills/tanstack-router/SKILL.md",
+      "computedHash": "24beccc4016f91bab65547209cfd849ea5e66f3d5d92820683a9dd84669ced56"
+    },
     "turborepo": {
       "source": "vercel/turborepo",
       "sourceType": "github",
