@@ -51,6 +51,10 @@ const voidRequestChannel = fc.constantFrom<IpcChannel>(
 const nonUndefinedJunk = fc.anything().filter((value) => value !== undefined);
 
 describe('ipc dispatch', () => {
+  test('every contract channel is registered for dispatch', () => {
+    expect([...ipcChannelNames].sort()).toEqual(Object.keys(ipcChannels).sort());
+  });
+
   test('a malformed payload becomes a validation-failed envelope, not a throw', async () => {
     const result = await dispatchIpc(
       handlersWith({}),

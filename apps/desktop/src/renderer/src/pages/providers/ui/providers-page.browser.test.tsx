@@ -126,6 +126,24 @@ test('removing an account deletes its row', async () => {
   await expect.element(screen.getByText('Claude Max')).not.toBeInTheDocument();
 });
 
+test('a storage-failed remove surfaces as a visible error', async () => {
+  bridgeWith({
+    'accounts:remove': () =>
+      Promise.resolve({
+        ok: false,
+        error: { code: 'storage-failed', message: 'Could not write the accounts file' },
+      }),
+  });
+
+  const screen = await renderProviders();
+
+  await screen.getByRole('button', { name: 'Remove Claude Max' }).click();
+
+  await expect
+    .element(screen.getByRole('alert'))
+    .toHaveTextContent('Could not write the accounts file');
+});
+
 test('a vault-unavailable failure surfaces as a visible error', async () => {
   bridgeWith({
     'accounts:connect': () =>
