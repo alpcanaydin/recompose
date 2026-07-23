@@ -1,12 +1,14 @@
 import { GATEWAY_CONFIG_VERSION, type GatewayConfig } from '@recompose/contracts';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import type { SecretCodec } from '../storage/safe-storage-codec';
+import type { AllowedOrigins, TrustedSender } from './sender-trust';
 
 import { loadVaultFile } from '../storage/vault';
+import { dispatchIpc } from './dispatch';
 import { createStorageIpcHandlers, type StorageIpcContext } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
@@ -206,5 +208,91 @@ describe('storage ipc handlers: storage failures', () => {
     });
 
     expect(result).toMatchObject({ ok: false, error: { code: 'storage-failed' } });
+  });
+});
+
+const secretFragment = 'sk-verysecret';
+const trustedSender: TrustedSender = {
+  frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
+  isMainFrame: true,
+};
+const allowedOrigins: AllowedOrigins = { devServerOrigin: undefined };
+
+describe('storage ipc handlers: accounts connect secret hygiene', () => {
+  test('vault-unavailable never leaks the secret', async () => {
+    const handlers = createStorageIpcHandlers(
+      await freshContext({ isEncryptionAvailable: () => false }),
+    );
+
+    const result = await handlers['accounts:connect'](connectRequest);
+
+    expect(JSON.stringify(result)).not.toContain(secretFragment);
+  });
+
+  test('vault-newer-schema never leaks the secret', async () => {
+    const ctx = await freshContext();
+
+    await writeFile(
+      join(ctx.userDataPath, 'vault.bin'),
+      JSON.stringify({ schemaVersion: 2, entries: {} }),
+      'utf8',
+    );
+
+    const handlers = createStorageIpcHandlers(ctx);
+    const result = await handlers['accounts:connect'](connectRequest);
+
+    expect(JSON.stringify(result)).not.toContain(secretFragment);
+  });
+
+  test('storage-failed never leaks the secret', async () => {
+    const ctx = await freshContext();
+
+    await mkdir(join(ctx.userDataPath, 'accounts.json'));
+
+    const handlers = createStorageIpcHandlers(ctx);
+    const result = await handlers['accounts:connect'](connectRequest);
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'storage-failed' } });
+    expect(JSON.stringify(result)).not.toContain(secretFragment);
+  });
+
+  test('dispatch-level validation-failed never leaks the secret', async () => {
+    const handlers = createStorageIpcHandlers(await freshContext());
+    const malformedRequest = { ...connectRequest, kind: 'oauth' };
+
+    const result = await dispatchIpc(
+      handlers,
+      'accounts:connect',
+      malformedRequest,
+      trustedSender,
+      allowedOrigins,
+    );
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'validation-failed' } });
+    expect(JSON.stringify(result)).not.toContain(secretFragment);
+  });
+});
+
+describe('storage ipc handlers: accounts connect logs nothing', () => {
+  test('connecting logs nothing to the console, on success or on any failure mode', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const handlers = createStorageIpcHandlers(await freshContext());
+    const noEncryptionHandlers = createStorageIpcHandlers(
+      await freshContext({ isEncryptionAvailable: () => false }),
+    );
+
+    await handlers['accounts:connect'](connectRequest);
+    await noEncryptionHandlers['accounts:connect'](connectRequest);
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 });

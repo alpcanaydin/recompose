@@ -3,7 +3,7 @@
   "workspaces": {
     "apps/desktop": {
       "ignoreDependencies": ["fast-check"],
-      "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
+      "ignore": ["src/renderer/src/app/routeTree.gen.ts", "src/main/ipc/register-ipc.ts"]
     },
     "packages/contracts": {
       "ignoreDependencies": ["fast-check"]

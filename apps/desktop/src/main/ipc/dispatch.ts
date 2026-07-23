@@ -5,9 +5,21 @@ import {
   type IpcResponse,
 } from '@recompose/contracts';
 
+import { assertTrustedSender, type AllowedOrigins, type TrustedSender } from './sender-trust';
+
 export type IpcHandlers = {
   [Channel in IpcChannel]: (request: IpcRequest<Channel>) => Promise<IpcResponse<Channel>>;
 };
+
+export const ipcChannelNames: readonly IpcChannel[] = [
+  'gateways:list',
+  'gateways:save',
+  'settings:get',
+  'settings:save',
+  'accounts:list',
+  'accounts:connect',
+  'accounts:remove',
+];
 
 function callHandler<Channel extends IpcChannel>(
   handlers: IpcHandlers,
@@ -21,7 +33,11 @@ export async function dispatchIpc(
   handlers: IpcHandlers,
   channel: IpcChannel,
   rawPayload: unknown,
+  sender: TrustedSender,
+  allowedOrigins: AllowedOrigins,
 ): Promise<unknown> {
+  assertTrustedSender(sender, allowedOrigins);
+
   const contract = ipcChannels[channel];
   const parsed = contract.request.safeParse(rawPayload);
 
