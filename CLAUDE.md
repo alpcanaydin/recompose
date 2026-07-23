@@ -15,6 +15,7 @@
 - Judge every finding against official docs and the actual code before acting — never apply blindly.
 - Addressed a finding → reply on its thread naming the fixing commit, then resolve the thread immediately.
 - Rejecting or deferring a finding → reply with the reasoning and leave the thread unresolved so CodeRabbit can respond; resolve only when the exchange settles.
+- No conversation stays unresolved at the end of the day: when CodeRabbit acknowledges an exchange but leaves the thread open, resolve it yourself.
 
 ## Skills
 
