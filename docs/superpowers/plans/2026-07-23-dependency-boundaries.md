@@ -249,7 +249,7 @@ printf "import '../../../app/app';\nexport const gateway = 1;\n" > apps/desktop/
 pnpm run lint:fsd; echo "exit: $?"
 ```
 
-Expected: `exit: 1` — at minimum `fsd/no-higher-level-imports` fires (an entity importing from the app layer); missing-public-api diagnostics may accompany it.
+Expected: `exit: 1` — at minimum `fsd/forbidden-imports` fires (an entity importing from the app layer; plugin 0.7.0 retired the older `no-higher-level-imports` rule id); missing-public-api diagnostics may accompany it.
 
 ```bash
 rm -rf apps/desktop/src/renderer/src/entities

@@ -17,16 +17,16 @@ Third infrastructure-queue item. ADR-0010 chose the tools (Steiger for FSD rules
 
 ## dependency-cruiser rules
 
-| Rule                      | Constraint                                                                                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `no-circular`             | No circular imports anywhere in the repo                                                                                   |
-| `renderer-isolated`       | `src/renderer/**` must not import `src/main/**` or `src/preload/**` (exception: type-only use of `src/preload/index.d.ts`) |
-| `main-not-into-renderer`  | `src/main/**` must not import `src/renderer/**`                                                                            |
-| `preload-isolated`        | `src/preload/**` must not import `src/main/**` or `src/renderer/**`                                                        |
-| `engine-no-electron`      | `packages/engine/**` must not import `electron`                                                                            |
-| `engine-only-contracts`   | `packages/engine/**` must not import `apps/**` or any workspace package other than `packages/contracts`                    |
-| `desktop-not-into-engine` | `apps/desktop/**` must not import `packages/engine/**`                                                                     |
-| `headless-scope`          | `apps/headless/**` may import only `packages/engine/**` and `packages/contracts/**` from the workspace                     |
+| Rule                      | Constraint                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `no-circular`             | No circular imports anywhere in the repo                                                                             |
+| `renderer-isolated`       | `src/renderer/**` must not import `src/main/**` or `src/preload/**` (exception: imports of `src/preload/index.d.ts`) |
+| `main-not-into-renderer`  | `src/main/**` must not import `src/renderer/**`                                                                      |
+| `preload-isolated`        | `src/preload/**` must not import `src/main/**` or `src/renderer/**`                                                  |
+| `engine-no-electron`      | `packages/engine/**` must not import `electron`                                                                      |
+| `engine-only-contracts`   | `packages/engine/**` must not import `apps/**` or any workspace package other than `packages/contracts`              |
+| `desktop-not-into-engine` | `apps/desktop/**` must not import `packages/engine/**`                                                               |
+| `headless-scope`          | `apps/headless/**` may import only `packages/engine/**` and `packages/contracts/**` from the workspace               |
 
 ## Steiger scope
 
