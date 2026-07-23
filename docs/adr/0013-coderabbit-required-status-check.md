@@ -20,6 +20,6 @@ Verified before adopting: CodeRabbit posts and completes the status on Renovate 
 
 ## Consequences
 
-**Good**: review findings are always triaged before merge; the gate is machine-enforced, consistent with ADR-0011's prose-rules-drift lesson.
+**Good**: the status check makes findings available before merge, and required thread resolution forces an explicit reply (fix or reasoned skip) on each finding — triage is machine-enforced, consistent with ADR-0011's prose-rules-drift lesson.
 
 **Bad**: merge waits for CodeRabbit's queue (typically minutes); every finding demands a thread reply even when the triage is "not applicable"; a CodeRabbit outage or a stale unresolved thread blocks merges — the repository-admin bypass in the ruleset remains the escape hatch.
