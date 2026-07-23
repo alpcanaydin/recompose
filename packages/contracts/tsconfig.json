@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.strict.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*", "vitest.config.ts", "../../vitest.shared.ts"]
+}
