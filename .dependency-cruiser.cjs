@@ -57,10 +57,64 @@ module.exports = {
         pathNot: '^(apps/headless|packages/(engine|contracts))/',
       },
     },
+    {
+      name: 'no-phantom-deps',
+      severity: 'error',
+      from: {},
+      to: { dependencyTypes: ['npm-no-pkg', 'npm-unknown'] },
+    },
+    {
+      name: 'not-to-unresolvable',
+      severity: 'error',
+      from: {},
+      to: { couldNotResolve: true, pathNot: ['\\?asset$'] },
+    },
+    {
+      name: 'no-orphans',
+      severity: 'error',
+      from: {
+        orphan: true,
+        pathNot: [
+          '\\.d\\.ts$',
+          '\\.test\\.(ts|tsx)$',
+          '\\.browser\\.test\\.tsx$',
+          '(^|/)src/main/index\\.ts$',
+          '(^|/)src/preload/index\\.ts$',
+          '(^|/)src/app/main\\.tsx$',
+        ],
+      },
+      to: {},
+    },
+    {
+      name: 'not-to-test',
+      severity: 'error',
+      from: { pathNot: ['\\.test\\.(ts|tsx)$', '\\.browser\\.test\\.tsx$'] },
+      to: { path: ['\\.test\\.(ts|tsx)$', '\\.browser\\.test\\.tsx$'] },
+    },
+    {
+      name: 'no-deprecated-core',
+      severity: 'error',
+      from: {},
+      to: {
+        dependencyTypes: ['core'],
+        path: ['^punycode$', '^domain$', '^constants$', '^sys$', '^_linklist$', '^_stream_wrap$'],
+      },
+    },
+    {
+      name: 'no-duplicate-dep-types',
+      severity: 'error',
+      from: {},
+      to: { moreThanOneDependencyType: true, dependencyTypesNot: ['type-only'] },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
+    exclude: { path: '(^|/)(out|coverage)/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'apps/desktop/tsconfig.web.json' },
+    enhancedResolveOptions: {
+      conditionNames: ['import', 'require', 'node', 'default', 'types'],
+      exportsFields: ['exports'],
+    },
   },
 };
