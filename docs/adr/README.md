@@ -24,4 +24,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0016](0016-storage-architecture.md)                           | Storage — JSON Configs, safeStorage Vault, node:sqlite Usage Log | Accepted | 2026-07-23 |
 | [0017](0017-tanstack-router-file-based-in-app-layer.md)        | TanStack Router, File-Based, Inside the FSD App Layer            | Accepted | 2026-07-23 |
 | [0018](0018-typed-ipc-with-result-envelope.md)                 | Typed IPC — Contracts-Defined Channels with a Result Envelope    | Accepted | 2026-07-23 |
-| [0019](0019-turbo-cache-persistence-in-ci.md)                  | Turbo Cache Persistence in CI via actions/cache                  | Accepted | 2026-07-23 |
+| [0019](0019-vercel-remote-cache-for-turbo.md)                  | Vercel Remote Cache for Turborepo                                | Accepted | 2026-07-23 |
