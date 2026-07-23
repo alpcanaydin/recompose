@@ -1,22 +1,20 @@
-import { electronAPI } from '@electron-toolkit/preload';
-import { contextBridge } from 'electron';
+import type { IpcRequest, IpcResponse, RecomposeIpc } from '@recompose/contracts';
 
-// Custom APIs for renderer
-const api = {};
+import { contextBridge, ipcRenderer } from 'electron';
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
-    contextBridge.exposeInMainWorld('api', api);
-  } catch (error) {
-    console.error(error);
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI;
-  // @ts-ignore (define in dts)
-  window.api = api;
+function bridgeEntry<Channel extends keyof RecomposeIpc>(channel: Channel) {
+  return (request: IpcRequest<Channel>): Promise<IpcResponse<Channel>> =>
+    ipcRenderer.invoke(channel, request);
 }
+
+const recompose: RecomposeIpc = Object.freeze({
+  'gateways:list': bridgeEntry('gateways:list'),
+  'gateways:save': bridgeEntry('gateways:save'),
+  'settings:get': bridgeEntry('settings:get'),
+  'settings:save': bridgeEntry('settings:save'),
+  'accounts:list': bridgeEntry('accounts:list'),
+  'accounts:connect': bridgeEntry('accounts:connect'),
+  'accounts:remove': bridgeEntry('accounts:remove'),
+});
+
+contextBridge.exposeInMainWorld('recompose', recompose);

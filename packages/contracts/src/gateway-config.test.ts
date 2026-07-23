@@ -153,6 +153,31 @@ describe('gateway config schema: rejections', () => {
   });
 });
 
+describe('gateway config schema: layout node keys', () => {
+  test('non-slug layout node keys are rejected', () => {
+    for (const bad of ['My Node', 'UPPER', '_lead', '']) {
+      const hostileLayout = {
+        ...validConfig,
+        layout: { nodes: { ...validConfig.layout.nodes, [bad]: { x: 0, y: 0 } } },
+      };
+
+      expect(() => gatewayConfigSchema.parse(hostileLayout)).toThrow();
+    }
+  });
+
+  test('a __proto__ layout key can never enter a parsed config', () => {
+    const hostileLayout = {
+      ...validConfig,
+      layout: { nodes: { ...validConfig.layout.nodes, ['__proto__']: { x: 0, y: 0 } } },
+    };
+
+    const parsed = gatewayConfigSchema.parse(hostileLayout);
+
+    expect(Object.keys(parsed.layout.nodes)).toEqual(Object.keys(validConfig.layout.nodes));
+    expect(Object.getPrototypeOf(parsed.layout.nodes)).not.toHaveProperty('x');
+  });
+});
+
 describe('gateway config schema: migration', () => {
   test('loadGatewayConfig validates after migration', () => {
     expect(loadGatewayConfig(validConfig)).toEqual(validConfig);
@@ -207,7 +232,7 @@ const configArb = fc.record({
   ),
   layout: fc.record({
     nodes: fc.dictionary(
-      fc.string({ minLength: 1, maxLength: 20 }),
+      slugArb,
       fc.record({
         x: fc.integer({ min: -10000, max: 10000 }),
         y: fc.integer({ min: -10000, max: 10000 }),

@@ -1,4 +1,6 @@
-import { Link, Outlet, createRootRoute } from '@tanstack/react-router';
+import type { QueryClient } from '@tanstack/react-query';
+
+import { Link, Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { Suspense, lazy } from 'react';
 
 const RouterDevtools =
@@ -10,7 +12,20 @@ const RouterDevtools =
       )
     : () => null;
 
-export const Route = createRootRoute({
+const QueryDevtools =
+  import.meta.env.DEV && import.meta.env.MODE !== 'test'
+    ? lazy(() =>
+        import('@tanstack/react-query-devtools').then((module) => ({
+          default: module.ReactQueryDevtools,
+        })),
+      )
+    : () => null;
+
+export type RouterAppContext = {
+  queryClient: QueryClient;
+};
+
+export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootLayout,
   notFoundComponent: NotFound,
 });
@@ -29,6 +44,7 @@ function RootLayout() {
       </main>
       <Suspense>
         <RouterDevtools />
+        <QueryDevtools />
       </Suspense>
     </div>
   );

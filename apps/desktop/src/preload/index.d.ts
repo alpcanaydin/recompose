@@ -1,8 +1,9 @@
-import { ElectronAPI } from '@electron-toolkit/preload';
+import type { RecomposeIpc } from '@recompose/contracts';
 
 declare global {
   interface Window {
-    electron: ElectronAPI;
-    api: unknown;
+    recompose: RecomposeIpc;
   }
 }
+
+export {};

@@ -10,6 +10,13 @@
 - `main` is protected. Never commit to it, locally or remotely.
 - Every job — feature, fix, docs, config, skills — gets its own worktree and branch, and lands through a PR. One job = one branch.
 
+## CodeRabbit reviews
+
+- Judge every finding against official docs and the actual code before acting — never apply blindly.
+- Addressed a finding → reply on its thread naming the fixing commit, then resolve the thread immediately.
+- Rejecting or deferring a finding → reply with the reasoning and leave the thread unresolved so CodeRabbit can respond; resolve only when the exchange settles.
+- No conversation stays unresolved at the end of the day: when CodeRabbit acknowledges an exchange but leaves the thread open, resolve it yourself.
+
 ## Skills
 
 - Use the `ponytail` skill for everything — every task starts by invoking it.
@@ -64,6 +71,7 @@
 
 - `feature-sliced-design` — before creating or moving ANY file in the renderer: the skill's decision tree determines its layer/slice/segment placement (FSD v2.1, see ADR-0010).
 - `tanstack-router` — before any TanStack Router work (routes, navigation, search params): file-based conventions, loader discipline, type registration. `tanstack-devtools` when wiring devtools.
+- `tanstack-query` — before any TanStack Query work (query options, loaders warming caches, mutations/invalidation): the skill's conventions apply.
 - `vercel-react-best-practices` — before writing or reviewing ANY React code in the renderer.
 - `vercel-composition-patterns` — when designing component APIs or structuring components (canvas nodes, inspector, drawers): composition over prop drilling.
 - `vercel-react-view-transitions` — when implementing UI transitions/animations between views or states (screen switches, drawer open/close, node focus).

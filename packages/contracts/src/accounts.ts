@@ -5,10 +5,12 @@ import { nonBlankString } from './non-blank';
 
 export const ACCOUNTS_VERSION = 1;
 
+export const accountKindSchema = z.enum(['subscription', 'api-key', 'aggregator']);
+
 const accountSchema = z.strictObject({
   id: nonBlankString,
   provider: nonBlankString,
-  kind: z.enum(['subscription', 'api-key', 'aggregator']),
+  kind: accountKindSchema,
   label: z.string().trim().min(1),
   credentialRef: nonBlankString,
 });

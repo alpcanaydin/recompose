@@ -58,6 +58,9 @@ jobs:
       - run: pnpm --filter @recompose/desktop exec playwright install --with-deps chromium
       - run: pnpm run fmt:check
       - run: pnpm exec turbo run lint typecheck build test
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
       - run: pnpm run lint:boundaries && pnpm run lint:fsd && pnpm run lint:dead
 
   gitleaks:

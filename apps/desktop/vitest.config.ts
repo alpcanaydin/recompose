@@ -14,6 +14,7 @@ export default defineConfig({
         'src/**/*.browser.test.*',
         'src/**/*.d.ts',
         'src/main/index.ts',
+        'src/main/ipc/register-ipc.ts',
         'src/main/windows/main-window.ts',
         'src/preload/index.ts',
         'src/renderer/src/app/main.tsx',
