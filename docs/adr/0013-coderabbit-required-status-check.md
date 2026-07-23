@@ -14,6 +14,7 @@ Three gates, layered:
 - `CodeRabbit` (integration id 347564) added to the ruleset's `required_status_checks` alongside `ci-success` — the review must have completed.
 - `required_review_thread_resolution: true` — a PR cannot merge while any review thread is unresolved. Resolution itself is the enforced gate; answering each finding with a fix or a reasoned skip before resolving is the project convention on top of it.
 - `required_approving_review_count: 1` plus `request_changes_workflow: true` in `.coderabbit.yaml` — CodeRabbit now submits request-changes while its findings are open and flips to an approving review once every thread is resolved, so the merge button stays red until that approval exists.
+- `dismiss_stale_reviews_on_push: true` and `require_last_push_approval: true` — every new push voids earlier approvals and the latest push must be approved by someone other than its pusher, so an approval always refers to the code being merged. (GitHub has no "every requested reviewer must approve" toggle; these two rules are its closest enforcement.)
 
 The ruleset JSON in `.github/rulesets/main.json` stays the source of truth and is re-applied via `gh api` (ADR-0007's mechanism).
 
