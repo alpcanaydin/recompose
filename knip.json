@@ -6,6 +6,7 @@
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
     "packages/contracts": {
+      "entry": ["src/**/*.test-d.ts"],
       "ignoreDependencies": ["fast-check"]
     },
     ".": {
