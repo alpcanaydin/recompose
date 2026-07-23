@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { migrateDocument, type Migration } from './migration';
+import { nonBlankString } from './non-blank';
 
 export const GATEWAY_CONFIG_VERSION = 1;
 
@@ -10,9 +11,9 @@ export const gatewaySlugSchema = z
 
 const targetSchema = z.strictObject({
   kind: z.literal('target'),
-  id: z.string().min(1),
-  accountId: z.string().min(1),
-  providerModel: z.string().min(1),
+  id: nonBlankString,
+  accountId: nonBlankString,
+  providerModel: nonBlankString,
   weight: z.int().min(0).max(100),
 });
 
@@ -30,7 +31,7 @@ const routingNodeSchema: z.ZodType<RoutingNode> = z.lazy(() =>
     targetSchema,
     z.strictObject({
       kind: z.literal('router'),
-      id: z.string().min(1),
+      id: nonBlankString,
       mode: z.enum(['failover', 'round-robin']),
       children: z.array(routingNodeSchema).min(1),
     }),
@@ -38,7 +39,7 @@ const routingNodeSchema: z.ZodType<RoutingNode> = z.lazy(() =>
 );
 
 const virtualModelSchema = z.strictObject({
-  id: z.string().min(1),
+  id: nonBlankString,
   slug: gatewaySlugSchema,
   displayName: z.string().trim().min(1),
   routing: routingNodeSchema,

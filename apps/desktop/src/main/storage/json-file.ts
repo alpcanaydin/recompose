@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
@@ -7,7 +8,7 @@ function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
 
 export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
-  const temporaryPath = `${filePath}.tmp-${process.pid}`;
+  const temporaryPath = `${filePath}.tmp-${process.pid}-${randomUUID()}`;
 
   await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
   await rename(temporaryPath, filePath);

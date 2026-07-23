@@ -39,7 +39,7 @@ Accounts are cross-gateway entities (one subscription serves many gateways), so 
 
 ## Schemas and migrations
 
-- Every JSON document carries `schemaVersion`. zod schemas and pure migration functions are shared by desktop, engine, and the future headless CLI — they become the **first real content of `packages/contracts`**, opening the package ADR-0010 reserved. Per ADR-0014's recorded follow-up, opening `packages/` adds `packages` to the boundary-scan arguments (`depcruise apps packages`).
+- Every JSON document carries `schemaVersion`. zod schemas and pure migration functions are shared by desktop, engine, and the future headless CLI — they become the **first real content of `packages/contracts`**, opening the package that ADR-0010 reserved. Per ADR-0014's recorded follow-up, opening `packages/` adds `packages` to the boundary-scan arguments (`depcruise apps packages`).
 - Load path: parse → migrate stepwise to current version → zod-validate. On unreadable or invalid input: the file is set aside as `<name>.corrupt-<timestamp>`, a fresh default takes its place, and the user is notified. No silent data loss, no silent "best effort" repair.
 - `usage.db` schema changes ride SQLite `PRAGMA user_version` with the same stepwise-migration discipline, applied by the engine on open.
 

@@ -1,15 +1,16 @@
 import { z } from 'zod';
 
 import { migrateDocument, type Migration } from './migration';
+import { nonBlankString } from './non-blank';
 
 export const ACCOUNTS_VERSION = 1;
 
 const accountSchema = z.strictObject({
-  id: z.string().min(1),
-  provider: z.string().min(1),
+  id: nonBlankString,
+  provider: nonBlankString,
   kind: z.enum(['subscription', 'api-key', 'aggregator']),
   label: z.string().trim().min(1),
-  credentialRef: z.string().min(1),
+  credentialRef: nonBlankString,
 });
 
 export const accountsDocumentSchema = z

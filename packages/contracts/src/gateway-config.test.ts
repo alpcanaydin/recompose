@@ -135,6 +135,22 @@ describe('gateway config schema: rejections', () => {
       expect(() => gatewayConfigSchema.parse({ ...validConfig, slug: bad })).toThrow();
     }
   });
+
+  test('a whitespace-only target accountId is rejected', () => {
+    const blankAccountId = {
+      ...validConfig,
+      virtualModels: [
+        {
+          id: 'vm1',
+          slug: 'fast',
+          displayName: 'fast',
+          routing: { ...validTarget, accountId: '   ' },
+        },
+      ],
+    };
+
+    expect(() => gatewayConfigSchema.parse(blankAccountId)).toThrow();
+  });
 });
 
 describe('gateway config schema: migration', () => {

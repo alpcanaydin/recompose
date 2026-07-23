@@ -50,4 +50,16 @@ describe('accounts registry', () => {
 
     expect(() => loadAccountsDocument(doubled)).toThrow(/duplicate/i);
   });
+
+  test('a whitespace-only account id is rejected', () => {
+    const doc = { ...validDoc, accounts: [{ ...validDoc.accounts[0], id: '   ' }] };
+
+    expect(() => loadAccountsDocument(doc)).toThrow();
+  });
+
+  test('a whitespace-only credential ref is rejected', () => {
+    const doc = { ...validDoc, accounts: [{ ...validDoc.accounts[0], credentialRef: '   ' }] };
+
+    expect(() => loadAccountsDocument(doc)).toThrow();
+  });
 });
