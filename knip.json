@@ -3,6 +3,10 @@
   "workspaces": {
     "apps/desktop": {
       "ignoreDependencies": ["fast-check"]
+    },
+    ".": {
+      "entry": ["steiger.config.ts"],
+      "ignoreDependencies": ["@steiger/toolkit", "@swc/core"]
     }
   }
 }
