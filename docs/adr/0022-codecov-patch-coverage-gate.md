@@ -9,7 +9,8 @@ The project coverage gate (90% thresholds, ratcheting per ADR-0015) judges the w
 
 ## Decision
 
-- **Codecov, free for public repositories, uploads via `codecov/codecov-action` v7 with OIDC** (`use_oidc: true`, job-scoped `id-token: write`) — no token secret to manage; fork PRs upload tokenless on public repos.
+- **Codecov, free for public repositories, uploads via `codecov/codecov-action` v7 with OIDC** (`use_oidc: true`) — no token secret to manage; fork PRs upload tokenless on public repos.
+- **OIDC lives in a dedicated `coverage-upload` job.** `id-token: write` never coexists with third-party code execution: the `check` job (pnpm postinstall scripts, playwright, the whole test suite) keeps `contents: read` only and hands `lcov.info` files over as artifacts; the upload job holds the OIDC grant and runs nothing but checkout, artifact download, and the pinned Codecov action. A compromised dependency in `check` therefore cannot mint an OIDC token and forge a green `codecov/patch`.
 - **`codecov/patch` at target 100%**: every changed line that appears in the coverage report must be covered. Lines in files excluded from coverage collection (main-process wiring, preload, generated route trees — the boundary files ADR-0012 already exempts) never enter the report, so the gate does not punish uncoverable wiring. Day-one green holds trivially: the gate judges future diffs.
 - **`codecov/project` status is off.** The vitest 90% ratchet remains the single authority for project-level coverage; a second project gate with its own comparison semantics would be a dual source of truth.
 - **Rollout order**: the upload step lands first; `codecov/patch` joins the ruleset's required checks only after the Codecov GitHub App is installed and the first upload proves the status context appears. Making it required first would brick every PR.
