@@ -17,16 +17,22 @@ Third infrastructure-queue item. ADR-0010 chose the tools (Steiger for FSD rules
 
 ## dependency-cruiser rules
 
-| Rule                      | Constraint                                                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `no-circular`             | No circular imports anywhere in the repo                                                                             |
-| `renderer-isolated`       | `src/renderer/**` must not import `src/main/**` or `src/preload/**` (exception: imports of `src/preload/index.d.ts`) |
-| `main-not-into-renderer`  | `src/main/**` must not import `src/renderer/**`                                                                      |
-| `preload-isolated`        | `src/preload/**` must not import `src/main/**` or `src/renderer/**`                                                  |
-| `engine-no-electron`      | `packages/engine/**` must not import `electron`                                                                      |
-| `engine-only-contracts`   | `packages/engine/**` must not import `apps/**` or any workspace package other than `packages/contracts`              |
-| `desktop-not-into-engine` | `apps/desktop/**` must not import `packages/engine/**`                                                               |
-| `headless-scope`          | `apps/headless/**` may import only `packages/engine/**` and `packages/contracts/**` from the workspace               |
+| Rule                      | Constraint                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `no-circular`             | No circular imports anywhere in the repo                                                                                     |
+| `renderer-isolated`       | `src/renderer/**` must not import `src/main/**` or `src/preload/**` (exception: imports of `src/preload/index.d.ts`)         |
+| `main-not-into-renderer`  | `src/main/**` must not import `src/renderer/**`                                                                              |
+| `preload-isolated`        | `src/preload/**` must not import `src/main/**` or `src/renderer/**`                                                          |
+| `engine-no-electron`      | `packages/engine/**` must not import `electron`                                                                              |
+| `engine-only-contracts`   | `packages/engine/**` must not import `apps/**` or any workspace package other than `packages/contracts`                      |
+| `desktop-not-into-engine` | `apps/desktop/**` must not import `packages/engine/**`                                                                       |
+| `headless-scope`          | `apps/headless/**` may import only `packages/engine/**` and `packages/contracts/**` from the workspace                       |
+| `no-phantom-deps`         | No imports of npm packages undeclared in the owning `package.json`                                                           |
+| `not-to-unresolvable`     | No imports that cannot be resolved on disk (exception: the electron-vite `?asset` query import)                              |
+| `no-orphans`              | No dead modules (exceptions: `.d.ts` files, `*.test.ts(x)`/`*.browser.test.tsx` files, and process entry points)             |
+| `not-to-test`             | Production code must not import `*.test.ts(x)` or `*.browser.test.tsx` files                                                 |
+| `no-deprecated-core`      | No imports of deprecated Node.js core modules (`punycode`, `domain`, `constants`, `sys`, `_linklist`, `_stream_wrap`)        |
+| `no-duplicate-dep-types`  | No import edge classified under more than one non-type-only dependency type (e.g. both `dependencies` and `devDependencies`) |
 
 ## Steiger scope
 
@@ -44,7 +50,7 @@ Each rule class gets a positive proof (temporary violating file → exit 1) and 
 
 ## Out of scope / deferred
 
-- Orphan-module and dependency-hygiene rules (`no-orphans`, dev-dep checks): add when a real incident motivates them.
+- `not-to-dev-dep`: rejected outright, not deferred. In an Electron app the entire toolchain — build plugins, test runners, and even `electron` itself — is a devDependency by design; the rule would drown in exceptions rather than catch anything real.
 - Dependency-graph visualization (`depcruise --output-type dot`): on demand, not wired into CI.
 - Extending Steiger with custom rules: the tool does not support external plugins yet.
 
