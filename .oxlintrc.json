@@ -572,6 +572,7 @@
     "coverage/**",
     "vendor/**",
     ".superpowers/**",
-    "docs/**"
+    "docs/**",
+    "**/routeTree.gen.ts"
   ]
 }

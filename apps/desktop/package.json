@@ -23,6 +23,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@tanstack/react-router": "1.170.18",
     "electron-liquid-glass": "^1.1.1"
   },
   "devDependencies": {
@@ -30,6 +31,8 @@
     "@fast-check/vitest": "0.4.1",
     "@recompose/contracts": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
+    "@tanstack/react-router-devtools": "1.167.0",
+    "@tanstack/router-plugin": "1.168.23",
     "@types/node": "24.13.3",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
