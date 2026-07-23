@@ -1,0 +1,11 @@
+coverage:
+  status:
+    project: off
+    patch:
+      default:
+        target: 100%
+        informational: false
+
+comment:
+  layout: condensed_header, diff, files
+  require_changes: true
