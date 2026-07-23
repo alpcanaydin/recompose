@@ -5,11 +5,27 @@ import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
+import { accountsQueryOptions } from '../pages/providers';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
 
 function emptyAccounts(): AccountsDocument {
   return { schemaVersion: 1, accounts: [] };
+}
+
+function seededAccounts(): AccountsDocument {
+  return {
+    schemaVersion: 1,
+    accounts: [
+      {
+        id: 'a1',
+        provider: 'anthropic',
+        kind: 'subscription',
+        label: 'Claude Max',
+        credentialRef: 'c1',
+      },
+    ],
+  };
 }
 
 function installFakeBridge(initial: AccountsDocument = emptyAccounts()) {
@@ -95,22 +111,25 @@ test('clicking the providers link navigates to the providers screen', async () =
 });
 
 test('navigating to providers loads and renders the registry from the bridge', async () => {
-  const seeded: AccountsDocument = {
-    schemaVersion: 1,
-    accounts: [
-      {
-        id: 'a1',
-        provider: 'anthropic',
-        kind: 'subscription',
-        label: 'Claude Max',
-        credentialRef: 'c1',
-      },
-    ],
-  };
-
-  const screen = await renderAt('/providers', seeded);
+  const screen = await renderAt('/providers', seededAccounts());
 
   await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
+});
+
+test('the /providers route loader warms the query cache before any component renders', async () => {
+  const seeded = seededAccounts();
+
+  installFakeBridge(seeded);
+
+  const queryClient = createQueryClient();
+  const router = createAppRouter({
+    queryClient,
+    history: createMemoryHistory({ initialEntries: ['/providers'] }),
+  });
+
+  await router.load();
+
+  expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
 });
 
 test('a valid gateway slug shows the canvas placeholder for that gateway', async () => {

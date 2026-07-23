@@ -102,6 +102,20 @@ test('connecting a provider adds it to the list and never shows the secret', asy
   await expect.element(screen.getByText('sk-supersecret')).not.toBeInTheDocument();
 });
 
+test('connecting an aggregator account shows its kind on the new row', async () => {
+  bridgeWith();
+
+  const screen = await renderProviders();
+
+  await screen.getByLabelText('Provider').fill('openai');
+  await screen.getByLabelText('Kind').selectOptions('aggregator');
+  await screen.getByLabelText('Label').fill('Work key');
+  await screen.getByLabelText('Secret').fill('sk-supersecret');
+  await screen.getByRole('button', { name: 'Connect' }).click();
+
+  await expect.element(screen.getByText('openai · aggregator')).toBeVisible();
+});
+
 test('removing an account deletes its row', async () => {
   bridgeWith();
 
