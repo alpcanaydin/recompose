@@ -21,5 +21,5 @@ The clean-code rules demand small single-responsibility functions, and `max-line
 
 ## Consequences
 
-- Any function whose branching exceeds 5 decision paths fails pre-commit and CI; the fix is decomposition, which the clean-code rules demand anyway. Engine routing logic (failover/round-robin trees) will feel this first — that pressure toward small pure functions is intended, and a genuine need for more headroom must argue its case in an ADR.
+- Any function whose measured cyclomatic complexity exceeds 5 — every `if`/`case`/loop/`catch` and every `&&`/`||`/`??` counts — fails pre-commit and CI; the fix is decomposition, which the clean-code rules demand anyway. Engine routing logic (failover/round-robin trees) will feel this first — that pressure toward small pure functions is intended, and a genuine need for more headroom must argue its case in an ADR.
 - Cognitive-complexity-specific smells that cyclomatic misses (deeply nested flat sequences, recursion penalties) stay uncovered until oxc ships the sonarjs plugin; the nesting ceilings blunt most of them meanwhile.
