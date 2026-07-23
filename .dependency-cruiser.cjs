@@ -31,7 +31,7 @@ module.exports = {
       name: 'engine-no-electron',
       severity: 'error',
       from: { path: '^packages/engine' },
-      to: { path: 'node_modules/electron/' },
+      to: { path: '^electron$|(^|/)node_modules/electron(/|$)' },
     },
     {
       name: 'engine-only-contracts',
