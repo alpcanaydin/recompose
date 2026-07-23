@@ -8,7 +8,8 @@
     "dist/**",
     "coverage/**",
     "vendor/**",
-    ".superpowers/**"
+    ".superpowers/**",
+    "**/routeTree.gen.ts"
   ],
   "singleQuote": true,
   "embeddedLanguageFormatting": "auto",

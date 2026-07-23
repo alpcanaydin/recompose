@@ -17,6 +17,7 @@ export default defineConfig({
         'src/main/windows/main-window.ts',
         'src/preload/index.ts',
         'src/renderer/src/app/main.tsx',
+        'src/renderer/src/app/routeTree.gen.ts',
       ],
     },
     projects: [
