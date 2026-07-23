@@ -1,13 +1,21 @@
+import type { QueryClient } from '@tanstack/react-query';
+
 import { createHashHistory, createRouter, type RouterHistory } from '@tanstack/react-router';
 
 import { routeTree } from './routeTree.gen';
 
-export function createAppRouter(history?: RouterHistory) {
-  const resolvedHistory = history ?? (import.meta.env.PROD ? createHashHistory() : undefined);
+export type AppRouterOptions = {
+  queryClient: QueryClient;
+  history?: RouterHistory;
+};
+
+export function createAppRouter(options: AppRouterOptions) {
+  const history = options.history ?? (import.meta.env.PROD ? createHashHistory() : undefined);
 
   return createRouter({
     routeTree,
-    ...(resolvedHistory === undefined ? {} : { history: resolvedHistory }),
+    context: { queryClient: options.queryClient },
+    ...(history === undefined ? {} : { history }),
   });
 }
 
