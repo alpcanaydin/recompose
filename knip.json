@@ -4,6 +4,9 @@
     "apps/desktop": {
       "ignoreDependencies": ["fast-check"]
     },
+    "packages/contracts": {
+      "ignoreDependencies": ["zod", "fast-check"]
+    },
     ".": {
       "entry": ["steiger.config.ts"],
       "ignoreDependencies": ["@steiger/toolkit", "@swc/core"]

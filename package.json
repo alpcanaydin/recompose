@@ -15,7 +15,7 @@
     "lint": "turbo run lint",
     "lint:root": "oxlint",
     "lint:fix": "oxlint --fix",
-    "lint:boundaries": "depcruise apps",
+    "lint:boundaries": "depcruise apps packages",
     "lint:dead": "knip",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "fmt": "oxfmt",
