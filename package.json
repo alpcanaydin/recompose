@@ -17,6 +17,7 @@
     "lint:fix": "oxlint --fix",
     "lint:boundaries": "depcruise apps packages",
     "lint:dead": "knip",
+    "lint:dup": "jscpd -c .jscpd.json apps packages",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
@@ -29,6 +30,7 @@
     "@stylistic/eslint-plugin": "5.10.0",
     "@swc/core": "1.15.46",
     "dependency-cruiser": "18.1.0",
+    "jscpd": "5.0.12",
     "knip": "6.29.0",
     "lefthook": "2.1.10",
     "oxfmt": "0.59.0",

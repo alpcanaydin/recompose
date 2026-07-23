@@ -1,0 +1,8 @@
+{
+  "format": ["typescript", "tsx"],
+  "ignore": ["**/*.gen.ts", "**/*.test.ts", "**/*.test.tsx"],
+  "minTokens": 50,
+  "minLines": 5,
+  "threshold": 0,
+  "reporters": ["console"]
+}

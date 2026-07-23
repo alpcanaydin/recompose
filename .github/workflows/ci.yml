@@ -61,7 +61,10 @@ jobs:
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
-      - run: pnpm run lint:boundaries && pnpm run lint:fsd && pnpm run lint:dead
+      - run: pnpm run lint:boundaries
+      - run: pnpm run lint:fsd
+      - run: pnpm run lint:dead
+      - run: pnpm run lint:dup
 
   gitleaks:
     runs-on: ubuntu-latest
