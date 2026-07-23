@@ -9,6 +9,7 @@
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
+    "types": ["@vitest/browser-playwright"],
     "paths": {
       "@renderer/*": ["./src/renderer/src/*"]
     }

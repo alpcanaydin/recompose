@@ -45,6 +45,8 @@
 
 - Write tests at every layer of the test pyramid: unit, integration, e2e.
 - Unit & integration tests: use the `javascript-testing-patterns` skill.
+- Vitest work (writing tests, config, mocking, coverage): use the `vitest` skill.
+- Property-based testing (fast-check): use the `javascript-testing-expert` skill.
 - E2E tests: use the `e2e-testing-patterns` skill.
 
 ## Clean code
