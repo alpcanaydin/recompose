@@ -26,6 +26,7 @@ Sixth infrastructure-queue item. The storage foundation (ADR-0016) shipped main-
 - **Vault wiring closes its recorded debts** (storage-job ledger): the safeStorage codec is constructed after `app.whenReady` (Linux `unknown`-backend trap); encryption-unavailable / `basic_text` fallback is a typed, expected failure surfaced to the renderer as an error result, not a thrown surprise; `loadVaultFile`'s newer-schema throw is caught and mapped to a meaningful error.
 - **Preload becomes the narrow bridge**: the commented, `@ts-ignore`'d scaffold is deleted; `window.recompose` exposes exactly the contract channels via `contextBridge`, typed from contracts in `index.d.ts`.
 - **Renderer data layer: TanStack Query + router loaders** (user-locked). `QueryClient` lives in the app layer and enters the router context; route loaders warm caches with `ensureQueryData`; screens read with `useSuspenseQuery`; writes are mutations followed by `invalidateQueries`. Query/mutation definitions are page-local (`pages/<slice>/api/` segment) per Pages First — promoted only when a second consumer exists. The providers page becomes the first real consumer (accounts registry replaces its placeholder).
+- **Query Devtools ride along** (user addition): `@tanstack/react-query-devtools` mounts dev-only with the same gating pattern as the router devtools (lazy, statically eliminated from production bundles, never loaded under vitest).
 
 ## Error model
 
