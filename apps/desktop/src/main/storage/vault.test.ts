@@ -5,7 +5,14 @@ import { describe, expect, test } from 'vitest';
 
 import type { SecretCodec } from './safe-storage-codec';
 
-import { deleteSecret, getSecret, loadVaultFile, saveVaultFile, setSecret } from './vault';
+import {
+  deleteSecret,
+  getSecret,
+  loadVaultFile,
+  saveVaultFile,
+  setSecret,
+  VaultNewerSchemaError,
+} from './vault';
 
 const reverseCodec: SecretCodec = {
   encrypt: (plain) => Buffer.from(plain.split('').reverse().join('')).toString('base64'),
@@ -136,12 +143,13 @@ describe('loading a structurally invalid vault file', () => {
 });
 
 describe('loading a vault file from a newer app version', () => {
-  test('a newer schemaVersion throws instead of emptying the vault', async () => {
+  test('a newer schemaVersion throws a VaultNewerSchemaError instead of emptying the vault', async () => {
     const dir = await freshVaultDir();
     const file = join(dir, 'vault.bin');
 
     await writeFile(file, JSON.stringify({ schemaVersion: 2, entries: {} }), 'utf8');
 
+    await expect(loadVaultFile(file, () => undefined)).rejects.toThrow(VaultNewerSchemaError);
     await expect(loadVaultFile(file, () => undefined)).rejects.toThrow(/newer/);
     expect(await readdir(dir)).toEqual(['vault.bin']);
   });

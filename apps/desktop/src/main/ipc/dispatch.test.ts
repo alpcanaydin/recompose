@@ -127,14 +127,24 @@ describe('ipc dispatch: sender trust rejects', () => {
   });
 
   test('a non-main frame at an otherwise trusted origin is rejected', async () => {
+    const calls: string[] = [];
+    const handlers = handlersWith({
+      'settings:get': () => {
+        calls.push('settings:get');
+
+        return Promise.resolve({ ok: true, value: settings });
+      },
+    });
     const subFrameSender: TrustedSender = {
       frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
       isMainFrame: false,
     };
 
     await expect(
-      dispatchIpc(handlersWith({}), 'settings:get', undefined, subFrameSender, allowedOrigins),
+      dispatchIpc(handlers, 'settings:get', undefined, subFrameSender, allowedOrigins),
     ).rejects.toThrow();
+
+    expect(calls).toEqual([]);
   });
 });
 

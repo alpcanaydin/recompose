@@ -9,6 +9,13 @@ export type VaultDocument = {
 
 const emptyVault: VaultDocument = { schemaVersion: 1, entries: {} };
 
+export class VaultNewerSchemaError extends Error {
+  constructor(schemaVersion: number) {
+    super(`vault schemaVersion ${schemaVersion} is newer than supported 1`);
+    this.name = 'VaultNewerSchemaError';
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -56,7 +63,7 @@ export async function loadVaultFile(
   const newerVersion = readNewerSchemaVersion(raw);
 
   if (newerVersion !== undefined) {
-    throw new Error(`vault schemaVersion ${newerVersion} is newer than supported 1`);
+    throw new VaultNewerSchemaError(newerVersion);
   }
 
   await quarantineFile(filePath, onCorrupt);

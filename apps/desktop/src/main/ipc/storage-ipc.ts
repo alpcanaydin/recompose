@@ -9,7 +9,13 @@ import type { IpcHandlers } from './dispatch';
 import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { loadSettingsFile, saveSettingsFile } from '../storage/settings-store';
-import { deleteSecret, loadVaultFile, saveVaultFile, setSecret } from '../storage/vault';
+import {
+  deleteSecret,
+  loadVaultFile,
+  saveVaultFile,
+  setSecret,
+  VaultNewerSchemaError,
+} from '../storage/vault';
 
 export type StorageIpcContext = {
   userDataPath: string;
@@ -108,10 +114,11 @@ async function openVaultForWrite(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, vault: await loadVaultFile(paths.vaultFile, ctx.onCorrupt) };
   } catch (error) {
-    return failure(
-      'vault-newer-schema',
-      error instanceof Error ? error.message : 'vault schema is newer than supported',
-    );
+    if (error instanceof VaultNewerSchemaError) {
+      return failure('vault-newer-schema', error.message);
+    }
+
+    return storageFailure(error);
   }
 }
 
@@ -169,9 +176,13 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    const vault = await loadVaultFile(paths.vaultFile, ctx.onCorrupt);
+    const opened = await openVaultForWrite(ctx, paths);
 
-    await saveVaultFile(paths.vaultFile, deleteSecret(vault, row.credentialRef));
+    if (!opened.ok) {
+      return opened;
+    }
+
+    await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
 
     const updated = {
       ...accounts,
