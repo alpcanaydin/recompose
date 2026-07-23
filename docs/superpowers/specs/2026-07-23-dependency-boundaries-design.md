@@ -13,7 +13,7 @@ Third infrastructure-queue item. ADR-0010 chose the tools (Steiger for FSD rules
 - **dependency-cruiser 18.1.0**, config `.dependency-cruiser.cjs` at the repo root. All rules `severity: error`.
 - **Steiger 0.6.0 + @feature-sliced/steiger-plugin 0.7.0**, config `steiger.config.ts` at the repo root, `fsd.configs.recommended`, targeting `apps/desktop/src/renderer/src`.
 - **Stages: pre-commit + CI** (user decision). Two lefthook pre-commit jobs and one CI `check`-job step running the same root scripts — local hooks stop violations before they leave the machine, CI is the net for `--no-verify` (ADR-0006/0007 layering).
-- **Pre-staged rules ship now.** Rules for `packages/engine`, `packages/contracts`, and `apps/headless` are written today against paths that do not exist yet; they match nothing until a package opens, then bind automatically with zero config changes.
+- **Pre-staged rules ship now.** Rules for `packages/engine`, `packages/contracts`, and `apps/headless` are written today against paths that do not exist yet; they match nothing until a package opens, then bind with zero rule changes. The only touch when `packages/` first opens: adding `packages` to the scan arguments (`depcruise apps` → `depcruise apps packages`) — recorded in ADR-0014. (`includeOnly` was rejected: it filters node_modules edges out of the graph, which would silently disable the `engine-no-electron` rule.)
 
 ## dependency-cruiser rules
 
@@ -34,7 +34,7 @@ Third infrastructure-queue item. ADR-0010 chose the tools (Steiger for FSD rules
 
 ## Wiring
 
-- Root `package.json` scripts: `"lint:boundaries": "depcruise ."` with `options.includeOnly: ['^apps', '^packages']` in the config (a scan target that exists regardless of whether `packages/` has opened yet — the alternative, listing `packages` as a CLI argument, fails while the directory does not exist), and `"lint:fsd": "steiger apps/desktop/src/renderer/src"` (steiger in check mode, non-interactive).
+- Root `package.json` scripts: `"lint:boundaries": "depcruise apps"` (gains `packages` as an argument when that directory first opens; depcruise errors on nonexistent paths, so it cannot be pre-listed) and `"lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings"` (single run, non-interactive; warnings fail too — closed to interpretation).
 - Lefthook `pre-commit`: two jobs, `boundaries` and `fsd`, same priority tier as the existing `lint` job.
 - CI `check` job: one step `pnpm run lint:boundaries && pnpm run lint:fsd` after the existing turbo step.
 
