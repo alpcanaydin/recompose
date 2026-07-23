@@ -26,3 +26,24 @@ test('an unknown path shows the not-found state inside the shell', async () => {
   await expect.element(screen.getByText('Not found')).toBeVisible();
   await expect.element(screen.getByRole('link', { name: 'Providers' })).toBeVisible();
 });
+
+test('clicking the providers link navigates to the providers screen', async () => {
+  const screen = await renderAt('/');
+
+  await screen.getByRole('link', { name: 'Providers' }).click();
+
+  await expect.element(screen.getByRole('heading', { name: 'Providers' })).toBeVisible();
+});
+
+test('a valid gateway slug shows the canvas placeholder for that gateway', async () => {
+  const screen = await renderAt('/gateways/my-gateway');
+
+  await expect.element(screen.getByRole('heading', { name: 'my-gateway' })).toBeVisible();
+  await expect.element(screen.getByText('Canvas coming soon.')).toBeVisible();
+});
+
+test('an invalid gateway slug lands on the not-found state', async () => {
+  const screen = await renderAt('/gateways/Not%20A%20Slug');
+
+  await expect.element(screen.getByText('Not found')).toBeVisible();
+});

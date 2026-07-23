@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProvidersRouteImport } from './routes/providers'
+import { Route as GatewaysSlugRouteImport } from './routes/gateways.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ProvidersRoute = ProvidersRouteImport.update({
   path: '/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GatewaysSlugRoute = GatewaysSlugRouteImport.update({
+  id: '/gateways/$slug',
+  path: '/gateways/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
+  '/gateways/$slug': typeof GatewaysSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
+  '/gateways/$slug': typeof GatewaysSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
+  '/gateways/$slug': typeof GatewaysSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/providers'
+  fullPaths: '/' | '/providers' | '/gateways/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/providers'
-  id: '__root__' | '/' | '/providers'
+  to: '/' | '/providers' | '/gateways/$slug'
+  id: '__root__' | '/' | '/providers' | '/gateways/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProvidersRoute: typeof ProvidersRoute
+  GatewaysSlugRoute: typeof GatewaysSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gateways/$slug': {
+      id: '/gateways/$slug'
+      path: '/gateways/$slug'
+      fullPath: '/gateways/$slug'
+      preLoaderRoute: typeof GatewaysSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProvidersRoute: ProvidersRoute,
+  GatewaysSlugRoute: GatewaysSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

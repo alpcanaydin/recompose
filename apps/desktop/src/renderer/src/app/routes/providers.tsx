@@ -1,9 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/providers')({
-  component: ProvidersPlaceholder,
-});
+import { ProvidersPage } from '../../pages/providers';
 
-function ProvidersPlaceholder() {
-  return <p>Providers</p>;
-}
+export const Route = createFileRoute('/providers')({
+  component: ProvidersPage,
+});
