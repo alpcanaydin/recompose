@@ -8,4 +8,4 @@ coverage:
 
 comment:
   layout: condensed_header, diff, files
-  require_changes: true
+  require_changes: false
