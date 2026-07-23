@@ -17,7 +17,7 @@ function senderFromEvent(event: IpcMainInvokeEvent): TrustedSender {
 function devServerOrigin(): string | undefined {
   const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
 
-  return rendererUrl === undefined ? undefined : new URL(rendererUrl).origin;
+  return rendererUrl === undefined || rendererUrl === '' ? undefined : new URL(rendererUrl).origin;
 }
 
 export function registerIpcHandlers(handlers: IpcHandlers): void {
