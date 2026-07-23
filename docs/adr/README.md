@@ -28,3 +28,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0020](0020-jscpd-duplicate-code-gate.md)                      | jscpd Duplicate-Code Gate at Zero Threshold                      | Accepted | 2026-07-23 |
 | [0021](0021-cyclomatic-complexity-ceiling.md)                  | Cyclomatic Complexity Ceiling of 5 via oxlint                    | Accepted | 2026-07-23 |
 | [0022](0022-codecov-patch-coverage-gate.md)                    | Patch Coverage Gate via Codecov                                  | Accepted | 2026-07-23 |
+| [0023](0023-type-level-tests.md)                               | Type-Level Tests for Load-Bearing Derived Types                  | Accepted | 2026-07-24 |
