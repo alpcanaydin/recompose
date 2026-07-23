@@ -102,6 +102,34 @@ describe('gateway config schema: rejections', () => {
     expect(() => gatewayConfigSchema.parse({ ...validConfig, apiKey: 'sk-oops' })).toThrow();
   });
 
+  test('secrets cannot hide in a nested router child either', () => {
+    const nestedSmuggle = {
+      ...validConfig,
+      virtualModels: [
+        {
+          id: 'vm1',
+          slug: 'fast',
+          displayName: 'fast',
+          routing: {
+            kind: 'router' as const,
+            id: 'outer',
+            mode: 'failover' as const,
+            children: [
+              {
+                kind: 'router' as const,
+                id: 'inner',
+                mode: 'failover' as const,
+                children: [{ ...validTarget, apiKey: 'sk-oops' }],
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    expect(() => gatewayConfigSchema.parse(nestedSmuggle)).toThrow();
+  });
+
   test('invalid slugs are rejected', () => {
     for (const bad of ['My Gateway', 'UPPER', '-lead', 'trail-', 'a--b', '']) {
       expect(() => gatewayConfigSchema.parse({ ...validConfig, slug: bad })).toThrow();

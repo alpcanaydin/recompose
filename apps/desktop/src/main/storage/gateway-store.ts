@@ -2,29 +2,17 @@ import { loadGatewayConfig, type GatewayConfig } from '@recompose/contracts';
 import { mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { quarantineFile, readJsonWithQuarantine, writeJsonAtomic } from './json-file';
+import { readDocumentWithQuarantine, writeJsonAtomic } from './json-file';
 
 export async function saveGatewayConfig(dir: string, config: GatewayConfig): Promise<void> {
   await writeJsonAtomic(join(dir, `${config.slug}.json`), config);
 }
 
-async function loadOneGatewayConfig(
+function loadOneGatewayConfig(
   filePath: string,
   onCorrupt: (quarantinedPath: string) => void,
 ): Promise<GatewayConfig | undefined> {
-  const raw = await readJsonWithQuarantine(filePath, onCorrupt);
-
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  try {
-    return loadGatewayConfig(raw);
-  } catch {
-    await quarantineFile(filePath, onCorrupt);
-
-    return undefined;
-  }
+  return readDocumentWithQuarantine(filePath, loadGatewayConfig, onCorrupt);
 }
 
 export async function listGatewayConfigs(

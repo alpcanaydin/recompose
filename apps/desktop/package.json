@@ -23,12 +23,12 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@recompose/contracts": "workspace:*",
     "electron-liquid-glass": "^1.1.1"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "2.0.0",
     "@fast-check/vitest": "0.4.1",
+    "@recompose/contracts": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "24.13.3",
     "@types/react": "19.2.17",

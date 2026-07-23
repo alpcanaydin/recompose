@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -14,8 +14,12 @@ const reverseCodec: SecretCodec = {
   isPlaintextFallback: false,
 };
 
+async function freshVaultDir(): Promise<string> {
+  return mkdtemp(join(tmpdir(), 'recompose-vault-'));
+}
+
 async function freshVaultFile(): Promise<string> {
-  return join(await mkdtemp(join(tmpdir(), 'recompose-vault-')), 'vault.bin');
+  return join(await freshVaultDir(), 'vault.bin');
 }
 
 describe('secret vault', () => {
@@ -64,50 +68,81 @@ describe('secret vault', () => {
   });
 });
 
-describe('loading a vault file', () => {
+describe('loading an absent or well-formed vault file', () => {
   test('an absent vault file loads as the empty vault', async () => {
     const file = await freshVaultFile();
 
     expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
   });
+});
 
-  test('a vault file whose contents are not an object loads as the empty vault', async () => {
-    const file = await freshVaultFile();
+describe('loading a structurally invalid vault file', () => {
+  async function expectQuarantined(dir: string, file: string): Promise<void> {
+    const seen: string[] = [];
+
+    const loaded = await loadVaultFile(file, (p) => seen.push(p));
+
+    expect(loaded).toEqual({ schemaVersion: 1, entries: {} });
+    expect(seen).toHaveLength(1);
+    const entries = await readdir(dir);
+
+    expect(entries).toEqual([expect.stringMatching(/^vault\.bin\.corrupt-/)]);
+  }
+
+  test('a vault file whose contents are not an object is quarantined', async () => {
+    const dir = await freshVaultDir();
+    const file = join(dir, 'vault.bin');
 
     await writeFile(file, JSON.stringify('not-a-vault'), 'utf8');
 
-    expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
+    await expectQuarantined(dir, file);
   });
 
-  test('a vault file holding null loads as the empty vault', async () => {
-    const file = await freshVaultFile();
+  test('a vault file holding null is quarantined', async () => {
+    const dir = await freshVaultDir();
+    const file = join(dir, 'vault.bin');
 
     await writeFile(file, JSON.stringify(null), 'utf8');
 
-    expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
+    await expectQuarantined(dir, file);
   });
 
-  test('a vault file with an unrecognised schema version loads as the empty vault', async () => {
-    const file = await freshVaultFile();
+  test('a vault file missing schemaVersion entirely is quarantined', async () => {
+    const dir = await freshVaultDir();
+    const file = join(dir, 'vault.bin');
 
-    await writeFile(file, JSON.stringify({ schemaVersion: 2, entries: {} }), 'utf8');
+    await writeFile(file, JSON.stringify({ entries: {} }), 'utf8');
 
-    expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
+    await expectQuarantined(dir, file);
   });
 
-  test('a vault file whose entries are not a record loads as the empty vault', async () => {
-    const file = await freshVaultFile();
+  test('a vault file whose entries are not a record is quarantined', async () => {
+    const dir = await freshVaultDir();
+    const file = join(dir, 'vault.bin');
 
     await writeFile(file, JSON.stringify({ schemaVersion: 1, entries: 'nope' }), 'utf8');
 
-    expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
+    await expectQuarantined(dir, file);
   });
 
-  test('a vault file whose entries hold a non-string value loads as the empty vault', async () => {
-    const file = await freshVaultFile();
+  test('a vault file whose entries hold a non-string value is quarantined', async () => {
+    const dir = await freshVaultDir();
+    const file = join(dir, 'vault.bin');
 
     await writeFile(file, JSON.stringify({ schemaVersion: 1, entries: { a: 5 } }), 'utf8');
 
-    expect(await loadVaultFile(file, () => undefined)).toEqual({ schemaVersion: 1, entries: {} });
+    await expectQuarantined(dir, file);
+  });
+});
+
+describe('loading a vault file from a newer app version', () => {
+  test('a newer schemaVersion throws instead of emptying the vault', async () => {
+    const dir = await freshVaultDir();
+    const file = join(dir, 'vault.bin');
+
+    await writeFile(file, JSON.stringify({ schemaVersion: 2, entries: {} }), 'utf8');
+
+    await expect(loadVaultFile(file, () => undefined)).rejects.toThrow(/newer/);
+    expect(await readdir(dir)).toEqual(['vault.bin']);
   });
 });

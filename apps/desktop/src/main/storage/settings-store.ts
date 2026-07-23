@@ -1,18 +1,14 @@
 import { defaultSettings, loadSettings, type Settings } from '@recompose/contracts';
 
-import { readJsonWithQuarantine, writeJsonAtomic } from './json-file';
+import { readDocumentWithQuarantine, writeJsonAtomic } from './json-file';
 
 export async function loadSettingsFile(
   filePath: string,
   onCorrupt: (quarantinedPath: string) => void,
 ): Promise<Settings> {
-  const raw = await readJsonWithQuarantine(filePath, onCorrupt);
+  const settings = await readDocumentWithQuarantine(filePath, loadSettings, onCorrupt);
 
-  if (raw === undefined) {
-    return defaultSettings();
-  }
-
-  return loadSettings(raw);
+  return settings ?? defaultSettings();
 }
 
 export async function saveSettingsFile(filePath: string, settings: Settings): Promise<void> {

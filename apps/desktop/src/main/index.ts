@@ -7,6 +7,8 @@ import { createMainWindow } from './windows/main-window';
 void app.whenReady().then(() => {
   void initializeStorage(app.getPath('userData'), (quarantinedPath) => {
     console.warn(`storage document quarantined: ${quarantinedPath}`);
+  }).catch((error: unknown) => {
+    console.error('storage initialization failed', error);
   });
 
   electronApp.setAppUserModelId('sh.recompose.app');
