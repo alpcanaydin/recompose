@@ -22,6 +22,7 @@ dedup
 değiştir
 depcruise
 diffable
+dmgbuild
 docblocks
 domcontentloaded
 dorny
@@ -84,6 +85,7 @@ shellcheck
 Squarespace
 steiger
 steiger's
+streamable
 subline
 Substack
 Supabase
@@ -119,6 +121,7 @@ Veed
 versionless
 verysecret
 Weavy
+WHATWG
 winstaller
 worktree
 worktrees
