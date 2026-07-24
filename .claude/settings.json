@@ -3,20 +3,6 @@
   "enabledMcpjsonServers": [
     "mobbin"
   ],
-  "enabledPlugins": {
-    "codex@openai-codex": true,
-    "superpowers@claude-plugins-official": true,
-    "andrej-karpathy-skills@karpathy-skills": true,
-    "ponytail@ponytail": true
-  },
-  "extraKnownMarketplaces": {
-    "ponytail": {
-      "source": {
-        "source": "github",
-        "repo": "DietrichGebert/ponytail"
-      }
-    }
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -71,5 +57,27 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "codex@openai-codex": true,
+    "superpowers@claude-plugins-official": true,
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "ponytail@ponytail": true,
+    "storybook@storybook": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "storybook": {
+      "source": {
+        "source": "github",
+        "repo": "storybookjs/mcp",
+        "ref": "main"
+      }
+    }
   }
 }

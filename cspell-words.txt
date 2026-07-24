@@ -4,6 +4,7 @@ AKIAIOSFODNN
 alikes
 Alpcan
 alpcanaydin
+andrej
 asar
 Attio
 Aydin
@@ -37,6 +38,7 @@ esac
 Firecrawl
 flatlist
 frontmost
+Gebert
 glassmorphism
 idempotently
 karpathy
@@ -51,6 +53,7 @@ lintable
 lockfiles
 lossily
 McCabe
+Mcpjson
 Menlo
 Meridius
 Mobbin
