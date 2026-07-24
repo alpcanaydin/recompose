@@ -7,14 +7,17 @@ export type AllowedOrigins = {
   devServerOrigin: string | undefined;
 };
 
-function isTrustedOrigin(frameUrl: string, allowed: AllowedOrigins): boolean {
-  const parsedUrl = new URL(frameUrl);
+const APP_SCHEME = 'app:';
+const APP_HOST = 'renderer';
 
-  if (parsedUrl.protocol === 'file:') {
+function isTrustedOrigin(frameUrl: string, allowed: AllowedOrigins): boolean {
+  const url = new URL(frameUrl);
+
+  if (url.protocol === APP_SCHEME && url.host === APP_HOST) {
     return true;
   }
 
-  return allowed.devServerOrigin !== undefined && parsedUrl.origin === allowed.devServerOrigin;
+  return allowed.devServerOrigin !== undefined && url.origin === allowed.devServerOrigin;
 }
 
 export function assertTrustedSender(sender: TrustedSender, allowed: AllowedOrigins): void {

@@ -6,11 +6,8 @@ const devOrigins: AllowedOrigins = { devServerOrigin: 'http://localhost:5173' };
 const noDevOrigin: AllowedOrigins = { devServerOrigin: undefined };
 
 describe('sender trust: accepted senders', () => {
-  test('the packaged app main frame (file://) is trusted', () => {
-    const sender: TrustedSender = {
-      frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
-      isMainFrame: true,
-    };
+  test('the packaged app main frame (app://renderer) is trusted', () => {
+    const sender: TrustedSender = { frameUrl: 'app://renderer/index.html', isMainFrame: true };
 
     expect(() => {
       assertTrustedSender(sender, noDevOrigin);
@@ -53,6 +50,17 @@ describe('sender trust: rejected senders', () => {
 
   test('the dev server origin is untrusted when no dev origin is configured', () => {
     const sender: TrustedSender = { frameUrl: 'http://localhost:5173/', isMainFrame: true };
+
+    expect(() => {
+      assertTrustedSender(sender, noDevOrigin);
+    }).toThrow();
+  });
+
+  test('a file:// main frame is now rejected', () => {
+    const sender: TrustedSender = {
+      frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
+      isMainFrame: true,
+    };
 
     expect(() => {
       assertTrustedSender(sender, noDevOrigin);

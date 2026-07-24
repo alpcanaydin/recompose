@@ -38,7 +38,7 @@ const connectRequest = {
 
 const secretFragment = 'sk-verysecret';
 const trustedSender: TrustedSender = {
-  frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
+  frameUrl: 'app://renderer/index.html',
   isMainFrame: true,
 };
 const allowedOrigins: AllowedOrigins = { devServerOrigin: undefined };
