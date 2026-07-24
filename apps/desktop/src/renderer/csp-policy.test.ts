@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { contentSecurityPolicy } from './csp-policy';
+import { contentSecurityPolicy, injectContentSecurityPolicy } from './csp-policy';
 
 describe('content security policy per build mode', () => {
   test('production forbids inline styles', () => {
@@ -24,5 +24,19 @@ describe('content security policy per build mode', () => {
       expect(policy).toContain("script-src 'self'");
       expect(policy).toContain("img-src 'self' data:");
     }
+  });
+});
+
+describe('inject content security policy', () => {
+  test('the placeholder swaps for the mode policy', () => {
+    const html = '<meta content="__CSP__" />';
+
+    expect(injectContentSecurityPolicy(html, 'build')).toBe(
+      `<meta content="${contentSecurityPolicy('build')}" />`,
+    );
+  });
+
+  test('a document without the placeholder fails the build', () => {
+    expect(() => injectContentSecurityPolicy('<html></html>', 'build')).toThrow('__CSP__');
   });
 });

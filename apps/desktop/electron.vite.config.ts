@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
 import { resolve } from 'path';
 
-import { contentSecurityPolicy } from './src/renderer/csp-policy';
+import { injectContentSecurityPolicy } from './src/renderer/csp-policy';
 
 function cspTransform() {
   return {
@@ -12,7 +12,7 @@ function cspTransform() {
     transformIndexHtml(html: string, ctx: { server?: unknown }) {
       const mode = ctx.server === undefined ? 'build' : 'serve';
 
-      return html.replace('__CSP__', contentSecurityPolicy(mode));
+      return injectContentSecurityPolicy(html, mode);
     },
   };
 }
