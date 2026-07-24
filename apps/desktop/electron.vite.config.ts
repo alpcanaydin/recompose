@@ -4,6 +4,19 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
 import { resolve } from 'path';
 
+import { contentSecurityPolicy } from './src/renderer/csp-policy';
+
+function cspTransform() {
+  return {
+    name: 'recompose-csp',
+    transformIndexHtml(html: string, ctx: { server?: unknown }) {
+      const mode = ctx.server === undefined ? 'build' : 'serve';
+
+      return html.replace('__CSP__', contentSecurityPolicy(mode));
+    },
+  };
+}
+
 export default defineConfig({
   main: {},
   preload: {},
@@ -19,6 +32,7 @@ export default defineConfig({
         routesDirectory: './src/app/routes',
         generatedRouteTree: './src/app/routeTree.gen.ts',
       }),
+      cspTransform(),
       react(),
       tailwindcss(),
     ],

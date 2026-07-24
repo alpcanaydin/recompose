@@ -6,7 +6,9 @@
     "../../vitest.shared.ts",
     "../../steiger.config.ts",
     "src/main/**/*",
-    "src/preload/**/*"
+    "src/preload/**/*",
+    "src/renderer/csp-policy.ts",
+    "src/renderer/csp-policy.test.ts"
   ],
   "compilerOptions": {
     "composite": true,
