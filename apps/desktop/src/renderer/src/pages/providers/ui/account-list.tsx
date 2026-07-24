@@ -6,6 +6,7 @@ type AccountListProps = {
   accounts: AccountsDocument['accounts'];
 };
 
+/** Connected accounts with their remove affordances. */
 export function AccountList({ accounts }: AccountListProps) {
   const remove = useRemoveAccount();
 

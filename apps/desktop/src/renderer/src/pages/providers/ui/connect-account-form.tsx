@@ -14,6 +14,7 @@ const emptyDraft: IpcRequest<'accounts:connect'> = {
   secret: '',
 };
 
+/** Form for connecting a new provider account. */
 export function ConnectAccountForm() {
   const connect = useConnectAccount();
   const [draft, setDraft] = useState(emptyDraft);

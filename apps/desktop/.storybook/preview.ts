@@ -4,10 +4,12 @@ import { definePreview } from '@storybook/react-vite';
 
 import '../src/renderer/src/app/styles/main.css';
 import './preview.css';
+import { withRecomposeBridge } from './recompose-bridge';
 
 export default definePreview({
   addons: [addonA11y()],
   decorators: [
+    withRecomposeBridge,
     withThemeByClassName({
       themes: { light: 'scheme-light', dark: 'scheme-dark' },
       defaultTheme: 'light',
