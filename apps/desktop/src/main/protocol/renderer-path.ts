@@ -14,6 +14,38 @@ function extractPathFromUrl(requestUrl: string): string {
   return pathMatch?.[1] ?? '/';
 }
 
+function decodedPathname(rawPath: string): string | null {
+  try {
+    return decodeURIComponent(rawPath).replace(/^\/+/, '');
+  } catch {
+    return null;
+  }
+}
+
+function resolveFilePath(rendererRoot: string, relativePath: string): string | null {
+  const root = resolve(rendererRoot);
+  const filePath = resolve(root, relativePath);
+
+  if (!filePath.startsWith(root + sep)) {
+    return null;
+  }
+
+  return filePath;
+}
+
+function validateRequestPath(rendererRoot: string, requestUrl: string): string | null {
+  const rawPath = extractPathFromUrl(requestUrl);
+  const requestedPath = decodedPathname(rawPath);
+
+  if (requestedPath === null) {
+    return null;
+  }
+
+  const relativePath = requestedPath === '' ? 'index.html' : requestedPath;
+
+  return resolveFilePath(rendererRoot, relativePath);
+}
+
 export function resolveRendererFile(
   rendererRoot: string,
   requestUrl: string,
@@ -24,14 +56,9 @@ export function resolveRendererFile(
     return { rejected: 'not-app-scheme' };
   }
 
-  const rawPath = extractPathFromUrl(requestUrl);
-  const requestedPath = decodeURIComponent(rawPath).replace(/^\/+/, '');
-  const relativePath = requestedPath === '' ? 'index.html' : requestedPath;
+  const filePath = validateRequestPath(rendererRoot, requestUrl);
 
-  const root = resolve(rendererRoot);
-  const filePath = resolve(root, relativePath);
-
-  if (!filePath.startsWith(root + sep)) {
+  if (filePath === null) {
     return { rejected: 'traversal' };
   }
 

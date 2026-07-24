@@ -41,4 +41,10 @@ describe('resolving app:// requests to renderer files', () => {
       rejected: 'not-app-scheme',
     });
   });
+
+  test('a malformed percent-encoding is rejected as traversal', () => {
+    expect(resolveRendererFile(root, 'app://renderer/50%off.png')).toEqual({
+      rejected: 'traversal',
+    });
+  });
 });
