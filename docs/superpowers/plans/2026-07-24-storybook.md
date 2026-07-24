@@ -2,7 +2,7 @@
 
 > **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A working Storybook 10.5 workshop for the renderer with six seed stories. Story tests plus blocking accessibility join the existing Vitest suite, a `storybook build` smoke and a story-required rule join CI, and Model Context Protocol (MCP) wiring lands at project scope.
+**Goal:** A working Storybook 10.5 workshop for the renderer with six seed components. Story tests plus blocking accessibility join the existing Vitest suite, a `storybook build` smoke and a story-required rule join CI, and Model Context Protocol (MCP) wiring lands at project scope.
 
 **Architecture:** Storybook lives in `apps/desktop` on the `@storybook/react-vite` framework with Component Story Format (CSF) factories. `viteFinal` re-declares the renderer's `@renderer` alias and the Tailwind plugin, because Storybook never reads `electron.vite.config.ts`. Stories colocate in Feature-Sliced Design (FSD) `ui/` segments. Wired components render through a typed fake of the `window.recompose` bridge, and `@storybook/addon-vitest` runs every story as a browser test in the existing Playwright Chromium setup.
 
@@ -213,7 +213,7 @@ export const Password = meta.story({
 
 Append to `.gitignore`:
 
-```
+```text
 storybook-static/
 ```
 
@@ -672,36 +672,43 @@ Directly after the `pnpm exec turbo run lint typecheck build test` step, add:
 In the `meta` job's script, after the `tests_changed=` line and before `fail=0`, add:
 
 ```bash
-          new_ui=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' | head -1 || true)
-          stories_changed=$(awk '{print $2}' files.txt | grep -E '\.stories\.tsx$' | head -1 || true)
+          new_ui_components=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' || true)
+          all_files=$(awk '{print $2}' files.txt)
 ```
 
 After the existing `case "$pr_type" in ... esac` block, add:
 
 ```bash
-          if [ -n "$new_ui" ] && [ -z "$stories_changed" ]; then
+          missing_stories=""
+          for component in $new_ui_components; do
+            sibling="${component%.tsx}.stories.tsx"
+            if ! printf '%s\n' "$all_files" | grep -qxF "$sibling"; then
+              missing_stories="$missing_stories $component"
+            fi
+          done
+          if [ -n "$missing_stories" ]; then
             if printf '%s' "$labels" | grep -qw 'stories-exempt' && printf '%s' "$body" | grep -q 'Stories-exempt:'; then
               echo "::notice::stories-exempt accepted; the weekly exemption audit lists this PR"
             else
-              echo "::error::new renderer ui component ($new_ui) landed without a story. Every ui component ships a *.stories.tsx sibling. Escape: add the stories-exempt label plus a 'Stories-exempt: <reason>' line in the PR body."
+              echo "::error::new renderer ui component(s) landed without a sibling story:${missing_stories}. Every ui component ships a *.stories.tsx sibling. Escape: add the stories-exempt label plus a 'Stories-exempt: <reason>' line in the PR body."
               fail=1
             fi
           fi
 ```
 
-The `grep -vE '\.(test|stories)\.tsx$'` filter also drops `*.browser.test.tsx` because the suffix still matches `.test.tsx`.
+The `grep -vE '\.(test|stories)\.tsx$'` filter also drops `*.browser.test.tsx` because the suffix still matches `.test.tsx`. A component counts as covered when its `*.stories.tsx` sibling appears anywhere in the diff, added or modified, so `all_files` carries every changed path rather than only the additions.
 
 - [ ] **Step 3: Extend the weekly exemption audit**
 
 In `.github/workflows/ruleset-bypass-audit.yml`, change the search label list:
 
-```
+```text
 label:tdd-exempt,adr-exempt
 ```
 
 to:
 
-```
+```text
 label:tdd-exempt,adr-exempt,stories-exempt
 ```
 
@@ -720,10 +727,17 @@ Run this fixture check from the worktree root. Every line must print `ok`:
 ```bash
 check() {
   files="$1"; labels="$2"; body="$3"; expected="$4"
-  new_ui=$(printf '%s\n' "$files" | grep '^added ' | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' | head -1 || true)
-  stories_changed=$(printf '%s\n' "$files" | awk '{print $2}' | grep -E '\.stories\.tsx$' | head -1 || true)
+  new_ui_components=$(printf '%s\n' "$files" | grep '^added ' | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' || true)
+  all_files=$(printf '%s\n' "$files" | awk '{print $2}')
+  missing_stories=""
+  for component in $new_ui_components; do
+    sibling="${component%.tsx}.stories.tsx"
+    if ! printf '%s\n' "$all_files" | grep -qxF "$sibling"; then
+      missing_stories="$missing_stories $component"
+    fi
+  done
   fail=0
-  if [ -n "$new_ui" ] && [ -z "$stories_changed" ]; then
+  if [ -n "$missing_stories" ]; then
     if printf '%s' "$labels" | grep -qw 'stories-exempt' && printf '%s' "$body" | grep -q 'Stories-exempt:'; then
       fail=0
     else
@@ -735,10 +749,15 @@ check() {
 check "added apps/desktop/src/renderer/src/pages/x/ui/widget.tsx" "" "" 1
 check "added apps/desktop/src/renderer/src/pages/x/ui/widget.tsx
 added apps/desktop/src/renderer/src/pages/x/ui/widget.stories.tsx" "" "" 0
+check "added apps/desktop/src/renderer/src/pages/x/ui/widget.tsx
+added apps/desktop/src/renderer/src/pages/x/ui/gadget.tsx
+added apps/desktop/src/renderer/src/pages/x/ui/gadget.stories.tsx" "" "" 1
 check "added apps/desktop/src/renderer/src/pages/x/ui/widget.tsx" "stories-exempt" "Stories-exempt: canvas spike" 0
 check "added apps/desktop/src/renderer/src/pages/x/ui/widget.browser.test.tsx" "" "" 0
 check "modified apps/desktop/src/renderer/src/pages/x/ui/widget.tsx" "" "" 0
 ```
+
+Run this fixture under bash, because the per-component loop relies on bash word-splitting the newline-joined `$new_ui_components`; the CI job runs bash.
 
 - [ ] **Step 6: Lint the workflows and commit**
 
