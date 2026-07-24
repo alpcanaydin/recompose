@@ -34,6 +34,10 @@ export const test = base.extend<ElectronFixtures>({
       },
     });
 
+    app.process().stderr?.on('data', (chunk: Buffer) => {
+      process.stderr.write(chunk);
+    });
+
     await use(app);
     await app.close();
   },
