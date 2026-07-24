@@ -1,10 +1,10 @@
-# Design System Foundations Implementation Plan
+# Design system foundations implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Two-tier design tokens (primitive → semantic) implemented in Tailwind CSS v4, with the existing shell restyled through them.
 
-**Architecture:** Primitives live as plain CSS variables in `:root` (no utilities); semantic tokens live in `@theme` and are the only utilities components may use. All theming happens at the semantic tier via `light-dark()`; the OS drives the theme through `color-scheme: light dark`. No JS, no separate package.
+**Architecture:** Primitives live as plain CSS variables in `:root` (no utilities). Semantic tokens live in `@theme` and are the only utilities components may use. All theming happens at the semantic tier via `light-dark()`, and the OS drives the theme through `color-scheme: light dark`. No JS, no separate package.
 
 **Tech Stack:** Tailwind CSS v4 (`@tailwindcss/vite`), electron-vite 5, React 19, oxfmt Tailwind class sorting.
 
@@ -12,14 +12,14 @@ Spec: `docs/superpowers/specs/2026-07-22-design-system-foundations-design.md`
 
 ## Global Constraints
 
-- **Never write code comments** — CSS files included. Naming and structure carry the intent.
+- **Never write code comments**, CSS files included. Naming and structure carry the intent.
 - Commits follow caveman-commit: `<type>(<scope>): <imperative>` ≤50 chars, body only for non-obvious why, trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- TypeScript stays maximally strict; do not touch tsconfig.
+- TypeScript stays maximally strict, so don't touch tsconfig.
 - No unit tests in this plan: foundations are pure CSS with no behavior (spec §Verification). Verification is build/lint/typecheck plus visual dark/light screenshots.
 - Dependency versions are exact-pinned (`-E`).
-- Component code uses only semantic utilities — never a primitive variable, never a raw hex.
-- A PostToolUse hook runs oxfmt+oxlint on every TS edit and blocks on errors; fix immediately.
-- The repository owner's private alias must not appear in any artifact. File contents are checked by the `forbidden-owner-alias` rule in `.gitleaks.toml`; coverage of other surfaces is per ADR-0011.
+- Component code uses only semantic utilities, never a primitive variable, never a raw hex.
+- A PostToolUse hook runs oxfmt+oxlint on every TS edit and blocks on errors, so fix issues immediately.
+- The repository owner's private alias must not appear in any artifact. The `forbidden-owner-alias` rule in `.gitleaks.toml` checks file contents. Coverage of other surfaces relies on review, per Architecture Decision Record (ADR) 0011.
 
 ---
 
@@ -35,7 +35,7 @@ Spec: `docs/superpowers/specs/2026-07-22-design-system-foundations-design.md`
 **Interfaces:**
 
 - Consumes: nothing.
-- Produces: a renderer build that processes Tailwind directives; `@import 'tailwindcss';` as the first line of `main.css` (Tasks 2–3 add `@theme` files that this pipeline consumes); oxfmt sorts Tailwind classes against `apps/desktop/src/renderer/src/assets/main.css`.
+- Produces: a renderer build that processes Tailwind directives. `@import 'tailwindcss';` sits as the first line of `main.css` (Tasks 2–3 add `@theme` files that this pipeline consumes). oxfmt sorts Tailwind classes for `apps/desktop/src/renderer/src/assets/main.css`.
 
 - [ ] **Step 1: Install Tailwind**
 
@@ -45,7 +45,7 @@ Run from repo root:
 pnpm --filter @recompose/desktop add -D -E tailwindcss @tailwindcss/vite
 ```
 
-Expected: both packages appear in `apps/desktop/package.json` devDependencies with exact versions; `pnpm-lock.yaml` updated. If install fails with `ERR_PNPM_IGNORED_BUILDS` naming a Tailwind-related package, add that package name with value `false` to the `allowBuilds:` map in `pnpm-workspace.yaml` (its prebuilt binaries ship in the package; the build script is unnecessary) and rerun the install.
+Expected: both packages appear in `apps/desktop/package.json` devDependencies with exact versions, and `pnpm-lock.yaml` gets updated. If install fails with `ERR_PNPM_IGNORED_BUILDS` naming a Tailwind-related package, add that package name with value `false` to the `allowBuilds:` map in `pnpm-workspace.yaml`. Its prebuilt binaries already ship in the package, so the build script is unnecessary. Then rerun the install.
 
 - [ ] **Step 2: Register the vite plugin**
 
@@ -100,7 +100,7 @@ pnpm --filter @recompose/desktop build
 pnpm fmt:check
 ```
 
-Expected: build succeeds (renderer CSS output now contains Tailwind preflight rules); `fmt:check` exits 0 (if oxfmt errors on the `stylesheet` path, resolve it relative to the config file location and adjust).
+Expected: build succeeds, and the renderer CSS output now contains Tailwind preflight rules. `fmt:check` exits 0 (if oxfmt errors on the `stylesheet` path, resolve it relative to the config file location and adjust).
 
 - [ ] **Step 6: Commit**
 
@@ -115,7 +115,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: Token files — primitives and semantic theme
+### Task 2: Primitive and semantic token files
 
 **Files:**
 
@@ -126,7 +126,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Interfaces:**
 
 - Consumes: Tailwind pipeline from Task 1.
-- Produces: semantic utilities for Task 3 — `bg-surface-{sidebar,toolbar,content,card,raised}`, `text-ink`, `text-ink-secondary`, `text-ink-tertiary`, `border-line-{subtle,faint,strong}`, `bg-accent`/`text-accent`, `{bg,text}-{success,warning,danger}`, `text-{title,heading,body,control,caption,overline,mono-value}`, `font-sans`/`font-mono`, `rounded-{chip,control,card,pill}`. Also the CSS variables themselves (`var(--color-ink)` etc.) for the base rules in Task 3.
+- Produces: semantic utilities for Task 3: `bg-surface-{sidebar,toolbar,content,card,raised}`, `text-ink`, `text-ink-secondary`, `text-ink-tertiary`, `border-line-{subtle,faint,strong}`, `bg-accent`/`text-accent`, `{bg,text}-{success,warning,danger}`, `text-{title,heading,body,control,caption,overline,mono-value}`, `font-sans`/`font-mono`, `rounded-{chip,control,card,pill}`. Also the CSS variables themselves (`var(--color-ink)` etc.) for the base rules in Task 3.
 
 - [ ] **Step 1: Create the primitive tier**
 
@@ -227,7 +227,7 @@ Create `apps/desktop/src/renderer/src/assets/theme.css`:
 }
 ```
 
-Note: `--font-*: initial` extends the spec's decision 3 to the font namespace for the same reason — only the two SF stacks may exist as `font-*` utilities.
+Note: `--font-*: initial` extends the spec's decision 3 to the font namespace for the same reason: only the two SF stacks may exist as `font-*` utilities.
 
 - [ ] **Step 3: Wire the imports**
 
@@ -248,7 +248,7 @@ pnpm --filter @recompose/desktop build
 pnpm fmt:check
 ```
 
-Expected: both exit 0. Utilities are not in the output yet (nothing uses them until Task 3); this step only proves the token files parse.
+Expected: both exit 0. Utilities aren't in the output yet, because nothing uses them until Task 3. This step only proves the token files parse.
 
 - [ ] **Step 5: Commit**
 
@@ -275,8 +275,8 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 
-- Consumes: semantic utilities and CSS variables from Task 2; `.app-drag` is defined here and used in `App.tsx`.
-- Produces: the app shell all future features build inside — `App.tsx` renders `aside` (sidebar) + `main` (content) styled exclusively with semantic utilities.
+- Consumes: semantic utilities and CSS variables from Task 2. This task defines `.app-drag` here and uses it in `App.tsx`.
+- Produces: the app shell all future features build inside. `App.tsx` renders `aside` (sidebar) + `main` (content) styled exclusively with semantic utilities.
 
 - [ ] **Step 1: Rewrite the entry stylesheet**
 
@@ -304,7 +304,7 @@ body,
 }
 ```
 
-Only what Tailwind cannot express stays here: the transparent chain the liquid glass window requires (ADR 0008), OS-driven `color-scheme`, and the native drag region.
+Only what Tailwind can't express stays here: the transparent chain the liquid glass window requires (ADR 0008), OS-driven `color-scheme`, and the native drag region.
 
 - [ ] **Step 2: Rewrite the shell component**
 
@@ -325,7 +325,7 @@ function App(): React.JSX.Element {
 export default App;
 ```
 
-Spacing maps to the design's 4px grid: `w-60` = 240px sidebar, `pt-13` = 52px traffic-light clearance, `px-4`/`pb-4` = 16px, `px-6`/`pb-6` = 24px pane inset. The sidebar wears the translucent `bg-surface-sidebar` scrim so the glass still shows through it; the content pane is opaque `bg-surface-content`.
+Spacing maps to the design's 4px grid: `w-60` = 240px sidebar, `pt-13` = 52px traffic-light clearance, `px-4`/`pb-4` = 16px, `px-6`/`pb-6` = 24px pane inset. The sidebar wears the translucent `bg-surface-sidebar` scrim, so the glass still shows through it. The content pane stays opaque with `bg-surface-content`.
 
 - [ ] **Step 3: Verify the build uses the tokens**
 
@@ -336,7 +336,7 @@ pnpm --filter @recompose/desktop build
 grep -l 'bg-surface-content' apps/desktop/out/renderer/assets/*.css
 ```
 
-Expected: typecheck, lint, build exit 0; grep prints one CSS file (the utility was generated and is backed by `--color-surface-content`).
+Expected: typecheck, lint, build exit 0, and grep prints one CSS file, since the build generates that utility from the `--color-surface-content` token.
 
 - [ ] **Step 4: Commit**
 
@@ -351,7 +351,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ### Task 4: Visual verification in both themes
 
-**Files:** none (verification only; fixes loop back into Task 2/3 files).
+**Files:** none. This task only verifies, and any fixes loop back into Task 2/3 files.
 
 **Interfaces:**
 
@@ -366,7 +366,7 @@ Run in background from repo root:
 pnpm --filter @recompose/desktop dev
 ```
 
-Wait for the window (log line `dev server running` / window shows). The dev process name is `Electron`; bring it frontmost with:
+Wait for the window (log line `dev server running` / window shows). The dev process name is `Electron`. Bring it frontmost with:
 
 ```bash
 osascript -e 'tell application id "com.github.Electron" to activate'
@@ -380,7 +380,7 @@ macOS appearance should be dark (default on this machine). Capture:
 screencapture -x /tmp/foundations-dark.png
 ```
 
-(Requires screen-recording permission; run without sandbox.) Read the image. Check: "Sidebar" text legible over glass, "Main Area" legible on `surface-content` dark gray, no invisible text.
+(Requires screen-recording permission. Run without sandbox.) Read the image. Check: "Sidebar" text legible over glass, "Main Area" legible on `surface-content` dark gray, no invisible text.
 
 - [ ] **Step 3: Screenshot light mode**
 
@@ -391,15 +391,15 @@ screencapture -x /tmp/foundations-light.png
 osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true'
 ```
 
-Read the image. Check the same legibility list in light. Any invisible text/border = a semantic mapping gap; fix the mapping in `theme.css`, rebuild, re-shoot before proceeding.
+Read the image. Check the same legibility list in light. Any invisible text/border means a semantic mapping gap, so fix the mapping in `theme.css`, rebuild, and re-shoot before proceeding.
 
 - [ ] **Step 4: Stop the dev process**
 
-Stop the background dev task. No commit (nothing changed unless a gap was fixed; gap fixes are committed as `fix(desktop): <what>` with the standard trailer).
+Stop the background dev task. No commit applies, unless a gap fix changed something. Commit gap fixes as `fix(desktop): <what>` with the standard trailer.
 
 ---
 
-### Task 5: ADR
+### Task 5: Architecture decision record
 
 **Files:**
 
@@ -413,7 +413,15 @@ Stop the background dev task. No commit (nothing changed unless a gap was fixed;
 
 - [ ] **Step 1: Write the ADR via the skill**
 
-Invoke the `architecture-decision-records` skill. The decision set to capture in ADR 0009: two-tier tokens (primitive → semantic, no component tier), Tailwind v4 CSS-first with default namespace resets, OS-driven theming via `color-scheme` + `light-dark()`, no separate UI package, Claude Design project as visual source of truth with naming owned by the codebase. Follow the skill's template and the existing files' style (see `docs/adr/0008-liquid-glass-window-chrome.md` for tone/length); add the index row to `docs/adr/README.md` exactly like the existing rows.
+Invoke the `architecture-decision-records` skill. The decision set to capture in ADR 0009:
+
+- Two-tier tokens (primitive → semantic, no component tier).
+- Tailwind v4 CSS-first with default namespace resets.
+- OS-driven theming via `color-scheme` + `light-dark()`.
+- No separate UI package.
+- The Claude Design project as visual source of truth, with naming owned by the codebase.
+
+Follow the skill's template and the existing files' style, and see `docs/adr/0008-liquid-glass-window-chrome.md` for tone and length. Add the index row to `docs/adr/README.md` exactly like the existing rows.
 
 - [ ] **Step 2: Commit**
 

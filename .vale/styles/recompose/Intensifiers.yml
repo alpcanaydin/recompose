@@ -1,0 +1,8 @@
+extends: existence
+message: "Drop the intensifier '%s'; use a concrete measure or a stronger word."
+level: error
+scope: text
+ignorecase: true
+tokens:
+  - very
+  - really

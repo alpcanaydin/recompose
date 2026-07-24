@@ -1,4 +1,4 @@
-# ADR-0001: Electron as Desktop Shell
+# 0001: Electron as desktop shell
 
 **Status**: Accepted
 **Date**: 2026-07-21
@@ -9,15 +9,15 @@ recompose is a desktop-first, offline-first AI gateway composer with a locked "n
 
 ## Decision
 
-Electron 30+ is the shell. Native glass/vibrancy is applied through Meridius-Labs/electron-liquid-glass, which requires `BrowserWindow.getNativeWindowHandle()`.
+Electron 30+ is the shell. Meridius-Labs/electron-liquid-glass applies native glass/vibrancy and requires `BrowserWindow.getNativeWindowHandle()`.
 
 ## Alternatives
 
-- **Lightweight webview shells (Tauri, Bun+Zig webviews)**: smaller bundles, but no native window handle access for glass/vibrancy — the core design requirement fails.
+- **Lightweight webview shells (Tauri, Bun+Zig webviews)**: smaller bundles, but no native window handle access for glass/vibrancy, so the core design requirement fails.
 - **Native Swift/AppKit app**: best-possible native feel, but kills cross-platform (Win/Linux are explicit targets) and the web-based node canvas stack.
 
 ## Consequences
 
-**Good**: real native materials on macOS; one web codebase for all platforms; mature ecosystem (electron-builder, auto-update, signing).
+**Good**: real native materials on macOS. One web codebase covers all platforms. The ecosystem is mature (electron-builder, automatic updates, signing).
 
-**Bad**: 80–150 MB bundle — accepted for an OSS pro tool. Native module (`electron-liquid-glass`) must rebuild against Electron's Node headers on every Electron upgrade.
+**Bad**: the bundle runs 80–150 MB, an accepted cost for an OSS pro tool. The native module (`electron-liquid-glass`) must rebuild to match Electron's Node headers on every Electron upgrade.

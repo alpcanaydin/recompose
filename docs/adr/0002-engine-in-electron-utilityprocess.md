@@ -1,4 +1,4 @@
-# ADR-0002: Gateway Engine Runs in Electron's utilityProcess
+# 0002: Gateway engine runs in Electron's utilityProcess
 
 **Status**: Accepted
 **Date**: 2026-07-21
@@ -13,10 +13,10 @@ The engine runs on Electron's bundled Node inside a `utilityProcess`. It lives i
 
 ## Alternatives
 
-- **Bun sidecar (`bun build --compile`)**: faster runtime, but requires compiling, signing, and notarizing an extra binary per platform, plus spawn/crash/update lifecycle management. Bun's speed advantage is irrelevant for local, low-RPS proxy traffic — Node's `http` + SSE streaming is sufficient at `localhost` scale.
+- **Bun sidecar (`bun build --compile`)**: faster runtime, but requires compiling, signing, and notarizing an extra binary per platform, plus spawn/crash/update lifecycle management. Bun's speed advantage is irrelevant for local proxy traffic with a low Requests Per Second (RPS) rate. Node's `http` and Server-Sent Events (SSE) streaming are sufficient at `localhost` scale.
 
 ## Consequences
 
-**Good**: no second runtime to package or notarize; single electron-builder chain; `utilityProcess` gives crash isolation and keeps the UI thread clean; plain Node messaging instead of cross-runtime IPC.
+**Good**: no second runtime needs packaging or notarizing. A single electron-builder chain covers the build. The `utilityProcess` gives crash isolation and keeps the UI thread clean. Plain Node messaging replaces cross-runtime Inter-Process Communication (IPC).
 
-**Bad**: engine is capped at Electron's Node version. A future headless/CLI mode needs its own entry point — kept possible by the zero-`electron`-imports rule.
+**Bad**: Electron's Node version caps the engine. A future headless/CLI mode still needs its own entry point, which the zero-`electron`-imports rule keeps possible.

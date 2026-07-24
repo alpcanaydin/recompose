@@ -6,7 +6,7 @@ pre-commit:
       fail_text: main is protected — create a branch (one job = one worktree/branch + PR)
     - name: gitleaks
       priority: 0
-      run: command -v gitleaks >/dev/null || brew install gitleaks; gitleaks git --staged --redact --no-banner
+      run: mise install -q && mise exec -- gitleaks git --staged --redact --no-banner
     - name: lint
       priority: 1
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
@@ -24,6 +24,10 @@ pre-commit:
     - name: dup
       priority: 1
       run: pnpm run lint:dup
+    - name: prose
+      priority: 1
+      glob: '*.md'
+      run: mise install -q && (test .vale/styles/Microsoft -nt .vale.ini || mise exec -- vale sync) && pnpm run lint:prose
     - name: fmt
       priority: 2
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'

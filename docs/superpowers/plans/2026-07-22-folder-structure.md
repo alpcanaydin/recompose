@@ -1,20 +1,20 @@
-# Folder Structure Implementation Plan
+# Folder structure implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bring the existing code into conformance with the approved folder-structure spec (`docs/superpowers/specs/2026-07-22-folder-structure-design.md`) and record the decision as an ADR.
+**Goal:** Bring the existing code into conformance with the approved folder-structure spec (`docs/superpowers/specs/2026-07-22-folder-structure-design.md`) and record the decision as an Architecture Decision Record (ADR).
 
-**Architecture:** Three self-contained moves: split the Electron main process into bootstrap + `windows/`, move the renderer's two files into an FSD `app/` layer, and write ADR-0010. No new folders beyond what receives a file today (spec rule: a folder opens with its first real code). Enforcement tooling (Steiger, dependency-cruiser) is explicitly NOT this job — it is queue items 2/3.
+**Architecture:** Three self-contained moves: split the Electron main process into bootstrap + `windows/`, move the renderer's two files into a Feature-Sliced Design (FSD) `app/` layer, and write ADR-0010. No new folders beyond what receives a file today (spec rule: a folder opens with its first real code). Enforcement tooling (Steiger, dependency-cruiser) is a separate job, reserved for queue items 2 and 3.
 
 **Tech Stack:** Electron 43 + electron-vite 6, React 19, TypeScript 7 (strict), pnpm workspaces + Turborepo.
 
 ## Global Constraints
 
-- Never commit to `main` — all work happens on the current worktree branch `worktree-folder-structure-spec`, lands via PR.
+- Never commit to `main`. All work happens on the current worktree branch `worktree-folder-structure-spec` and lands via PR.
 - **No behavior change anywhere in this plan.** Per `.claude/rules/tdd-bdd.md` ("test code changes if and only if behavior changes") and because no test framework exists yet (Vitest is the next queue item), verification for every task is: `typecheck` + `lint` + `build` green, plus one manual dev-launch smoke check at the end.
 - No code comments (project rule). The moved code must not gain any.
 - File and folder names: kebab-case (`main-window.ts`, `app.tsx`).
-- TypeScript maximum strictness is already configured — do not weaken any tsconfig.
+- TypeScript maximum strictness is already configured, so don't weaken any tsconfig.
 - Commit messages: Conventional Commits, terse, why over what (caveman-commit style).
 - All commands run from the worktree root.
 
@@ -30,11 +30,11 @@
 **Interfaces:**
 
 - Consumes: nothing from other tasks.
-- Produces: `createMainWindow(): void` exported from `apps/desktop/src/main/windows/main-window.ts` — the only window factory; `main/index.ts` is composition only.
+- Produces: `createMainWindow(): void` exported from `apps/desktop/src/main/windows/main-window.ts`, the only window factory. `main/index.ts` is composition only.
 
 - [ ] **Step 1: Create `apps/desktop/src/main/windows/main-window.ts`**
 
-The body is today's `createWindow` + `applyGlassBackdrop`, unchanged except: the function is renamed `createMainWindow` and exported, and the icon import gains one `../` (the file is one level deeper). The `join(__dirname, ...)` paths do NOT change — they are runtime paths inside the bundled `out/main`, independent of source layout.
+The body is today's `createWindow` + `applyGlassBackdrop`. The rename to `createMainWindow` (now exported) and one extra `../` on the icon import (the file sits one level deeper) are the only changes. The `join(__dirname, ...)` paths stay unchanged, because they're runtime paths inside the bundled `out/main`, independent of source layout.
 
 ```ts
 import { is } from '@electron-toolkit/utils';
@@ -131,7 +131,7 @@ app.on('window-all-closed', () => {
 - [ ] **Step 3: Verify**
 
 Run: `pnpm --filter @recompose/desktop run typecheck && pnpm --filter @recompose/desktop run lint && pnpm --filter @recompose/desktop run build`
-Expected: all three exit 0. Typical failure: wrong `../` count on the icon import → typecheck error "Cannot find module '../../../resources/icon.png?asset'".
+Expected: all three exit 0. Typical failure: wrong `../` count on the icon import → typecheck error `Cannot find module '../../../resources/icon.png?asset'`.
 
 - [ ] **Step 4: Commit**
 
@@ -145,7 +145,7 @@ composition only; window construction lives in main/windows/."
 
 ---
 
-### Task 2: Move renderer into FSD app layer
+### Task 2: Move renderer into the Feature-Sliced Design app layer
 
 **Files:**
 
@@ -157,7 +157,7 @@ composition only; window construction lives in main/windows/."
 **Interfaces:**
 
 - Consumes: nothing from Task 1 (independent).
-- Produces: FSD `app/` layer — entry `app/main.tsx`, root component `app/app.tsx` (default export `App`), global styles `app/styles/main.css`. Future layers (`pages/`, `widgets/`, …) open beside `app/` when their first file lands; nothing pre-creates them.
+- Produces: the FSD `app/` layer, containing entry `app/main.tsx`, root component `app/app.tsx` (default export `App`), and global styles `app/styles/main.css`. Future layers (`pages/`, `widgets/`, …) open beside `app/` when their first file lands, and nothing pre-creates them.
 
 - [ ] **Step 1: Move the files with git mv**
 
@@ -172,7 +172,7 @@ git mv assets/theme.css app/styles/theme.css
 cd -
 ```
 
-(`assets/` becomes empty and disappears — git tracks files, not directories.)
+(`assets/` becomes empty and disappears, because git tracks files, not directories.)
 
 - [ ] **Step 2: Fix imports in `app/main.tsx`**
 
@@ -192,7 +192,7 @@ createRoot(document.getElementById('root')!).render(
 );
 ```
 
-`app/app.tsx` and the css files need no content change — `main.css` imports `./primitives.css` / `./theme.css`, which moved together with it.
+`app/app.tsx` and the css files need no content change, because `main.css` imports `./primitives.css` / `./theme.css`, which moved together with it.
 
 - [ ] **Step 3: Point `index.html` at the new entry**
 
@@ -205,12 +205,12 @@ In `apps/desktop/src/renderer/index.html` change line 15:
 - [ ] **Step 4: Verify**
 
 Run: `pnpm --filter @recompose/desktop run typecheck && pnpm --filter @recompose/desktop run lint && pnpm --filter @recompose/desktop run build`
-Expected: all exit 0. Typical failure: stale script src in index.html → build error "Rollup failed to resolve import /src/main.tsx".
+Expected: all exit 0. Typical failure: stale script src in index.html → build error `Rollup failed to resolve import /src/main.tsx`.
 
 - [ ] **Step 5: Dev-launch smoke check**
 
 Run: `pnpm --filter @recompose/desktop run dev` (or the project's `run-desktop` skill), wait for the window.
-Expected: window opens showing the "Sidebar" / "Main Area" placeholder layout with glass backdrop on macOS — identical to before. Then quit with Ctrl+C.
+Expected: window opens showing the "Sidebar" / "Main Area" placeholder layout with glass backdrop on macOS, identical to before. Then quit with Ctrl+C.
 
 - [ ] **Step 6: Commit**
 
@@ -225,12 +225,12 @@ their first file."
 
 ---
 
-### Task 3: Write ADR-0010
+### Task 3: Architecture decision record 0010
 
 **Files:**
 
 - Create: `docs/adr/0010-folder-structure-fsd-and-enforced-boundaries.md`
-- Modify: `docs/adr/README.md` (index table — append the row below after the 0009 row)
+- Modify: `docs/adr/README.md` (index table, appending the row below after the 0009 row)
 
 ```markdown
 | [0010](0010-folder-structure-fsd-and-enforced-boundaries.md) | Folder Structure — FSD Renderer, Enforced Boundaries | Accepted | 2026-07-22 |
@@ -238,12 +238,12 @@ their first file."
 
 **Interfaces:**
 
-- Consumes: nothing — documents the decision behind Tasks 1–2.
+- Consumes: nothing. This task documents the decision behind Tasks 1–2.
 - Produces: the ADR every future structure question defers to.
 
 - [ ] **Step 1: Invoke the ADR skill**
 
-Project rule: ADRs go through the `architecture-decision-records` skill (or `new-adr`). Invoke it; if its template matches the house format below (it should — ADR-0001..0009 use it), proceed with this content:
+Project rule: ADRs go through the `architecture-decision-records` skill (or `new-adr`). Invoke it, and if its template matches the house format below (it should, since ADR-0001..0009 use it), proceed with this content:
 
 ```markdown
 # ADR-0010: Folder Structure — FSD Renderer, Enforced Boundaries
@@ -310,7 +310,7 @@ green.
 - [ ] **Step 2: Verify**
 
 Run: `ls docs/adr/ | grep 0010`
-Expected: `0010-folder-structure-fsd-and-enforced-boundaries.md`. Confirm the README index table has the 0010 row from the Files section above.
+Expected: `0010-folder-structure-fsd-and-enforced-boundaries.md`. Confirm the README index table has the 0010 row from the Files section earlier in this task.
 
 - [ ] **Step 3: Commit**
 
@@ -323,4 +323,4 @@ git commit -m "docs(adr): record folder-structure decision (ADR-0010)"
 
 ## Done criteria
 
-All three tasks committed on `worktree-folder-structure-spec`; `typecheck`, `lint`, `build` green; dev smoke unchanged. PR creation is not part of this plan — it goes through the `superpowers:finishing-a-development-branch` flow (PR body via its own rules, CodeRabbit findings judged per project memory).
+This plan lands all three tasks on `worktree-folder-structure-spec`, keeps `typecheck`, `lint`, and `build` green, and leaves the dev smoke check unchanged. PR creation isn't part of this plan. It goes through the `superpowers:finishing-a-development-branch` flow (PR body via its own rules, CodeRabbit findings judged per project memory).

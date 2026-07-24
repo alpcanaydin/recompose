@@ -1,28 +1,28 @@
-# Storage Foundation Implementation Plan
+# Storage foundation implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Open `packages/contracts` with the schemaVersion'd zod schemas and migration framework for all on-disk documents, and give the desktop main process its storage services (gateway configs, accounts, settings, vault) with atomic writes and corrupt-file quarantine.
+**Goal:** Open `packages/contracts` with the schemaVersion'd zod schemas and migration framework for all on-disk documents. Give the desktop main process its storage services (gateway configs, accounts, settings, vault) with atomic writes and corrupt-file quarantine.
 
-**Architecture:** Pure schema/migration logic lives in `packages/contracts` (source-exports workspace package, no build step — vite and vitest consume TS directly). The desktop main process gets thin fs shells under `src/main/windows`-style module `src/main/storage/`, booted by one `initializeStorage` call from the entry wiring. Engine-side pieces (usage.db recorder, config/secret handoff messaging) are deferred until `packages/engine` opens; the vault's safeStorage codec is the only electron-touching file and is injected everywhere else.
+**Architecture:** Pure schema/migration logic lives in `packages/contracts` (source-exports workspace package, no build step, since vite and vitest consume TS directly). The desktop main process gets thin fs shells under a `src/main/windows`-style module, `src/main/storage/`, booted by one `initializeStorage` call from the entry wiring. Engine-side pieces (usage.db recorder, config/secret handoff messaging) wait until `packages/engine` opens. The vault's safeStorage codec is the only electron-touching file, and callers inject it everywhere else.
 
 **Tech Stack:** zod 4.4.3, vitest 4.1.10, fast-check 4.9.0 + @fast-check/vitest 0.4.1, Electron safeStorage.
 
 ## Global Constraints
 
 - Spec: `docs/superpowers/specs/2026-07-23-storage-design.md`.
-- Exact pins, no ranges (workspace convention): zod 4.4.3; devDependencies mirror apps/desktop's pins — typescript 7.0.2, vitest 4.1.10, fast-check 4.9.0, @fast-check/vitest 0.4.1, oxlint 1.74.0, oxlint-tsgolint 0.25.0. Workspace references use `workspace:*`.
-- `packages/contracts` opens this job → the boundary scan gains the argument: root `package.json` script `lint:boundaries` becomes `depcruise apps packages` (the follow-up ADR-0014 recorded). All pre-staged package rules bind automatically.
-- Coverage gate applies to the new package: its vitest config spreads `coverageDefaults` from the root `vitest.shared.ts` (thresholds live ONLY there).
-- Filename boundary: node-env tests are `*.test.ts`, colocated with source. No DOM here — no browser-mode tests.
-- Secrets never appear in gateway/accounts/settings JSON; only `credentialRef` strings.
-- Single-writer: these services are main-process-only; nothing here spawns processes or registers IPC.
-- TDD: failing test first for every behavior. State-based assertions; test doubles ONLY at process boundaries (fs via temp dirs is real, electron's safeStorage is the one mocked boundary).
-- TypeScript max strictness; no `any`, no silencing `as`.
+- Exact pins, no ranges (workspace convention): zod 4.4.3. devDependencies mirror apps/desktop's pins: typescript 7.0.2, vitest 4.1.10, fast-check 4.9.0, @fast-check/vitest 0.4.1, oxlint 1.74.0, oxlint-tsgolint 0.25.0. Workspace references use `workspace:*`.
+- `packages/contracts` opens this job → the boundary scan gains the argument: root `package.json` script `lint:boundaries` becomes `depcruise apps packages` (the follow-up Architecture Decision Record (ADR) 0014 recorded). All pre-staged package rules bind automatically.
+- Coverage gate applies to the new package: its vitest config spreads `coverageDefaults` from the root `vitest.shared.ts` (thresholds live only there).
+- Filename boundary: node-env tests are `*.test.ts`, colocated with source. No DOM here, so no browser-mode tests.
+- Secrets never appear in gateway/accounts/settings JSON, only `credentialRef` strings.
+- Single-writer: these services are main-process-only, and nothing here spawns processes or registers Inter-Process Communication (IPC).
+- Test-Driven Development (TDD): failing test first for every behavior. State-based assertions, with test doubles only at process boundaries (fs via temp dirs is real, electron's safeStorage is the one mocked boundary).
+- TypeScript max strictness, with no `any` and no silencing `as`.
 - **Never write code comments.**
 - The repository owner's private alias must not appear in any artifact.
-- Commit messages: Conventional Commits, terse, imperative; trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- Pre-commit hooks run gitleaks/lint/fmt/typecheck + boundaries/fsd/dead gates; oxfmt may reformat and auto-stage. If the FIRST commit in a fresh worktree fails with `oxfmt: No such file or directory`, run `pnpm install` once and retry.
+- Commit messages: Conventional Commits, terse, imperative, with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+- Pre-commit hooks run gitleaks/lint/fmt/typecheck plus boundaries/fsd/dead gates, and oxfmt may reformat and stage fixes automatically. If the first commit in a fresh worktree fails with `oxfmt: No such file or directory`, run `pnpm install` once and retry.
 - All commands run from the worktree root. Shell may be fish: check exit codes with `echo "exit: $status"`, never after a pipe.
 
 ---
@@ -120,7 +120,7 @@ export * from './migration';
 ```
 
 Run: `pnpm install`
-Expected: lockfile gains the new importer; no errors (all versions already in the store; `minimumReleaseAge` is satisfied because every pin already exists in the lockfile).
+Expected: lockfile gains the new importer, with no errors. All versions already exist in the store, so every pin's presence in the lockfile satisfies `minimumReleaseAge`.
 
 - [ ] **Step 2: Write the failing migration specs (examples + property)**
 
@@ -198,7 +198,7 @@ describe('document migration', () => {
 - [ ] **Step 3: Run to verify failure**
 
 Run: `pnpm --filter @recompose/contracts run test`
-Expected: FAIL — cannot resolve `./migration`.
+Expected: `FAIL`, since the test can't resolve `./migration`.
 
 - [ ] **Step 4: Implement**
 
@@ -246,7 +246,7 @@ export function migrateDocument(
 - [ ] **Step 5: Run to verify pass**
 
 Run: `pnpm --filter @recompose/contracts run test`
-Expected: PASS — 6 specs, coverage 100% on `migration.ts` (index.ts re-export counts via import).
+Expected: `PASS`: 6 specs, coverage 100% on `migration.ts` (index.ts re-export counts via import).
 
 - [ ] **Step 6: Extend the boundary scan to packages**
 
@@ -257,10 +257,10 @@ In the root `package.json`, change the script:
 ```
 
 Run: `pnpm run lint:boundaries; echo "exit: $status"`
-Expected: `exit: 0` — module count grows by the contracts files; no violations (contracts imports nothing from the workspace).
+Expected: `exit: 0`. The module count grows by the contracts files, with no violations (contracts imports nothing from the workspace).
 
 Run: `pnpm run lint:dead; echo "exit: $status"`
-Expected: `exit: 0`. If knip flags the new workspace (e.g. unused index export before Task 4 consumes it), the test files consuming the exports should already satisfy it; if a workspace-level knip entry is genuinely needed, add the narrowest possible block to `knip.json` (`"packages/contracts": {}`) — never a broad ignore.
+Expected: `exit: 0`. If knip flags the new workspace (for example, an unused index export before Task 4 consumes it), the test files consuming the exports should already satisfy it. If a workspace-level knip entry is genuinely needed, add the narrowest possible block to `knip.json` (`"packages/contracts": {}`). Never use a broad ignore.
 
 Run: `pnpm run typecheck && pnpm run lint && pnpm test`
 Expected: turbo now runs 2 packages for each task, all green.
@@ -470,7 +470,7 @@ describe('gateway config round-trip', () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm --filter @recompose/contracts run test`
-Expected: FAIL — cannot resolve `./gateway-config`.
+Expected: `FAIL`, since the test can't resolve `./gateway-config`.
 
 - [ ] **Step 3: Implement**
 
@@ -558,12 +558,12 @@ export * from './gateway-config';
 - [ ] **Step 4: Run to verify pass**
 
 Run: `pnpm --filter @recompose/contracts run test`
-Expected: PASS — all specs including the property (100 generated configs), coverage green. If zod 4's API names differ from the snippet (`z.strictObject`, `z.int`), consult the installed `node_modules/zod` typings and use the current equivalents — never loosen a constraint to pass.
+Expected: `PASS`. All specs pass, including the property (100 generated configs), and coverage is green. If zod 4's API names differ from the snippet (`z.strictObject`, `z.int`), consult the installed `node_modules/zod` typings and use the current equivalents. Never loosen a constraint to pass.
 
 - [ ] **Step 5: Typecheck + commit**
 
 Run: `pnpm --filter @recompose/contracts run typecheck`
-Expected: PASS.
+Expected: `PASS`.
 
 ```bash
 git add packages/contracts
@@ -679,7 +679,7 @@ describe('app settings', () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm --filter @recompose/contracts run test`
-Expected: FAIL — cannot resolve `./accounts` and `./settings`.
+Expected: `FAIL`, since the test can't resolve `./accounts` and `./settings`.
 
 - [ ] **Step 3: Implement**
 
@@ -761,7 +761,7 @@ export * from './settings';
 - [ ] **Step 4: Run to verify pass, then commit**
 
 Run: `pnpm --filter @recompose/contracts run test && pnpm --filter @recompose/contracts run typecheck`
-Expected: PASS, coverage green.
+Expected: `PASS`, coverage green.
 
 ```bash
 git add packages/contracts
@@ -864,7 +864,7 @@ describe('json file shell', () => {
 - [ ] **Step 3: Run to verify failure**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: FAIL — cannot resolve `./json-file` (browser project and existing unit specs stay green).
+Expected: `FAIL`, since the test can't resolve `./json-file` (browser project and existing unit specs stay green).
 
 - [ ] **Step 4: Implement the json shell**
 
@@ -913,7 +913,7 @@ export async function readJsonWithQuarantine(
 ```
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: json-file specs PASS.
+Expected: json-file specs `PASS`.
 
 - [ ] **Step 5: Write the failing store specs**
 
@@ -1099,7 +1099,7 @@ describe('storage boot', () => {
 - [ ] **Step 6: Run to verify failure**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: FAIL — the four store modules do not exist.
+Expected: `FAIL`, since the four store modules don't exist.
 
 - [ ] **Step 7: Implement the stores**
 
@@ -1228,7 +1228,7 @@ export async function initializeStorage(
 - [ ] **Step 8: Run to verify pass**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS — all storage specs green; coverage includes the new modules at high percentages (the dynamic `rename` import in gateway-store's schema-invalid path is exercised by the quarantine spec).
+Expected: `PASS`. All storage specs stay green, and coverage includes the new modules at high percentages. The quarantine spec exercises the dynamic `rename` import in gateway-store's schema-invalid path.
 
 - [ ] **Step 9: Wire the boot call**
 
@@ -1238,7 +1238,7 @@ In `apps/desktop/src/main/index.ts`, add the import (after the existing imports)
 import { initializeStorage } from './storage/initialize-storage';
 ```
 
-and inside the existing `app.whenReady().then(() => { ... })` callback, as its FIRST statement:
+and inside the existing `app.whenReady().then(() => { ... })` callback, as its first statement:
 
 ```ts
 void initializeStorage(app.getPath('userData'), (quarantinedPath) => {
@@ -1270,7 +1270,7 @@ git commit -m "feat(desktop): storage services with atomic writes and quarantine
 **Interfaces:**
 
 - Consumes: `writeJsonAtomic`, `readJsonWithQuarantine` (Task 4).
-- Produces: `type SecretCodec = { encrypt: (plain: string) => string; decrypt: (encryptedBase64: string) => string; isPlaintextFallback: boolean }`; `createSafeStorageCodec(): SecretCodec` (the ONLY electron-importing storage file); vault functions `loadVaultFile(filePath, onCorrupt): Promise<VaultDocument>`, `saveVaultFile(filePath, vault): Promise<void>`, `setSecret(vault, codec, ref, plain): VaultDocument`, `getSecret(vault, codec, ref): string | undefined`, `deleteSecret(vault, ref): VaultDocument` with `type VaultDocument = { schemaVersion: 1; entries: Record<string, string> }`.
+- Produces: `type SecretCodec = { encrypt: (plain: string) => string; decrypt: (encryptedBase64: string) => string; isPlaintextFallback: boolean }`; `createSafeStorageCodec(): SecretCodec` (the only electron-importing storage file); vault functions `loadVaultFile(filePath, onCorrupt): Promise<VaultDocument>`, `saveVaultFile(filePath, vault): Promise<void>`, `setSecret(vault, codec, ref, plain): VaultDocument`, `getSecret(vault, codec, ref): string | undefined`, `deleteSecret(vault, ref): VaultDocument` with `type VaultDocument = { schemaVersion: 1; entries: Record<string, string> }`.
 
 - [ ] **Step 1: Write the failing vault specs**
 
@@ -1381,7 +1381,7 @@ describe('safeStorage codec', () => {
 - [ ] **Step 2: Run to verify failure**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: FAIL — the two modules do not exist.
+Expected: `FAIL`, since the two modules don't exist.
 
 - [ ] **Step 3: Implement**
 
@@ -1406,7 +1406,7 @@ export function createSafeStorageCodec(): SecretCodec {
 }
 ```
 
-Note: `getSelectedStorageBackend` exists only on Linux in Electron's typings; if the typecheck rejects the direct call, gate it exactly as above (`process.platform === 'linux'`) and consult the installed `electron` typings for the current guard shape — never cast to `any`.
+Note: `getSelectedStorageBackend` exists only on Linux in Electron's typings. If the typecheck rejects the direct call, gate it exactly as above (`process.platform === 'linux'`), and consult the installed `electron` typings for the current guard shape. Never cast to `any`.
 
 Create `apps/desktop/src/main/storage/vault.ts`:
 
@@ -1484,7 +1484,7 @@ export function deleteSecret(vault: VaultDocument, ref: string): VaultDocument {
 - [ ] **Step 4: Run to verify pass, full gates, commit**
 
 Run: `pnpm --filter @recompose/desktop run test && pnpm --filter @recompose/desktop run typecheck && pnpm run lint:dead`
-Expected: all green (test files consuming the vault exports satisfy knip; the electron mock is a sanctioned process-boundary double).
+Expected: all green. Test files consuming the vault exports satisfy knip, and the electron mock is a sanctioned process-boundary double.
 
 ```bash
 git add apps/desktop
@@ -1493,7 +1493,7 @@ git commit -m "feat(desktop): secret vault over safeStorage codec"
 
 ---
 
-### Task 6: ADR-0016
+### Task 6: Architecture decision record 0016
 
 **Files:**
 
@@ -1503,7 +1503,7 @@ git commit -m "feat(desktop): secret vault over safeStorage codec"
 **Interfaces:**
 
 - Consumes: shipped code from Tasks 1–5 (referenced, not changed).
-- Produces: the decision record; nothing downstream.
+- Produces: ADR-0016, with nothing downstream.
 
 - [ ] **Step 1: Write the ADR**
 
@@ -1559,6 +1559,6 @@ git commit -m "docs(adr): record storage architecture (ADR-0016)"
 
 ## Deviations discovered in execution
 
-- **`@recompose/contracts` must be a `devDependency` of `@recompose/desktop`, not a `dependency`.** Task 4 Step 1 (`pnpm --filter @recompose/desktop add "@recompose/contracts@workspace:*"`) lands it in `dependencies`, which electron-vite externalizes for the main bundle — the built `out/main/index.js` then does `require("@recompose/contracts")`, unresolvable under Electron's Node at runtime (the app cannot boot). Contracts is TS-source-only and consumed entirely at build time; it belongs in `devDependencies` so electron-vite inlines it (zod included) instead of externalizing it.
-- **Settings, accounts, and gateway configs now share one quarantine path.** The plan's Task 4 snippets have `loadSettingsFile`/`loadAccountsFile` call `loadSettings`/`loadAccountsDocument` directly after `readJsonWithQuarantine`, so a syntactically-valid-but-schema-invalid document throws instead of being quarantined — inconsistent with gateway-store's per-file handling and with the spec's "unreadable or invalid input is quarantined" rule. `json-file.ts` gained `readDocumentWithQuarantine<T>(filePath, parse, onCorrupt): Promise<T | undefined>`, which quarantines on both JSON syntax errors and schema-validation failures; `settings-store.ts`, `accounts-store.ts`, and `gateway-store.ts` are all rewired through it.
-- **Vault documents that fail structural validation are now quarantined, not silently emptied — except a newer `schemaVersion`, which throws.** The plan's `loadVaultFile` returns `emptyVault` for any document that fails `isVaultDocument`, including a syntactically fine file with a bad shape; the next save would silently overwrite it with an empty vault, losing secrets. `vault.ts` now quarantines the file (matching the other stores) when the document is structurally invalid and `schemaVersion` is absent or `1`; when `schemaVersion` is an integer greater than `1`, it throws instead, naming both versions, so an app downgrade cannot silently wipe a newer vault.
+- **`@recompose/contracts` must be a `devDependency` of `@recompose/desktop`, not a `dependency`.** Task 4 Step 1 (`pnpm --filter @recompose/desktop add "@recompose/contracts@workspace:*"`) lands it in `dependencies`, which electron-vite externalizes for the main bundle. The built `out/main/index.js` then does `require("@recompose/contracts")`, unresolvable under Electron's Node at runtime, so the app can't boot. Contracts is TS-source-only and consumed entirely at build time, so it belongs in `devDependencies`, letting electron-vite inline it (zod included) instead of externalizing it.
+- **Settings, accounts, and gateway configs now share one quarantine path.** The plan's Task 4 snippets have `loadSettingsFile`/`loadAccountsFile` call `loadSettings`/`loadAccountsDocument` directly after `readJsonWithQuarantine`, so a syntactically valid but schema-invalid document throws instead of landing in quarantine. This is inconsistent with gateway-store's per-file handling and with the spec's `unreadable or invalid input is quarantined` rule. `json-file.ts` gained `readDocumentWithQuarantine<T>(filePath, parse, onCorrupt): Promise<T | undefined>`, which quarantines on both JSON syntax errors and schema-validation failures, and `settings-store.ts`, `accounts-store.ts`, and `gateway-store.ts` are all rewired through it.
+- **Vault documents that fail structural validation are now quarantined, not emptied without warning, except a newer `schemaVersion`, which throws.** The plan's `loadVaultFile` returns `emptyVault` for any document that fails `isVaultDocument`, including a syntactically fine file with a bad shape, and the next save would overwrite it with an empty vault without warning, losing secrets. `vault.ts` now quarantines the file (matching the other stores) when the document is structurally invalid and `schemaVersion` is absent or `1`. When `schemaVersion` is an integer greater than `1`, it throws instead, naming both versions, so an app downgrade can't wipe a newer vault without warning.

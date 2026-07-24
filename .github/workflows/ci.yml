@@ -19,6 +19,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       workflows: ${{ steps.filter.outputs.workflows }}
+      prose: ${{ steps.filter.outputs.prose }}
     steps:
       - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
@@ -37,6 +38,8 @@ jobs:
               - '!**/*.md'
             workflows:
               - '.github/workflows/**'
+            prose:
+              - '{**/*.md,.vale.ini,.vale/**,mise.toml}'
 
   check:
     needs: changes
@@ -95,6 +98,25 @@ jobs:
           files: apps/desktop/coverage/lcov.info,packages/contracts/coverage/lcov.info
           disable_search: true
           fail_ci_if_error: true
+
+  prose:
+    needs: changes
+    if: needs.changes.outputs.prose == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: vale-cli/vale-action@85f9f7f2c5f449ac0ae5b66662961bae3f77ca6a # v2.1.2
+        with:
+          version: 3.15.2
+          files: all
+          vale_flags: '--glob=!{node_modules,.agents,.claude/skills,.claude/worktrees,.vale,out,dist,coverage}/**'
+          reporter: github-pr-check
+          fail_on_error: true
 
   gitleaks:
     runs-on: ubuntu-latest
@@ -171,7 +193,8 @@ jobs:
         run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
 
   ci-success:
-    needs: [changes, check, coverage-upload, gitleaks, audit, zizmor, actionlint, commitlint-pr]
+    needs:
+      [changes, check, coverage-upload, prose, gitleaks, audit, zizmor, actionlint, commitlint-pr]
     if: always()
     runs-on: ubuntu-latest
     steps:

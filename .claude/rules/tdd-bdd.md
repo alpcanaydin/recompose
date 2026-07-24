@@ -1,4 +1,4 @@
-# TDD/BDD Rules — inside-out (Detroit/classicist), BDD-style specs
+# Test-driven and behavior-driven rules, applied inside-out (Detroit/classicist) and written as behavior-style specs
 
 ## Method
 - Test-first, always: red → green → refactor. No implementation code before a failing test.
@@ -7,15 +7,15 @@
 
 ## Verification style
 - **State-based, not interaction-based.** Assert on outcomes and returned/observable state.
-- No mocks for internal collaborators — exercise them indirectly through the unit under test.
+- Exercise internal collaborators indirectly through the unit under test instead of mocking them.
 - Test doubles only at real process boundaries: network, filesystem, clock, child processes.
 
-## BDD spec language
+## Behavior-style spec language
 - Tests are behavior specs: structure and name them Given/When/Then (arrange/act/assert).
 - Describe *what* the system does in domain language ("failover shifts traffic to the next healthy target"), never *how* ("calls selectTarget() twice").
 - A scenario must make sense to someone who has never seen the implementation.
 
 ## The invariant
 - **Test code changes if and only if behavior changes.**
-- A pure refactor must never require touching a test. If it does, the test was coupled to implementation — rewrite the test against public behavior, don't patch it.
+- A pure refactor must never require touching a test. If it does, the test has coupled itself to implementation details, so rewrite it around public behavior instead of patching it.
 - Forbidden in tests: reaching into private state, asserting call order/counts of internals, importing non-public modules.

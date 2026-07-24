@@ -1,18 +1,18 @@
-# Folder Structure — Design
+# Folder structure: Design
 
 **Date:** 2026-07-22
-**Status:** Approved; implemented via `docs/superpowers/plans/2026-07-22-folder-structure.md` (ADR-0010)
+**Status:** Approved. Implemented via `docs/superpowers/plans/2026-07-22-folder-structure.md` (Architecture Decision Record (ADR) 0010)
 
 ## Goal
 
-Fix the repository's folder structure before feature development starts, at every level: monorepo package map, Electron process layout (`main`/`preload`/`renderer`), and renderer internals. Every placement question must have a pre-written answer, and every rule must be machine-enforced — no room for session-to-session interpretation drift.
+Fix the repository's folder structure before feature development starts, at every level: monorepo package map, Electron process layout (`main`/`preload`/`renderer`), and renderer internals. Every placement question must have a pre-written answer, and every rule must be machine-enforced, leaving no room for session-to-session interpretation drift.
 
 ## Guiding decision
 
 Two published conventions, one tool each, zero overlap:
 
-- **Renderer:** full [Feature-Sliced Design](https://feature-sliced.design/) (FSD), enforced by [Steiger](https://github.com/feature-sliced/steiger). FSD was chosen over a bespoke hybrid precisely because it is an externally documented standard: "where does this file go" is answered by the methodology, not by whoever (or whatever) is writing code that day.
-- **Repo graph:** [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) enforces everything FSD cannot see — package direction, Electron process boundaries, the engine's purity rule, and circular-import bans.
+- **Renderer:** full [Feature-Sliced Design](https://feature-sliced.design/) (FSD), enforced by [Steiger](https://github.com/feature-sliced/steiger). This spec picks FSD over a bespoke hybrid, because it's an externally documented standard: the methodology answers "where does this file go," instead of whoever (or whatever) is writing code that day.
+- **Repo graph:** [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) enforces everything FSD can't see: package direction, Electron process boundaries, the engine's purity rule, and circular-import bans.
 
 ## 1. Monorepo map
 
@@ -27,9 +27,9 @@ design-system/         # Claude Design library (exists, unchanged)
 docs/adr/              # exists, unchanged
 ```
 
-Reserved packages are named now so their boundary rules exist before their first file does. No empty scaffolds (YAGNI): a package opens when its first real code lands, and `packages/engine` gets its own internal-structure ADR at that moment (its shape depends on which OSS gateway code gets adapted — designing it earlier is speculation).
+This spec names reserved packages now, so their boundary rules exist before their first file does. This follows the You Aren't Gonna Need It (YAGNI) principle: no empty scaffolds. A package opens only when its first real code lands, and `packages/engine` gets its own internal-structure ADR at that moment. Its shape depends on which OSS gateway code gets adapted, so designing it earlier would be speculation.
 
-**Dependency direction (target state — machine enforcement lands with the deferred dependency-cruiser/Steiger queue item):**
+**Dependency direction (target state, with machine enforcement landing via the deferred dependency-cruiser/Steiger queue item):**
 
 - `apps/desktop` → `packages/contracts` ← `packages/engine`
 - `packages/engine` must never import `electron` or any workspace package other than `contracts` (regular npm dependencies are fine)
@@ -56,11 +56,11 @@ src/
 
 **Process-boundary rules (dependency-cruiser):**
 
-- `renderer` must never import from `main` or `preload` (and vice versa) — they communicate only via IPC
+- `renderer` must never import from `main` or `preload` (and vice versa), since they communicate only via Inter-Process Communication (IPC)
 - `main`/`preload` must never import from `renderer`
 - Only `engine-host` may reference the engine entry
 
-## 3. Renderer — full Feature-Sliced Design
+## 3. Renderer layer structure
 
 Root: `src/renderer/src/`. Standard FSD layers, no custom layers:
 
@@ -76,7 +76,7 @@ shared/       # ui kit (DS primitives), ipc client, config — no business logic
 
 Layer import rule (enforced by Steiger): a layer may import only from layers **below** it (`app` → `pages` → `widgets` → `features` → `entities` → `shared`). Slices on the same layer never import each other.
 
-**Segments** inside every slice — purpose-named, never essence-named (`components/`, `hooks/`, `types/`, `utils/` are forbidden as folder names):
+**Segments** inside every slice: purpose-named, never essence-named. This spec forbids `components/`, `hooks/`, `types/`, `utils/` as folder names:
 
 ```text
 entities/gateway/
@@ -86,25 +86,25 @@ entities/gateway/
 └─ lib/      # slice-local library code (rare)
 ```
 
-A segment opens when its first file lands. Each slice exposes a public API `index.ts`; deeper imports are blocked by Steiger. Segment-level barrel files are not used (Vite tree-shaking).
+A segment opens when its first file lands. Each slice exposes a public API `index.ts`, and Steiger blocks deeper imports. Segment-level barrel files aren't used (Vite tree-shaking).
 
-**Placement rule (FSD v2.1 — "start simple, extract when needed"):** new code goes into the `pages/` slice it serves. It moves down a layer only when the same code is _currently_ used in 2+ places, the usages don't always change together, and the boundary is stable — never for hypothetical reuse. The minimal valid tree is `app/ + pages/ + shared/`; `widgets/`, `features/`, `entities/` open at their first confirmed multi-use, like every other folder in this spec.
+**Placement rule (FSD v2.1's `start simple, extract when needed`):** New code goes into the `pages/` slice it serves. It moves down a layer only when the same code is _currently_ used in 2+ places and the usages don't always change together, and only when the boundary is stable. Hypothetical reuse never justifies the move. The minimal valid tree is `app/ + pages/ + shared/`. `widgets/`, `features/`, `entities/` open at their first confirmed multi-use, like every other folder in this spec.
 
-| It is a…                                                                    | It goes to         |
-| --------------------------------------------------------------------------- | ------------------ |
-| anything single-use, or in doubt                                            | its `pages/` slice |
-| domain model used by 2+ pages/widgets **today**                             | `entities/`        |
-| user interaction used by 2+ pages/widgets **today**                         | `features/`        |
-| composite block reused across pages **today**                               | `widgets/`         |
-| infrastructure with zero business logic (ui kit, IPC client, CRUD plumbing) | `shared/`          |
+| It's a…                                                                                                    | It goes to         |
+| ---------------------------------------------------------------------------------------------------------- | ------------------ |
+| anything single-use, or in doubt                                                                           | its `pages/` slice |
+| domain model used by 2+ pages/widgets **today**                                                            | `entities/`        |
+| user interaction used by 2+ pages/widgets **today**                                                        | `features/`        |
+| composite block reused across pages **today**                                                              | `widgets/`         |
+| infrastructure with zero business logic (ui kit, IPC client, Create, Read, Update, Delete (CRUD) plumbing) | `shared/`          |
 
-`shared/` exposes a public API per segment (`shared/ui/index.ts`, `shared/api/index.ts`) — no top-level `shared/index.ts`. Every placement decision for a new renderer file goes through the `feature-sliced-design` skill's decision tree (rule recorded in `CLAUDE.md`).
+`shared/` exposes a public API per segment (`shared/ui/index.ts`, `shared/api/index.ts`), with no top-level `shared/index.ts`. Every placement decision for a new renderer file goes through the `feature-sliced-design` skill's decision tree (rule recorded in `CLAUDE.md`).
 
-**TanStack Router fit:** file-based route files live in `app/routes/`; each route file only mounts a `pages/` slice. This is the documented FSD + TanStack combination; if the route-file location fights the router's generator, TanStack's Virtual File Routes are the sanctioned escape hatch.
+**TanStack Router fit:** file-based route files live in `app/routes/`, and each route file only mounts a `pages/` slice. This is the documented FSD + TanStack combination. If the route-file location fights the router's generator, TanStack's Virtual File Routes are the sanctioned escape hatch.
 
 ## 4. Tests
 
-- Unit/integration: colocated — `wire-status.ts` + `wire-status.test.ts` side by side, in every package
+- Unit/integration: colocated, with `wire-status.ts` + `wire-status.test.ts` side by side, in every package
 - E2E (Playwright, queue item 9): `apps/desktop/e2e/`
 - Same rule applies to `packages/engine` when it opens
 
@@ -115,15 +115,15 @@ A segment opens when its first file lands. Each slice exposes a public API `inde
 | FSD layers, slice isolation, public API, segments         | Steiger            | CI + lefthook |
 | Package direction, engine purity, process borders, cycles | dependency-cruiser | CI + lefthook |
 
-Tool configuration itself is queue item 2/3 (Vitest, then dependency-cruiser + Steiger); this spec only fixes the rules they will encode.
+Tool configuration itself is queue item 2/3 (Vitest, then dependency-cruiser + Steiger). This spec only fixes the rules they will encode.
 
 ## 6. Naming
 
 - Folders and files: kebab-case (`gateway-list.tsx`, `wire-status.ts`)
-- Slice names use domain language: `gateway`, `virtual-model`, `provider`, `target` — never `manager`, `helper`, `util`, `data`
+- Slice names use domain language: `gateway`, `virtual-model`, `provider`, `target`, never `manager`, `helper`, `util`, `data`
 
 ## Out of scope
 
-- `packages/engine` internal structure — own ADR at birth (see section 1)
+- `packages/engine` internal structure: own ADR at birth (see section 1)
 - Migration of the two existing renderer files (`App.tsx`, `main.tsx`) happens in the implementation plan, not here
-- Window-close vs quit lifecycle behavior — belongs to the gateway-lifecycle feature
+- Window-close vs quit lifecycle behavior: belongs to the gateway-lifecycle feature

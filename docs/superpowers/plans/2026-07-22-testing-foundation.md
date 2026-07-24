@@ -1,23 +1,31 @@
-# Testing Foundation Implementation Plan
+# Testing foundation implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up the unit/integration test harness — Vitest 4 with a node/browser project split, fast-check property testing, and a CI-enforced 90% coverage gate — proven by real behavior specs.
+**Goal:** Stand up the unit/integration test harness (Vitest 4 with a node/browser project split, fast-check property testing, and a CI-enforced 90% coverage gate). Real behavior specs prove it works.
 
-**Architecture:** Per-package Vitest config (Turborepo guidance) with two `projects` inside `apps/desktop`: `unit` (node environment) and `browser` (Vitest Browser Mode on real Chromium via Playwright). Coverage thresholds live once in a root `vitest.shared.ts`. The CI `check` job already runs `turbo run test`; it only gains a Chromium install step.
+**Architecture:** Per-package Vitest config (Turborepo guidance) with two `projects` inside `apps/desktop`: `unit` (node environment) and `browser` (Vitest Browser Mode on real Chromium via Playwright). Coverage thresholds live once in a root `vitest.shared.ts`. The CI `check` job already runs `turbo run test`, and it only gains a Chromium install step.
 
-**Tech Stack:** vitest 4.1.10, @vitest/browser-playwright 4.1.10, @vitest/coverage-v8 4.1.10, vitest-browser-react 2.2.0, fast-check 4.9.0, @fast-check/vitest 0.4.1, playwright 1.61.1.
+**Tech Stack:**
+
+- vitest 4.1.10
+- @vitest/browser-playwright 4.1.10
+- @vitest/coverage-v8 4.1.10
+- vitest-browser-react 2.2.0
+- fast-check 4.9.0
+- @fast-check/vitest 0.4.1
+- playwright 1.61.1
 
 ## Global Constraints
 
 - Spec: `docs/superpowers/specs/2026-07-22-testing-foundation-design.md`.
-- All dependency versions exactly as listed above (`pnpm add -D -E`).
-- Filename boundary: DOM-touching tests are `*.browser.test.tsx`; everything else is `*.test.ts`. Tests are colocated with source.
+- All dependency versions exactly as listed in Tech Stack (`pnpm add -D -E`).
+- Filename boundary: DOM-touching tests are `*.browser.test.tsx`, and everything else is `*.test.ts`. Tests are colocated with source.
 - Coverage thresholds: `lines/branches/functions/statements ≥ 90`, defined only in `vitest.shared.ts`.
-- Process boundary wiring files (`src/main/index.ts`, `src/main/windows/main-window.ts`, `src/preload/index.ts`, `src/renderer/src/app/main.tsx`) are excluded from coverage; consequently no logic may live in them — logic is extracted to tested modules.
-- TypeScript max strictness is already on (`tsconfig.strict.json`); no `any`, no `as` casts to silence errors.
+- Coverage excludes process boundary wiring files (`src/main/index.ts`, `src/main/windows/main-window.ts`, `src/preload/index.ts`, `src/renderer/src/app/main.tsx`), so no logic may live in them. Extraction moves logic into tested modules instead.
+- TypeScript max strictness is already on (`tsconfig.strict.json`), with no `any` and no `as` casts to silence errors.
 - **Never write code comments** (project rule).
-- The repository owner's private alias must not appear in any artifact (gitleaks `forbidden-owner-alias` enforces file contents; keep it out of commit messages and branch names manually).
+- The repository owner's private alias must not appear in any artifact. The gitleaks `forbidden-owner-alias` rule enforces file contents, and commit messages and branch names need manual care.
 - Commit messages: Conventional Commits, terse, imperative, no AI attribution in the message body (Co-Authored-By trailer only).
 - Tests follow `.claude/rules/tdd-bdd.md`: state-based assertions, behavior language, no doubles for internal collaborators.
 - All commands run from the worktree root.
@@ -38,7 +46,10 @@
 **Interfaces:**
 
 - Consumes: nothing from earlier tasks.
-- Produces: `windowOptionsFor(platform: NodeJS.Platform, preloadPath: string, iconPath: string): BrowserWindowConstructorOptions` in `apps/desktop/src/main/windows/window-options.ts`; `apps/desktop/vitest.config.ts` with a `unit` project that Task 2 extends with a `browser` project; `test` script that Task 3 extends with `--coverage`.
+- Produces:
+  - `windowOptionsFor(platform: NodeJS.Platform, preloadPath: string, iconPath: string): BrowserWindowConstructorOptions` in `apps/desktop/src/main/windows/window-options.ts`.
+  - `apps/desktop/vitest.config.ts` with a `unit` project that Task 2 extends with a `browser` project.
+  - A `test` script that Task 3 extends with `--coverage`.
 
 - [ ] **Step 1: Install unit-layer dependencies and add the test script**
 
@@ -84,7 +95,7 @@ In `apps/desktop/tsconfig.node.json`, extend `include`:
 ```
 
 Run: `pnpm --filter @recompose/desktop run typecheck`
-Expected: PASS (vitest.config.ts compiles; nothing else changed yet).
+Expected: `PASS` (vitest.config.ts compiles, and nothing else changed yet).
 
 - [ ] **Step 4: Write the failing behavior specs (examples + property)**
 
@@ -157,7 +168,7 @@ describe('window chrome per platform', () => {
 - [ ] **Step 5: Run the test to verify it fails**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: FAIL — `Cannot find module './window-options'` (or equivalent resolve error) for all four specs.
+Expected: `FAIL`, with `Cannot find module './window-options'` (or equivalent resolve error) for all four specs.
 
 - [ ] **Step 6: Implement the extraction**
 
@@ -194,7 +205,7 @@ export function windowOptionsFor(
 - [ ] **Step 7: Run the test to verify it passes**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS — 4 passed (the property spec runs 100 generated cases internally).
+Expected: `PASS`, with 4 passed (the property spec runs 100 generated cases internally).
 
 - [ ] **Step 8: Point the window wiring at the extraction**
 
@@ -212,12 +223,12 @@ const mainWindow = new BrowserWindow(
 );
 ```
 
-Nothing else in the file changes (`isMac`, `applyGlassBackdrop`, handlers stay as they are).
+Nothing else in the file changes (`isMac`, `applyGlassBackdrop`, handlers stay as they're).
 
 - [ ] **Step 9: Verify typecheck, tests, and build still pass**
 
 Run: `pnpm --filter @recompose/desktop run typecheck && pnpm --filter @recompose/desktop run test && pnpm --filter @recompose/desktop run build`
-Expected: all PASS.
+Expected: all pass.
 
 - [ ] **Step 10: Commit**
 
@@ -240,8 +251,8 @@ git commit -m "test(desktop): add vitest unit project, extract window options"
 
 **Interfaces:**
 
-- Consumes: `apps/desktop/vitest.config.ts` from Task 1 — the `projects` array with the `unit` entry.
-- Produces: a `browser` project entry Task 3's coverage measures; CI capable of running Browser Mode.
+- Consumes: `apps/desktop/vitest.config.ts` from Task 1, specifically the `projects` array with the `unit` entry.
+- Produces: a `browser` project entry that Task 3's coverage measures, plus CI capable of running Browser Mode.
 
 - [ ] **Step 1: Install browser-layer dependencies and Chromium**
 
@@ -298,7 +309,7 @@ In `apps/desktop/tsconfig.web.json`, add to `compilerOptions`:
 
 - [ ] **Step 4: Write the renderer shell spec**
 
-Create `apps/desktop/src/renderer/src/app/app.browser.test.tsx` (colocated with `app.tsx` in the FSD app layer — the test travels with its slice):
+Create `apps/desktop/src/renderer/src/app/app.browser.test.tsx` (colocated with `app.tsx` in the Feature-Sliced Design (FSD) app layer, because the test travels with its slice):
 
 ```tsx
 import { expect, test } from 'vitest';
@@ -317,16 +328,16 @@ test('the shell presents a sidebar beside the main area', async () => {
 - [ ] **Step 5: Run and verify it passes in real Chromium**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS — unit project 4 passed, browser project 1 passed (look for `chromium` in the browser project banner).
+Expected: `PASS`, with unit project 4 passed and browser project 1 passed (look for `chromium` in the browser project banner).
 
 - [ ] **Step 6: Prove the browser harness actually asserts**
 
-Temporarily change `screen.getByText('Sidebar')` to `screen.getByText('No Such Text')`, run `pnpm --filter @recompose/desktop run test`, and confirm the browser project FAILS with an element-not-found error. Revert the change and re-run to confirm PASS again.
+Temporarily change `screen.getByText('Sidebar')` to `screen.getByText('No Such Text')`, run `pnpm --filter @recompose/desktop run test`, and confirm the browser project fails with an element-not-found error. Revert the change and re-run to confirm it passes again.
 
 - [ ] **Step 7: Verify typecheck**
 
 Run: `pnpm --filter @recompose/desktop run typecheck`
-Expected: PASS (`expect.element` and `render` resolve their types).
+Expected: `PASS` (`expect.element` and `render` resolve their types).
 
 - [ ] **Step 8: Commit the harness**
 
@@ -366,7 +377,7 @@ git commit -m "ci: install chromium for browser-mode tests"
 **Interfaces:**
 
 - Consumes: the full `projects` config from Task 2.
-- Produces: `coverageDefaults` (provider, reporters, thresholds) exported from `vitest.shared.ts` — the single place thresholds live; every future package spreads it.
+- Produces: `coverageDefaults` (provider, reporters, thresholds) exported from `vitest.shared.ts`, the single place thresholds live. Every future package spreads it.
 
 - [ ] **Step 1: Install the coverage provider**
 
@@ -417,7 +428,7 @@ and add a `coverage` block inside `test` (before `projects`):
     },
 ```
 
-The four excluded source files are process boundary wiring: pure composition at the Electron edge (app lifecycle, `BrowserWindow`/`contextBridge` construction, DOM mount). The rule this encodes: logic never lives in a wiring file — it gets extracted (as `window-options.ts` was) and tested.
+The four excluded source files are process boundary wiring: pure composition at the Electron edge (app lifecycle, `BrowserWindow`/`contextBridge` construction, DOM mount). The rule this encodes: logic never lives in a wiring file, so it gets extracted (as `window-options.ts` was) and tested.
 
 In `apps/desktop/tsconfig.node.json`, extend `include`:
 
@@ -444,12 +455,12 @@ Append `coverage` on its own line to `apps/desktop/.gitignore`.
 - [ ] **Step 5: Run and verify the gate passes**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS, with a coverage table showing `window-options.ts` and `app.tsx` at 100% and no threshold errors.
+Expected: `PASS`, with a coverage table showing `window-options.ts` and `app.tsx` at 100% and no threshold errors.
 
-- [ ] **Step 6: Prove the gate fails when thresholds are not met**
+- [ ] **Step 6: Prove the gate fails when thresholds aren't met**
 
 Run: `pnpm --filter @recompose/desktop exec vitest run --coverage --coverage.thresholds.lines=101`
-Expected: exit code 1 with a `coverage threshold` error. Verify with `echo $?` (bash) — must print `1`.
+Expected: exit code 1 with a `coverage threshold` error. Verify with `echo $?` (bash), which must print `1`.
 
 - [ ] **Step 7: Wire turbo caching**
 
@@ -465,10 +476,10 @@ In `turbo.json`, replace `"test": {}` with:
 - [ ] **Step 8: Verify the root pipeline**
 
 Run: `pnpm test`
-Expected: turbo runs `@recompose/desktop:test`, PASS. Run `pnpm test` again — expected `FULL TURBO` (cache hit).
+Expected: turbo runs `@recompose/desktop:test`, `PASS`. Run `pnpm test` again, and check for `FULL TURBO` (cache hit).
 
 Run: `pnpm --filter @recompose/desktop run typecheck`
-Expected: PASS.
+Expected: `PASS`.
 
 - [ ] **Step 9: Commit**
 
@@ -479,7 +490,7 @@ git commit -m "test: enforce 90% coverage gate via shared thresholds"
 
 ---
 
-### Task 4: ADR-0012
+### Task 4: Architecture decision record 0012
 
 **Files:**
 
@@ -489,7 +500,7 @@ git commit -m "test: enforce 90% coverage gate via shared thresholds"
 **Interfaces:**
 
 - Consumes: the shipped harness from Tasks 1–3 (referenced, not changed).
-- Produces: the decision record; nothing downstream.
+- Produces: the Architecture Decision Record (ADR), with nothing downstream.
 
 - [ ] **Step 1: Write the ADR**
 
@@ -507,22 +518,32 @@ The infrastructure queue reached the unit/integration layers of the test pyramid
 
 ## Decision
 
-- **Vitest 4** as the runner, configured per package with a `projects` split inside `apps/desktop`: `unit` (node environment — main, preload, renderer pure logic) and `browser` (Browser Mode on real Chromium via `@vitest/browser-playwright`, rendering with `vitest-browser-react`). No jsdom/happy-dom anywhere; the filename decides the environment (`*.browser.test.tsx` vs `*.test.ts`).
+- **Vitest 4** as the runner, configured per package with a `projects` split inside `apps/desktop`: `unit` (node environment, covering main, preload, and renderer pure logic) and `browser` (Browser Mode on real Chromium via `@vitest/browser-playwright`, rendering with `vitest-browser-react`). No jsdom/happy-dom exists anywhere. The filename decides the environment instead (`*.browser.test.tsx` vs `*.test.ts`).
 - **fast-check v4 via `@fast-check/vitest`** for property-based testing, colocated in the same spec files (`test.prop`). Core domain logic gets example and property specs.
-- **Coverage gate**: `@vitest/coverage-v8` with `lines/branches/functions/statements ≥ 90`, thresholds defined once in the root `vitest.shared.ts`. `coverage.include` spans all of `src/`, so an untested (or misnamed) file counts against the gate. Process boundary wiring files (`src/main/index.ts`, `src/main/windows/main-window.ts`, `src/preload/index.ts`, `src/renderer/src/app/main.tsx`) are excluded as pure composition — the corollary rule is that logic never lives in them.
+- **Coverage gate**: `@vitest/coverage-v8` with `lines/branches/functions/statements ≥ 90`, thresholds defined once in the root `vitest.shared.ts`. `coverage.include` spans all of `src/`, so an untested (or misnamed) file counts against the gate. Process boundary wiring files (`src/main/index.ts`, `src/main/windows/main-window.ts`, `src/preload/index.ts`, `src/renderer/src/app/main.tsx`) count as pure composition and stay excluded, so the corollary rule holds: logic never lives in them.
 - **Turbo wiring**: per-package `test` script (Turborepo guidance over root-level projects), `coverage/**` cached as task output. CI gains one step: `playwright install --with-deps chromium`.
 
 ## Alternatives
 
-- **jsdom/happy-dom for renderer tests**: faster and dependency-free, but a simulation — weakest exactly where this app lives (canvas layout, pointer interaction, real CSS). Rejected for fidelity; Browser Mode is stable in Vitest 4.
-- **Root-level Vitest projects for the whole monorepo**: single command and merged coverage, but defeats turbo's per-package caching; Turborepo documents it as the compatibility path, not the recommended one.
-- **Coverage as report-only**: no machine pressure; rejected — prose-only rules drift (ADR-0011's lesson), and TDD makes the threshold cheap to hold.
+- **jsdom/happy-dom for renderer tests**: faster and dependency-free, but a simulation, and it's weakest exactly where this app lives (canvas layout, pointer interaction, real CSS). Rejected for fidelity, since Browser Mode is stable in Vitest 4.
+- **Root-level Vitest projects for the whole monorepo**: single command and merged coverage, but defeats turbo's per-package caching. Turborepo documents it as the compatibility path, not the recommended one.
+- **Coverage as report-only**: no machine pressure, so it's rejected, because prose-only rules drift (ADR-0011's lesson), and TDD makes the threshold cheap to hold.
 
 ## Consequences
 
-**Good**: environments are chosen by filename, not judgment; DOM specs run where the app actually runs (Chromium); property tests share the runner and reporter; the coverage gate turns "every layer is tested" from prose into an exit code; unchanged packages skip their test task entirely via turbo cache.
+**Good**:
 
-**Bad**: Browser Mode needs a Chromium download locally and in CI (one install step, ~30s uncached); coverage thresholds are repo-global — a future package with a legitimate reason for lower coverage has to argue with the shared file; entry-file exclusion relies on the extraction discipline the plan establishes.
+- Environments get chosen by filename, not judgment.
+- DOM specs run where the app actually runs (Chromium).
+- Property tests share the runner and reporter.
+- The coverage gate turns "every layer is tested" from prose into an exit code.
+- Unchanged packages skip their test task entirely via turbo cache.
+
+**Bad**:
+
+- Browser Mode needs a Chromium download locally and in CI (one install step, ~30s uncached).
+- Coverage thresholds are repo-global, so a future package with a legitimate reason for lower coverage has to argue with the shared file.
+- Entry-file exclusion relies on the extraction discipline the plan establishes.
 ```
 
 - [ ] **Step 2: Add the index row**

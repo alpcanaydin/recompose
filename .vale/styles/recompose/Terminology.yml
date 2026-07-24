@@ -1,0 +1,15 @@
+extends: substitution
+message: "One concept, one name: use '%s' instead of '%s'."
+level: error
+scope: text
+ignorecase: true
+swap:
+  virtual-model: virtual model
+  virtual_model: virtual model
+  fail-over: failover
+  work-tree: worktree
+  round robin: round-robin
+  sub-agent: subagent
+  code base: codebase
+  type-check: typecheck
+  pre commit: pre-commit

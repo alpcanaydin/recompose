@@ -6,3 +6,6 @@ design-system
 .turbo
 .turbo
 out
+.vale/styles/*
+!.vale/styles/config/
+!.vale/styles/recompose/
