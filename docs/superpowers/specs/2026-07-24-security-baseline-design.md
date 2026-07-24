@@ -16,7 +16,7 @@ Seventh infrastructure-queue item. The typed Inter-Process Communication (IPC) s
 - **Permissions deny by default.** The session gets a permission request handler and a permission check handler that refuse everything, because today's renderer needs no Web permissions. Any future need lands as a visible allowlist entry.
 - **Electron Fuses harden the packaged binary**: `runAsNode` off, Node options and Node inspect arguments off, cookie encryption on, embedded archive integrity validation on, and load-app-from-archive-only on. Applied at package time through the builder hook.
 - **CSP tightens empirically.** The production policy drops `'unsafe-inline'` for styles if the built stylesheet works without it, measured during implementation; development keeps what hot reload needs. The policy stays a document meta tag, the standard mechanism for custom-scheme documents.
-- **OpenSSF Scorecard installs as a standing check with a published badge.** The maintainer dropped the old one-shot-audit plan: Electronegativity leaves the job entirely (unmaintained tool), and Scorecard arrives as the official workflow on the default branch plus a weekly schedule, publishing results so the README carries the score badge. Scorecard audits repository posture rather than diffs, so it runs beside the merge gates rather than inside them.
+- **One one-shot audit rides along.** Electronegativity leaves the job entirely (unmaintained tool, maintainer's call). OpenSSF Scorecard runs once locally per the original queue rider: uncovered findings land in this job's decision record, and no action, schedule, or badge installs.
 
 ## Testing
 
