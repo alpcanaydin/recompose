@@ -57,7 +57,7 @@ describe('window chrome contract across all platforms', () => {
       expect(options.show).toBe(false);
       expect(options.autoHideMenuBar).toBe(true);
       expect(options.webPreferences?.preload).toBe(somePreload);
-      expect(options.webPreferences?.sandbox).toBe(false);
+      expect(options.webPreferences?.sandbox).toBe(true);
     },
   );
 
