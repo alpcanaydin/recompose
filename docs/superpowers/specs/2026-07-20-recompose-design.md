@@ -25,7 +25,7 @@
 
 ## 2. Platform & technical direction
 
-- **Shell: Electron 30+** (Bun = backend/sidecar: gateway engine + protocol translation). **Pivoted from Electrobun.** Trade-off: 80–150 MB bundle (acceptable for an OSS pro tool).
+- **Shell: Electron 30+** (Bun = backend/sidecar: gateway engine + protocol translation). **Pivoted from Electrobun.** **Superseded** (Architecture Decision Record (ADR) 0002): Bun left the architecture, and the engine now runs in Electron's `utilityProcess`. Trade-off: 80–150 MB bundle (acceptable for an OSS pro tool).
 - Character: **DESKTOP-native, macOS-first, "Mac Native" flat pro tool** (TablePlus/Xcode flavor): traffic lights top-left, flat dark/light chrome, systemBlue accent, SF feel. Not a web app.
   - **Direction change (2026-07-20):** this change eliminated the Liquid Glass-heavy character and alternatives 01–07, and locked the direction onto **explorations 08 (dark) / 09 (light)**.
   - **Vibrancy only in the sidebar:** body background is a mac wallpaper, sidebar is translucent blur (`backdrop-filter: blur(52px) saturate(150%)`, alpha `.82` dark / `.8` light, since lower values read as too transparent). The rest of the chrome is flat/opaque.
@@ -188,7 +188,7 @@ The graph keeps a fixed layer order (Gateway·VM·[Router]·Target). Crowding co
 
 ### 8.0 Port model: **single port + path-per-gateway**
 
-A single server port (**:8397**) serves every gateway, each at its own URL path (`http://localhost:8397/my-gateway`). The gateway node subtitle is `/my-gateway · :8397`. An advanced gateway setting holds any per-gateway custom port override. (This design eliminated the old port-per-gateway model and the "port +1" duplicate behavior.)
+A single server port (**:8397**) serves every gateway, each at its own URL path (`http://localhost:8397/my-gateway`). The gateway node subtitle is `/my-gateway · :8397`. An advanced gateway setting holds any per-gateway custom port override (**deferred**: it shipped out of design-system v1 scope, see the deferred list in §10). (This design eliminated the old port-per-gateway model and the "port +1" duplicate behavior.)
 
 ### 8.1 Gateway lifecycle: A+B+C all (companion: `gateway-lifecycle.html`)
 
@@ -220,7 +220,7 @@ Locked 2026-07-21, following the LM Studio model. Research-driven: Ollama's no-a
 
 1. **No API key in the default UI**: localhost use needs zero ceremony.
 2. **Invisible engine hardening:** the gateway validates Origin/Host headers against DNS rebinding (the Ollama CVE fix pattern). Spec text only, no UI.
-3. **One flat, always-visible switch:** Settings › Server › **"Require API token"** (Local Area Network (LAN) exposure toggle), off by default ("Clients must send it as a Bearer token · recommended when serving on LAN"). ON reveals the token row (§9) and grows the Connect tab (§6). Unlike Ollama, recompose fronts **paid accounts**: LAN exposure without a token would mean quota theft, hence the toggle exists.
+3. **One flat, always-visible switch:** Settings › Server › **"Require API token"** (Local Area Network (LAN) exposure toggle), off by default ("Clients must send it as a Bearer token · recommended when serving on LAN"). ON reveals the token row (§9) and grows the Connect tab (§6). Unlike Ollama, recompose fronts **paid accounts**: LAN exposure without a token would mean quota theft, hence the toggle exists. Binding to LAN doesn't force the toggle on; the UI recommends it.
    This design rejected the contextual-key idea (key required automatically only when bind = LAN) as too hard to explain.
 
 ---

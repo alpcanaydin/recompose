@@ -39,10 +39,7 @@ jobs:
             workflows:
               - '.github/workflows/**'
             prose:
-              - '**/*.md'
-              - '.vale.ini'
-              - '.vale/**'
-              - 'mise.toml'
+              - '{**/*.md,.vale.ini,.vale/**,mise.toml}'
 
   check:
     needs: changes

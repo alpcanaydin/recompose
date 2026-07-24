@@ -29,7 +29,7 @@ You define virtual models, wire them to real providers on a node canvas, and poi
 - **Virtual models**: clients see aliases such as `fast` or `smart`. Swap the real model behind that name without touching a single client config.
 - **Composable routing**: failover ladders send traffic to the topmost healthy target; round-robin pools spread it evenly or by weight. Chain routers to combine strategies.
 - **Any provider**: sign in with OAuth for Claude and Codex subscriptions, or add any OpenAI-compatible or Anthropic-compatible endpoint with a base URL and key. The roadmap includes local runtimes (Ollama, LM Studio).
-- **Offline-first and private**: no signup, no telemetry. Credentials stay on your machine in `~/.recompose`. Serving on a Local Area Network (LAN) is opt-in and sits behind a local API token.
+- **Offline-first and private**: no signup, no telemetry. Credentials stay on your machine in `~/.recompose`. Serving on a Local Area Network (LAN) is opt-in, and the app recommends turning on the local API token when you do.
 
 ## How it works
 

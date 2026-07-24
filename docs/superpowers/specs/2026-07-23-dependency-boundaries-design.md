@@ -15,6 +15,8 @@ Third infrastructure-queue item. Architecture Decision Record (ADR) ADR-0010 cho
 - **Stages: pre-commit + CI** (user decision). Two lefthook pre-commit jobs and one CI `check`-job step run the same root scripts. Local hooks stop violations before they leave the machine. CI serves as the net for `--no-verify` (ADR-0006/0007 layering).
 - **Pre-staged rules ship now.** This plan already writes rules for `packages/engine`, `packages/contracts`, and `apps/headless` against paths that don't exist yet. They match nothing until a package opens, then bind with zero rule changes. The only touch when `packages/` first opens: adding `packages` to the scan arguments (`depcruise apps` → `depcruise apps packages`), recorded in ADR-0014. (This design rejected `includeOnly` because it filters node_modules edges out of the graph, which would disable the `engine-no-electron` rule without warning.)
 
+**Execution deviation:** the shipped configuration grew past this table to 17 rules, including the transitive `reachable` checks. ADR-0014 records the final inventory.
+
 ## dependency-cruiser rules
 
 | Rule                      | Constraint                                                                                                                           |
