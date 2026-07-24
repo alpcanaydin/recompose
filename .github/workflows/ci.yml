@@ -148,7 +148,7 @@ jobs:
           body=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.body // ""')
           pr_type=$(printf '%s' "$PR_TITLE" | sed -E 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/')
           src_changed=$(awk '{print $2}' files.txt | grep -E '^(apps|packages)/[^/]+/src/.*\.(ts|tsx)$' | grep -vE '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
-          tests_changed=$(awk '{print $2}' files.txt | grep -E '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
+          tests_changed=$(awk '{print $2}' files.txt | grep -E '\.(test|test-d|stories)\.(ts|tsx)$' | head -1 || true)
           new_ui=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' | head -1 || true)
           stories_changed=$(awk '{print $2}' files.txt | grep -E '\.stories\.tsx$' | head -1 || true)
           fail=0
