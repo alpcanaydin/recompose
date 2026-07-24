@@ -25,8 +25,9 @@ try {
   assert.equal(bridge.isObject, true, 'bridge missing from globalThis');
   assert.equal(bridge.isFrozen, true, 'bridge not frozen');
 
-  const answer = await page.evaluate(() => globalThis.recompose['settings:get']({}));
+  const answer = await page.evaluate(() => globalThis.recompose['settings:get']());
   assert.equal(typeof answer.ok, 'boolean', 'bridge did not answer with a result envelope');
+  assert.equal(answer.ok, true, 'settings:get did not reach the real handler');
 
   const sandboxed = await app.evaluate(
     ({ BrowserWindow }) =>
