@@ -82,6 +82,7 @@
 - Use the `vercel-react-best-practices` skill before writing or reviewing any React code in the renderer.
 - Use the `vercel-composition-patterns` skill when designing component APIs or structuring components (canvas nodes, inspector, drawers), favoring composition over prop drilling.
 - Use the `vercel-react-view-transitions` skill when implementing UI transitions/animations between views or states (screen switches, drawer open/close, node focus).
+- Use the `storybook-stories` skill when writing or reviewing any Storybook story, the Storybook config, or the fake bridge decorator.
 - Use the `writing-guidelines` skill when writing any user-facing copy, docs, or README text.
 
 ## Long-form writing
