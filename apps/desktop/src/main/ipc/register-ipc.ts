@@ -1,3 +1,4 @@
+import { is } from '@electron-toolkit/utils';
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
@@ -16,7 +17,7 @@ function senderFromEvent(event: IpcMainInvokeEvent): TrustedSender {
 }
 
 export function registerIpcHandlers(handlers: IpcHandlers): void {
-  const allowedOrigins: AllowedOrigins = { devServerOrigin: devServerOrigin() };
+  const allowedOrigins: AllowedOrigins = { devServerOrigin: devServerOrigin(is.dev) };
 
   for (const channel of ipcChannelNames) {
     ipcMain.handle(channel, async (event, payload: unknown) =>

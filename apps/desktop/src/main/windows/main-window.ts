@@ -33,7 +33,7 @@ export function createMainWindow(): void {
     mainWindow.show();
   });
 
-  const navigationPolicy: NavigationPolicy = { devServerOrigin: devServerOrigin() };
+  const navigationPolicy: NavigationPolicy = { devServerOrigin: devServerOrigin(is.dev) };
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!isAllowedNavigation(url, navigationPolicy)) {
