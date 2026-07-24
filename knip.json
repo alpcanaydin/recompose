@@ -4,7 +4,6 @@
     "apps/desktop": {
       "entry": [
         "build/after-pack.cjs",
-        "e2e/security-boot-proof.mjs",
         "e2e/playwright.config.ts",
         "e2e/fixtures.ts",
         "e2e/*.spec.ts",
