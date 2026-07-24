@@ -9,7 +9,7 @@
         "e2e/*.spec.ts",
         "e2e/steps/**/*.ts"
       ],
-      "ignoreDependencies": ["fast-check", "electron-playwright-helpers"],
+      "ignoreDependencies": ["fast-check"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
     "packages/contracts": {
