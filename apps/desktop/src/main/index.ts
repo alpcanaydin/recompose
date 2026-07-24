@@ -15,7 +15,6 @@ function onStorageCorrupt(quarantinedPath: string): void {
 }
 
 function registerPermissionHandlers(): void {
-  // eslint-disable-next-line promise/no-callback-in-promise
   const permissionRequestHandler = (
     _webContents: unknown,
     _permission: string,
