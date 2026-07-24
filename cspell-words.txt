@@ -86,6 +86,7 @@ shellcheck
 Squarespace
 steiger
 steiger's
+storybookjs
 streamable
 subline
 Substack
