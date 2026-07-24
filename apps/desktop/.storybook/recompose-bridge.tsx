@@ -2,7 +2,7 @@ import type { AccountsDocument, RecomposeIpc } from '@recompose/contracts';
 import type { Decorator } from '@storybook/react-vite';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 
 const emptyDocument: AccountsDocument = { schemaVersion: 1, accounts: [] };
 
@@ -13,6 +13,7 @@ type BridgeParameters = {
 
 function installBridge(parameters: BridgeParameters): void {
   let registry = parameters.accounts ?? emptyDocument;
+  let nextAccountNumber = registry.accounts.length + 1;
 
   window.recompose = {
     'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
@@ -25,7 +26,9 @@ function installBridge(parameters: BridgeParameters): void {
     'settings:save': async (settings) => Promise.resolve({ ok: true, value: settings }),
     'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
     'accounts:connect': async (request) => {
-      const id = `a${registry.accounts.length + 1}`;
+      const id = `a${nextAccountNumber}`;
+
+      nextAccountNumber += 1;
 
       registry = {
         ...registry,
@@ -56,11 +59,13 @@ function installBridge(parameters: BridgeParameters): void {
 }
 
 export const withRecomposeBridge: Decorator = (Story, context) => {
-  const parameters = (context.parameters['bridge'] ?? {}) as BridgeParameters;
+  const bridgeParameter = context.parameters['bridge'] as BridgeParameters | undefined;
 
-  installBridge(parameters);
+  const queryClient = useMemo(() => {
+    installBridge(bridgeParameter ?? {});
 
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  }, [bridgeParameter]);
 
   return (
     <Suspense fallback={null}>
