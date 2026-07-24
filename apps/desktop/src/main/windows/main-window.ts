@@ -14,6 +14,10 @@ import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
 
+function targetForLog(url: string): string {
+  return URL.canParse(url) ? new URL(url).origin : 'a malformed target';
+}
+
 function applyGlassBackdrop(window: BrowserWindow): void {
   window.webContents.once('did-finish-load', () => {
     liquidGlass.addView(window.getNativeWindowHandle(), { opaque: false });
@@ -38,15 +42,17 @@ export function createMainWindow(): void {
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!isAllowedNavigation(url, navigationPolicy)) {
       event.preventDefault();
-      console.warn(`blocked navigation to ${url}`);
+      console.warn(`blocked navigation to ${targetForLog(url)}`);
     }
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     if (decideExternalOpen(details.url) === 'open-https') {
-      void shell.openExternal(details.url);
+      shell.openExternal(details.url).catch((error: unknown) => {
+        console.error(`failed to open ${targetForLog(details.url)} externally`, error);
+      });
     } else {
-      console.warn(`dropped window-open to ${details.url}`);
+      console.warn(`dropped window-open to ${targetForLog(details.url)}`);
     }
 
     return { action: 'deny' };
