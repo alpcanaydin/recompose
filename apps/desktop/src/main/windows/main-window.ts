@@ -1,6 +1,5 @@
 import { is } from '@electron-toolkit/utils';
 import { BrowserWindow, shell } from 'electron';
-import liquidGlass from 'electron-liquid-glass';
 import { join } from 'path';
 
 import icon from '../../../resources/icon.png?asset';
@@ -20,7 +19,9 @@ function targetForLog(url: string): string {
 
 function applyGlassBackdrop(window: BrowserWindow): void {
   window.webContents.once('did-finish-load', () => {
-    liquidGlass.addView(window.getNativeWindowHandle(), { opaque: false });
+    void import('electron-liquid-glass').then(({ default: liquidGlass }) => {
+      liquidGlass.addView(window.getNativeWindowHandle(), { opaque: false });
+    });
   });
 }
 
