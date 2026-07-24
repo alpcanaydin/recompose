@@ -25,10 +25,11 @@ test('the built bundle boots on the app scheme with the security baseline', asyn
 
   const bridge = await page.evaluate(() => ({
     isObject: typeof globalThis.recompose === 'object',
+    isNull: Object.is(globalThis.recompose, null),
     isFrozen: Object.isFrozen(globalThis.recompose),
   }));
 
-  expect(bridge).toEqual({ isObject: true, isFrozen: true });
+  expect(bridge).toEqual({ isObject: true, isNull: false, isFrozen: true });
 
   const answer = await page.evaluate(async () => globalThis.recompose['settings:get']());
 
