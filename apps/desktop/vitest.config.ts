@@ -1,3 +1,4 @@
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
 import { defaultExclude, defineConfig } from 'vitest/config';
@@ -20,6 +21,7 @@ export default defineConfig({
         'src/preload/index.ts',
         'src/renderer/src/app/main.tsx',
         'src/renderer/src/app/routeTree.gen.ts',
+        'src/**/*.stories.tsx',
       ],
     },
     projects: [
@@ -36,6 +38,18 @@ export default defineConfig({
         test: {
           name: 'browser',
           include: ['src/renderer/**/*.browser.test.{ts,tsx}'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+      {
+        plugins: [storybookTest({ configDir: '.storybook' })],
+        test: {
+          name: 'storybook',
           browser: {
             enabled: true,
             headless: true,
