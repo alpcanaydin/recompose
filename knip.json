@@ -12,7 +12,7 @@
     ".": {
       "entry": ["steiger.config.ts"],
       "ignoreDependencies": ["@steiger/toolkit", "@swc/core"],
-      "ignoreBinaries": ["vale"]
+      "ignoreBinaries": ["mise"]
     }
   }
 }

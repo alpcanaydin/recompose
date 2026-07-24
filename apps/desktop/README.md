@@ -1,12 +1,12 @@
-# desktop
+# Desktop
 
 An Electron application with React and TypeScript
 
-## Recommended IDE Setup
+## Recommended editor setup
 
 - [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
 
-## Project Setup
+## Project setup
 
 ### Install
 

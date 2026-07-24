@@ -1,8 +1,8 @@
-# Dependency Boundaries Implementation Plan
+# Dependency boundaries implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Machine-enforce the dependency rules the folder-structure spec wrote as target state — dependency-cruiser over one whole-repo import graph, Steiger over the FSD renderer — wired into pre-commit and CI.
+**Goal:** Machine-enforce the dependency rules the folder-structure spec wrote as target state (dependency-cruiser over one whole-repo import graph, Steiger over the Feature-Sliced Design (FSD) renderer). Both gates wire into pre-commit and CI.
 
 **Architecture:** Both tools are root-level gates (like `fmt:check`), not turbo tasks: cross-package rules need the full graph and both run in under a second. Rules for unopened packages (`packages/engine`, `packages/contracts`, `apps/headless`) ship now and bind when those paths appear.
 
@@ -11,20 +11,20 @@
 ## Global Constraints
 
 - Spec: `docs/superpowers/specs/2026-07-23-dependency-boundaries-design.md`.
-- Dependency versions exactly as listed above, installed at the repo root with `pnpm add -D -E -w`.
-- All dependency-cruiser rules `severity: 'error'`; Steiger runs with `--fail-on-warnings`.
-- The current tree must pass both tools without any rule disables. If a legitimate file trips a recommended rule, STOP and report BLOCKED — never disable a rule to get green.
-- Every rule class is proven both ways: a temporary violating file makes the tool exit 1, and the clean tree exits 0. No permanent fixture files are committed; every proof file is deleted before any commit.
+- Dependency versions exactly as listed in Tech Stack, installed at the repo root with `pnpm add -D -E -w`.
+- All dependency-cruiser rules `severity: 'error'`, and Steiger runs with `--fail-on-warnings`.
+- The current tree must pass both tools without any rule disables. If a legitimate file trips a recommended rule, stop and report `BLOCKED`, and never disable a rule to get green.
+- This plan proves every rule class both ways: a temporary violating file makes the tool exit 1, and the clean tree exits 0. It commits no permanent fixture files, and it deletes every proof file before any commit.
 - **Never write code comments** (project rule; applies to `.dependency-cruiser.cjs` and `steiger.config.ts` too).
-- TypeScript max strictness; no `any`, no `as` casts to silence errors.
+- TypeScript max strictness, with no `any` and no `as` casts to silence errors.
 - The repository owner's private alias must not appear in any artifact.
-- Commit messages: Conventional Commits, terse, imperative; end with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- A pre-commit hook runs gitleaks/lint/fmt/typecheck; oxfmt may reformat and auto-stage files (expected). If the FIRST commit attempt in a fresh worktree fails with `./node_modules/.bin/oxfmt: No such file or directory`, run `pnpm install` once and retry the commit.
+- Commit messages: Conventional Commits, terse, imperative, ending with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+- A pre-commit hook runs gitleaks/lint/fmt/typecheck, and oxfmt may reformat files and stage the fixes automatically (expected). If the first commit attempt in a fresh worktree fails with `./node_modules/.bin/oxfmt: No such file or directory`, run `pnpm install` once and retry the commit.
 - All commands run from the worktree root.
 
 ---
 
-### Task 1: dependency-cruiser — whole-repo boundary rules
+### Task 1: whole-repo boundary rules via dependency-cruiser
 
 **Files:**
 
@@ -121,13 +121,13 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 3: Negative proof — the clean tree passes**
+- [ ] **Step 3: The clean tree passes (negative proof)**
 
 Run: `pnpm run lint:boundaries`
 Expected: exit 0, output ends with `no dependency violations found` (module/dependency counts may vary).
-Verify the exit code explicitly: `pnpm run lint:boundaries; echo "exit: $?"` (bash) — must print `exit: 0`.
+Verify the exit code explicitly: `pnpm run lint:boundaries; echo "exit: $?"` (bash), which must print `exit: 0`.
 
-- [ ] **Step 4: Positive proof — process isolation fires**
+- [ ] **Step 4: Process isolation fires (positive proof)**
 
 ```bash
 printf "import '../../main/windows/window-options';\n" > apps/desktop/src/renderer/src/violation-probe.ts
@@ -140,7 +140,7 @@ Expected: `renderer-isolated` violation reported, `exit: 1`.
 rm apps/desktop/src/renderer/src/violation-probe.ts
 ```
 
-- [ ] **Step 5: Positive proof — circular fires**
+- [ ] **Step 5: Circular-import detection fires (positive proof)**
 
 ```bash
 printf "import './probe-b';\nexport const a = 1;\n" > apps/desktop/src/main/probe-a.ts
@@ -154,7 +154,7 @@ Expected: `no-circular` violation reported, `exit: 1`.
 rm apps/desktop/src/main/probe-a.ts apps/desktop/src/main/probe-b.ts
 ```
 
-- [ ] **Step 6: Positive proof — pre-staged engine rules fire**
+- [ ] **Step 6: Pre-staged engine rules fire (positive proof)**
 
 ```bash
 mkdir -p packages/engine/src
@@ -162,7 +162,7 @@ printf "import 'electron';\nimport '../../../apps/desktop/src/main/windows/windo
 pnpm exec depcruise apps packages; echo "exit: $?"
 ```
 
-Expected: `engine-no-electron` AND `engine-only-contracts` violations reported, `exit: 1`. (The proof run passes `packages` explicitly; the committed script gains that argument only when the directory opens for real.)
+Expected: `engine-no-electron` and `engine-only-contracts` violations reported, `exit: 1`. The proof run passes `packages` explicitly, and the committed script gains that argument only when the directory opens for real.
 
 ```bash
 rm -rf packages
@@ -171,7 +171,7 @@ rm -rf packages
 - [ ] **Step 7: Re-run the negative proof after cleanup**
 
 Run: `pnpm run lint:boundaries; echo "exit: $?"`
-Expected: `exit: 0`. Also `git status --short` shows only `package.json`, `pnpm-lock.yaml`, and `.dependency-cruiser.cjs` — no probe files remain.
+Expected: `exit: 0`. Also `git status --short` shows only `package.json`, `pnpm-lock.yaml`, and `.dependency-cruiser.cjs`, with no probe files remaining.
 
 - [ ] **Step 8: Commit**
 
@@ -182,7 +182,7 @@ git commit -m "ci: enforce dependency boundaries with dependency-cruiser"
 
 ---
 
-### Task 2: Steiger — FSD rules over the renderer
+### Task 2: Steiger enforces renderer layer rules
 
 **Files:**
 
@@ -234,14 +234,14 @@ In `apps/desktop/tsconfig.node.json`, extend `include` (it already lists `../../
 ```
 
 Run: `pnpm --filter @recompose/desktop run typecheck`
-Expected: PASS.
+Expected: `PASS`.
 
-- [ ] **Step 4: Negative proof — the clean renderer passes**
+- [ ] **Step 4: The clean renderer passes (negative proof)**
 
 Run: `pnpm run lint:fsd; echo "exit: $?"`
-Expected: `exit: 0` with no diagnostics. If the current tree (a lone `app/` layer with `app.tsx`, `main.tsx`, `styles/`, colocated tests) produces ANY diagnostic, STOP — report BLOCKED with the diagnostic text; do not disable rules.
+Expected: `exit: 0` with no diagnostics. If the current tree (a lone `app/` layer with `app.tsx`, `main.tsx`, `styles/`, colocated tests) produces any diagnostic, stop and report `BLOCKED` with the diagnostic text, and don't disable rules.
 
-- [ ] **Step 5: Positive proof — FSD layer rule fires**
+- [ ] **Step 5: The FSD layer rule fires (positive proof)**
 
 ```bash
 mkdir -p apps/desktop/src/renderer/src/entities/gateway/model
@@ -249,7 +249,7 @@ printf "import '../../../app/app';\nexport const gateway = 1;\n" > apps/desktop/
 pnpm run lint:fsd; echo "exit: $?"
 ```
 
-Expected: `exit: 1` — at minimum `fsd/forbidden-imports` fires (an entity importing from the app layer; plugin 0.7.0 retired the older `no-higher-level-imports` rule id); missing-public-api diagnostics may accompany it.
+Expected: `exit: 1`, with at minimum `fsd/forbidden-imports` firing (an entity importing from the app layer, since plugin 0.7.0 retired the older `no-higher-level-imports` rule id). Missing-public-api diagnostics may accompany it.
 
 ```bash
 rm -rf apps/desktop/src/renderer/src/entities
@@ -277,7 +277,7 @@ git commit -m "ci: enforce fsd renderer rules with steiger"
 **Interfaces:**
 
 - Consumes: root scripts `lint:boundaries` (Task 1) and `lint:fsd` (Task 2).
-- Produces: the enforced gates; nothing downstream.
+- Produces: the enforced gates, with nothing downstream.
 
 - [ ] **Step 1: Add the lefthook jobs**
 
@@ -326,7 +326,7 @@ Expected: this commit itself passes the two new hooks (they run on it).
 
 ---
 
-### Task 4: ADR-0014
+### Task 4: Architecture decision record 0014
 
 **Files:**
 
@@ -336,7 +336,7 @@ Expected: this commit itself passes the two new hooks (they run on it).
 **Interfaces:**
 
 - Consumes: the shipped gates from Tasks 1–3 (referenced, not changed).
-- Produces: the decision record; nothing downstream.
+- Produces: the Architecture Decision Record (ADR), with nothing downstream.
 
 - [ ] **Step 1: Write the ADR**
 

@@ -26,10 +26,10 @@ You define virtual models, wire them to real providers on a node canvas, and poi
 ## Features
 
 - **One endpoint for every client**: each gateway serves both API dialects on a single base URL, `/v1/messages` (Anthropic) and `/v1/chat/completions` (OpenAI). The request path disambiguates; there is nothing to configure per client.
-- **Virtual models**: clients see aliases such as `fast` or `smart`. Swap the real model behind an alias without touching a single client config.
+- **Virtual models**: clients see aliases such as `fast` or `smart`. Swap the real model behind that name without touching a single client config.
 - **Composable routing**: failover ladders send traffic to the topmost healthy target; round-robin pools spread it evenly or by weight. Chain routers to combine strategies.
-- **Any provider**: sign in with OAuth for Claude and Codex subscriptions, or add any OpenAI-compatible or Anthropic-compatible endpoint with a base URL and key. Local runtimes (Ollama, LM Studio) are planned.
-- **Offline-first and private**: no signup, no telemetry. Credentials stay on your machine in `~/.recompose`. Serving on LAN is opt-in and sits behind a local API token.
+- **Any provider**: sign in with OAuth for Claude and Codex subscriptions, or add any OpenAI-compatible or Anthropic-compatible endpoint with a base URL and key. The roadmap includes local runtimes (Ollama, LM Studio).
+- **Offline-first and private**: no signup, no telemetry. Credentials stay on your machine in `~/.recompose`. Serving on a Local Area Network (LAN) is opt-in and sits behind a local API token.
 
 ## How it works
 
@@ -69,4 +69,4 @@ pnpm dev
 
 ## Architecture
 
-The Electron shell hosts the UI; the gateway engine runs in a `utilityProcess` as a pure TypeScript package with no `electron` imports, keeping a future headless mode possible. Every technical decision is recorded in [docs/adr](docs/adr/README.md).
+The Electron shell hosts the UI. The gateway engine runs in a `utilityProcess` as a pure TypeScript package with no `electron` imports, keeping a future headless mode possible. The [docs/adr](docs/adr/README.md) index records every technical decision.

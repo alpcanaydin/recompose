@@ -39,11 +39,10 @@ jobs:
             workflows:
               - '.github/workflows/**'
             prose:
-              - 'docs/adr/**'
-              - 'README.md'
-              - 'CLAUDE.md'
+              - '**/*.md'
               - '.vale.ini'
               - '.vale/**'
+              - 'mise.toml'
 
   check:
     needs: changes
@@ -114,12 +113,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - run: |
-          curl -sSLo vale.tar.gz https://github.com/vale-cli/vale/releases/download/v3.15.2/vale_3.15.2_Linux_64-bit.tar.gz
-          echo "fc72e64454d6bd7af91905d4faebbf411bae3eec17bb572f4101311212bc0d9e  vale.tar.gz" | sha256sum -c -
-          tar -xzf vale.tar.gz vale
-          ./vale sync
-          ./vale docs/adr README.md CLAUDE.md
+      - uses: vale-cli/vale-action@85f9f7f2c5f449ac0ae5b66662961bae3f77ca6a # v2.1.2
+        with:
+          version: 3.15.2
+          files: all
+          vale_flags: '--glob=!{node_modules,.agents,.claude/skills,.claude/worktrees,.vale,out,dist,coverage}/**'
+          reporter: github-pr-check
+          fail_on_error: true
 
   gitleaks:
     runs-on: ubuntu-latest

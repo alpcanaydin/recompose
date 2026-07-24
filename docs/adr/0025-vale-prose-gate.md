@@ -1,35 +1,33 @@
-# ADR-0025: Vale Prose Gate on Authored Documentation
+# 0025: Vale prose gate with Microsoft style at full strength
 
 **Status**: Accepted
 **Date**: 2026-07-24
 
 ## Context
 
-The repository's decision records and README are written once and read forever, mostly by models with no human copyeditor in the loop — a misspelled domain term or drifting terminology quietly becomes permanent vocabulary, the prose equivalent of the one-concept-one-name rule breaking. Nothing machine-checked the prose. The control-gates queue orders a prose linter sixth and asks for a Google-versus-Microsoft decision, a curated day-one-green rule set, and vocabulary aligned with the writing-guidelines skill.
+Authors write the repository's records and docs once. Models mostly read them forever, with no human copyeditor in the loop. A misspelled domain term or drifting terminology becomes permanent vocabulary without anyone noticing. Nothing machine-checked the prose. The control-gates queue orders a prose linter sixth. The maintainer set the direction in a brainstorm. Outward-facing documentation deserves the friendlier Microsoft register, and every Architecture Decision Record (ADR) explains something to someone. The gate should run at full strength rather than error-only.
 
 ## Decision
 
-- **Vale 3.15.2 with the Google style, pinned as a release URL package** (`errata-ai/Google` v0.6.3 in `Packages`; `vale sync` materializes it into the gitignored `.vale/styles`, committed vocabulary excepted). Google over Microsoft: the house prose is terse developer documentation, which is the register Google's guide targets; Microsoft's consumer-friendliness rules would fight every ADR.
-- **Scope: authored prose only** — `docs/adr`, `README.md`, `CLAUDE.md`. Vendored skill content is third-party text (already excluded from review by path filters), and `docs/superpowers` holds approved historical execution artifacts that are amended, not rewritten.
-- **Day-one green by curation, not thresholds.** Every deferred rule is named here with its reason:
-  - `Google.EmDash` — spaced em-dashes are the house typography, used deliberately across every ADR.
-  - `Google.Headings` — ADR titles use title case by house convention.
-  - `Google.Colons` — the `**Status**: Accepted` metadata pattern capitalizes after colons by design.
-  - `Google.Latin` — `e.g.`/`i.e.` are accepted shorthand in engineering records.
-  - `Google.Units` — durations like `3s` are CI-log vocabulary, not narrative units.
-  - `Google.LyHyphens` — false positive: the rule matches any `-ly`-ending word, flagging the correct compound `supply-chain`. The three genuine hits it found (`newly-disclosed`, `deliberately-fresh`) were fixed before deferring it.
-  - `Google.Quotes` — flags quoted identifiers like `"recompose-design-system"` followed by punctuation; moving the period inside would misquote the name.
-- **Vocabulary is a reviewed artifact**: 123 case-flexible entries in `.vale/styles/config/vocabularies/recompose/accept.txt`, extracted from the actual tree and hand-scanned so a real typo cannot hide in the accept list. New words arrive through PR diffs like code.
-- **Wiring**: root `lint:prose` script; lefthook `prose` job (installs Vale via brew and syncs styles on first use, the gitleaks pattern); a dedicated CI `prose` job behind a new `prose` paths filter — authored docs never trigger the heavy `check` job, and `check`'s path filter never sees docs — added to `ci-success`'s needs (ADR-0007). The CI binary is downloaded at a pinned version and verified against its published SHA-256 before running.
+- **Vale 3.15.2 with the Microsoft style, pinned as a release-URL package** (v0.14.2 in `Packages`). `vale sync` materializes it into the gitignored styles path. The committed pieces are the vocabulary and the house style.
+- **Every Microsoft rule runs at error level.** The maintainer chose full promotion over an error-only gate after seeing the measured cost: 2,300 fixes across 51 files. Two rules stay off with his approval: `Microsoft.Avoid`, because "backend" is house domain language (the safeStorage backend), and `Microsoft.HeadingColons`, because headings keep brand casing like jscpd and pnpm after a colon.
+- **One promotion didn't survive the evidence.** `Microsoft.Vocab` is advisory by design: its own message says "verify your use" against the A-Z word list. Treating it as an error forced semantic damage. It rewrote "verified against a checksum" into "verified next to a checksum" and renamed the forbidden-owner-alias concept away from the gitleaks rule that literally carries that name. The reverts landed file by file, and the rule now stays off the gate.
+- **House rules, chosen by the maintainer, live in `.vale/styles/recompose/`**: `NoEmDash` bans the em dash outright, and the fix is a rewrite that reads as if the sentence never had one, never a lazy colon patch. `Terminology` pins one name per concept for measured variants such as failover, worktree, and subagent. `WeakOpeners` rejects sentences that open with "there is." `Intensifiers` bans the two stock amplifier adverbs in favor of concrete measures.
+- **Scope: every authored markdown file**, covering `docs/`, `README.md`, `CLAUDE.md`, and `.claude/rules/`. Vendored skill content and generated output stay excluded, matching the review-tool path filters.
+- **Vocabulary is a reviewed artifact**: case-flexible entries in the committed accept list, extracted from the tree and hand-scanned so a real typo can't hide there. Accept-list entries double as acronym exceptions, which keeps standard names like SHA-256 intact. New words arrive through pull request (PR) diffs like code.
+- **Wiring**: a root `lint:prose` script and a lefthook `prose` job. Local tool versions come from `mise.toml`, so hooks are cross-platform and pinned instead of assuming Homebrew, and styles resync whenever `.vale.ini` is newer than the synced directory. A dedicated continuous integration (CI) `prose` job runs behind its own paths filter through the official vale-action, pinned by commit, and joins the `ci-success` needs list per ADR-0007.
 
 ## Alternatives
 
-- **Microsoft base style** — friendlier consumer tone; its contractions/person rules conflict with record-keeping prose more than Google's.
-- **Warning-level rollout** (the common adoption advice) — violates the standing no-advisory-gates rule; curation achieves day-one green at error level instead.
-- **errata-ai/vale-action** — official but reviewdog-shaped; an eight-line pinned-checksum download keeps the workflow's third-party action surface unchanged.
+- **Google base style**: the classic developer-docs register, and the original recommendation. The maintainer picked Microsoft because the project's documentation faces outward.
+- **Error-only gate**: rejected by the maintainer with the measured cost on the table.
+- **Warning-level rollout**: the common adoption advice, but it violates the standing no-advisory-gates rule.
+- **Hand-rolled pinned-checksum binary download in CI**: worked, but the maintainer directed the switch to the official action.
 
 ## Consequences
 
-- A typo or terminology drift in authored docs fails pre-commit and CI; the fix is a text edit or a visible vocabulary addition, each reviewable in the diff.
-- Deferred rules are individually auditable and individually revivable; re-enabling one is a config diff plus the prose cleanup it demands.
-- The Google package is fetched by pinned URL; upgrading it is a deliberate version bump in `.vale.ini`, and new rules arriving with an upgrade must clear the same curation bar.
+- A typo, a banned construction, or terminology drift in authored docs fails pre-commit and CI. The fix is a rewrite or a visible vocabulary addition, each reviewable in the diff.
+- The full-strength register reshaped the corpus once: active voice, contractions, split sentences, sentence-case headings, and acronym expansions on first use. Every future document pays the same discipline as it lands.
+- The gate flagged its own ADR and the coordinator's CLAUDE.md addition while landing, which is the mechanism working.
+- Maintainers inherit two documented false-positive shapes: `Microsoft.Headings` misfires on headings whose parenthetical contains a colon, and `Microsoft.Acronyms` flags stylistic all-caps emphasis as undefined acronyms. Both have cheap rewrites.
+- Upgrading the Microsoft package is a deliberate version bump in `.vale.ini`, and new rules arriving with an upgrade must clear the same per-rule curation bar.

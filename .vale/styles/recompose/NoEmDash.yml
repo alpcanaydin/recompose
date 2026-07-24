@@ -1,0 +1,7 @@
+extends: existence
+message: 'Never use an em dash. Rewrite the sentence so it reads as if it never had one.'
+level: error
+scope: text
+nonword: true
+tokens:
+  - '—'

@@ -18,7 +18,7 @@
     "lint:boundaries": "depcruise apps packages",
     "lint:dead": "knip",
     "lint:dup": "jscpd -c .jscpd.json apps packages",
-    "lint:prose": "vale docs/adr README.md CLAUDE.md",
+    "lint:prose": "mise exec -- vale --glob=\"!{node_modules,.agents,.claude/skills,.claude/worktrees,.vale,out,dist,coverage}/**\" .",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"

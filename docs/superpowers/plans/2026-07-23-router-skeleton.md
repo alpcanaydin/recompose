@@ -1,10 +1,10 @@
-# Router Skeleton Implementation Plan
+# Router skeleton implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan requires the sub-skill superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** File-based TanStack Router inside the FSD app layer — root layout with sidebar links, empty-state index, slug-validated gateway canvas route, providers route — proven by Browser Mode navigation specs.
+**Goal:** File-based TanStack Router inside the Feature-Sliced Design (FSD) app layer. It ships a root layout (sidebar links, empty-state index), a slug-validated gateway canvas route, and a providers route. Browser Mode navigation specs verify all three routes.
 
-**Architecture:** The router plugin generates the route tree from `src/renderer/src/app/routes/` (routing is an app-layer segment per FSD). Route files are thin `createFileRoute` adapters; screens live in `pages/` slices behind public APIs. A `createAppRouter(history?)` factory in the app layer serves both the real entry (browser history) and tests (memory history). `routeTree.gen.ts` is generated, committed, and treated like a lockfile by every gate.
+**Architecture:** The router plugin generates the route tree from `src/renderer/src/app/routes/` (routing is an app-layer segment per FSD). Route files are thin `createFileRoute` adapters, and screens live in `pages/` slices behind public APIs. A `createAppRouter(history?)` factory in the app layer serves both the real entry (browser history) and tests (memory history). The router plugin generates `routeTree.gen.ts`, and every gate treats the committed file like a lockfile.
 
 **Tech Stack:** @tanstack/react-router 1.170.18, @tanstack/router-plugin 1.168.23, @tanstack/react-router-devtools 1.167.0, zod slug rule from @recompose/contracts.
 
@@ -12,21 +12,21 @@
 
 - Spec: `docs/superpowers/specs/2026-07-23-router-skeleton-design.md`.
 - Exact pins: `@tanstack/react-router` 1.170.18 as a runtime dependency of apps/desktop; `@tanstack/router-plugin` 1.168.23 and `@tanstack/react-router-devtools` 1.167.0 as devDependencies (`pnpm add -E` / `-D -E`).
-- FSD placement is binding and machine-checked (Steiger in pre-commit): route adapters in `app/routes/`, router factory `app/router.tsx`, screens ONLY in `pages/<slice>/ui/` re-exported through `pages/<slice>/index.ts`; route files import pages ONLY via the slice public API.
-- `src/renderer/src/app/routeTree.gen.ts` is generated: excluded from oxlint, oxfmt, knip, and coverage; committed to git; exempt from the no-comments rule. Hand-editing it is forbidden.
-- `$slug` is parsed with `gatewaySlugSchema` from `@recompose/contracts`; an invalid slug must land on the not-found UI.
-- No route loaders, no router context values in this job (typed-IPC queue item owns them).
-- Devtools render only in dev — never in production builds and never in vitest runs.
-- Browser-mode tests (`*.browser.test.tsx`) drive a memory-history router; node tests are not applicable here.
-- TypeScript max strictness; no `any`, no silencing `as`. **Never write code comments** (generated file exempt).
+- FSD placement is binding and machine-checked (Steiger in pre-commit): route adapters live in `app/routes/`, the router factory lives in `app/router.tsx`, and screens live only in `pages/<slice>/ui/`, re-exported through `pages/<slice>/index.ts`. Route files import pages only via the slice public API.
+- The router plugin generates `src/renderer/src/app/routeTree.gen.ts`. It's excluded from oxlint, oxfmt, knip, and coverage, committed to git, and exempt from the no-comments rule. Never hand-edit it.
+- `gatewaySlugSchema` from `@recompose/contracts` parses `$slug`, and an invalid slug must land on the not-found UI.
+- No route loaders, no router context values in this job (the typed Inter-Process Communication (IPC) queue item owns them).
+- Devtools render only in dev, never in production builds and never in vitest runs.
+- Browser-mode tests (`*.browser.test.tsx`) drive a memory-history router. Node tests aren't applicable here.
+- TypeScript max strictness, with no `any` and no silencing `as`. **Never write code comments** (generated file exempt).
 - The repository owner's private alias must not appear in any artifact.
-- Commit messages: Conventional Commits, terse, imperative; trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- Pre-commit hooks run gitleaks/lint/fmt/typecheck + boundaries/fsd/dead; oxfmt may reformat and auto-stage. If the FIRST commit in a fresh worktree fails with `oxfmt: No such file or directory`, run `pnpm install` once and retry.
+- Commit messages: Conventional Commits, terse, imperative, with trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+- Pre-commit hooks run gitleaks/lint/fmt/typecheck plus boundaries/fsd/dead, and oxfmt may reformat and stage fixes automatically. If the first commit in a fresh worktree fails with `oxfmt: No such file or directory`, run `pnpm install` once and retry.
 - All commands run from the worktree root. Shell may be fish: `echo "exit: $status"`, never after a pipe.
 
 ---
 
-### Task 1: Router foundation — plugin, factory, root layout, empty state
+### Task 1: Router foundation (plugin, factory, root layout, empty state)
 
 **Files:**
 
@@ -88,7 +88,7 @@ export default defineConfig({
 });
 ```
 
-The renderer's Vite root is `src/renderer`, so both paths resolve inside `src/renderer/src/app/`. Verify after Step 5's first build/dev run that `apps/desktop/src/renderer/src/app/routeTree.gen.ts` is where the file appears — if the plugin writes it elsewhere, fix the two paths, never move the file by hand.
+The renderer's Vite root is `src/renderer`, so both paths resolve inside `src/renderer/src/app/`. After Step 5's first build/dev run, verify that `apps/desktop/src/renderer/src/app/routeTree.gen.ts` is where the file appears. If the plugin writes it elsewhere, fix the two paths, and never move the file by hand.
 
 - [ ] **Step 3: Create the root layout and empty state**
 
@@ -123,7 +123,7 @@ function NotFound() {
 }
 ```
 
-Create `apps/desktop/src/renderer/src/app/routes/index.tsx` (empty state is app chrome, not a screen — it stays inline by design):
+Create `apps/desktop/src/renderer/src/app/routes/index.tsx` (empty state is app chrome, not a screen, so it stays inline by design):
 
 ```tsx
 import { createFileRoute } from '@tanstack/react-router';
@@ -178,19 +178,19 @@ createRoot(document.getElementById('root')!).render(
 );
 ```
 
-Delete `apps/desktop/src/renderer/src/app/app.tsx` and `apps/desktop/src/renderer/src/app/app.browser.test.tsx` (the shell's behavior moves to `__root` and is re-specified by the navigation tests in Step 7 — behavior changed, so the tests change with it).
+Delete `apps/desktop/src/renderer/src/app/app.tsx` and `apps/desktop/src/renderer/src/app/app.browser.test.tsx` (the shell's behavior moves to `__root` and is re-specified by the navigation tests in Step 7, because behavior changed and the tests change with it).
 
 - [ ] **Step 5: Generate the route tree**
 
 Run: `pnpm --filter @recompose/desktop run build`
-Expected: build succeeds AND `apps/desktop/src/renderer/src/app/routeTree.gen.ts` now exists (generated during the vite run). It will contain comments — that is the sanctioned generated-file exemption.
+Expected: build succeeds and `apps/desktop/src/renderer/src/app/routeTree.gen.ts` now exists (generated during the vite run). It will contain comments, which is the sanctioned generated-file exemption.
 
 - [ ] **Step 6: Exempt the generated file from the gates**
 
 In `.oxlintrc.json`, append to `ignorePatterns`: `"**/routeTree.gen.ts"`.
 In `.oxfmtrc.json`, append to `ignorePatterns`: `"**/routeTree.gen.ts"`.
 In `apps/desktop/vitest.config.ts`, append to the `coverage.exclude` array: `'src/renderer/src/app/routeTree.gen.ts',`.
-If `pnpm run lint:dead` flags the generated file or the router packages, add the narrowest possible knip entry and record it in your report — never a broad ignore.
+If `pnpm run lint:dead` flags the generated file or the router packages, add the narrowest possible knip entry and record it in your report. Never use a broad ignore.
 
 - [ ] **Step 7: Write the failing navigation specs**
 
@@ -226,16 +226,16 @@ test('an unknown path shows the not-found state inside the shell', async () => {
 });
 ```
 
-- [ ] **Step 8: Run to verify the RED, then the GREEN**
+- [ ] **Step 8: Verify the red state, then the green state**
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected first: FAIL while any wiring is incomplete (e.g. before Steps 3–6 are all done, module resolution or route-tree errors). Once Steps 1–6 are complete, re-run:
-Expected: PASS — browser project runs both navigation specs in Chromium; unit project (window-options) untouched; coverage gate green (`app.tsx` is gone; `router.tsx`, `__root.tsx`, `index.tsx` are covered by the specs; `main.tsx` and `routeTree.gen.ts` excluded).
+Expected first: `FAIL` while any wiring is incomplete. For example, before Steps 3–6 finish, module resolution or route-tree errors may appear. Once Steps 1–6 are complete, re-run:
+Expected: `PASS`. The browser project runs both navigation specs in Chromium, and the unit project (window-options) stays untouched. The coverage gate is green: `app.tsx` no longer exists, the specs cover `router.tsx`, `__root.tsx`, and `index.tsx`, and the exclusion list still covers `main.tsx` and `routeTree.gen.ts`.
 
 - [ ] **Step 9: Full gates and commit**
 
 Run: `pnpm --filter @recompose/desktop run typecheck && pnpm run lint:boundaries && pnpm run lint:fsd && pnpm run lint:dead && pnpm run fmt:check`
-Expected: all exit 0 — Steiger must accept `app/routes/` and `router.tsx` as app-layer segments without any rule disables; if it objects, STOP and report BLOCKED with the diagnostic.
+Expected: all exit 0. Steiger must accept `app/routes/` and `router.tsx` as app-layer segments without any rule disables. If it objects, stop and report `BLOCKED` with the diagnostic.
 
 ```bash
 git add apps/desktop .oxlintrc.json .oxfmtrc.json pnpm-lock.yaml
@@ -244,7 +244,7 @@ git commit -m "feat(desktop): tanstack router foundation in fsd app layer"
 
 ---
 
-### Task 2: Screen routes — pages slices, slug-validated canvas, providers
+### Task 2: Screen routes (pages slices, slug-validated canvas, providers)
 
 **Files:**
 
@@ -289,7 +289,7 @@ test('an invalid gateway slug lands on the not-found state', async () => {
 ```
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: FAIL — the three new specs cannot resolve the routes.
+Expected: `FAIL`, since the three new specs can't resolve the routes.
 
 - [ ] **Step 2: Create the pages slices**
 
@@ -367,20 +367,20 @@ export const Route = createFileRoute('/providers')({
 });
 ```
 
-- [ ] **Step 4: Regenerate the tree and verify GREEN**
+- [ ] **Step 4: Regenerate the tree and verify the green state**
 
 Run: `pnpm --filter @recompose/desktop run build`
 Expected: `routeTree.gen.ts` updates with the two new routes.
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS — all five navigation specs plus the unit project; coverage gate green (pages and adapters covered by the specs).
+Expected: `PASS`. All five navigation specs plus the unit project pass, and the coverage gate is green (pages and adapters covered by the specs).
 
-If the invalid-slug spec fails because a `params.parse` throw surfaces as an error boundary instead of not-found, check the installed TanStack Router docs (`node_modules/@tanstack/react-router`) for the current invalid-params behavior and route the failure to `notFound()` explicitly (e.g. catch the parse error in a `beforeLoad` and `throw notFound()`), keeping the schema as the single validation source. Report which mechanism the shipped version required.
+If the invalid-slug spec fails because a `params.parse` throw surfaces as an error boundary instead of not-found, check the installed TanStack Router docs (`node_modules/@tanstack/react-router`) for the current invalid-params behavior. Route the failure to `notFound()` explicitly (for example, catch the parse error in a `beforeLoad` and `throw notFound()`), keeping the schema as the single validation source. Report which mechanism the shipped version required.
 
 - [ ] **Step 5: Full gates and commit**
 
 Run: `pnpm --filter @recompose/desktop run typecheck && pnpm run lint:boundaries && pnpm run lint:fsd && pnpm run lint:dead && pnpm run fmt:check`
-Expected: all exit 0 — Steiger validates the first `pages/` slices (public API rule included).
+Expected: all exit 0. Steiger validates the first `pages/` slices (public API rule included).
 
 ```bash
 git add apps/desktop
@@ -431,9 +431,9 @@ and inside `RootLayout`'s returned JSX, after `</main>` (still inside the flex c
 ```
 
 Run: `pnpm --filter @recompose/desktop run test`
-Expected: PASS unchanged — vitest sets `MODE === 'test'`, so the null component renders and no devtools chunk loads in specs. If `import.meta.env.MODE` is not `'test'` under the browser project, verify with a temporary `console.log` (removed before commit) and gate on the env var vitest actually sets (report which).
+Expected: `PASS` unchanged. Vitest sets `MODE === 'test'`, so the null component renders and no devtools chunk loads in specs. If `import.meta.env.MODE` isn't `'test'` under the browser project, verify with a temporary `console.log` (removed before commit) and gate on the env var vitest actually sets (report which).
 
-- [ ] **Step 2: Boot smoke — build green is not boot proof**
+- [ ] **Step 2: Boot smoke: a green build isn't boot proof**
 
 ```bash
 pnpm --filter @recompose/desktop run build
@@ -461,7 +461,7 @@ git commit -m "feat(desktop): dev-only router devtools, skill routing rule"
 
 ---
 
-### Task 4: ADR-0017
+### Task 4: Architecture decision record 0017
 
 **Files:**
 
@@ -471,7 +471,7 @@ git commit -m "feat(desktop): dev-only router devtools, skill routing rule"
 **Interfaces:**
 
 - Consumes: shipped routing from Tasks 1–3 (referenced, not changed).
-- Produces: the decision record; nothing downstream.
+- Produces: the Architecture Decision Record (ADR), with nothing downstream.
 
 - [ ] **Step 1: Write the ADR**
 
@@ -527,6 +527,6 @@ git commit -m "docs(adr): record router integration (ADR-0017)"
 
 ## Deviations discovered in execution
 
-- **Invalid-slug handling** does not use the `beforeLoad` contingency this plan sketches in Task 2 Step 4 — a `beforeLoad` hook runs after `params.parse`, so it cannot catch a parse failure there. The shipped route (`apps/desktop/src/renderer/src/app/routes/gateways.$slug.tsx`) instead runs `gatewaySlugSchema.safeParse` directly inside `params.parse` and throws `notFound()` on failure, keeping the schema as the single validation source without needing a second hook.
-- **Production history is hash-based, not browser history.** `apps/desktop/src/renderer/src/app/router.tsx`'s `createAppRouter` factory defaults to `createHashHistory()` when `import.meta.env.PROD` is true and no explicit history is passed. The packaged/preview app loads `renderer/index.html` over `file://`, where browser-history pathnames resolve as filesystem paths and always miss every route; hash history keeps the route state in the fragment, which `file://` navigation does not touch. Explicit-history callers (tests passing `createMemoryHistory`) are unaffected.
+- **Invalid-slug handling** doesn't use the `beforeLoad` contingency this plan sketches in Task 2 Step 4, because a `beforeLoad` hook runs after `params.parse`, so it can't catch a parse failure there. The shipped route (`apps/desktop/src/renderer/src/app/routes/gateways.$slug.tsx`) instead runs `gatewaySlugSchema.safeParse` directly inside `params.parse` and throws `notFound()` on failure, keeping the schema as the single validation source without needing a second hook.
+- **Production history is hash-based, not browser history.** `apps/desktop/src/renderer/src/app/router.tsx`'s `createAppRouter` factory defaults to `createHashHistory()` when `import.meta.env.PROD` is true and the caller passes no explicit history. The packaged/preview app loads `renderer/index.html` over `file://`, where browser-history pathnames resolve as filesystem paths and always miss every route. Hash history keeps the route state in the fragment, which `file://` navigation doesn't touch. Explicit-history callers (tests passing `createMemoryHistory`) stay unaffected.
 - **Sidebar links needed an explicit no-drag carve-out.** The `<aside>` in `__root.tsx` carries `app-drag` (`-webkit-app-region: drag`) for window dragging; without an override, its child `<nav>` links inherit the drag region and don't receive clicks in the real window. `apps/desktop/src/renderer/src/app/styles/main.css` adds `.app-no-drag { -webkit-app-region: no-drag; }`, and `__root.tsx`'s `<nav>` carries `app-no-drag` alongside its layout classes.

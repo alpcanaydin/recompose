@@ -1,15 +1,15 @@
-# Design system foundations — design
+# Design system foundations: Design
 
 Date: 2026-07-22
 Status: approved for planning
 
 ## Goal
 
-Establish the design token foundation for the recompose renderer: a two-tier token
+Establish the design token foundation for the recompose renderer. This spec covers a two-tier token
 architecture implemented in Tailwind CSS v4, with the existing shell (sidebar +
 main area) restyled through it. Visual values come from the Claude Design project
-**recompose-design-system**; token names and structure are defined here, by our
-conventions — the Design project shows what things look like, not how they are named.
+**recompose-design-system**. This spec defines token names and structure, following
+recompose's conventions, because the Design project shows what things look like, not how they're named.
 
 ## Decisions
 
@@ -17,9 +17,9 @@ conventions — the Design project shows what things look like, not how they are
    - Primitives are raw, theme-agnostic values. They never appear in component code
      and never become Tailwind utilities.
    - Semantic tokens carry intent (`surface-content`, `ink-secondary`) and are the
-     only tokens components touch. Text tokens are named `ink` and borders `line`
-     so the generated utilities read naturally (`text-ink-secondary`,
-     `border-line-subtle`) — a `--color-text-*` token would generate a stuttering
+     only tokens components touch. Text tokens use `ink` and borders use `line`,
+     so the generated utilities read cleanly (`text-ink-secondary`,
+     `border-line-subtle`). A `--color-text-*` token would instead generate a stuttering
      `text-text-*` utility. All theming happens at this tier via `light-dark()`.
    - Dependency flow is one-way: primitive → semantic. Never the reverse.
    - **No component-token tier.** Components consume semantic tokens directly.
@@ -28,36 +28,36 @@ conventions — the Design project shows what things look like, not how they are
 2. **Tailwind v4, CSS-first.** No `tailwind.config.*`; tokens live in CSS.
    Primitives in `:root`, semantic tokens in `@theme` (per official guidance:
    `@theme` is only for tokens that should become utilities).
-3. **Default namespaces reset** where we own the scale: `--color-*: initial`,
+3. **Default namespaces reset** where recompose owns the scale: `--color-*: initial`,
    `--text-*: initial`, `--radius-*: initial`. Only semantic utilities exist, so a
    primitive leak (`bg-red-500`) is structurally impossible. Tailwind's default
-   spacing scale is kept: it is already the 4px grid the design uses (`p-1` = 4px
-   … `p-6` = 24px) and serves as our spacing primitive tier.
-4. **Theme follows the OS.** `:root { color-scheme: light dark }`; every
-   `light-dark()` resolves automatically. Zero JS, zero IPC, no toggle. A manual
+   spacing scale stays: it's already the 4px grid the design uses (`p-1` = 4px
+   … `p-6` = 24px) and serves as recompose's spacing primitive tier.
+4. **Theme follows the OS.** Setting `:root { color-scheme: light dark }` means every
+   `light-dark()` resolves automatically. Zero JS, zero Inter-Process Communication (IPC), no toggle. A manual
    theme setting later is one line (`color-scheme: dark` on root) and touches no
    tokens. Dark is the design's default character.
-5. **No separate UI package.** The desktop renderer is the only consumer; the
-   architectural boundary is a folder, not a workspace package. Extract to
+5. **No separate UI package.** The desktop renderer is the only consumer, so the
+   architectural boundary is a folder, not a workspace package. Move to
    `packages/ui` when a second consumer actually exists.
 6. **oxfmt sorts Tailwind classes.** Enable oxfmt's Tailwind class sorting and
-   point it at our entry stylesheet so semantic utilities sort correctly. Exact
+   point it at the renderer's entry stylesheet so semantic utilities sort correctly. Exact
    config key resolved at implementation time.
-7. **Deferred, deliberately:**
+7. **Deferred:**
    - Canvas tokens (node tints, `shadow-node`, dot grid) → arrive with the canvas
-     feature; the accent primitives they map to ship now, so each is one semantic line.
+     feature. The accent primitives they map to ship now, so each is one semantic line.
    - Control heights (`h-row: 28px` etc.) → arrive with the first control component.
-   - CVA (class-variance-authority) → adopt when the first variant-bearing
+   - Class Variance Authority (CVA), the class-variance-authority package → adopt when the first variant-bearing
      component lands. Foundations have no components.
 
 ## Token inventory
 
-Values are lifted from the Claude Design project (tokens/*.css) and normalized:
-`#28282b` and `#28282c` are consolidated to `#28282c` (closest-match normalization).
+This spec pulls token values from the Claude Design project (tokens/*.css) and normalizes them:
+it consolidates `#28282b` and `#28282c` into the single value `#28282c` (closest-match normalization).
 
 ### Primitives (`:root`, plain CSS variables)
 
-Accent palette — macOS system colors; `-600` is the light-theme variant, `-500` the
+Accent palette: macOS system colors, where `-600` is the light-theme variant and `-500` the
 dark-theme variant (higher number = darker holds for every pair):
 
 | Primitive      | Value     | Primitive      | Value     |
@@ -70,8 +70,8 @@ dark-theme variant (higher number = darker holds for every pair):
 | `--red-500`    | `#ff453a` | `--red-600`    | `#ff3b30` |
 | `--yellow-500` | `#ffd60a` | `--yellow-600` | `#c79000` |
 
-Alpha scales for text and lines, names approximate percent opacity; the two
-scales are not symmetric — each lists exactly the steps the semantic tier consumes:
+Alpha scales for text and lines carry names that approximate opacity. The two
+scales aren't symmetric, because each lists exactly the steps the semantic tier consumes:
 
 - White (dark theme): `--white-a90` (90%), `--white-a55` (55%), `--white-a28` (28%),
   `--white-a13` (13%), `--white-a08` (8.5%), `--white-a06` (5.5%)
@@ -93,7 +93,7 @@ Surface grays:
 
 ### Semantic tokens (`@theme`)
 
-Colors — every value is `light-dark(<light primitive>, <dark primitive>)`:
+Colors, where every value is `light-dark(<light primitive>, <dark primitive>)`:
 
 | Token                     | Light           | Dark             |
 | ------------------------- | --------------- | ---------------- |
@@ -113,10 +113,10 @@ Colors — every value is `light-dark(<light primitive>, <dark primitive>)`:
 | `--color-warning`         | `--orange-600`  | `--orange-500`   |
 | `--color-danger`          | `--red-600`     | `--red-500`      |
 
-Teal, purple and yellow ship as primitives only (locked brand palette); their
+Teal, purple and yellow ship as primitives only (locked brand palette). Their
 semantic consumers (node tints, warnings-vs-caution split) arrive with later features.
 
-Typography — SF stacks plus role-based sizes (Tailwind `--text-<role>` with
+Typography, using SF stacks plus role-based sizes (Tailwind `--text-<role>` with
 `--font-weight`/`--letter-spacing`/`--line-height` sub-tokens):
 
 | Role         | Size | Weight | Extras                                         |
@@ -150,7 +150,7 @@ apps/desktop/src/renderer/src/assets/
   main.css         ← @import "tailwindcss" + the two above + app-specific CSS
 ```
 
-`main.css` retains only what Tailwind cannot express: `-webkit-app-region: drag`
+`main.css` retains only what Tailwind can't express: `-webkit-app-region: drag`
 regions and the transparent html/body rules the liquid glass window requires.
 
 ## Shell restyle
@@ -158,15 +158,15 @@ regions and the transparent html/body rules the liquid glass window requires.
 `App.tsx`'s placeholder shell is rewritten with semantic utilities: sidebar
 `bg-surface-sidebar` (translucent over glass), content `bg-surface-content`,
 text `text-ink` / `text-ink-secondary`, divider `border-line-subtle`, heading `text-title`.
-No behavior change; the glass window chrome (ADR 0008) is untouched.
+No behavior changes, and the glass window chrome (Architecture Decision Record (ADR) 0008) stays untouched.
 
 ## Verification
 
 - `typecheck`, `lint`, `build` green.
-- Run the app; screenshot in dark and in light (macOS appearance toggle). The
+- Run the app, then screenshot in dark and in light (macOS appearance toggle). The
   standard theming gap test: if switching themes produces invisible borders or
-  vanishing text, a semantic mapping is missing — fix before merge.
-- No unit tests: foundations are pure CSS with no behavior. The TDD rule ("test
+  vanishing text, a semantic mapping is missing, so fix it before merge.
+- No unit tests: foundations are pure CSS with no behavior. The Test-Driven Development (TDD) rule ("test
   code changes iff behavior changes") gates tests on the first behavioral component.
 
 ## Records

@@ -1,0 +1,6 @@
+extends: existence
+message: "Do not open a sentence with 'there is/are'; name the subject and use a strong verb."
+level: error
+scope: text
+raw:
+  - '(^|[.!?] )There (is|are|was|were)\b'

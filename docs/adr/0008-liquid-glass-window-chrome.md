@@ -1,4 +1,4 @@
-# ADR-0008: Liquid Glass Window Chrome via electron-liquid-glass
+# 0008: Liquid glass window chrome via electron-liquid-glass
 
 **Status**: Accepted
 **Date**: 2026-07-22
@@ -9,15 +9,15 @@ The desktop shell should look native on macOS: a translucent sidebar that picks 
 
 ## Decision
 
-Use the `electron-liquid-glass` native module: the window is created with `transparent: true` and `titleBarStyle: 'hiddenInset'` on macOS, and a glass view is attached behind the content after `did-finish-load`. The sidebar stays transparent in CSS so the glass shows through; the main area paints a semi-opaque background over it.
+Use the `electron-liquid-glass` native module: it creates the window with `transparent: true` and `titleBarStyle: 'hiddenInset'` on macOS, and attaches a glass view behind the content after `did-finish-load`. The sidebar stays transparent in CSS so the glass shows through. The main area paints a semi-opaque background over it.
 
 ## Alternatives
 
-- **Built-in `vibrancy: 'sidebar'`**: zero dependencies, but caps the look at pre-Tahoe blur — no Liquid Glass.
-- **CSS `backdrop-filter`**: only blurs the app's own content, cannot sample the desktop behind the window.
+- **Built-in `vibrancy: 'sidebar'`**: zero dependencies, but caps the look at pre-Tahoe blur, without Liquid Glass.
+- **CSS `backdrop-filter`**: only blurs the app's own content, can't capture the desktop behind the window.
 
 ## Consequences
 
-**Good**: real Liquid Glass on macOS 26+; the module itself falls back to `NSVisualEffectView` on macOS 11–25 and is a safe no-op (`-1`) elsewhere, so no fallback code on our side. Distribution via Homebrew is unaffected — notarization does not scan for private APIs.
+**Good**: real Liquid Glass works on macOS 26+. The module itself falls back to `NSVisualEffectView` on macOS 11–25 and is a safe no-op (`-1`) elsewhere, so the app needs no fallback code. Homebrew distribution stays unaffected, since notarization doesn't scan for private APIs.
 
-**Bad**: relies on a private API, so a macOS minor update can degrade the effect (visually, not a crash) — acceptable since Homebrew lets us ship fixes fast. Mac App Store distribution would be blocked by static analysis; not a current channel.
+**Bad**: relies on a private API, so a macOS minor update can degrade the effect (visually, not a crash), an acceptable risk since Homebrew lets the maintainer ship fixes fast. Static analysis would block Mac App Store distribution, which isn't a current channel.
