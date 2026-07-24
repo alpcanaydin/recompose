@@ -2,7 +2,7 @@ name: ci
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -117,6 +117,53 @@ jobs:
           vale_flags: '--glob=!{node_modules,.agents,.claude/skills,.claude/worktrees,.vale,out,dist,coverage}/**'
           reporter: github-pr-check
           fail_on_error: true
+
+  meta:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .status+" "+.filename' > files.txt
+          labels=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '[.labels[].name] | join(" ")')
+          body=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.body // ""')
+          pr_type=$(printf '%s' "$PR_TITLE" | sed -E 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/')
+          src_changed=$(awk '{print $2}' files.txt | grep -E '^(apps|packages)/[^/]+/src/.*\.(ts|tsx)$' | grep -vE '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
+          tests_changed=$(awk '{print $2}' files.txt | grep -E '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
+          fail=0
+          case "$pr_type" in
+            feat|fix|perf)
+              if [ -n "$src_changed" ] && [ -z "$tests_changed" ]; then
+                if printf '%s' "$labels" | grep -qw 'tdd-exempt' && printf '%s' "$body" | grep -q 'TDD-exempt:'; then
+                  echo "::notice::tdd-exempt accepted; the weekly exemption audit lists this PR"
+                else
+                  echo "::error::'$pr_type' changes src without a test diff. tdd-bdd.md ties behavior changes to test changes. Escape: add the tdd-exempt label plus a 'TDD-exempt: <reason>' line in the PR body."
+                  fail=1
+                fi
+              fi ;;
+          esac
+          adr_trigger=$(awk '{print $2}' files.txt | grep -E '^(\.github/workflows/|turbo\.json$|tsconfig[^/]*\.json$|\.oxlintrc\.json$|lefthook\.yml$|\.dependency-cruiser\.cjs$|knip\.json$|codecov\.yml$|\.vale\.ini$|\.jscpd\.json$|mise\.toml$|pnpm-workspace\.yaml$|steiger\.config)' | head -1 || true)
+          new_pkg=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^(apps|packages)/[^/]+/package\.json$' | head -1 || true)
+          adr_changed=$(awk '{print $2}' files.txt | grep -E '^docs/adr/' | head -1 || true)
+          if { [ -n "$adr_trigger" ] || [ -n "$new_pkg" ]; } && [ -z "$adr_changed" ]; then
+            if printf '%s' "$labels" | grep -qw 'adr-exempt' && printf '%s' "$body" | grep -q 'ADR-exempt:'; then
+              echo "::notice::adr-exempt accepted; the weekly exemption audit lists this PR"
+            else
+              echo "::error::architecture-significant paths changed (${adr_trigger:-$new_pkg}) without a docs/adr change. Record the decision, or add the adr-exempt label plus an 'ADR-exempt: <reason>' line in the PR body."
+              fail=1
+            fi
+          fi
+          exit "$fail"
 
   gitleaks:
     runs-on: ubuntu-latest
