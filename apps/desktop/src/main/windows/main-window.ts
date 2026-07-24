@@ -4,6 +4,12 @@ import liquidGlass from 'electron-liquid-glass';
 import { join } from 'path';
 
 import icon from '../../../resources/icon.png?asset';
+import { devServerOrigin } from '../environment/dev-server-origin';
+import {
+  decideExternalOpen,
+  isAllowedNavigation,
+  type NavigationPolicy,
+} from './navigation-policy';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
@@ -27,8 +33,21 @@ export function createMainWindow(): void {
     mainWindow.show();
   });
 
+  const navigationPolicy: NavigationPolicy = { devServerOrigin: devServerOrigin() };
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedNavigation(url, navigationPolicy)) {
+      event.preventDefault();
+      console.warn(`blocked navigation to ${url}`);
+    }
+  });
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    void shell.openExternal(details.url);
+    if (decideExternalOpen(details.url) === 'open-https') {
+      void shell.openExternal(details.url);
+    } else {
+      console.warn(`dropped window-open to ${details.url}`);
+    }
 
     return { action: 'deny' };
   });
