@@ -104,6 +104,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile --trust-lockfile
+      - run: pnpm --filter @recompose/desktop exec node node_modules/electron/install.js
       - run: pnpm exec turbo run build
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -144,6 +145,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile --trust-lockfile
+      - run: pnpm --filter @recompose/desktop exec node node_modules/electron/install.js
       - run: pnpm exec turbo run build
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -203,6 +205,7 @@ jobs:
           files: all
           reporter: github-pr-check
           fail_on_error: true
+          filter_mode: nofilter
 
   meta:
     if: github.event_name == 'pull_request'
@@ -281,6 +284,7 @@ jobs:
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.30.1
 
   audit:
     needs: changes
