@@ -18,6 +18,26 @@ describe('resolving app:// requests to renderer files', () => {
     });
   });
 
+  test('a query string is not part of the file path', () => {
+    expect(resolveRendererFile(root, 'app://renderer/assets/app.js?v=123')).toEqual({
+      filePath: join(root, 'assets/app.js'),
+    });
+  });
+
+  test('a hash fragment is not part of the file path', () => {
+    expect(resolveRendererFile(root, 'app://renderer/index.html#section')).toEqual({
+      filePath: join(root, 'index.html'),
+    });
+  });
+
+  test('an uppercase scheme still serves only renderer content', () => {
+    expect(resolveRendererFile(root, 'APP://renderer/index.html')).toEqual({
+      filePath: join(root, 'index.html'),
+    });
+  });
+});
+
+describe('rejecting unsafe or foreign app:// requests', () => {
   test('a decoded parent-directory escape is rejected as traversal', () => {
     expect(resolveRendererFile(root, 'app://renderer/../secret')).toEqual({
       rejected: 'traversal',
@@ -45,18 +65,6 @@ describe('resolving app:// requests to renderer files', () => {
   test('a malformed percent-encoding is rejected as traversal', () => {
     expect(resolveRendererFile(root, 'app://renderer/50%off.png')).toEqual({
       rejected: 'traversal',
-    });
-  });
-
-  test('a query string is not part of the file path', () => {
-    expect(resolveRendererFile(root, 'app://renderer/assets/app.js?v=123')).toEqual({
-      filePath: join(root, 'assets/app.js'),
-    });
-  });
-
-  test('a hash fragment is not part of the file path', () => {
-    expect(resolveRendererFile(root, 'app://renderer/index.html#section')).toEqual({
-      filePath: join(root, 'index.html'),
     });
   });
 });

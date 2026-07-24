@@ -36,7 +36,11 @@ describe('external-open policy', () => {
     expect(decideExternalOpen('http://recompose.sh')).toBe('drop');
   });
 
-  test('a malformed target is dropped', () => {
+  test('a javascript scheme target is dropped', () => {
     expect(decideExternalOpen('javascript:alert(1)')).toBe('drop');
+  });
+
+  test('a malformed target is dropped', () => {
+    expect(decideExternalOpen('not a url')).toBe('drop');
   });
 });
