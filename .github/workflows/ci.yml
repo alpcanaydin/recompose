@@ -112,7 +112,24 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y gnome-keyring
       - if: runner.os == 'Linux'
-        run: dbus-run-session -- bash -c "export \$(echo -n '' | gnome-keyring-daemon --unlock) && export XDG_CURRENT_DESKTOP=GNOME && xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e"
+        run: |
+          cat > /tmp/keyring-probe.cjs <<'PROBE'
+          const { app, safeStorage } = require('electron');
+          void app.whenReady().then(() => {
+            process.stdout.write(`backend=${safeStorage.getSelectedStorageBackend()} available=${safeStorage.isEncryptionAvailable()}\n`);
+            app.quit();
+          });
+          PROBE
+          cat > /tmp/e2e-linux.sh <<'SCRIPT'
+          set -e
+          eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
+          eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
+          export XDG_CURRENT_DESKTOP=GNOME
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec electron /tmp/keyring-probe.cjs --password-store=gnome-libsecret | tee /tmp/keyring-probe.out
+          grep -q 'available=true' /tmp/keyring-probe.out
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e
+          SCRIPT
+          dbus-run-session -- bash /tmp/e2e-linux.sh
       - if: runner.os != 'Linux'
         run: pnpm --filter @recompose/desktop run test:e2e
       - if: runner.os == 'Linux'
