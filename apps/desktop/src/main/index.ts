@@ -7,6 +7,7 @@ import { createStorageIpcHandlers } from './ipc/storage-ipc';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
+import { resolveUserDataOverride } from './user-data-override';
 import { createMainWindow } from './windows/main-window';
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
 
@@ -28,6 +29,12 @@ function registerPermissionHandlers(): void {
   const permissionCheckHandler = () => denyPermissionCheck();
 
   session.defaultSession.setPermissionCheckHandler(permissionCheckHandler);
+}
+
+const userDataOverride = resolveUserDataOverride(process.env);
+
+if (userDataOverride !== null) {
+  app.setPath('userData', userDataOverride);
 }
 
 registerAppScheme();
