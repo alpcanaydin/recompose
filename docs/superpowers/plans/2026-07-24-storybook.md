@@ -673,7 +673,7 @@ In the `meta` job's script, after the `tests_changed=` line and before `fail=0`,
 
 ```bash
           new_ui_components=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' || true)
-          all_files=$(awk '{print $2}' files.txt)
+          all_files=$(grep -v '^removed ' files.txt | awk '{print $2}')
 ```
 
 After the existing `case "$pr_type" in ... esac` block, add:
@@ -696,7 +696,7 @@ After the existing `case "$pr_type" in ... esac` block, add:
           fi
 ```
 
-The `grep -vE '\.(test|stories)\.tsx$'` filter also drops `*.browser.test.tsx` because the suffix still matches `.test.tsx`. A component counts as covered when its `*.stories.tsx` sibling appears anywhere in the diff, added or modified, so `all_files` carries every changed path rather than only the additions.
+The `grep -vE '\.(test|stories)\.tsx$'` filter also drops `*.browser.test.tsx` because the suffix still matches `.test.tsx`. A component counts as covered when its `*.stories.tsx` sibling still exists in the pull request head, so `all_files` drops `removed` entries and keeps every other status (`added`, `modified`, `renamed`, `copied`). A deleted sibling story therefore cannot satisfy the requirement for a newly added component.
 
 - [ ] **Step 3: Extend the weekly exemption audit**
 
@@ -728,7 +728,7 @@ Run this fixture check from the worktree root. Every line must print `ok`:
 check() {
   files="$1"; labels="$2"; body="$3"; expected="$4"
   new_ui_components=$(printf '%s\n' "$files" | grep '^added ' | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' || true)
-  all_files=$(printf '%s\n' "$files" | awk '{print $2}')
+  all_files=$(printf '%s\n' "$files" | grep -v '^removed ' | awk '{print $2}')
   missing_stories=""
   for component in $new_ui_components; do
     sibling="${component%.tsx}.stories.tsx"
@@ -755,6 +755,8 @@ added apps/desktop/src/renderer/src/pages/x/ui/gadget.stories.tsx" "" "" 1
 check "added apps/desktop/src/renderer/src/pages/x/ui/widget.tsx" "stories-exempt" "Stories-exempt: canvas spike" 0
 check "added apps/desktop/src/renderer/src/pages/x/ui/widget.browser.test.tsx" "" "" 0
 check "modified apps/desktop/src/renderer/src/pages/x/ui/widget.tsx" "" "" 0
+check "added apps/desktop/src/renderer/src/pages/x/ui/widget.tsx
+removed apps/desktop/src/renderer/src/pages/x/ui/widget.stories.tsx" "" "" 1
 ```
 
 Run this fixture under bash, because the per-component loop relies on bash word-splitting the newline-joined `$new_ui_components`; the CI job runs bash.
