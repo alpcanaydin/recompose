@@ -23,7 +23,7 @@ Seventh infrastructure-queue item. The typed Inter-Process Communication (IPC) s
 - Sender-trust specs change behavior. An `app://renderer` main frame passes, a `file://` origin now fails, and the dev origin still passes. The Test-Driven Development (TDD) invariant applies, so behavior changes bring spec changes.
 - The protocol handler gets path-traversal specs: a request escaping the renderer directory yields a rejection, not a file.
 - The `openExternal` scheme gate and the navigation guard become pure functions with unit specs (allowed, denied, logged).
-- Boot proof over Chrome DevTools Protocol (CDP) against the packaged build: the window serves from `app://`, the frozen bridge still answers, a scripted navigation attempt away from the app fails, and the sandbox flag shows up in the process model.
+- Boot proof over Chrome DevTools Protocol (CDP) against the built application in `apps/desktop/out`: the window serves from `app://`, the frozen bridge still answers, a scripted navigation attempt away from the app fails, and the sandbox flag shows up in the process model. Packaged-artifact coverage lands with the future Playwright job.
 
 ## Out of scope
 
