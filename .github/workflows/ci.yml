@@ -125,7 +125,7 @@ jobs:
           eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
           eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
           export XDG_CURRENT_DESKTOP=GNOME
-          xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec electron /tmp/keyring-probe.cjs --password-store=gnome-libsecret | tee /tmp/keyring-probe.out
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec electron /tmp/keyring-probe.cjs --no-sandbox --password-store=gnome-libsecret | tee /tmp/keyring-probe.out
           grep -q 'available=true' /tmp/keyring-probe.out
           xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e
           SCRIPT
