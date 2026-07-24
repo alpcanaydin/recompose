@@ -86,8 +86,8 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { test as base, _electron as electron } from '@playwright/test';
-import { createBdd } from 'playwright-bdd';
+import { _electron as electron } from '@playwright/test';
+import { createBdd, test as base } from 'playwright-bdd';
 
 const appRoot = join(__dirname, '..');
 
