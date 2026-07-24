@@ -16,7 +16,7 @@ Seventh infrastructure-queue item. The typed Inter-Process Communication (IPC) s
 - **Permissions deny by default.** The session gets a permission request handler and a permission check handler that refuse everything, because today's renderer needs no Web permissions. Any future need lands as a visible allowlist entry.
 - **Electron Fuses harden the packaged binary**: `runAsNode` off, Node options and Node inspect arguments off, cookie encryption on, embedded archive integrity validation on, and load-app-from-archive-only on. Applied at package time through the builder hook.
 - **CSP tightens empirically.** The production policy drops `'unsafe-inline'` for styles if the built stylesheet works without it, measured during implementation; development keeps what hot reload needs. The policy stays a document meta tag, the standard mechanism for custom-scheme documents.
-- **Two one-shot audits ride along**, per the queue riders: Electronegativity and OpenSSF Scorecard run once locally, and their uncovered findings land in this job's decision record. Neither becomes a CI gate.
+- **OpenSSF Scorecard installs as a standing check with a published badge.** The maintainer dropped the old one-shot-audit plan: Electronegativity leaves the job entirely (unmaintained tool), and Scorecard arrives as the official workflow on the default branch plus a weekly schedule, publishing results so the README carries the score badge. Scorecard audits repository posture rather than diffs, so it runs beside the merge gates rather than inside them.
 
 ## Testing
 
@@ -33,4 +33,4 @@ Seventh infrastructure-queue item. The typed Inter-Process Communication (IPC) s
 
 ## Decision record
 
-The team writes ADR-0028 with the architecture-decision-records skill during implementation. It captures the scheme choice and its sender-trust consequences, the sandbox rationale, the fuse set, and the permission stance. The `https`-only link-out and the audit findings from Electronegativity and Scorecard land there too.
+The team writes ADR-0028 with the architecture-decision-records skill during implementation. It captures the scheme choice and its sender-trust consequences, the sandbox rationale, the fuse set, and the permission stance. The `https`-only link-out and the Scorecard decision land there too.
