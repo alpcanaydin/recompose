@@ -26,7 +26,7 @@
 ## Prose style
 
 - **Never use an em dash.** Don't patch one out with a colon: rewrite the sentence so it reads as if it never had one.
-- All authored markdown passes Vale: Microsoft base style with rules promoted to error, plus the house rules in `.vale/styles/recompose/` (`docs/adr/0025-vale-prose-gate.md`). New vocabulary lands in the committed accept list through the PR diff.
+- All authored markdown passes Vale: Microsoft base style with rules promoted to error, plus the house rules in `.vale/styles/recompose/` (`docs/adr/0025-vale-prose-gate.md`). New vocabulary lands in the committed accept list through the PR diff. Implementation plans under `docs/superpowers/plans/` sit outside both prose gates (Vale and cspell) as internal execution artifacts.
 
 ## Comments
 

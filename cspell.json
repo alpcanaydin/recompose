@@ -16,6 +16,7 @@
     ".claude/skills",
     ".claude/worktrees",
     ".vale/styles",
+    "docs/superpowers/plans",
     "pnpm-lock.yaml",
     "skills-lock.json",
     "**/routeTree.gen.ts",
