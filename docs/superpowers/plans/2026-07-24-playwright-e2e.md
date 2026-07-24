@@ -129,15 +129,17 @@ export const test = base.extend<ElectronFixtures>({
 export const { Given, When, Then } = createBdd(test);
 ```
 
+Playwright parses a fixture function's first parameter as literal source text and requires the `{}` object destructuring pattern, so the empty pattern stays. A file-scoped `no-empty-pattern` override for `apps/desktop/e2e/fixtures.ts` in `.oxlintrc.json` (mirroring the existing recompose-bridge override) keeps oxlint green without inline disables. playwright-bdd generates only when `bddgen` runs, which is why the scripts in Step 4 chain it before the runner.
+
 - [ ] **Step 4: Add scripts to `apps/desktop/package.json`**
 
 Add to `"scripts"`:
 
 ```json
-"test:e2e": "playwright test -c e2e/playwright.config.ts --project acceptance --project proofs --grep-invert @quarantine",
+"test:e2e": "bddgen -c e2e/playwright.config.ts && playwright test -c e2e/playwright.config.ts --project acceptance --project proofs --grep-invert @quarantine",
 "test:e2e:leak": "playwright test -c e2e/playwright.config.ts --project leak --grep-invert @quarantine",
 "test:e2e:packaged": "playwright test -c e2e/playwright.config.ts --project packaged --grep-invert @quarantine",
-"test:e2e:quarantine": "playwright test -c e2e/playwright.config.ts --grep @quarantine --pass-with-no-tests"
+"test:e2e:quarantine": "bddgen -c e2e/playwright.config.ts && playwright test -c e2e/playwright.config.ts --grep @quarantine --pass-with-no-tests"
 ```
 
 Add to root `package.json` scripts:
@@ -364,6 +366,7 @@ async function connectAccount(
   label: string,
 ): Promise<void> {
   await page.getByRole('textbox', { name: 'Provider' }).fill(provider);
+  await page.getByRole('combobox', { name: 'Kind' }).selectOption('api-key');
   await page.getByRole('textbox', { name: 'Label' }).fill(label);
   await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
   await page.getByRole('button', { name: 'Connect' }).click();
@@ -395,6 +398,7 @@ Then(
 
     await expect(item).toBeVisible();
     await expect(item).toContainText(provider);
+    await expect(item).toContainText('api-key');
   },
 );
 
@@ -457,10 +461,11 @@ test('the built bundle boots on the app scheme with the security baseline', asyn
   expect(served.host).toBe('renderer');
 
   const bridge = await page.evaluate(() => ({
-    isObject: typeof globalThis.recompose === 'object' && globalThis.recompose !== null,
+    isObject: typeof globalThis.recompose === 'object',
+    isNull: Object.is(globalThis.recompose, null),
     isFrozen: Object.isFrozen(globalThis.recompose),
   }));
-  expect(bridge).toEqual({ isObject: true, isFrozen: true });
+  expect(bridge).toEqual({ isObject: true, isNull: false, isFrozen: true });
 
   const answer = await page.evaluate(() => globalThis.recompose['settings:get']());
   expect(answer.ok).toBe(true);
@@ -484,9 +489,11 @@ test('the built bundle boots on the app scheme with the security baseline', asyn
   await page.evaluate(() => {
     globalThis.location.href = 'https://example.com/';
   });
-  await expect(page).toHaveURL(beforeAttempt);
+  await expect.poll(() => page.url()).toBe(beforeAttempt);
 });
 ```
+
+The null probe runs through `Object.is` because the ambient `RecomposeIpc` type would make a `!== null` condition statically vacuous while the runtime proof still needs it. The navigation guard polls `page.url()` because a cancelled `will-navigate` emits an errored navigation event that `toHaveURL`'s waiter throws on, an Electron and Chrome DevTools Protocol race confirmed against the playwright-core source.
 
 Type note: the `.mjs` original accessed `globalThis.recompose` untyped. In TS, reuse whatever ambient declaration the renderer uses for `window.recompose` (see `apps/desktop/src/preload/index.d.ts`); if `globalThis.recompose` doesn't typecheck inside `page.evaluate`, type the evaluate callbacks against the `RecomposeIpc` contract imported from `@recompose/contracts`. No `as` casts.
 
@@ -531,6 +538,8 @@ git commit -m "test(e2e): migrate the security boot proof into the runner"
 **Interfaces:**
 
 - Consumes: `inheritedEnv()` from `e2e/fixtures.ts`; `findLatestBuild`/`parseElectronApp` from `electron-playwright-helpers`. Requires `apps/desktop/dist` produced by `electron-builder --dir`.
+
+**Execution amendment (supersedes Step 1's launch mechanics).** The shipped `EnableNodeCliInspectArguments: false` fuse blocks the Node-inspector handshake `electron.launch` depends on, and fuses never relax for tests because the smoke must prove the artifact users run. The landed spec therefore spawns the packaged executable with `--remote-debugging-port=0`, discovers the port from the `DevTools listening` stderr line, connects through `chromium.connectOverCDP`, asserts a page at `app://renderer` plus the frozen bridge, and adds two direct fuse probes: `ELECTRON_RUN_AS_NODE` gets ignored (bounded non-exit poll) and `--inspect=0` never prints a debugger banner. `app.isPackaged` and `getAppPath` assertions drop because no main-process channel exists under shipped fuses; the `OnlyLoadAppFromAsar` fuse makes a successful `app://renderer` boot the structural ASAR proof. Every spawned child carries an error listener that fails the test with the operation named. The code below records the original design for the execution history.
 
 - [ ] **Step 1: Write `packaged-smoke.spec.ts`**
 
