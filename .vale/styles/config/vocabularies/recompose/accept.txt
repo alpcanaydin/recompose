@@ -151,6 +151,7 @@
 [Ss]tderr
 [Ss]tdin
 [Ss]teiger
+[Ss]tryker
 [Ss]ubline
 [Ss]ubpaths
 [Ss]upabase

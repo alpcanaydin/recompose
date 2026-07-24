@@ -47,3 +47,27 @@ jobs:
           else
             gh issue create -R ${{ github.repository }} --title "Ruleset bypass audit" --body "$BODY"
           fi
+      - id: exemptions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          since=$(date -u -d '7 days ago' +%Y-%m-%d)
+          rows=$(gh api "search/issues?q=repo:${{ github.repository }}+is:pr+is:merged+merged:>=$since+label:tdd-exempt,adr-exempt" --paginate --jq '.items[] | "- #\(.number) \(.title) (labels: \([.labels[].name] | join(", ")))"')
+          count=$(printf '%s' "$rows" | grep -c . || true)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo "rows<<ROWS_EOF"
+            printf '%s\n' "$rows"
+            echo "ROWS_EOF"
+          } >> "$GITHUB_OUTPUT"
+      - if: steps.exemptions.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ROWS: ${{ steps.exemptions.outputs.rows }}
+        run: |
+          existing=$(gh issue list -R ${{ github.repository }} --state open --search 'Exemption audit in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment -R ${{ github.repository }} "$existing" --body "$ROWS"
+          else
+            gh issue create -R ${{ github.repository }} --title "Exemption audit" --body "$ROWS"
+          fi
