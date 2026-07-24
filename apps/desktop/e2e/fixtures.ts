@@ -22,7 +22,7 @@ type ElectronFixtures = {
 };
 
 export const test = base.extend<ElectronFixtures>({
-  electronApp: async ({}, use) => {
+  electronApp: async (_fixtures, use) => {
     const userDataDir = await mkdtemp(join(tmpdir(), 'recompose-e2e-'));
     const app = await electron.launch({
       args: [appRoot],
@@ -33,11 +33,13 @@ export const test = base.extend<ElectronFixtures>({
         RECOMPOSE_USER_DATA_DIR: userDataDir,
       },
     });
+
     await use(app);
     await app.close();
   },
   page: async ({ electronApp }, use) => {
     const page = await electronApp.firstWindow();
+
     await page.waitForLoadState('domcontentloaded');
     await use(page);
   },

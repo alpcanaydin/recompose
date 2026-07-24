@@ -602,7 +602,7 @@
     "docs/**",
     "**/routeTree.gen.ts",
     "apps/desktop/build/**",
-    "apps/desktop/e2e/**"
+    "apps/desktop/e2e/.features-gen/**"
   ],
   "overrides": [
     {
