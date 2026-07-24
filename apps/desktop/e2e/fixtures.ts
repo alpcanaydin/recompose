@@ -1,10 +1,10 @@
 import type { ElectronApplication, Page } from '@playwright/test';
 
-import { test as base, _electron as electron } from '@playwright/test';
+import { _electron as electron } from '@playwright/test';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createBdd } from 'playwright-bdd';
+import { createBdd, test as base } from 'playwright-bdd';
 
 const appRoot = join(__dirname, '..');
 
