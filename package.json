@@ -18,6 +18,7 @@
     "lint:boundaries": "depcruise apps packages",
     "lint:dead": "knip",
     "lint:dup": "jscpd -c .jscpd.json apps packages",
+    "lint:prose": "vale docs/adr README.md CLAUDE.md",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"

@@ -30,3 +30,4 @@ Every technical decision in recompose is recorded here (see `CLAUDE.md`). New AD
 | [0022](0022-codecov-patch-coverage-gate.md)                    | Patch Coverage Gate via Codecov                                  | Accepted | 2026-07-23 |
 | [0023](0023-type-level-tests.md)                               | Type-Level Tests for Load-Bearing Derived Types                  | Accepted | 2026-07-24 |
 | [0024](0024-type-aware-unsafe-lint.md)                         | Type-Aware Lint Guards Against any-Taint                         | Accepted | 2026-07-24 |
+| [0025](0025-vale-prose-gate.md)                                | Vale Prose Gate on Authored Documentation                        | Accepted | 2026-07-24 |

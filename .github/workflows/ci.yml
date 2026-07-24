@@ -19,6 +19,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
       workflows: ${{ steps.filter.outputs.workflows }}
+      prose: ${{ steps.filter.outputs.prose }}
     steps:
       - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
@@ -37,6 +38,12 @@ jobs:
               - '!**/*.md'
             workflows:
               - '.github/workflows/**'
+            prose:
+              - 'docs/adr/**'
+              - 'README.md'
+              - 'CLAUDE.md'
+              - '.vale.ini'
+              - '.vale/**'
 
   check:
     needs: changes
@@ -95,6 +102,24 @@ jobs:
           files: apps/desktop/coverage/lcov.info,packages/contracts/coverage/lcov.info
           disable_search: true
           fail_ci_if_error: true
+
+  prose:
+    needs: changes
+    if: needs.changes.outputs.prose == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: |
+          curl -sSLo vale.tar.gz https://github.com/vale-cli/vale/releases/download/v3.15.2/vale_3.15.2_Linux_64-bit.tar.gz
+          echo "fc72e64454d6bd7af91905d4faebbf411bae3eec17bb572f4101311212bc0d9e  vale.tar.gz" | sha256sum -c -
+          tar -xzf vale.tar.gz vale
+          ./vale sync
+          ./vale docs/adr README.md CLAUDE.md
 
   gitleaks:
     runs-on: ubuntu-latest
@@ -171,7 +196,8 @@ jobs:
         run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
 
   ci-success:
-    needs: [changes, check, coverage-upload, gitleaks, audit, zizmor, actionlint, commitlint-pr]
+    needs:
+      [changes, check, coverage-upload, prose, gitleaks, audit, zizmor, actionlint, commitlint-pr]
     if: always()
     runs-on: ubuntu-latest
     steps:
