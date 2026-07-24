@@ -11,6 +11,10 @@
     "storybook": {
       "type": "http",
       "url": "http://localhost:6006/mcp"
+    },
+    "playwright": {
+      "command": "pnpm",
+      "args": ["exec", "playwright-mcp"]
     }
   }
 }
