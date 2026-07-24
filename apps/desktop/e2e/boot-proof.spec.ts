@@ -14,6 +14,30 @@ declare global {
   }
 }
 
+const NAVIGATION_GUARD_WINDOW_MS = 500;
+
+async function assertUrlStaysUnchanged(
+  detectDrift: () => string | null,
+  windowMs: number,
+): Promise<void> {
+  const start = Date.now();
+
+  await expect
+    .poll(
+      () => {
+        const drift = detectDrift();
+
+        if (drift !== null) {
+          throw new Error(drift);
+        }
+
+        return Date.now() - start;
+      },
+      { timeout: windowMs + 4500 },
+    )
+    .toBeGreaterThan(windowMs);
+}
+
 test('the built bundle boots on the app scheme with the security baseline', async ({
   electronApp,
   page,
@@ -57,5 +81,9 @@ test('the built bundle boots on the app scheme with the security baseline', asyn
   await page.evaluate(() => {
     globalThis.location.href = 'https://example.com/';
   });
-  await expect.poll(() => page.url()).toBe(beforeAttempt);
+
+  await assertUrlStaysUnchanged(
+    () => (page.url() === beforeAttempt ? null : `url changed to ${page.url()}`),
+    NAVIGATION_GUARD_WINDOW_MS,
+  );
 });

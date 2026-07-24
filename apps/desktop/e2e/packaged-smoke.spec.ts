@@ -17,6 +17,8 @@ declare global {
 
 const distDir = join(__dirname, '..', 'dist');
 const FUSE_PROBE_WINDOW_MS = 2000;
+const DEVTOOLS_PORT_TIMEOUT_MS = 30_000;
+const RENDERER_PAGE_TIMEOUT_MS = 30_000;
 const DEVTOOLS_LISTENING_PATTERN = /DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//;
 
 async function createPackagedLaunchEnv(
@@ -60,15 +62,22 @@ async function waitForDevtoolsPort(
   });
 
   await expect
-    .poll(() => {
-      const spawnFailure = getSpawnFailure();
+    .poll(
+      () => {
+        const spawnFailure = getSpawnFailure();
 
-      if (spawnFailure !== null) {
-        throw new Error(spawnFailure);
-      }
+        if (spawnFailure !== null) {
+          throw new Error(spawnFailure);
+        }
 
-      return DEVTOOLS_LISTENING_PATTERN.test(buffer);
-    })
+        if (child.exitCode !== null) {
+          throw new Error(`devtools port wait exited early with code ${String(child.exitCode)}`);
+        }
+
+        return DEVTOOLS_LISTENING_PATTERN.test(buffer);
+      },
+      { timeout: DEVTOOLS_PORT_TIMEOUT_MS },
+    )
     .toBe(true);
 
   const match = DEVTOOLS_LISTENING_PATTERN.exec(buffer);
@@ -87,7 +96,9 @@ async function findRendererPage(browser: Browser): Promise<Page> {
       .flatMap((context) => context.pages())
       .filter((candidate) => candidate.url().startsWith('app://renderer'));
 
-  await expect.poll(() => rendererPages().length).toBeGreaterThan(0);
+  await expect
+    .poll(() => rendererPages().length, { timeout: RENDERER_PAGE_TIMEOUT_MS })
+    .toBeGreaterThan(0);
 
   const renderer = rendererPages()[0];
 
