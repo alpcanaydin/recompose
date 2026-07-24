@@ -24,6 +24,9 @@ pre-commit:
     - name: dup
       priority: 1
       run: pnpm run lint:dup
+    - name: spell
+      priority: 1
+      run: pnpm run lint:spell
     - name: prose
       priority: 1
       glob: '*.md'

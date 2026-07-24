@@ -75,6 +75,7 @@ jobs:
       - run: pnpm run lint:fsd
       - run: pnpm run lint:dead
       - run: pnpm run lint:dup
+      - run: pnpm run lint:spell
 
   coverage-upload:
     needs: check
@@ -110,6 +111,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+      - run: pnpm run lint:spell
       - uses: vale-cli/vale-action@85f9f7f2c5f449ac0ae5b66662961bae3f77ca6a # v2.1.2
         with:
           version: 3.15.2
