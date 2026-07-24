@@ -19,7 +19,7 @@ The repository's decision records and README are written once and read forever, 
   - `Google.Units` — durations like `3s` are CI-log vocabulary, not narrative units.
   - `Google.LyHyphens` — false positive: the rule matches any `-ly`-ending word, flagging the correct compound `supply-chain`. The three genuine hits it found (`newly-disclosed`, `deliberately-fresh`) were fixed before deferring it.
   - `Google.Quotes` — flags quoted identifiers like `"recompose-design-system"` followed by punctuation; moving the period inside would misquote the name.
-- **Vocabulary is a reviewed artifact**: 121 case-flexible entries in `.vale/styles/config/vocabularies/recompose/accept.txt`, extracted from the actual tree and hand-scanned so a real typo cannot hide in the accept list. New words arrive through PR diffs like code.
+- **Vocabulary is a reviewed artifact**: 123 case-flexible entries in `.vale/styles/config/vocabularies/recompose/accept.txt`, extracted from the actual tree and hand-scanned so a real typo cannot hide in the accept list. New words arrive through PR diffs like code.
 - **Wiring**: root `lint:prose` script; lefthook `prose` job (installs Vale via brew and syncs styles on first use, the gitleaks pattern); a dedicated CI `prose` job behind a new `prose` paths filter — authored docs never trigger the heavy `check` job, and `check`'s path filter never sees docs — added to `ci-success`'s needs (ADR-0007). The CI binary is downloaded at a pinned version and verified against its published SHA-256 before running.
 
 ## Alternatives

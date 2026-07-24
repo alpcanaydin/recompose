@@ -27,7 +27,7 @@ pre-commit:
     - name: prose
       priority: 1
       glob: '*.md'
-      run: command -v vale >/dev/null || brew install vale; test -d .vale/styles/Google || vale sync; pnpm run lint:prose
+      run: command -v vale >/dev/null || brew install vale; test .vale/styles/Google -nt .vale.ini || vale sync; pnpm run lint:prose
     - name: fmt
       priority: 2
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'
