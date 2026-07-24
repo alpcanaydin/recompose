@@ -6,39 +6,34 @@ export type RendererFileResolution =
 
 const APP_SCHEME = 'app:';
 const APP_HOST = 'renderer';
+const URL_PATH_REGEX = /^app:\/\/[^/]*(.*)/;
 
-function isValidAppUrl(protocol: string, host: string): boolean {
-  return protocol === APP_SCHEME && host === APP_HOST;
-}
+function extractPathFromUrl(requestUrl: string): string {
+  const pathMatch = URL_PATH_REGEX.exec(requestUrl);
 
-const TRAVERSAL_PATTERN = /\.\.|\\|%2[eE]%2[eE]/;
-
-function isTraversalAttempt(path: string): boolean {
-  return TRAVERSAL_PATTERN.test(path);
-}
-
-function isPathInRoot(filePath: string, root: string): boolean {
-  return filePath.startsWith(root + sep);
+  return pathMatch?.[1] ?? '/';
 }
 
 export function resolveRendererFile(
   rendererRoot: string,
   requestUrl: string,
 ): RendererFileResolution {
-  if (isTraversalAttempt(requestUrl)) {
-    return { rejected: 'traversal' };
-  }
-
   const url = new URL(requestUrl);
 
-  if (!isValidAppUrl(url.protocol, url.host)) {
+  if (url.protocol !== APP_SCHEME || url.host !== APP_HOST) {
     return { rejected: 'not-app-scheme' };
   }
 
-  const requestedPath = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+  const rawPath = extractPathFromUrl(requestUrl);
+  const requestedPath = decodeURIComponent(rawPath).replace(/^\/+/, '');
   const relativePath = requestedPath === '' ? 'index.html' : requestedPath;
+
   const root = resolve(rendererRoot);
   const filePath = resolve(root, relativePath);
 
-  return isPathInRoot(filePath, root) ? { filePath } : { rejected: 'traversal' };
+  if (!filePath.startsWith(root + sep)) {
+    return { rejected: 'traversal' };
+  }
+
+  return { filePath };
 }
