@@ -8,6 +8,7 @@ async function connectAccount(
   label: string,
 ): Promise<void> {
   await page.getByRole('textbox', { name: 'Provider' }).fill(provider);
+  await page.getByRole('combobox', { name: 'Kind' }).selectOption('api-key');
   await page.getByRole('textbox', { name: 'Label' }).fill(label);
   await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
   await page.getByRole('button', { name: 'Connect' }).click();
@@ -39,6 +40,7 @@ Then(
 
     await expect(item).toBeVisible();
     await expect(item).toContainText(provider);
+    await expect(item).toContainText('api-key');
   },
 );
 
