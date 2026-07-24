@@ -1,7 +1,9 @@
+import { is } from '@electron-toolkit/utils';
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
 
+import { devServerOrigin } from '../environment/dev-server-origin';
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
 function senderFromEvent(event: IpcMainInvokeEvent): TrustedSender {
@@ -14,14 +16,8 @@ function senderFromEvent(event: IpcMainInvokeEvent): TrustedSender {
   return { frameUrl: senderFrame.url, isMainFrame: senderFrame === event.sender.mainFrame };
 }
 
-function devServerOrigin(): string | undefined {
-  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
-
-  return rendererUrl === undefined || rendererUrl === '' ? undefined : new URL(rendererUrl).origin;
-}
-
 export function registerIpcHandlers(handlers: IpcHandlers): void {
-  const allowedOrigins: AllowedOrigins = { devServerOrigin: devServerOrigin() };
+  const allowedOrigins: AllowedOrigins = { devServerOrigin: devServerOrigin(is.dev) };
 
   for (const channel of ipcChannelNames) {
     ipcMain.handle(channel, async (event, payload: unknown) =>

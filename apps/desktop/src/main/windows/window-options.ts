@@ -19,7 +19,7 @@ export function windowOptionsFor(
     ...(platform === 'linux' ? { icon: iconPath } : {}),
     webPreferences: {
       preload: preloadPath,
-      sandbox: false,
+      sandbox: true,
     },
   };
 }

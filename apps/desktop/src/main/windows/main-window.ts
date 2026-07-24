@@ -4,9 +4,19 @@ import liquidGlass from 'electron-liquid-glass';
 import { join } from 'path';
 
 import icon from '../../../resources/icon.png?asset';
+import { devServerOrigin } from '../environment/dev-server-origin';
+import {
+  decideExternalOpen,
+  isAllowedNavigation,
+  type NavigationPolicy,
+} from './navigation-policy';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
+
+function targetForLog(url: string): string {
+  return URL.canParse(url) ? new URL(url).origin : 'a malformed target';
+}
 
 function applyGlassBackdrop(window: BrowserWindow): void {
   window.webContents.once('did-finish-load', () => {
@@ -27,8 +37,23 @@ export function createMainWindow(): void {
     mainWindow.show();
   });
 
+  const navigationPolicy: NavigationPolicy = { devServerOrigin: devServerOrigin(is.dev) };
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedNavigation(url, navigationPolicy)) {
+      event.preventDefault();
+      console.warn(`blocked navigation to ${targetForLog(url)}`);
+    }
+  });
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    void shell.openExternal(details.url);
+    if (decideExternalOpen(details.url) === 'open-https') {
+      shell.openExternal(details.url).catch((error: unknown) => {
+        console.error(`failed to open ${targetForLog(details.url)} externally`, error);
+      });
+    } else {
+      console.warn(`dropped window-open to ${targetForLog(details.url)}`);
+    }
 
     return { action: 'deny' };
   });
@@ -38,6 +63,6 @@ export function createMainWindow(): void {
   if (is.dev && rendererUrl !== undefined && rendererUrl !== '') {
     void mainWindow.loadURL(rendererUrl);
   } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    void mainWindow.loadURL('app://renderer/index.html');
   }
 }

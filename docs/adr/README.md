@@ -33,3 +33,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0025](0025-vale-prose-gate.md)                                | Vale Prose Gate with Microsoft Style at Full Strength                   | Accepted | 2026-07-24 |
 | [0026](0026-pr-meta-gate.md)                                   | A Meta-Gate Machine-Checks Pull Requests for Tests and Records          | Accepted | 2026-07-24 |
 | [0027](0027-cspell-single-spelling-authority.md)               | cspell Is the Single Spelling Authority                                 | Accepted | 2026-07-24 |
+| [0028](0028-security-baseline.md)                              | Security Baseline: app:// Scheme, Sandbox, Fuses, Deny-by-Default       | Accepted | 2026-07-24 |

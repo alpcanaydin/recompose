@@ -4,6 +4,7 @@
 
 - Research current industry best practices for the topic (web search), independent of this codebase.
 - If a clear standard path exists, bring the codebase into conformance with it first, then do the work.
+- When a request sounds like a capability of a platform or tool already in use (GitHub, Electron, pnpm, and so on), search for the built-in or off-the-shelf solution first. Write a custom implementation only after that search comes up empty.
 
 ## Git workflow
 

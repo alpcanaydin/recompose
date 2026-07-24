@@ -600,7 +600,9 @@
     "vendor/**",
     ".superpowers/**",
     "docs/**",
-    "**/routeTree.gen.ts"
+    "**/routeTree.gen.ts",
+    "apps/desktop/build/**",
+    "apps/desktop/e2e/**"
   ],
   "overrides": [
     {

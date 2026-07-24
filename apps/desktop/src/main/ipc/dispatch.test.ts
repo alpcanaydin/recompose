@@ -10,7 +10,7 @@ const settings = { schemaVersion: 1, theme: 'dark', enginePort: 9000 } as const;
 const emptyAccounts: AccountsDocument = { schemaVersion: 1, accounts: [] };
 
 const trustedSender: TrustedSender = {
-  frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
+  frameUrl: 'app://renderer/index.html',
   isMainFrame: true,
 };
 const allowedOrigins: AllowedOrigins = { devServerOrigin: undefined };
@@ -136,7 +136,7 @@ describe('ipc dispatch: sender trust rejects', () => {
       },
     });
     const subFrameSender: TrustedSender = {
-      frameUrl: 'file:///Applications/recompose.app/renderer/index.html',
+      frameUrl: 'app://renderer/index.html',
       isMainFrame: false,
     };
 
@@ -156,7 +156,7 @@ describe('ipc dispatch: sender trust accepts', () => {
     const devSender: TrustedSender = { frameUrl: 'http://localhost:5173/', isMainFrame: true };
     const devOrigins: AllowedOrigins = { devServerOrigin: 'http://localhost:5173' };
 
-    const fileResult = await dispatchIpc(
+    const packagedResult = await dispatchIpc(
       handlers,
       'settings:get',
       undefined,
@@ -165,7 +165,7 @@ describe('ipc dispatch: sender trust accepts', () => {
     );
     const devResult = await dispatchIpc(handlers, 'settings:get', undefined, devSender, devOrigins);
 
-    expect(fileResult).toEqual({ ok: true, value: settings });
+    expect(packagedResult).toEqual({ ok: true, value: settings });
     expect(devResult).toEqual({ ok: true, value: settings });
   });
 });
