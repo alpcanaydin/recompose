@@ -38,6 +38,6 @@ export function createMainWindow(): void {
   if (is.dev && rendererUrl !== undefined && rendererUrl !== '') {
     void mainWindow.loadURL(rendererUrl);
   } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    void mainWindow.loadURL('app://renderer/index.html');
   }
 }

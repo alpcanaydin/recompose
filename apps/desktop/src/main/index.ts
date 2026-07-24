@@ -1,8 +1,10 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow, safeStorage } from 'electron';
+import { join } from 'path';
 
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
+import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { createMainWindow } from './windows/main-window';
@@ -11,7 +13,11 @@ function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
 
+registerAppScheme();
+
 void app.whenReady().then(() => {
+  serveRenderer(join(__dirname, '../renderer'));
+
   registerIpcHandlers(
     createStorageIpcHandlers({
       userDataPath: app.getPath('userData'),
