@@ -149,8 +149,8 @@ jobs:
           pr_type=$(printf '%s' "$PR_TITLE" | sed -E 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/')
           src_changed=$(awk '{print $2}' files.txt | grep -E '^(apps|packages)/[^/]+/src/.*\.(ts|tsx)$' | grep -vE '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
           tests_changed=$(awk '{print $2}' files.txt | grep -E '\.(test|test-d|stories)\.(ts|tsx)$' | head -1 || true)
-          new_ui=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' | head -1 || true)
-          stories_changed=$(awk '{print $2}' files.txt | grep -E '\.stories\.tsx$' | head -1 || true)
+          new_ui_components=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' || true)
+          all_files=$(awk '{print $2}' files.txt)
           fail=0
           case "$pr_type" in
             feat|fix|perf)
@@ -163,11 +163,18 @@ jobs:
                 fi
               fi ;;
           esac
-          if [ -n "$new_ui" ] && [ -z "$stories_changed" ]; then
+          missing_stories=""
+          for component in $new_ui_components; do
+            sibling="${component%.tsx}.stories.tsx"
+            if ! printf '%s\n' "$all_files" | grep -qxF "$sibling"; then
+              missing_stories="$missing_stories $component"
+            fi
+          done
+          if [ -n "$missing_stories" ]; then
             if printf '%s' "$labels" | grep -qw 'stories-exempt' && printf '%s' "$body" | grep -q 'Stories-exempt:'; then
               echo "::notice::stories-exempt accepted; the weekly exemption audit lists this PR"
             else
-              echo "::error::new renderer ui component ($new_ui) landed without a story. Every ui component ships a *.stories.tsx sibling. Escape: add the stories-exempt label plus a 'Stories-exempt: <reason>' line in the PR body."
+              echo "::error::new renderer ui component(s) landed without a sibling story:${missing_stories}. Every ui component ships a *.stories.tsx sibling. Escape: add the stories-exempt label plus a 'Stories-exempt: <reason>' line in the PR body."
               fail=1
             fi
           fi
