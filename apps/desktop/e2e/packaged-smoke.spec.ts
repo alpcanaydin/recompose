@@ -33,7 +33,23 @@ async function createPackagedLaunchEnv(
   };
 }
 
-async function waitForDevtoolsPort(child: ChildProcessWithoutNullStreams): Promise<number> {
+function trackChildFailure(
+  child: ChildProcessWithoutNullStreams,
+  operation: string,
+): () => string | null {
+  let failure: string | null = null;
+
+  child.on('error', (error) => {
+    failure = `${operation} failed: ${error.message}`;
+  });
+
+  return () => failure;
+}
+
+async function waitForDevtoolsPort(
+  child: ChildProcessWithoutNullStreams,
+  getSpawnFailure: () => string | null,
+): Promise<number> {
   let buffer = '';
 
   child.stdout.on('data', () => {
@@ -43,7 +59,17 @@ async function waitForDevtoolsPort(child: ChildProcessWithoutNullStreams): Promi
     buffer += chunk.toString();
   });
 
-  await expect.poll(() => DEVTOOLS_LISTENING_PATTERN.test(buffer)).toBe(true);
+  await expect
+    .poll(() => {
+      const spawnFailure = getSpawnFailure();
+
+      if (spawnFailure !== null) {
+        throw new Error(spawnFailure);
+      }
+
+      return DEVTOOLS_LISTENING_PATTERN.test(buffer);
+    })
+    .toBe(true);
 
   const match = DEVTOOLS_LISTENING_PATTERN.exec(buffer);
 
@@ -101,9 +127,10 @@ test('the packaged artifact boots from the asar on the app scheme', async () => 
   const child = spawn(appInfo.executable, ['--remote-debugging-port=0'], {
     env: await createPackagedLaunchEnv({}),
   });
+  const getSpawnFailure = trackChildFailure(child, 'packaged binary spawn');
 
   try {
-    const port = await waitForDevtoolsPort(child);
+    const port = await waitForDevtoolsPort(child, getSpawnFailure);
     const browser = await chromium.connectOverCDP(`http://127.0.0.1:${String(port)}`);
 
     try {
@@ -128,6 +155,7 @@ test('the run-as-node fuse stays flipped in the packaged binary', async () => {
   const child = spawn(appInfo.executable, ['-e', 'process.exit(97)'], {
     env: await createPackagedLaunchEnv({ ELECTRON_RUN_AS_NODE: '1' }),
   });
+  const getSpawnFailure = trackChildFailure(child, 'run-as-node fuse probe spawn');
 
   child.stdout.on('data', () => {
     return undefined;
@@ -138,7 +166,9 @@ test('the run-as-node fuse stays flipped in the packaged binary', async () => {
 
   try {
     await assertNoEarlyFailure(
-      () => (child.exitCode === null ? null : `exited early with code ${String(child.exitCode)}`),
+      () =>
+        getSpawnFailure() ??
+        (child.exitCode === null ? null : `exited early with code ${String(child.exitCode)}`),
       FUSE_PROBE_WINDOW_MS,
     );
   } finally {
@@ -152,6 +182,7 @@ test('the inspect-cli-arguments fuse stays flipped in the packaged binary', asyn
   const child = spawn(appInfo.executable, ['--inspect=0'], {
     env: await createPackagedLaunchEnv({}),
   });
+  const getSpawnFailure = trackChildFailure(child, 'inspect-cli-arguments fuse probe spawn');
 
   let stderr = '';
 
@@ -165,7 +196,10 @@ test('the inspect-cli-arguments fuse stays flipped in the packaged binary', asyn
   try {
     await assertNoEarlyFailure(
       () =>
-        stderr.includes('Debugger listening') ? 'debugger listening line appeared on stderr' : null,
+        getSpawnFailure() ??
+        (stderr.includes('Debugger listening')
+          ? 'debugger listening line appeared on stderr'
+          : null),
       FUSE_PROBE_WINDOW_MS,
     );
   } finally {
