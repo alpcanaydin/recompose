@@ -14,9 +14,19 @@ description: Conventions for writing recompose Storybook stories. Use when creat
 ## Format
 
 - Component Story Format (CSF) factories only: `import preview from '#.storybook/preview'`, then `preview.meta({ component })` and `meta.story({ args })`.
-- One concept per story. Split a story that shows two ideas.
+- One concept per story. Split a story that shows two ideas. A `SizesAndVariants` story mixing many concepts is the documented anti-pattern; `Basic`, `Primary`, `Disabled` is the documented good shape.
+
+## Manifest documentation
+
+Agents consume stories through manifests built by static analysis (source: [Storybook AI best practices](https://storybook.js.org/docs/ai/best-practices) and [manifests](https://storybook.js.org/docs/ai/manifests)):
+
 - JSDoc with a purpose sentence goes on every exported component, prop, and story. This is manifest documentation for agents, the one sanctioned exception to the no-comments rule.
-- Tag anti-pattern or deprecated stories with `tags: ['!manifest']` so agents never learn from them.
+- Describe the why, not the what: when to reach for the component or variant, never how it renders.
+- Agents read a component's `@summary` tag, or a truncated description when no summary exists. A story surfaces roughly its first sixty characters, so front-load the point; add `@summary` when a description runs long.
+- Prop tables come from docgen. This repo pins `reactDocgen: 'react-docgen'` (the TypeScript-aware extractor crashes against the TypeScript 7 compiler), so hand-written prop JSDoc carries more weight here than upstream docs assume.
+- Curate, never dump: irrelevant manifest content degrades agent output as surely as missing content. Tag anti-pattern or deprecated stories with `tags: ['!manifest']` on the story, on the meta (whole file), or on an MDX `Meta` tag.
+- Manifests capture only what static analysis sees. A dynamically computed value never lands in them, so write key values literally in MDX docs pages.
+- Sanity-check what agents see at `/manifests/components.json` and the human-readable `/manifests/components.html` while `storybook dev` runs.
 
 ## Wired components
 
