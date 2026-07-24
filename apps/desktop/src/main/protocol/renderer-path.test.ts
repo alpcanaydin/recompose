@@ -47,4 +47,16 @@ describe('resolving app:// requests to renderer files', () => {
       rejected: 'traversal',
     });
   });
+
+  test('a query string is not part of the file path', () => {
+    expect(resolveRendererFile(root, 'app://renderer/assets/app.js?v=123')).toEqual({
+      filePath: join(root, 'assets/app.js'),
+    });
+  });
+
+  test('a hash fragment is not part of the file path', () => {
+    expect(resolveRendererFile(root, 'app://renderer/index.html#section')).toEqual({
+      filePath: join(root, 'index.html'),
+    });
+  });
 });

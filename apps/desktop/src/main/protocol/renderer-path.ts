@@ -6,7 +6,7 @@ export type RendererFileResolution =
 
 const APP_SCHEME = 'app:';
 const APP_HOST = 'renderer';
-const URL_PATH_REGEX = /^app:\/\/[^/]*(.*)/;
+const URL_PATH_REGEX = /^app:\/\/[^/?#]*([^?#]*)/;
 
 function extractPathFromUrl(requestUrl: string): string {
   const pathMatch = URL_PATH_REGEX.exec(requestUrl);
