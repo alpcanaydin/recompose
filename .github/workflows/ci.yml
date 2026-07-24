@@ -64,6 +64,7 @@ jobs:
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
+      - run: pnpm --filter @recompose/desktop run storybook:build
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-reports
@@ -148,6 +149,8 @@ jobs:
           pr_type=$(printf '%s' "$PR_TITLE" | sed -E 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/')
           src_changed=$(awk '{print $2}' files.txt | grep -E '^(apps|packages)/[^/]+/src/.*\.(ts|tsx)$' | grep -vE '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
           tests_changed=$(awk '{print $2}' files.txt | grep -E '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
+          new_ui=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' | head -1 || true)
+          stories_changed=$(awk '{print $2}' files.txt | grep -E '\.stories\.tsx$' | head -1 || true)
           fail=0
           case "$pr_type" in
             feat|fix|perf)
@@ -160,6 +163,14 @@ jobs:
                 fi
               fi ;;
           esac
+          if [ -n "$new_ui" ] && [ -z "$stories_changed" ]; then
+            if printf '%s' "$labels" | grep -qw 'stories-exempt' && printf '%s' "$body" | grep -q 'Stories-exempt:'; then
+              echo "::notice::stories-exempt accepted; the weekly exemption audit lists this PR"
+            else
+              echo "::error::new renderer ui component ($new_ui) landed without a story. Every ui component ships a *.stories.tsx sibling. Escape: add the stories-exempt label plus a 'Stories-exempt: <reason>' line in the PR body."
+              fail=1
+            fi
+          fi
           adr_trigger=$(awk '{print $2}' files.txt | grep -E '^(\.github/workflows/|turbo\.json$|tsconfig[^/]*\.json$|\.oxlintrc\.json$|lefthook\.yml$|\.dependency-cruiser\.cjs$|knip\.json$|codecov\.yml$|\.vale\.ini$|\.jscpd\.json$|mise\.toml$|pnpm-workspace\.yaml$|steiger\.config)' | head -1 || true)
           new_pkg=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^(apps|packages)/[^/]+/package\.json$' | head -1 || true)
           adr_changed=$(awk '{print $2}' files.txt | grep -E '^docs/adr/' | head -1 || true)
