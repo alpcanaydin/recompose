@@ -8,7 +8,7 @@
 
 **Tech Stack:** Electron 43, `@electron/fuses`, Playwright `_electron` (already installed), Vitest with fast-check, electron-vite, electron-builder.
 
-## Global Constraints
+## Global constraints
 
 - **Never commit to `main`.** All work stays on branch `worktree-security-baseline` and lands through one Pull Request.
 - **The repository owner's private alias must never appear** in any file, message, or artifact. The gitleaks `forbidden-owner-alias` rule enforces file contents.
@@ -1007,3 +1007,17 @@ Expected: both clean. Add any genuine new domain terms to `cspell-words.txt` and
 git add docs/adr/0028-security-baseline.md docs/adr/README.md cspell-words.txt
 git commit -m "docs: record security baseline decisions in ADR-0028"
 ```
+
+---
+
+## Execution deviations
+
+This plan is a historical artifact. The shipped implementation diverged from the snippets above in the following ways, and ADR-0028 carries the full rationale for each.
+
+- **Task 1, renderer path resolver.** The plan's snippet derived the request path from `url.pathname`. That approach is unsound: the URL standard collapses `..` and `%2e%2e` dot segments during parsing, so no pathname-based check ever sees them. The shipped resolver extracts the path from the raw request URL, bounded at the first `?` or `#`, and rejects malformed escape sequences as traversal instead of throwing.
+- **Task 5, navigation policy.** The shipped `main-window.ts` wiring logs only the parsed origin of a blocked target, never the full URL, and attaches a rejection handler to `shell.openExternal`.
+- **Task 5, dev-server origin.** The shipped `devServerOrigin` takes the dev flag as a parameter, yields nothing in packaged builds, and trusts only `http:` and `https:` origins. A malformed or opaque `ELECTRON_RENDERER_URL` value fails closed.
+- **Task 7, fuses dependency.** The plan called `@electron/fuses` a CommonJS package. The pinned 2.1.3 ships as an ECMAScript module with a Node floor of 22.12, and the CommonJS `after-pack.cjs` hook loads it through Node's stable `require` interoperability for that format.
+- **Task 8, content security policy.** The plan's snippet called `html.replace` inline. The shipped code routes through `injectContentSecurityPolicy`, which throws when the `__CSP__` placeholder is missing, so a broken template fails the build instead of shipping without a policy.
+- **Task 9, boot proof.** The shipped proof also verifies the bridge answers a real request, pins the served document's policy content, asserts the exact URL survives a blocked navigation, and closes the app on failure.
+- **Task 10 rider, CodeQL.** The maintainer later upgraded the workflow from telemetry to a required merge gate through the ruleset's native code-scanning rule, tuned to the `security-extended` suite.
