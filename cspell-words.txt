@@ -38,6 +38,7 @@ esac
 Firecrawl
 flatlist
 frontmost
+fuite
 Gebert
 glassmorphism
 idempotently
@@ -55,6 +56,7 @@ lockfiles
 lossily
 McCabe
 Mcpjson
+memlab
 Menlo
 Meridius
 Mobbin
@@ -73,9 +75,9 @@ oxlint's
 oxlintrc
 panresponder
 pipx
-pypi
 pressable
 proptypes
+pypi
 reimplementation
 renderitem
 Replit
