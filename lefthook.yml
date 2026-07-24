@@ -26,7 +26,7 @@ pre-commit:
       run: pnpm run lint:dup
     - name: spell
       priority: 1
-      run: pnpm run lint:spell
+      run: pnpm exec cspell --no-progress --no-must-find-files {staged_files}
     - name: prose
       priority: 1
       glob: '*.md'

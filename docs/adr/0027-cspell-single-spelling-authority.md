@@ -13,7 +13,7 @@ No gate read the code's own words. Vale guards prose, but research confirmed its
   <!-- cspell:disable-next-line -->
   `credentailRef` fails with a suggested fix of `credential`.
 - **`Vale.Spelling` turns off.** Vale keeps every style, register, and house rule; spelling has exactly one authority and one dictionary. Vale's accept list stays for its separate jobs: casing terms and acronym exceptions.
-- **The dictionary is a reviewed artifact**: `cspell-words.txt` at the root, 101 entries measured from the tree and hand-scanned before acceptance. The scan caught one coined word that reads as a typo,
+- **The dictionary is a reviewed artifact**: `cspell-words.txt` at the root, every entry measured from the tree and hand-scanned before acceptance (a fixed count would drift with each addition, as this record's first draft proved). The scan caught one coined word that reads as a typo,
   <!-- cspell:disable-next-line -->
   `re-appliable`, which became a text fix (`re-applicable`) instead of a dictionary entry: fixing prose beats legitimizing a coinage. New words arrive through PR diffs like code.
 - **Wiring per the standing rule**: root `lint:spell` script, lefthook `spell` job beside `prose`, and a CI step in both lanes. The `check` job covers code changes, and the `prose` lane gains a pnpm setup plus the same script so documentation-only PRs stay covered too. Both lanes report into the required `ci-success` roll-up.
