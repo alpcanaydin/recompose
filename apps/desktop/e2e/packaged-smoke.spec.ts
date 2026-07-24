@@ -1,7 +1,12 @@
+import type { Browser, Page } from '@playwright/test';
 import type { RecomposeIpc } from '@recompose/contracts';
+import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 
-import { _electron as electron, expect, test } from '@playwright/test';
+import { chromium, expect, test } from '@playwright/test';
 import { findLatestBuild, parseElectronApp } from 'electron-playwright-helpers';
+import { spawn } from 'node:child_process';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { inheritedEnv } from './fixtures';
@@ -11,66 +16,159 @@ declare global {
 }
 
 const distDir = join(__dirname, '..', 'dist');
+const FUSE_PROBE_WINDOW_MS = 2000;
+const DEVTOOLS_LISTENING_PATTERN = /DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//;
+
+async function createPackagedLaunchEnv(
+  overrides: Record<string, string>,
+): Promise<Record<string, string>> {
+  const userDataDir = await mkdtemp(join(tmpdir(), 'recompose-packaged-'));
+
+  return {
+    ...inheritedEnv(),
+    NODE_ENV: 'production',
+    ELECTRON_RENDERER_URL: '',
+    RECOMPOSE_USER_DATA_DIR: userDataDir,
+    ...overrides,
+  };
+}
+
+async function waitForDevtoolsPort(child: ChildProcessWithoutNullStreams): Promise<number> {
+  let buffer = '';
+
+  child.stdout.on('data', () => {
+    return undefined;
+  });
+  child.stderr.on('data', (chunk: Buffer) => {
+    buffer += chunk.toString();
+  });
+
+  await expect.poll(() => DEVTOOLS_LISTENING_PATTERN.test(buffer)).toBe(true);
+
+  const match = DEVTOOLS_LISTENING_PATTERN.exec(buffer);
+
+  if (match?.[1] === undefined) {
+    throw new Error('devtools listening line did not carry a port number');
+  }
+
+  return Number(match[1]);
+}
+
+async function findRendererPage(browser: Browser): Promise<Page> {
+  const rendererPages = () =>
+    browser
+      .contexts()
+      .flatMap((context) => context.pages())
+      .filter((candidate) => candidate.url().startsWith('app://renderer'));
+
+  await expect.poll(() => rendererPages().length).toBeGreaterThan(0);
+
+  const renderer = rendererPages()[0];
+
+  expect(renderer).toBeDefined();
+
+  if (renderer === undefined) {
+    throw new Error("no app://renderer page found on the packaged binary's devtools endpoint");
+  }
+
+  return renderer;
+}
+
+async function assertNoEarlyFailure(
+  detectFailure: () => string | null,
+  windowMs: number,
+): Promise<void> {
+  const start = Date.now();
+
+  await expect
+    .poll(() => {
+      const failure = detectFailure();
+
+      if (failure !== null) {
+        throw new Error(failure);
+      }
+
+      return Date.now() - start;
+    })
+    .toBeGreaterThan(windowMs);
+}
 
 test('the packaged artifact boots from the asar on the app scheme', async () => {
   const appInfo = parseElectronApp(findLatestBuild(distDir));
 
   expect(appInfo.asar).toBe(true);
 
-  const app = await electron.launch({
-    args: [appInfo.main],
-    executablePath: appInfo.executable,
-    env: { ...inheritedEnv(), NODE_ENV: 'production', ELECTRON_RENDERER_URL: '' },
+  const child = spawn(appInfo.executable, ['--remote-debugging-port=0'], {
+    env: await createPackagedLaunchEnv({}),
   });
 
   try {
-    const page = await app.firstWindow();
+    const port = await waitForDevtoolsPort(child);
+    const browser = await chromium.connectOverCDP(`http://127.0.0.1:${String(port)}`);
 
-    await page.waitForLoadState('domcontentloaded');
+    try {
+      const renderer = await findRendererPage(browser);
 
-    const served = new URL(page.url());
+      const bridge = await renderer.evaluate(() => ({
+        isFrozen: Object.isFrozen(globalThis.recompose),
+      }));
 
-    expect(served.protocol).toBe('app:');
-    expect(served.host).toBe('renderer');
-
-    const packagedPaths = await app.evaluate(({ app: packagedApp }) => ({
-      isPackaged: packagedApp.isPackaged,
-      appPath: packagedApp.getAppPath(),
-    }));
-
-    expect(packagedPaths.isPackaged).toBe(true);
-    expect(packagedPaths.appPath.endsWith('app.asar')).toBe(true);
-
-    const bridge = await page.evaluate(() => ({
-      isFrozen: Object.isFrozen(globalThis.recompose),
-    }));
-
-    expect(bridge.isFrozen).toBe(true);
+      expect(bridge.isFrozen).toBe(true);
+    } finally {
+      await browser.close();
+    }
   } finally {
-    await app.close();
+    child.kill();
   }
 });
 
 test('the run-as-node fuse stays flipped in the packaged binary', async () => {
   const appInfo = parseElectronApp(findLatestBuild(distDir));
 
-  const app = await electron.launch({
-    args: [appInfo.main],
-    executablePath: appInfo.executable,
-    env: {
-      ...inheritedEnv(),
-      NODE_ENV: 'production',
-      ELECTRON_RENDERER_URL: '',
-      ELECTRON_RUN_AS_NODE: '1',
-    },
+  const child = spawn(appInfo.executable, ['-e', 'process.exit(97)'], {
+    env: await createPackagedLaunchEnv({ ELECTRON_RUN_AS_NODE: '1' }),
+  });
+
+  child.stdout.on('data', () => {
+    return undefined;
+  });
+  child.stderr.on('data', () => {
+    return undefined;
   });
 
   try {
-    const page = await app.firstWindow();
-
-    await page.waitForLoadState('domcontentloaded');
-    expect(new URL(page.url()).protocol).toBe('app:');
+    await assertNoEarlyFailure(
+      () => (child.exitCode === null ? null : `exited early with code ${String(child.exitCode)}`),
+      FUSE_PROBE_WINDOW_MS,
+    );
   } finally {
-    await app.close();
+    child.kill();
+  }
+});
+
+test('the inspect-cli-arguments fuse stays flipped in the packaged binary', async () => {
+  const appInfo = parseElectronApp(findLatestBuild(distDir));
+
+  const child = spawn(appInfo.executable, ['--inspect=0'], {
+    env: await createPackagedLaunchEnv({}),
+  });
+
+  let stderr = '';
+
+  child.stdout.on('data', () => {
+    return undefined;
+  });
+  child.stderr.on('data', (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+
+  try {
+    await assertNoEarlyFailure(
+      () =>
+        stderr.includes('Debugger listening') ? 'debugger listening line appeared on stderr' : null,
+      FUSE_PROBE_WINDOW_MS,
+    );
+  } finally {
+    child.kill();
   }
 });
