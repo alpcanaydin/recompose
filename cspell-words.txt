@@ -41,6 +41,7 @@ frontmost
 Gebert
 glassmorphism
 idempotently
+inspectable
 karpathy
 Kimi
 Langdock
