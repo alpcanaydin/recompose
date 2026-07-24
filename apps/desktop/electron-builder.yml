@@ -2,6 +2,7 @@ appId: sh.recompose.app
 productName: recompose
 directories:
   buildResources: build
+afterPack: ./build/after-pack.cjs
 files:
   - '!**/.vscode/*'
   - '!src/*'

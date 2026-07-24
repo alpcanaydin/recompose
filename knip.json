@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     "apps/desktop": {
+      "entry": ["build/after-pack.cjs"],
       "ignoreDependencies": ["fast-check"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
