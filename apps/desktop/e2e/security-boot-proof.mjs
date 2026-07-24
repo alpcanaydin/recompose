@@ -35,11 +35,20 @@ try {
   );
   assert.equal(sandboxed, true, 'live window not sandboxed');
 
+  const csp = await page.evaluate(() => {
+    const meta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    return meta === null ? '' : (meta.getAttribute('content') ?? '');
+  });
+  assert.notEqual(csp, '', 'csp meta tag missing from the served document');
+  assert.equal(csp.includes('__CSP__'), false, 'csp placeholder left in the served document');
+  assert.equal(csp.includes('unsafe-inline'), false, 'production csp allows inline styles');
+
+  const beforeAttempt = page.url();
   await page.evaluate(() => {
     globalThis.location.href = 'https://example.com/';
   });
   await page.waitForTimeout(500);
-  assert.equal(new URL(page.url()).protocol, 'app:', 'navigation guard did not hold');
+  assert.equal(page.url(), beforeAttempt, 'navigation guard did not hold');
 } finally {
   await app.close();
 }
