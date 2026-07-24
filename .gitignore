@@ -10,3 +10,6 @@ out
 !.vale/styles/config/
 !.vale/styles/recompose/
 storybook-static/
+.features-gen/
+test-results/
+playwright-report/

@@ -2,8 +2,15 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     "apps/desktop": {
-      "entry": ["build/after-pack.cjs", "e2e/security-boot-proof.mjs"],
-      "ignoreDependencies": ["fast-check"],
+      "entry": [
+        "build/after-pack.cjs",
+        "e2e/security-boot-proof.mjs",
+        "e2e/playwright.config.ts",
+        "e2e/fixtures.ts",
+        "e2e/*.spec.ts",
+        "e2e/steps/**/*.ts"
+      ],
+      "ignoreDependencies": ["fast-check", "electron-playwright-helpers"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
     "packages/contracts": {
