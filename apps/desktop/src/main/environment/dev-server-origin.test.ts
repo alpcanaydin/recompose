@@ -24,4 +24,16 @@ describe('resolving the dev server origin', () => {
 
     expect(devServerOrigin(true)).toBeUndefined();
   });
+
+  test('a dev run with a malformed env var yields undefined', () => {
+    vi.stubEnv('ELECTRON_RENDERER_URL', 'not a url');
+
+    expect(devServerOrigin(true)).toBeUndefined();
+  });
+
+  test('a dev run with a non-network scheme yields undefined', () => {
+    vi.stubEnv('ELECTRON_RENDERER_URL', 'file:///tmp/renderer/index.html');
+
+    expect(devServerOrigin(true)).toBeUndefined();
+  });
 });
