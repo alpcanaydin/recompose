@@ -9,6 +9,7 @@ type AccountKindFieldProps = {
   onChangeValue: (kind: AccountKind) => void;
 };
 
+/** Selector for the three account kinds an account can connect as. */
 export function AccountKindField({ value, onChangeValue }: AccountKindFieldProps) {
   return (
     <label>

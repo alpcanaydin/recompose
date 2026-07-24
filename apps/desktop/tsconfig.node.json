@@ -8,7 +8,8 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/renderer/csp-policy.ts",
-    "src/renderer/csp-policy.test.ts"
+    "src/renderer/csp-policy.test.ts",
+    ".storybook/main.ts"
   ],
   "compilerOptions": {
     "composite": true,

@@ -9,3 +9,4 @@ out
 .vale/styles/*
 !.vale/styles/config/
 !.vale/styles/recompose/
+storybook-static/

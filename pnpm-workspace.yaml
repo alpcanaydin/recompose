@@ -15,6 +15,16 @@ minimumReleaseAgeExclude:
   - knip@6.29.0
   - '@typescript-eslint/types@8.65.0'
   - baseline-browser-mapping@2.10.44
+  - storybook@10.5.4
+  - '@storybook/react-vite@10.5.4'
+  - '@storybook/addon-a11y@10.5.4'
+  - '@storybook/addon-vitest@10.5.4'
+  - '@storybook/addon-themes@10.5.4'
+  - '@storybook/addon-mcp@0.7.0'
+  - '@storybook/builder-vite@10.5.4'
+  - '@storybook/csf-plugin@10.5.4'
+  - '@storybook/react-dom-shim@10.5.4'
+  - '@storybook/react@10.5.4'
 
 overrides:
   fast-check: 4.9.0

@@ -131,7 +131,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(out|coverage)/' },
+    exclude: { path: '(^|/)(out|coverage|storybook-static)/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'apps/desktop/tsconfig.web.json' },
     enhancedResolveOptions: {

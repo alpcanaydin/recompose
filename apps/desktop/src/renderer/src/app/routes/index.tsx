@@ -1,9 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { EmptyState } from '../../pages/home';
+
 export const Route = createFileRoute('/')({
   component: EmptyState,
 });
-
-function EmptyState() {
-  return <p>Select a gateway or create one to get started.</p>;
-}

@@ -52,7 +52,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           since=$(date -u -d '7 days ago' +%Y-%m-%d)
-          rows=$(gh api "search/issues?q=repo:${{ github.repository }}+is:pr+is:merged+merged:>=$since+label:tdd-exempt,adr-exempt" --paginate --jq '.items[] | "- #\(.number) \(.title) (labels: \([.labels[].name] | join(", ")))"')
+          rows=$(gh api "search/issues?q=repo:${{ github.repository }}+is:pr+is:merged+merged:>=$since+label:tdd-exempt,adr-exempt,stories-exempt" --paginate --jq '.items[] | "- #\(.number) \(.title) (labels: \([.labels[].name] | join(", ")))"')
           count=$(printf '%s' "$rows" | grep -c . || true)
           echo "count=$count" >> "$GITHUB_OUTPUT"
           {

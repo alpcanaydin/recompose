@@ -610,6 +610,13 @@
       "rules": {
         "typescript/no-unsafe-return": "off"
       }
+    },
+    {
+      "files": ["apps/desktop/.storybook/recompose-bridge.tsx"],
+      "rules": {
+        "typescript/consistent-type-assertions": "off",
+        "typescript/no-unsafe-type-assertion": "off"
+      }
     }
   ]
 }
