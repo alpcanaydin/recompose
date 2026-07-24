@@ -12,7 +12,7 @@ This design trims scope to what produces value today, per You Aren't Gonna Need 
 ## Decisions
 
 - Workflow shape: **single `ci.yml` with an aggregate-success job**. Branch protection requires only `ci-success`, so adding a job never touches the ruleset.
-- Branch protection as code: **ruleset JSON in repo, applied via `gh api`**, versioned and re-appliable, with no extra toolchain.
+- Branch protection as code: **ruleset JSON in repo, applied via `gh api`**, versioned and re-applicable, with no extra toolchain.
 - Dependency updates: **Renovate GitHub App (hosted)**, since only `renovate.json` lives in the repo, with zero maintenance and no CI minutes.
 
 ## 1. `.github/workflows/ci.yml`

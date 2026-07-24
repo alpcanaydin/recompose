@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "dictionaryDefinitions": [
+    {
+      "name": "recompose-words",
+      "path": "./cspell-words.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["recompose-words", "typescript", "node", "npm", "softwareTerms", "html", "css"],
+  "ignorePaths": [
+    "node_modules",
+    ".agents",
+    ".claude/skills",
+    ".claude/worktrees",
+    ".vale/styles",
+    "pnpm-lock.yaml",
+    "skills-lock.json",
+    "**/routeTree.gen.ts",
+    "out",
+    "dist",
+    "coverage",
+    ".git",
+    "cspell-words.txt"
+  ],
+  "useGitignore": true
+}
