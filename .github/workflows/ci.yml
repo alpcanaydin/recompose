@@ -58,6 +58,10 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile --trust-lockfile
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm --filter @recompose/desktop exec playwright install --with-deps chromium
       - run: pnpm run fmt:check
       - run: pnpm exec turbo run lint typecheck build test
@@ -77,6 +81,74 @@ jobs:
       - run: pnpm run lint:dead
       - run: pnpm run lint:dup
       - run: pnpm run lint:spell
+
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+        if: runner.os == 'Linux'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+      - run: pnpm exec turbo run build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
+      - if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e
+      - if: runner.os != 'Linux'
+        run: pnpm --filter @recompose/desktop run test:e2e
+      - if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:leak
+      - run: pnpm --filter @recompose/desktop exec electron-builder --dir
+      - if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:packaged
+      - if: runner.os != 'Linux'
+        run: pnpm --filter @recompose/desktop run test:e2e:packaged
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-traces-${{ matrix.os }}
+          path: apps/desktop/test-results
+          retention-days: 3
+
+  e2e-quarantine:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+      - run: pnpm exec turbo run build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
+      - run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:quarantine
 
   coverage-upload:
     needs: check
@@ -269,6 +341,7 @@ jobs:
       [
         changes,
         check,
+        e2e,
         coverage-upload,
         prose,
         meta,

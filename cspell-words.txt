@@ -88,6 +88,7 @@ rhysd
 screencapture
 scrollview
 semgrep
+servernum
 setstate
 shellcheck
 Squarespace
