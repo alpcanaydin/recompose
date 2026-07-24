@@ -122,7 +122,7 @@ jobs:
         with:
           version: 3.15.2
           files: all
-          vale_flags: '--glob=!{node_modules,.agents,.claude/skills,.claude/worktrees,.vale,out,dist,coverage}/**'
+          vale_flags: '--glob=!{node_modules,.agents,.claude/skills,.claude/worktrees,.superpowers,.vale,out,dist,coverage}/**'
           reporter: github-pr-check
           fail_on_error: true
 

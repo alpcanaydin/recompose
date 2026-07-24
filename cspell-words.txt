@@ -31,6 +31,7 @@ Electrobun
 Electrobun's
 Electronegativity
 electronjs
+esac
 Firecrawl
 flatlist
 frontmost

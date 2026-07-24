@@ -18,7 +18,7 @@
     "lint:boundaries": "depcruise apps packages",
     "lint:dead": "knip",
     "lint:dup": "jscpd -c .jscpd.json apps packages",
-    "lint:prose": "mise exec -- vale --glob=\"!{node_modules,.agents,.claude/skills,.claude/worktrees,.vale,out,dist,coverage}/**\" .",
+    "lint:prose": "mise exec -- vale --glob=\"!{node_modules,.agents,.claude/skills,.claude/worktrees,.superpowers,.vale,out,dist,coverage}/**\" .",
     "lint:spell": "cspell --no-progress \"**\"",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "fmt": "oxfmt",
