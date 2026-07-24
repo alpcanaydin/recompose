@@ -617,6 +617,12 @@
         "typescript/consistent-type-assertions": "off",
         "typescript/no-unsafe-type-assertion": "off"
       }
+    },
+    {
+      "files": ["apps/desktop/e2e/fixtures.ts"],
+      "rules": {
+        "eslint/no-empty-pattern": "off"
+      }
     }
   ]
 }

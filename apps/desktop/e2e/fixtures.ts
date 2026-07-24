@@ -22,7 +22,7 @@ type ElectronFixtures = {
 };
 
 export const test = base.extend<ElectronFixtures>({
-  electronApp: async (_fixtures, use) => {
+  electronApp: async ({}, use) => {
     const userDataDir = await mkdtemp(join(tmpdir(), 'recompose-e2e-'));
     const app = await electron.launch({
       args: [appRoot],
