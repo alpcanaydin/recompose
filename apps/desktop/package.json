@@ -2,6 +2,7 @@
   "name": "@recompose/desktop",
   "version": "0.2.0",
   "description": "recompose desktop shell",
+  "homepage": "https://github.com/recomposesh/recompose",
   "license": "MIT",
   "author": "Alpcan Aydin <alpcan@alpcanaydin.com>",
   "main": "./out/main/index.js",
