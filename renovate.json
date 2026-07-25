@@ -7,6 +7,16 @@
     "enabled": true,
     "schedule": ["before 6am on monday"]
   },
+  "packageRules": [
+    {
+      "description": "Pin bumps on ADR-trigger paths re-execute recorded decisions; take the adr-exempt escape hatch automatically",
+      "matchFileNames": [".github/workflows/**", "mise.toml"],
+      "addLabels": ["adr-exempt"],
+      "prBodyNotes": [
+        "ADR-exempt: automated dependency pin bump; the ADR that adopted this tool already records the decision."
+      ]
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",
