@@ -11,7 +11,7 @@ Eleventh infrastructure-queue item, pulled ahead of release operations by the ma
 
 - **A `visual.spec.ts` joins the end-to-end suite as the fifth Playwright project.** It stays a plain Playwright spec rather than Gherkin: a pixel comparison is a technical proof, not business behavior, the same line ADR-0031 drew for the boot proof and the packaged smoke. The spec reuses the existing launch fixture with its fresh user-data seam.
 - **Three screens form the initial scope.** The home empty state, the providers empty state, and the providers list after connecting an account. Each asserts with `toHaveScreenshot` against its committed baseline.
-- **The full three-platform matrix runs from day one.** Playwright suffixes every baseline per platform automatically, and each matrix leg compares only against its own platform's baseline. Nine images exist at the start: three screens across three platforms.
+- **The full three-platform matrix runs from day one.** A `snapshotPathTemplate` in the Playwright config appends the `{platform}` suffix to every baseline, because Playwright doesn't suffix explicitly named snapshots on its own, and each matrix leg compares only against its own platform's baseline. Nine images exist at the start: three screens across three platforms.
 - **Baselines live in plain git.** Nine window-sized images don't need Git Large File Storage; the ADR records the revisit trigger: adoption when the snapshot directory grows past 25 MB or measurably hurts clone times.
 - **Stabilizers keep the comparisons deterministic.** The window opens at a fixed size, the spec waits for font loading to settle, and Playwright's defaults already disable animations and hide the caret. An explicit `maxDiffPixels` tolerance lands in the Playwright config, tuned from the first continuous-integration runs so the gate is green on day one and ratchets later, the ADR-0015 philosophy. Masking stays available for future dynamic regions; today's three screens have none.
 - **The assertions run inside the existing required `e2e` job.** A `test:e2e:visual` script runs as a step on all three matrix legs, so the gate is transitively required through `ci-success` with no ruleset change. The quarantine policy from ADR-0031 applies unchanged.
@@ -35,7 +35,7 @@ Eleventh infrastructure-queue item, pulled ahead of release operations by the ma
 
 ## Risks
 
-- Runner image updates can shift rendering and churn baselines. The tolerance absorbs subpixel noise, and a churn event costs one workflow dispatch plus a reviewed diff.
+- Runner image updates can shift rendering and churn baselines. The zero-pixel budget absorbs nothing by design, so a shift means red legs, one workflow dispatch, and a reviewed diff; a documented tolerance raise stays available if churn repeats.
 - The bot-commit path needs `contents: write`. The scope stays narrow: the dispatch input names a working branch, and protected `main` rejects any direct push. The workflow passes the same zizmor and actionlint gates as every other workflow.
 - The first tolerance numbers may need an iteration or two before all three legs sit stably green; the day-one-green rule makes that tuning explicit instead of silent.
 - Committed images grow the repository over time; the ADR's Large File Storage trigger bounds that growth.
