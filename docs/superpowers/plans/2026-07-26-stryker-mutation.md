@@ -158,7 +158,7 @@ Both `package.json` script blocks gain:
 
 Root `.gitignore` gains two lines (keep existing entries untouched):
 
-```
+```text
 .stryker-tmp/
 reports/
 ```
