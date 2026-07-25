@@ -113,7 +113,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gnome-keyring
       - if: runner.os == 'Linux'
         run: |
-          cat > /tmp/keyring-probe.cjs <<'PROBE'
+          cat > apps/desktop/keyring-probe.cjs <<'PROBE'
           const { _electron } = require('playwright');
 
           const appRoot = process.cwd();
@@ -158,7 +158,7 @@ jobs:
           eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
           eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
           export XDG_CURRENT_DESKTOP=GNOME
-          xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec node /tmp/keyring-probe.cjs
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec node keyring-probe.cjs
           xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e
           SCRIPT
           dbus-run-session -- bash /tmp/e2e-linux.sh
