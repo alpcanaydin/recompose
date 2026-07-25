@@ -16,6 +16,7 @@ declare global {
 }
 
 const distDir = join(__dirname, '..', 'dist');
+const noSandboxArgs = process.platform === 'linux' ? ['--no-sandbox'] : [];
 const FUSE_PROBE_WINDOW_MS = 2000;
 const DEVTOOLS_PORT_TIMEOUT_MS = 30_000;
 const RENDERER_PAGE_TIMEOUT_MS = 30_000;
@@ -135,7 +136,7 @@ test('the packaged artifact boots from the asar on the app scheme', async () => 
 
   expect(appInfo.asar).toBe(true);
 
-  const child = spawn(appInfo.executable, ['--remote-debugging-port=0'], {
+  const child = spawn(appInfo.executable, [...noSandboxArgs, '--remote-debugging-port=0'], {
     env: await createPackagedLaunchEnv({}),
   });
   const getSpawnFailure = trackChildFailure(child, 'packaged binary spawn');
@@ -190,7 +191,7 @@ test('the run-as-node fuse stays flipped in the packaged binary', async () => {
 test('the inspect-cli-arguments fuse stays flipped in the packaged binary', async () => {
   const appInfo = parseElectronApp(findLatestBuild(distDir));
 
-  const child = spawn(appInfo.executable, ['--inspect=0'], {
+  const child = spawn(appInfo.executable, [...noSandboxArgs, '--inspect=0'], {
     env: await createPackagedLaunchEnv({}),
   });
   const getSpawnFailure = trackChildFailure(child, 'inspect-cli-arguments fuse probe spawn');
