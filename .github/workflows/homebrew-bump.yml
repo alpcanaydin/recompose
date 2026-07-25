@@ -1,0 +1,63 @@
+name: homebrew-bump
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - shell: bash
+        run: |
+          version="${TAG#v}"
+          dmg_url=$(gh api "repos/${REPO}/releases/tags/${TAG}" \
+            --jq '.assets[] | select(.name | endswith(".dmg")) | .browser_download_url' | head -1)
+          if [ -z "$dmg_url" ]; then
+            echo "no dmg asset on release ${TAG}"
+            exit 1
+          fi
+          curl -sL "$dmg_url" -o app.dmg
+          sha=$(sha256sum app.dmg | cut -d' ' -f1)
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/tap_key
+          chmod 600 ~/.ssh/tap_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap_key -o UserKnownHostsFile=~/.ssh/known_hosts"
+          git clone git@github.com:recomposesh/homebrew-tap.git tap
+          cd tap
+          cat > Casks/recompose.rb <<CASK
+          cask "recompose" do
+            version "${version}"
+            sha256 "${sha}"
+
+            url "${dmg_url}"
+            name "recompose"
+            desc "Local-first AI gateway composer"
+            homepage "https://github.com/recomposesh/recompose"
+
+            depends_on arch: :arm64
+
+            app "recompose.app"
+          end
+          CASK
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/recompose.rb
+          if git diff --cached --quiet; then
+            echo "cask already current"
+            exit 0
+          fi
+          git commit -m "recompose ${version}"
+          git push origin HEAD:main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+          DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
