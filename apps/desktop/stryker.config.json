@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.mutation.config.ts" },
+  "mutate": [
+    "src/main/**/*.ts",
+    "!src/main/**/*.test.ts",
+    "!src/main/index.ts",
+    "!src/main/ipc/register-ipc.ts",
+    "!src/main/protocol/app-protocol.ts",
+    "!src/main/windows/main-window.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "incremental": true,
+  "incrementalFile": "reports/stryker-incremental.json",
+  "reporters": ["html", "clear-text", "progress"],
+  "htmlReporter": { "fileName": "reports/mutation/mutation.html" },
+  "thresholds": { "high": 90, "low": 70, "break": 81 },
+  "dashboard": {
+    "project": "github.com/recomposesh/recompose",
+    "version": "main",
+    "module": "desktop-main"
+  },
+  "tsconfigFile": "tsconfig.stryker-disabled.json",
+  "plugins": ["@stryker-mutator/vitest-runner"]
+}

@@ -9,13 +9,16 @@
   "scripts": {
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@fast-check/vitest": "0.4.1",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
     "@vitest/coverage-v8": "4.1.10",
     "fast-check": "4.9.0",
     "oxlint": "1.75.0",
