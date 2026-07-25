@@ -39,3 +39,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0031](0031-playwright-end-to-end.md)                          | Playwright End-to-End Testing, the Three-Platform Matrix, and the Quarantine Policy | Accepted | 2026-07-25 |
 | [0032](0032-renovate-pin-bumps-adr-exempt.md)                  | Renovate Pin Bumps Take the adr-exempt Escape Hatch Automatically                   | Accepted | 2026-07-25 |
 | [0033](0033-chromatic-visual-regression.md)                    | Chromatic Visual Regression, the UI Tests Gate, and the Fake-Bridge Extraction      | Accepted | 2026-07-25 |
+| [0034](0034-screen-level-visual-regression.md)                 | Screen-Level Visual Regression on the Real Electron Shell, Three-Platform Baselines | Accepted | 2026-07-25 |
