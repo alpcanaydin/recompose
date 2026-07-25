@@ -7,6 +7,7 @@
 (?i)trpc
 (?i)ui
 [Aa]ctionlint
+[Aa]DR
 [Aa]DRs
 [Aa]gentic
 [Aa]llowBuilds
@@ -25,6 +26,7 @@
 [Cc]alendly
 [Cc]cproxy
 [Cc]hainable
+[Cc]hromatic
 [Cc]liproxyapi
 [Cc]odebase
 [Cc]odec
@@ -77,6 +79,7 @@
 [Ii]dempotently
 [Ii]ff
 [Ii]nlines
+IPC
 [Ii]os
 [Jj]scpd
 [Kk]imi
@@ -171,6 +174,7 @@
 [Tt]sgolint
 [Tt]sx
 [Tt]urborepo
+[Tt]urboSnap
 [Tt]ypecheck
 [Tt]ypecheckable
 [Tt]ypechecked

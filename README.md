@@ -69,4 +69,4 @@ pnpm dev
 
 ## Architecture
 
-The Electron shell hosts the UI. The gateway engine runs in a `utilityProcess` as a pure TypeScript package with no `electron` imports, keeping a future headless mode possible. The [docs/adr](docs/adr/README.md) index records every technical decision.
+The Electron shell hosts the UI. The gateway engine runs in a `utilityProcess` as a pure TypeScript package with no `electron` imports, keeping a future headless mode possible. The [docs/ADR](docs/adr/README.md) index records every technical decision.

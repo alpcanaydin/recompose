@@ -38,3 +38,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0030](0030-vale-exclusions-in-config.md)                      | One Exclusion List for the Prose Gate                                               | Accepted | 2026-07-25 |
 | [0031](0031-playwright-end-to-end.md)                          | Playwright End-to-End Testing, the Three-Platform Matrix, and the Quarantine Policy | Accepted | 2026-07-25 |
 | [0032](0032-renovate-pin-bumps-adr-exempt.md)                  | Renovate Pin Bumps Take the adr-exempt Escape Hatch Automatically                   | Accepted | 2026-07-25 |
+| [0033](0033-chromatic-visual-regression.md)                    | Chromatic Visual Regression, the UI Tests Gate, and the Fake-Bridge Extraction      | Accepted | 2026-07-25 |
