@@ -41,7 +41,7 @@ Tenth infrastructure-queue item. Architecture Decision Record (ADR) 0029 landed 
 
 ## Risks
 
-- Fork pull requests never fire the `push` workflow, so the required UI Tests check never reports and the merge blocks. The ADR records the residual and Chromatic's sanctioned fix, a plaintext project token, deferred until an external contributor appears.
+- A fork's `push` events run inside the fork, not in this repository, so the upstream pull request never receives the required UI Tests status and the merge blocks. The ADR records the residual and Chromatic's sanctioned fix, a plaintext project token, deferred until an external contributor appears.
 - Every push costs nine snapshots, and frequent pushes consume the budget. More than 500 builds a month fit the free plan; skip globs for bot branches or TurboSnap recover headroom if pressure appears.
 - A required external check blocks forever when its workflow never reports; the unconditional `push` trigger closes that gap for same-repository branches.
 
