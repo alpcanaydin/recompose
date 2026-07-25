@@ -13,6 +13,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.*',
         'src/**/*.browser.test.*',
+        'src/renderer/src/shared/testing/**',
         'src/**/*.d.ts',
         'src/main/index.ts',
         'src/main/ipc/register-ipc.ts',
