@@ -7,7 +7,7 @@ Status: Approved
 
 Ninth infrastructure-queue item. The desktop app ships to macOS, Windows, and Linux. The maintainer confirmed that during this brainstorm. The end-to-end layer therefore runs as a full three-platform matrix rather than the macOS-only shape the original rider assumed. Today the only end-to-end artifact is `apps/desktop/e2e/security-boot-proof.mjs`, a local-only script that launches the built `out/` bundle and proves the security baseline. Issue #58 requires a packaged-artifact smoke test that the source-mode proof can't provide. The acceptance layer uses Gherkin `.feature` files through playwright-bdd as the maintainer's approval artifact, a standing decision from the typed Inter-Process Communication (IPC) job. Two skills already landed on this branch as groundwork: the vendored `playwright-best-practices` and the authored `gherkin-best-practices`, both mandatory for any end-to-end work. The Playwright Model Context Protocol (MCP) server also landed, pinned at project scope.
 
-**Amendment.** The shipped EnableNodeCliInspectArguments fuse blocks electron.launch on the packaged binary. The landed smoke instead spawns the executable with a DevTools port and connects over the Chrome DevTools Protocol (CDP). Architecture Decision Record (ADR) 0030 records the as-built mechanics, including the dropped main-process assertions and the lockfile-keyed cache.
+**Amendment.** The shipped EnableNodeCliInspectArguments fuse blocks electron.launch on the packaged binary. The landed smoke instead spawns the executable with a DevTools port and connects over the Chrome DevTools Protocol (CDP). Architecture Decision Record (ADR) 0031 records the as-built mechanics, including the dropped main-process assertions and the lockfile-keyed cache.
 
 ## Decisions
 
@@ -48,4 +48,4 @@ Ninth infrastructure-queue item. The desktop app ships to macOS, Windows, and Li
 
 ## Decision record
 
-ADR-0030 lands with the implementation through the architecture-decision-records skill. It captures the runner choice, the three-platform matrix rationale, the quarantine policy text, and the leak-check approach with the fuite and memlab rejection. It also records the user-data seam, the MCP pinning, and the gitleaks allowlist scoping.
+ADR-0031 lands with the implementation through the architecture-decision-records skill. It captures the runner choice, the three-platform matrix rationale, the quarantine policy text, and the leak-check approach with the fuite and memlab rejection. It also records the user-data seam, the MCP pinning, and the gitleaks allowlist scoping.

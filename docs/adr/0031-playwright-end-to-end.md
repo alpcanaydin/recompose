@@ -1,4 +1,4 @@
-# 0030: Playwright end-to-end testing, the three-platform matrix, and the quarantine policy
+# 0031: Playwright end-to-end testing, the three-platform matrix, and the quarantine policy
 
 **Status**: Accepted
 **Date**: 2026-07-25
