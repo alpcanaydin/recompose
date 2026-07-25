@@ -1,0 +1,96 @@
+name: update-visual-baselines
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: branch whose visual baselines get regenerated
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-visual-baselines-${{ inputs.branch }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+        if: runner.os == 'Linux'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+      - run: pnpm --filter @recompose/desktop exec node node_modules/electron/install.js
+      - run: pnpm exec turbo run build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y gnome-keyring
+      - if: runner.os == 'Linux'
+        run: |
+          cat > /tmp/visual-update-linux.sh <<'SCRIPT'
+          set -e
+          eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
+          eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
+          export XDG_CURRENT_DESKTOP=GNOME
+          export RECOMPOSE_PASSWORD_STORE=gnome-libsecret
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:visual:update
+          SCRIPT
+          dbus-run-session -- bash /tmp/visual-update-linux.sh
+      - if: runner.os != 'Linux'
+        run: pnpm --filter @recompose/desktop run test:e2e:visual:update
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-baselines-${{ runner.os }}
+          path: apps/desktop/e2e/visual.spec.ts-snapshots/
+          retention-days: 3
+
+  commit:
+    needs: regenerate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: visual-baselines-*
+          merge-multiple: true
+          path: apps/desktop/e2e/visual.spec.ts-snapshots/
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/e2e/visual.spec.ts-snapshots
+          if git diff --cached --quiet; then
+            echo "baselines unchanged"
+            exit 0
+          fi
+          git commit -m "test(e2e): update visual baselines"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BRANCH: ${{ inputs.branch }}
