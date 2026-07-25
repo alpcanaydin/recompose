@@ -37,3 +37,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0029](0029-storybook-component-workshop.md)                   | Storybook Component Workshop, Blocking Gates, and the Assistant Posture             | Accepted | 2026-07-24 |
 | [0030](0030-vale-exclusions-in-config.md)                      | One Exclusion List for the Prose Gate                                               | Accepted | 2026-07-25 |
 | [0031](0031-playwright-end-to-end.md)                          | Playwright End-to-End Testing, the Three-Platform Matrix, and the Quarantine Policy | Accepted | 2026-07-25 |
+| [0032](0032-renovate-pin-bumps-adr-exempt.md)                  | Renovate Pin Bumps Take the adr-exempt Escape Hatch Automatically                   | Accepted | 2026-07-25 |
