@@ -60,6 +60,7 @@
     "@vitejs/plugin-react": "6.0.4",
     "@vitest/browser-playwright": "4.1.10",
     "@vitest/coverage-v8": "4.1.10",
+    "chromatic": "18.1.0",
     "electron": "43.2.0",
     "electron-builder": "26.15.3",
     "electron-playwright-helpers": "2.1.0",
