@@ -1,6 +1,10 @@
 [extend]
 useDefault = true
 
+[[allowlists]]
+targetRules = ["generic-api-key"]
+paths = ['''^\.agents/skills/''']
+
 [[rules]]
 id = "forbidden-owner-alias"
 description = "Repository owner's private alias must never appear in any artifact"

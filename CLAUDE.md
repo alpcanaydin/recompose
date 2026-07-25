@@ -61,7 +61,7 @@
 - Load-bearing derived types (mapped types, schema-inferred types) get type-level specs: `*.test-d.ts` with `expectTypeOf`, run through vitest typecheck. The TDD invariant applies at the type level: a type contract changes if and only if its type spec changes.
 - Vitest work (writing tests, config, mocking, coverage): use the `vitest` skill.
 - Property-based testing (fast-check): use the `javascript-testing-expert` skill.
-- E2E tests: use the `e2e-testing-patterns` skill.
+- E2E tests: use the `e2e-testing-patterns` skill. Before writing any e2e test, step definition, or `.feature` file, always use the `playwright-best-practices` and `gherkin-best-practices` skills together. This pairing is mandatory, never optional.
 
 ## Clean Code
 

@@ -9,7 +9,8 @@
     "src/preload/**/*",
     "src/renderer/csp-policy.ts",
     "src/renderer/csp-policy.test.ts",
-    ".storybook/main.ts"
+    ".storybook/main.ts",
+    "e2e/**/*"
   ],
   "compilerOptions": {
     "composite": true,

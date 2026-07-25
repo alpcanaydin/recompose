@@ -602,7 +602,7 @@
     "docs/**",
     "**/routeTree.gen.ts",
     "apps/desktop/build/**",
-    "apps/desktop/e2e/**"
+    "apps/desktop/e2e/.features-gen/**"
   ],
   "overrides": [
     {
@@ -616,6 +616,12 @@
       "rules": {
         "typescript/consistent-type-assertions": "off",
         "typescript/no-unsafe-type-assertion": "off"
+      }
+    },
+    {
+      "files": ["apps/desktop/e2e/fixtures.ts"],
+      "rules": {
+        "eslint/no-empty-pattern": "off"
       }
     }
   ]

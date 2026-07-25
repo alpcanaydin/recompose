@@ -2,7 +2,13 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     "apps/desktop": {
-      "entry": ["build/after-pack.cjs", "e2e/security-boot-proof.mjs"],
+      "entry": [
+        "build/after-pack.cjs",
+        "e2e/playwright.config.ts",
+        "e2e/fixtures.ts",
+        "e2e/*.spec.ts",
+        "e2e/steps/**/*.ts"
+      ],
       "ignoreDependencies": ["fast-check"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
@@ -12,7 +18,7 @@
     },
     ".": {
       "entry": ["steiger.config.ts"],
-      "ignoreDependencies": ["@steiger/toolkit", "@swc/core"],
+      "ignoreDependencies": ["@playwright/mcp", "@steiger/toolkit", "@swc/core"],
       "ignoreBinaries": ["mise"]
     }
   }
