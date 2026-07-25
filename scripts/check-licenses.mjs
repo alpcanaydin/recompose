@@ -17,6 +17,7 @@ const allowlist = new Set([
 
 const raw = execFileSync('pnpm', ['licenses', 'list', '--prod', '--json'], {
   encoding: 'utf8',
+  shell: process.platform === 'win32',
 });
 const byLicense = JSON.parse(raw);
 
