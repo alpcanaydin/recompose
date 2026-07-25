@@ -4,6 +4,7 @@ import { join } from 'path';
 
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
+import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
@@ -35,6 +36,12 @@ const userDataOverride = resolveUserDataOverride(process.env);
 
 if (userDataOverride !== null) {
   app.setPath('userData', userDataOverride);
+}
+
+const passwordStoreOverride = resolvePasswordStoreOverride(process.env);
+
+if (passwordStoreOverride !== null) {
+  app.commandLine.appendSwitch('password-store', passwordStoreOverride);
 }
 
 registerAppScheme();
