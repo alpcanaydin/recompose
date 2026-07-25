@@ -23,7 +23,11 @@ jobs:
             echo "no dmg asset on release ${TAG}"
             exit 1
           fi
-          curl -sL "$dmg_url" -o app.dmg
+          curl -fsSL "$dmg_url" -o app.dmg
+          if [ ! -s app.dmg ]; then
+            echo "dmg download empty for ${TAG}"
+            exit 1
+          fi
           sha=$(sha256sum app.dmg | cut -d' ' -f1)
           mkdir -p ~/.ssh
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/tap_key
