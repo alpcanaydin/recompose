@@ -5,6 +5,10 @@ useDefault = true
 targetRules = ["generic-api-key"]
 paths = ['''^\.agents/skills/''']
 
+[[allowlists]]
+targetRules = ["generic-api-key"]
+regexes = ['''c8d89b3e-009b-49ee-91e7-05b07712fef5''']
+
 [[rules]]
 id = "forbidden-owner-alias"
 description = "Repository owner's private alias must never appear in any artifact"

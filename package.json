@@ -23,6 +23,7 @@
     "lint:prose": "mise exec -- vale .",
     "lint:spell": "cspell --no-progress \"**\"",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
+    "lint:licenses": "node scripts/check-licenses.mjs",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },

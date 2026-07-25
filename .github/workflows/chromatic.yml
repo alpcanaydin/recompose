@@ -2,6 +2,7 @@ name: chromatic
 
 on:
   push:
+    branches: ['**']
 
 permissions:
   contents: read
