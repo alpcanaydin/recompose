@@ -30,6 +30,7 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  executableName: recompose
   target:
     - AppImage
     - snap
