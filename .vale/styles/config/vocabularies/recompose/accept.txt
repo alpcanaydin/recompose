@@ -195,6 +195,7 @@
 [Vv]ersionless
 [Vv]iewport
 [Vv]irtualModel
+[Vv]isual
 [Vv]ite
 [Vv]itest
 [Vv]Ms

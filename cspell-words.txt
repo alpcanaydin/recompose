@@ -14,6 +14,7 @@ boxshadow
 BYOK
 Cabe
 ccproxy
+chromaui
 cliproxyapi
 Codechecks
 codegen
@@ -23,8 +24,8 @@ covguard
 dagre
 dbus
 dedup
-değiştir
 depcruise
+değiştir
 diffable
 dmgbuild
 docblocks

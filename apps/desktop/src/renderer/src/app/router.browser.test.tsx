@@ -6,12 +6,9 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
 import { accountsQueryOptions } from '../pages/providers';
+import { installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
-
-function emptyAccounts(): AccountsDocument {
-  return { schemaVersion: 1, accounts: [] };
-}
 
 function seededAccounts(): AccountsDocument {
   return {
@@ -28,49 +25,8 @@ function seededAccounts(): AccountsDocument {
   };
 }
 
-function installFakeBridge(initial: AccountsDocument = emptyAccounts()) {
-  let registry = initial;
-
-  window.recompose = {
-    'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
-    'gateways:save': async () => Promise.resolve({ ok: true, value: [] }),
-    'settings:get': async () =>
-      Promise.resolve({
-        ok: true,
-        value: { schemaVersion: 1, theme: 'system', enginePort: 8397 },
-      }),
-    'settings:save': async (settings) => Promise.resolve({ ok: true, value: settings }),
-    'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': async (request) => {
-      registry = {
-        ...registry,
-        accounts: [
-          ...registry.accounts,
-          {
-            id: `acc-${registry.accounts.length + 1}`,
-            provider: request.provider,
-            kind: request.kind,
-            label: request.label,
-            credentialRef: `cred-${registry.accounts.length + 1}`,
-          },
-        ],
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-    'accounts:remove': async (request) => {
-      registry = {
-        ...registry,
-        accounts: registry.accounts.filter((row) => row.id !== request.id),
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-  };
-}
-
-async function renderAt(path: string, initial: AccountsDocument = emptyAccounts()) {
-  installFakeBridge(initial);
+async function renderAt(path: string, initial?: AccountsDocument) {
+  installFakeBridge(initial === undefined ? {} : { accounts: initial });
 
   const queryClient = createQueryClient();
   const router = createAppRouter({
@@ -119,7 +75,7 @@ test('navigating to providers loads and renders the registry from the bridge', a
 test('the /providers route loader warms the query cache before any component renders', async () => {
   const seeded = seededAccounts();
 
-  installFakeBridge(seeded);
+  installFakeBridge({ accounts: seeded });
 
   const queryClient = createQueryClient();
   const router = createAppRouter({

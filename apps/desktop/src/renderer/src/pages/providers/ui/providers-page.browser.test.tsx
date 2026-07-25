@@ -1,10 +1,11 @@
-import type { AccountsDocument, RecomposeIpc } from '@recompose/contracts';
+import type { AccountsDocument } from '@recompose/contracts';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
+import { installFakeBridge } from '../../../shared/testing';
 import { ProvidersPage } from './providers-page';
 
 const seeded: AccountsDocument = {
@@ -19,48 +20,6 @@ const seeded: AccountsDocument = {
     },
   ],
 };
-
-function bridgeWith(overrides: Partial<RecomposeIpc> = {}, initial: AccountsDocument = seeded) {
-  let registry = initial;
-
-  window.recompose = {
-    'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
-    'gateways:save': async () => Promise.resolve({ ok: true, value: [] }),
-    'settings:get': async () =>
-      Promise.resolve({
-        ok: true,
-        value: { schemaVersion: 1, theme: 'system', enginePort: 8397 },
-      }),
-    'settings:save': async (settings) => Promise.resolve({ ok: true, value: settings }),
-    'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': async (request) => {
-      registry = {
-        ...registry,
-        accounts: [
-          ...registry.accounts,
-          {
-            id: 'a2',
-            provider: request.provider,
-            kind: request.kind,
-            label: request.label,
-            credentialRef: 'c2',
-          },
-        ],
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-    'accounts:remove': async (request) => {
-      registry = {
-        ...registry,
-        accounts: registry.accounts.filter((row) => row.id !== request.id),
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-    ...overrides,
-  };
-}
 
 async function renderProviders() {
   const queryClient = new QueryClient({
@@ -80,7 +39,7 @@ async function renderProviders() {
 }
 
 test('the providers screen lists connected accounts from the registry', async () => {
-  bridgeWith();
+  installFakeBridge({ accounts: seeded });
 
   const screen = await renderProviders();
 
@@ -89,7 +48,7 @@ test('the providers screen lists connected accounts from the registry', async ()
 });
 
 test('connecting a provider adds it to the list and never shows the secret', async () => {
-  bridgeWith();
+  installFakeBridge({ accounts: seeded });
 
   const screen = await renderProviders();
 
@@ -103,7 +62,7 @@ test('connecting a provider adds it to the list and never shows the secret', asy
 });
 
 test('connecting an aggregator account shows its kind on the new row', async () => {
-  bridgeWith();
+  installFakeBridge({ accounts: seeded });
 
   const screen = await renderProviders();
 
@@ -117,7 +76,7 @@ test('connecting an aggregator account shows its kind on the new row', async () 
 });
 
 test('removing an account deletes its row', async () => {
-  bridgeWith();
+  installFakeBridge({ accounts: seeded });
 
   const screen = await renderProviders();
 
@@ -127,12 +86,15 @@ test('removing an account deletes its row', async () => {
 });
 
 test('a storage-failed remove surfaces as a visible error', async () => {
-  bridgeWith({
-    'accounts:remove': async () =>
-      Promise.resolve({
-        ok: false,
-        error: { code: 'storage-failed', message: 'Could not write the accounts file' },
-      }),
+  installFakeBridge({
+    accounts: seeded,
+    overrides: {
+      'accounts:remove': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'Could not write the accounts file' },
+        }),
+    },
   });
 
   const screen = await renderProviders();
@@ -145,12 +107,15 @@ test('a storage-failed remove surfaces as a visible error', async () => {
 });
 
 test('a vault-unavailable failure surfaces as a visible error', async () => {
-  bridgeWith({
-    'accounts:connect': async () =>
-      Promise.resolve({
-        ok: false,
-        error: { code: 'vault-unavailable', message: 'OS secret encryption is unavailable' },
-      }),
+  installFakeBridge({
+    accounts: seeded,
+    overrides: {
+      'accounts:connect': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'vault-unavailable', message: 'OS secret encryption is unavailable' },
+        }),
+    },
   });
 
   const screen = await renderProviders();

@@ -9,7 +9,7 @@
         "e2e/*.spec.ts",
         "e2e/steps/**/*.ts"
       ],
-      "ignoreDependencies": ["fast-check"],
+      "ignoreDependencies": ["chromatic", "fast-check"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
     "packages/contracts": {
