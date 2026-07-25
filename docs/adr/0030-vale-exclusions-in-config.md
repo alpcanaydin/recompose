@@ -9,9 +9,9 @@ Architecture Decision Record (ADR) 0025 scoped the prose gate to authored markdo
 
 ## Decision
 
-The exclusion list moves into `.vale.ini` as a glob section that clears `BasedOnStyles` and turns off every rule the `[*.md]` section promotes to error. Both readers of the config now agree on scope. The command line keeps its `--glob` flags for speed, and any editor that finds `.vale.ini` honors the same boundary.
+The exclusion list moves into `.vale.ini` as one glob section that clears `BasedOnStyles` and turns off every rule the `[*.md]` section promotes to error. The `--glob` flags leave the `lint:prose` script and the CI job, so the config alone defines scope.
 
-The section omits `.claude/worktrees`. Each worktree is its own project root, and its absolute path carries that segment, so the pattern would silence Vale everywhere inside a worktree. The command-line flags keep the exclusion, because they match paths relative to the scan root.
+One entry needs a different shape. The `.claude/worktrees` pattern stays relative to the repository root instead of taking the `**/` prefix the other entries carry. A command-line run from the root hands Vale a path such as `.claude/worktrees/playwright/README.md`, which the relative pattern matches. An editor hands Vale an absolute path, which it doesn't match, so a worktree opened as its own project still draws the full rule set.
 
 ## Alternatives
 
@@ -24,4 +24,4 @@ The section omits `.claude/worktrees`. Each worktree is its own project root, an
 
 **Good**: one authority defines what the prose gate covers. Editors and CI report the same errors, so a clean editor predicts a clean gate.
 
-**Bad**: the section repeats 19 rule names as `NO`, because clearing `BasedOnStyles` leaves the rules that `[*.md]` names outright. Promoting a rule in `[*.md]` means adding it here too, and nothing machine-checks that pairing. Opening a worktree from the parent repository still draws the full rule set, since the `.claude/worktrees` gap only closes on the command line.
+**Bad**: the section repeats 19 rule names as `NO`, because clearing `BasedOnStyles` leaves the rules that `[*.md]` names outright. Promoting a rule in `[*.md]` means adding it here too, and nothing machine-checks that pairing. Vale also walks the excluded trees now instead of skipping them. A local run grew from 891 scanned files to 1,512 and stayed near one second, so the cost tracks `node_modules`.
