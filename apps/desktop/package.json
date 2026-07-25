@@ -31,7 +31,9 @@
     "test:e2e": "bddgen -c e2e/playwright.config.ts && playwright test -c e2e/playwright.config.ts --project acceptance --project proofs --grep-invert @quarantine",
     "test:e2e:leak": "playwright test -c e2e/playwright.config.ts --project leak --grep-invert @quarantine",
     "test:e2e:packaged": "playwright test -c e2e/playwright.config.ts --project packaged --grep-invert @quarantine",
-    "test:e2e:quarantine": "bddgen -c e2e/playwright.config.ts && playwright test -c e2e/playwright.config.ts --project acceptance --project proofs --project leak --grep @quarantine --pass-with-no-tests"
+    "test:e2e:visual": "playwright test -c e2e/playwright.config.ts --project visual --grep-invert @quarantine",
+    "test:e2e:visual:update": "playwright test -c e2e/playwright.config.ts --project visual --update-snapshots",
+    "test:e2e:quarantine": "bddgen -c e2e/playwright.config.ts && playwright test -c e2e/playwright.config.ts --project acceptance --project proofs --project leak --project visual --grep @quarantine --pass-with-no-tests"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
