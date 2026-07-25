@@ -47,4 +47,4 @@ Tenth infrastructure-queue item. Architecture Decision Record (ADR) 0029 landed 
 
 ## Decision record
 
-ADR-0032 lands with the implementation through the architecture-decision-records skill. It captures the Chromatic choice with the free-plan arithmetic, the `push`-trigger workflow shape, and the UI Tests ruleset gate with its deviation from ADR-0007. It also records the squash-merge countermeasure, the TurboSnap rejection with its revisit trigger, the fork residual, the pull-request comment opt-in, and the fake-bridge extraction.
+ADR-0033 lands with the implementation through the architecture-decision-records skill. It captures the Chromatic choice with the free-plan arithmetic, the `push`-trigger workflow shape, and the UI Tests ruleset gate with its deviation from ADR-0007. It also records the squash-merge countermeasure, the TurboSnap rejection with its revisit trigger, the fork residual, the pull-request comment opt-in, and the fake-bridge extraction.

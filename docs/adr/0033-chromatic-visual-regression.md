@@ -1,11 +1,11 @@
-# 0032: Chromatic visual regression, the UI Tests gate, and the fake-bridge extraction
+# 0033: Chromatic visual regression, the UI Tests gate, and the fake-bridge extraction
 
 **Status**: Accepted
 **Date**: 2026-07-25
 
 ## Context
 
-The tenth infrastructure-queue item wires the Storybook workshop from ADR-0029 into visual regression testing. Six seed components and nine stories exist in `apps/desktop`, and a `storybook:build` smoke already runs inside the required `check` job. The free-tier policy from ADR-0022 allows Chromatic's free plan: 5,000 Chrome snapshots a month. Nine stories cost nine snapshots a build, which supports more than 500 builds a month. The repository merges through squash, which rewrites commits and orphans accepted baselines unless the workflow applies the documented countermeasure. One rider from the Storybook ledger landed here: the fake bridge existed three times, once in the Storybook decorator and once in each of two Vitest browser tests.
+The tenth infrastructure-queue item wires the Storybook workshop from Architecture Decision Record (ADR) 0029 into visual regression testing. Six seed components and nine stories exist in `apps/desktop`, and a `storybook:build` smoke already runs inside the required `check` job. The free-tier policy from ADR-0022 allows Chromatic's free plan: 5,000 Chrome snapshots a month. Nine stories cost nine snapshots a build, which supports more than 500 builds a month. The repository merges through squash, which rewrites commits and orphans accepted baselines unless the workflow applies the documented countermeasure. One rider from the Storybook ledger landed here: the fake bridge existed three times, once in the Storybook decorator and once in each of two Vitest browser tests.
 
 ## Decision
 
@@ -24,7 +24,7 @@ The tenth infrastructure-queue item wires the Storybook workshop from ADR-0029 i
 - **The `pull_request` trigger with head-ref checkout overrides**: rejected. The `push` trigger is the documented path and needs no override plumbing.
 - **TurboSnap**: rejected for now. Locked until ten builds, incompatible with `pull_request` triggers, and worthless at nine stories.
 - **The UI Review feature as a second required check**: rejected. A solo maintainer reviews once, in the UI Tests accept flow.
-- **Keeping three fake bridges**: rejected. The stub encodes one piece of knowledge, the fake IPC contract behavior, and Don't Repeat Yourself applies to knowledge.
+- **Keeping three fake bridges**: rejected. The stub encodes one piece of knowledge, the fake Inter-Process Communication (IPC) contract behavior, and Don't Repeat Yourself applies to knowledge.
 
 ## Consequences
 
