@@ -8,9 +8,6 @@ import { createBdd, test as base } from 'playwright-bdd';
 
 const appRoot = join(__dirname, '..');
 
-const launchArgs =
-  process.platform === 'linux' ? [appRoot, '--password-store=gnome-libsecret'] : [appRoot];
-
 export function inheritedEnv(): Record<string, string> {
   return Object.fromEntries(
     Object.entries(process.env).filter(
@@ -28,7 +25,7 @@ export const test = base.extend<ElectronFixtures>({
   electronApp: async ({}, use) => {
     const userDataDir = await mkdtemp(join(tmpdir(), 'recompose-e2e-'));
     const app = await electron.launch({
-      args: launchArgs,
+      args: [appRoot],
       env: {
         ...inheritedEnv(),
         NODE_ENV: 'production',

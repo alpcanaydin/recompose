@@ -116,28 +116,15 @@ jobs:
           cat > apps/desktop/keyring-probe.cjs <<'PROBE'
           const { _electron } = require('playwright');
 
-          const appRoot = process.cwd();
-
           function inherited() {
             return Object.fromEntries(
               Object.entries(process.env).filter(([, value]) => value !== undefined),
             );
           }
 
-          async function probe(label, options) {
-            const app = await _electron.launch(options);
-            const out = await app.evaluate(
-              ({ safeStorage }) =>
-                `backend=${safeStorage.getSelectedStorageBackend()} available=${safeStorage.isEncryptionAvailable()}`,
-            );
-            console.log(`${label}: ${out}`);
-            await app.close();
-            return out;
-          }
-
           (async () => {
-            const fixtureLike = await probe('fixture-like', {
-              args: [appRoot, '--password-store=gnome-libsecret'],
+            const app = await _electron.launch({
+              args: [process.cwd()],
               env: {
                 ...inherited(),
                 NODE_ENV: 'production',
@@ -145,9 +132,13 @@ jobs:
                 RECOMPOSE_USER_DATA_DIR: '/tmp/probe-userdata',
               },
             });
-            await probe('inherit-env', { args: [appRoot, '--password-store=gnome-libsecret'] });
-            await probe('switch-first', { args: ['--password-store=gnome-libsecret', appRoot] });
-            if (!fixtureLike.includes('available=true')) process.exit(1);
+            const out = await app.evaluate(
+              ({ safeStorage }) =>
+                `backend=${safeStorage.getSelectedStorageBackend()} available=${safeStorage.isEncryptionAvailable()}`,
+            );
+            console.log(out);
+            await app.close();
+            if (!out.includes('available=true')) process.exit(1);
           })().catch((error) => {
             console.error(error);
             process.exit(1);
@@ -158,6 +149,7 @@ jobs:
           eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
           eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
           export XDG_CURRENT_DESKTOP=GNOME
+          export RECOMPOSE_PASSWORD_STORE=gnome-libsecret
           xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec node keyring-probe.cjs
           xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e
           SCRIPT
