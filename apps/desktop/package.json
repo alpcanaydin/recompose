@@ -16,6 +16,7 @@
   "scripts": {
     "lint": "oxlint",
     "test": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
@@ -52,6 +53,8 @@
     "@storybook/addon-themes": "10.5.4",
     "@storybook/addon-vitest": "10.5.4",
     "@storybook/react-vite": "10.5.4",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-query": "5.101.4",
     "@tanstack/react-query-devtools": "5.101.4",

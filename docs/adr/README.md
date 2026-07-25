@@ -41,3 +41,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0033](0033-chromatic-visual-regression.md)                    | Chromatic Visual Regression, the UI Tests Gate, and the Fake-Bridge Extraction      | Accepted | 2026-07-25 |
 | [0034](0034-screen-level-visual-regression.md)                 | Screen-Level Visual Regression on the Real Electron Shell, Three-Platform Baselines | Accepted | 2026-07-25 |
 | [0035](0035-release-operations.md)                             | Release Operations, Unsigned Phase A, and the Homebrew Tap                          | Accepted | 2026-07-25 |
+| [0036](0036-stryker-mutation-gate.md)                          | Stryker Mutation Gate Over the Node-Tested Surfaces                                 | Accepted | 2026-07-26 |

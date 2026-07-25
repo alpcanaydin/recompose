@@ -7,13 +7,14 @@
         "e2e/playwright.config.ts",
         "e2e/fixtures.ts",
         "e2e/*.spec.ts",
-        "e2e/steps/**/*.ts"
+        "e2e/steps/**/*.ts",
+        "vitest.mutation.config.ts"
       ],
       "ignoreDependencies": ["chromatic", "fast-check"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
     "packages/contracts": {
-      "entry": ["src/**/*.test-d.ts"],
+      "entry": ["src/**/*.test-d.ts", "vitest.mutation.config.ts"],
       "ignoreDependencies": ["fast-check"]
     },
     ".": {
