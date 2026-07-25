@@ -11,10 +11,13 @@ export default defineConfig({
   timeout: 30_000,
   retries: process.env['CI'] === undefined ? 0 : 2,
   use: { trace: 'on-first-retry' },
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}',
+  expect: { toHaveScreenshot: { maxDiffPixels: 0 } },
   projects: [
     { name: 'acceptance', testDir: acceptanceDir },
     { name: 'proofs', testMatch: /boot-proof\.spec\.ts/ },
     { name: 'leak', testMatch: /leak\.spec\.ts/ },
     { name: 'packaged', testMatch: /packaged-smoke\.spec\.ts/, timeout: 120_000 },
+    { name: 'visual', testMatch: /visual\.spec\.ts/ },
   ],
 });

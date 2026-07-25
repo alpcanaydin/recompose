@@ -152,10 +152,13 @@ jobs:
           export RECOMPOSE_PASSWORD_STORE=gnome-libsecret
           xvfb-run --auto-servernum pnpm --filter @recompose/desktop exec node keyring-probe.cjs
           xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:visual
           SCRIPT
           dbus-run-session -- bash /tmp/e2e-linux.sh
       - if: runner.os != 'Linux'
         run: pnpm --filter @recompose/desktop run test:e2e
+      - if: runner.os != 'Linux'
+        run: pnpm --filter @recompose/desktop run test:e2e:visual
       - if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:leak
       - run: pnpm --filter @recompose/desktop exec electron-builder --dir
