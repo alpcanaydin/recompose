@@ -3,7 +3,10 @@ useDefault = true
 
 [[allowlists]]
 targetRules = ["generic-api-key"]
-paths = ['''^\.agents/skills/''']
+paths = [
+  '''^\.agents/skills/''',
+  '''^BRAINSTORM-NOTES\.md$''',
+]
 
 [[rules]]
 id = "forbidden-owner-alias"
