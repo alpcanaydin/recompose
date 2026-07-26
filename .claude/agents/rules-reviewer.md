@@ -1,6 +1,7 @@
 ---
 name: rules-reviewer
 description: Reviews changed code for compliance with recompose's project rules (CLAUDE.md + .claude/rules/), covering the constraints linters can't check. Use after implementing features or fixes, before committing.
+model: opus
 tools: Read, Grep, Glob, Bash
 ---
 
