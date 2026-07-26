@@ -31,6 +31,12 @@ pre-commit:
       priority: 1
       glob: '*.md'
       run: mise install -q && (test .vale/styles/Microsoft -nt .vale.ini || mise exec -- vale sync) && pnpm run lint:prose
+    - name: openspec
+      priority: 1
+      glob:
+        - 'openspec/*'
+        - 'openspec/**'
+      run: pnpm run lint:openspec
     - name: fmt
       priority: 2
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'

@@ -44,6 +44,7 @@ esac
 Firecrawl
 Flathub
 flatlist
+frontmatter
 frontmost
 fuite
 Gebert
@@ -76,6 +77,8 @@ Ollama
 Ollama's
 opencodex
 openrouter
+openspec
+opsx
 osascript
 oxfmtrc
 oxlint
