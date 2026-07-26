@@ -6,13 +6,13 @@
 
 <!-- Anchor the artifact chain so a fresh-context reader navigates it without guessing. -->
 
-Record the change id and schema, then link every sibling artifact for this change.
+Record the change id and schema, then link each applicable sibling artifact and write None for the rest.
 
 - Change id: <change id>
 - Schema: recompose
 - Proposal: <link>
 - Specs: <link>
-- Discovery: <link>
+- Discovery: <link or None>
 - Tasks: <link>
 
 ## Context

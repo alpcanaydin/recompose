@@ -2,7 +2,7 @@
 name: design-critic
 description: "Use proactively when a UI feature needs a design-quality review: critiques layout, hierarchy, and interaction against the recompose design system and macOS conventions. Returns ranked fixes with reference screenshots."
 model: opus
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob
 memory: project
 skills:
   - design-system-patterns

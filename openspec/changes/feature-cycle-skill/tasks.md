@@ -2,7 +2,7 @@
 
 > For agentic workers: use superpowers:subagent-driven-development to execute task by task. Every commit passes lefthook without bypass. Global constraints: never commit to `main`, no code comments, commit style `<type>: <imperative subject>` with at most 50 characters, and `pnpm exec openspec validate --all --strict --no-interactive` stays green after every task.
 
-### Task 1: Solution-design template
+## Task 1: Solution-design template
 
 **Files:**
 
@@ -40,7 +40,7 @@ git add openspec/schemas/
 git commit -m "docs: seventeen-section solution-design template"
 ```
 
-### Task 2: Subagent roster
+## Task 2: Subagent roster
 
 **Files:**
 
@@ -72,7 +72,7 @@ git add .claude/agents/
 git commit -m "feat: feature-cycle subagent roster"
 ```
 
-### Task 3: The feature-cycle skill
+## Task 3: The feature-cycle skill
 
 **Files:**
 
@@ -106,7 +106,7 @@ git add .claude/skills/feature-cycle/
 git commit -m "feat: feature-cycle process skill"
 ```
 
-### Task 4: Route CLAUDE.md through the skill
+## Task 4: Route CLAUDE.md through the skill
 
 **Files:**
 
@@ -132,7 +132,7 @@ git add CLAUDE.md
 git commit -m "docs: route features through feature-cycle"
 ```
 
-### Task 5: Process record
+## Task 5: Process record
 
 **Files:**
 
@@ -161,7 +161,7 @@ git add docs/adr/
 git commit -m "docs: adr for feature-cycle process"
 ```
 
-### Task 6: Pull request
+## Task 6: Pull request
 
 **Files:** none (process step).
 
