@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Never commit to `main`; all work happens on this worktree branch, lands through a PR.
-- New devDeps pinned exact: `pnpm add -DE`. Add the package to `minimumReleaseAgeExclude` in `renovate.json` (ADR-0015 item 4 convention).
+- New devDeps pinned exact: `pnpm add -DE`. Per ADR-0015 item 4, `minimumReleaseAgeExclude` lives in `pnpm-workspace.yaml`, not `renovate.json`, and only needs an entry when the installed version is younger than the configured `minimumReleaseAge` (4320 minutes / 3 days) at resolution time; a version already older than that window needs no entry.
 - Standing gate rule: every gate gets a lefthook pre-commit job AND a CI step, and must be required — a step inside the `check` job is transitively required via `ci-success`.
 - No code comments. No em dashes in authored markdown. All authored markdown passes Vale (Microsoft, full strength) and cspell; `docs/superpowers/plans/` and `.claude/skills/` are exempt.
 - Every commit message through the caveman-commit style: `<type>: <imperative subject>` ≤50 chars.
@@ -27,7 +27,7 @@
 **Files:**
 
 - Modify: `package.json` (root devDependencies + scripts later)
-- Modify: `renovate.json` (`minimumReleaseAgeExclude` array)
+- Modify: `pnpm-workspace.yaml` (`minimumReleaseAgeExclude` array, only if the installed version is still inside the `minimumReleaseAge` window)
 - Modify: `pnpm-lock.yaml` (generated)
 
 **Interfaces:**
@@ -45,16 +45,18 @@ pnpm add -DE @fission-ai/openspec
 Run: `pnpm exec openspec --version`
 Expected: a version string `1.6.x` or newer, exit 0.
 
-- [ ] **Step 3: Add the renovate exclusion**
+- [ ] **Step 3: Apply the release-age convention**
 
-Open `renovate.json`, find the `minimumReleaseAgeExclude` array, append `"@fission-ai/openspec"` following the existing entries' format.
+Per ADR-0015 item 4, only packages whose installed version is younger than the `minimumReleaseAge` window (4320 minutes / 3 days in `pnpm-workspace.yaml`) need a `minimumReleaseAgeExclude` entry, added there in `"package@version"` format. Check the installed version's publish date; if it already clears the window, add nothing and note why. Otherwise open `pnpm-workspace.yaml` and append `'@fission-ai/openspec@<version>'` following the existing entries' format.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add package.json pnpm-lock.yaml renovate.json
+git add package.json pnpm-lock.yaml pnpm-workspace.yaml
 git commit -m "build: add openspec dependency"
 ```
+
+(Include `pnpm-workspace.yaml` only if Step 3 added an exclusion entry.)
 
 ---
 
