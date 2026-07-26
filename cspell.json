@@ -17,6 +17,7 @@
     ".claude/commands",
     ".claude/worktrees",
     "openspec/schemas",
+    "openspec/changes/**/discovery",
     ".vale/styles",
     "docs/superpowers/plans",
     "pnpm-lock.yaml",
