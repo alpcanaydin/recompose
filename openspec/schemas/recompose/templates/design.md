@@ -19,7 +19,7 @@ Record the change id and schema, then link every sibling artifact for this chang
 
 <!-- Frame the problem so this document stands alone; do not restate the proposal's motivation. -->
 
-State the problem this design solves and the situation it lands in — enough that a reader who has not opened the proposal can follow every section below.
+State the problem this design solves and the situation it lands in, enough for a reader who has not opened the proposal to follow every section below.
 
 ## Discovery inputs consumed
 
@@ -39,7 +39,7 @@ List each code-map entry, research finding, and rider hit that shaped this desig
 
 **Non-goals:**
 
-- <what this design deliberately excludes — treat each as a hard scope fence>
+- <what this design deliberately excludes (treat each as a hard scope fence)>
 
 ## Constraints and invariants
 
@@ -51,19 +51,19 @@ Restate every binding rule verbatim: TypeScript strictness settings, Feature-Sli
 
 <!-- Give the approach: overview before detail, trade-offs in view; add a sequence or flow diagram when interaction order matters. -->
 
-Describe the approach — overview first, then the detail. Foreground the trade-offs behind the shape you chose. Add a sequence or flow diagram when interaction order carries the design.
+Describe the approach: overview first, then the detail. Foreground the trade-offs behind the shape you chose. Add a sequence or flow diagram when interaction order carries the design.
 
 ## Data model and contracts
 
 <!-- Pin the entities, state transitions, and channel or storage contracts the feature touches. -->
 
-When applicable — the standard tier may write None. Define entities, state transitions, IPC channel schemas, and storage contracts.
+When applicable, the standard tier may write None. Define entities, state transitions, IPC channel schemas, and storage contracts.
 
 ## Error handling
 
 <!-- Enumerate the expected failure states as typed results and how each one routes or surfaces. -->
 
-When applicable — the standard tier may write None. List each expected failure state as a typed result and state how it routes or surfaces.
+When applicable, the standard tier may write None. List each expected failure state as a typed result and state how it routes or surfaces.
 
 ## File map
 
@@ -71,7 +71,7 @@ When applicable — the standard tier may write None. List each expected failure
 
 List each create/modify path with a one-line responsibility, matching Feature-Sliced Design placement.
 
-- `<path>` — <responsibility> (create | modify)
+- `<path>`: <responsibility> (create | modify)
 
 ## Interfaces
 
@@ -92,9 +92,9 @@ One numbered block per choice.
 
 <the choice, and why it wins over the alternatives>
 
-**Alternatives considered:** <alternative — rejected because ...>
+**Alternatives considered:** <alternative, rejected because ...>
 
-**ADR draft:** <link — when the decision meets the ADR bar>
+**ADR draft:** <link (when the decision meets the ADR bar)>
 
 ## Test matrix
 
@@ -116,7 +116,7 @@ Fill every row. A row states what its layer proves, or gives the reason none app
 
 Name the intended tasks, their dependency order, and the interface each task hands off, so tasks.md follows without reinterpretation.
 
-- Task <n>: <name> — depends on: <task or none> — hands off: <interface>
+- Task <n>: <name> (depends on: <task or none>, hands off: <interface>)
 
 ## Risks
 
@@ -128,7 +128,7 @@ One line per risk: [Risk] <what could go wrong> → Mitigation: <how it is conta
 
 <!-- State how the change deploys, rolls back, and migrates data; write None rather than omitting. -->
 
-When applicable — the standard tier may write None. Cover deploy, rollback, and data migration.
+When applicable, the standard tier may write None. Cover deploy, rollback, and data migration.
 
 ## Open questions
 

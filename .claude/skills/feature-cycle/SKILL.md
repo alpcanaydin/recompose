@@ -22,13 +22,15 @@ Trigger: `/feature-cycle <description>`. On entry, before any phase work:
 3. **Scaffold the change and seed a real delta in one commit.** See [Change hygiene](#change-hygiene).
 4. **Run the phase set for the confirmed tier.** The reference files carry the detail: [planning.md](references/planning.md), [implementation.md](references/implementation.md), [verification.md](references/verification.md).
 
+A confirmed `trivial` tier exits after step 2 with no change directory scaffolded. Steps 3 and 4 run only for `standard` and `full`.
+
 ## Tier rubric
 
 The recommendation follows a written rubric. The maintainer confirms it.
 
 | Tier       | When it fits                                                      | Planning shape                                                                                                            |
 | ---------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `trivial`  | single-file edit, config tweak, or docs, with no behavior change  | exit the pipeline and do the work directly; the pull request still faces every machine gate                               |
+| `trivial`  | single-file edit, config tweak, or docs, with no behavior change  | exit after the confirm step and do the work directly, with no change directory scaffolded; the pull request still faces every machine gate |
 | `standard` | one subsystem, bounded behavior, no cross-cutting contract        | five discovery arms fold into one research pass, no candidate panel, a single subagent writes the design and the solution design; both approval gates stay |
 | `full`     | cross-subsystem work, a new contract, or high blast radius        | five parallel discovery arms, the candidate-approach panel, and both approval gates                                       |
 
@@ -70,7 +72,7 @@ Every subagent definition pins `model: opus` as its default. The rows below are 
 
 ## Subagent caps
 
-Every phase pins a hard subagent-count cap and a tool-call budget. The overrides column names where a seat leaves its `opus` default.
+Every phase pins a hard subagent-count cap. The overrides column names where a seat leaves its `opus` default.
 
 | Phase                    | Subagents                                                     | Cap                                                    | Dispatch-time override                          |
 | ------------------------ | ------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------- |
@@ -91,3 +93,7 @@ The roster dispatched by name: `code-analyzer`, `researcher`, `tdd-implementer`,
 - [planning.md](references/planning.md): the five discovery arms with caps, the interactive brainstorm, and the two approval gates.
 - [implementation.md](references/implementation.md): the contracts cluster, disjoint ownership, staggered worktrees, the merge train, red-proof pairs, and the explicit test-layer tasks. Task execution delegates to `superpowers:subagent-driven-development`.
 - [verification.md](references/verification.md): the reviewer pair with a judge, the mutation pass, the commit chain, and the pull-request line with the CodeRabbit protocol.
+
+## Enforcement rollout
+
+The phases name enforcement machinery that lands in later changes. That set covers the zero-token citation validator, TDD Guard hook, process assertion, pipeline marker, path guard, environment setup script, finding-by-commit verifiers, and rider ledger. Until each one exists, the session runs those checks by hand and records riders in the pull request body.

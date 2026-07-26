@@ -7,7 +7,7 @@ The feature-cycle design spec locked a per-feature pipeline, and PR-1 gave it an
 ## What changes
 
 - A `feature-cycle` skill becomes the single entry point that defines the pipeline: tiers, discovery arms, approval gates, implementation discipline, and the pull request line.
-- Five subagent definitions land under `.claude/agents/`, and the existing `rules-reviewer` gains the same conventions: trigger-rule descriptions, skill preloads, read-only tool sets for judges, and project-scoped memory for reviewers.
+- Five subagent definitions land under `.claude/agents/` with trigger-rule descriptions, skill preloads, read-only tool sets for judges, and project-scoped memory for reviewers. The existing `rules-reviewer` already had a trigger description and a restricted tool set, so it gains only the explicit model pin.
 - The `design.md` template in the recompose schema grows from scaffolding into the researched seventeen-section solution-design template.
 - `CLAUDE.md` routes feature development through the skill.
 - A process Architecture Decision Record (ADR) records the decisions, including the change-hygiene policy this proposal itself follows: every change carries at least one spec delta from creation, because validation demands one.

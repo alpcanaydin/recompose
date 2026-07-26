@@ -8,19 +8,21 @@ A Haiku classifier fills `isUI` and the affected subsystems, then recommends a t
 
 ## Step 2: Discover
 
-Dispatch the discovery arms in parallel, capped at six subagents. A zero-token citation validator runs afterward and rejects any code-map path or symbol that the repository lacks, so no invented reference reaches the design.
+Dispatch the discovery arms in parallel, capped at six subagents. A zero-token citation validator runs on the code map afterward and rejects any path or symbol that the repository lacks, so no invented reference reaches the design. On rejection, the reader runs once more with the validator errors as input.
 
 | Arm                      | Subagent                    | Runs when     | Produces                                          |
 | ------------------------ | --------------------------- | ------------- | ------------------------------------------------- |
 | technical research       | `researcher`                | always        | a cited brief on libraries, standards, prior art  |
 | codebase readers         | `code-analyzer`             | always        | a code map of paths, symbols, and FSD layers      |
-| Mobbin references        | `researcher`                | `isUI` only   | screens and flows for the design-system reference |
+| Mobbin references        | the session                 | `isUI` only   | screens and flows for the design-system reference |
 | acceptance references    | `researcher`                | always        | criteria from vendor docs, issue trackers, and community complaints |
 | rider-ledger lookup      | `code-analyzer`             | always        | prior out-of-scope riders that touch this feature |
 
 Acceptance references come from vendor docs, issue trackers, and community complaints, because broken expectations reveal the hidden criteria the happy-path docs omit. Machine-written output lands in `discovery/`, which the prose gates exempt.
 
-**Standard tier:** the five arms fold into one research pass. A single `researcher` covers technical research and acceptance references; `code-analyzer` still maps the code and validates citations.
+The Mobbin arm runs in the orchestrating session, not in a subagent. The Mobbin Model Context Protocol tools live in the session, and `researcher`'s tool pins (`WebSearch`, `WebFetch`, `Read`) exclude them. Session-run work does not consume a slot in the six-subagent cap.
+
+**Standard tier:** the five arms fold without dropping any. A single `researcher` covers technical research, acceptance references, and the rider-ledger lookup. `code-analyzer` maps the code. The session runs the Mobbin pass when the feature touches UI.
 
 ## Step 3: Brainstorm
 
