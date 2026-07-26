@@ -1,0 +1,47 @@
+name: recompose
+version: 1
+description: recompose feature-cycle change schema
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: High-level description of the change, its motivation, and scope
+    template: proposal.md
+    requires: []
+  - id: specs
+    generates: specs/**/*.md
+    description: Detailed specifications with requirements and scenarios
+    template: specs/spec.md
+    requires:
+      - proposal
+  - id: design
+    generates: design.md
+    description: Technical design decisions and implementation approach
+    template: design.md
+    requires:
+      - specs
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist with trackable tasks
+    template: tasks.md
+    requires:
+      - design
+  - id: discovery
+    generates: discovery/**/*.md
+    description: Machine-written discovery output, code map, research brief, acceptance references, and rider hits
+    template: discovery.md
+    requires: []
+  - id: manifest
+    generates: manifest.md
+    description: Run manifest tracking tier, phase, approvals, and branch
+    template: manifest.md
+    requires: []
+  - id: gherkin
+    generates: gherkin/*.feature
+    description: Gherkin scenario files written through the gherkin-best-practices skill
+    template: gherkin.md
+    requires:
+      - design
+apply:
+  requires:
+    - tasks
+  tracks: tasks.md

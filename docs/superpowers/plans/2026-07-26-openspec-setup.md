@@ -121,6 +121,7 @@ git commit -m "build: initialize openspec tree"
 
 - Create: `openspec/schemas/recompose/schema.yaml` (via CLI, then edited)
 - Create: `openspec/schemas/recompose/templates/*.md` (via CLI, plus three new templates)
+- Modify: `.vale.ini` and `cspell.json` (exempt `openspec/schemas/**`; the CLI scaffold templates are machine-generated and fail Vale's Microsoft style, so this exemption is pulled forward from Task 4 to unblock this commit, same class as Task 2's `.claude/commands` exemption)
 
 **Interfaces:**
 
@@ -189,10 +190,27 @@ Expected: exit 0. Fix any structural complaint it prints before moving on.
 Run: `pnpm exec openspec schema which recompose`
 Expected: resolves to `openspec/schemas/recompose/`. Also confirm `openspec/config.yaml` now references the schema as default (the `--default` flag from Step 1); if it does not, add the reference using the key `openspec config` documents, and re-run this step.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Exempt the machine-generated schema templates from the prose gates**
+
+The CLI scaffold templates (`proposal.md`, `design.md`, `tasks.md`, `specs/spec.md`) are machine-generated and fail Vale's Microsoft style (heading capitalization, ellipsis, and the `WHEN`/`THEN`/`ADDED` acronyms), which blocks this commit. Pull the `openspec/schemas/**` exemption forward from Task 4 (same class as Task 2's `.claude/commands` exemption, machine-generated scaffolding). Human documents under `openspec/specs/**` and the `openspec/changes/` proposals and designs stay linted; only the schema scaffolding is exempt.
+
+In `.vale.ini`, add `**/openspec/schemas/**` inside the brace-union exclusion section, comma-separated, next to `**/.claude/commands/**`.
+
+In `cspell.json`, add `"openspec/schemas"` to `ignorePaths`.
+
+Verify both gates pass over the whole tree:
 
 ```bash
-git add openspec/schemas/ openspec/config.yaml
+pnpm run lint:prose
+pnpm run lint:spell
+```
+
+Expected: both exit 0.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add openspec/schemas/ openspec/config.yaml .vale.ini cspell.json
 git commit -m "build: recompose change schema"
 ```
 
@@ -212,21 +230,20 @@ git commit -m "build: recompose change schema"
 
 - [ ] **Step 1: Extend the Vale exclusion glob**
 
-Open `.vale.ini`. The second section header is a brace-union glob starting with `[{.claude/worktrees/**,`. Add two entries inside the braces, keeping the comma-separated single-line format:
+Open `.vale.ini`. The second section header is a brace-union glob starting with `[{.claude/worktrees/**,`. Add one entry inside the braces, keeping the comma-separated single-line format (`**/openspec/schemas/**` already landed in Task 3):
 
 ```
-**/openspec/changes/**/discovery/**,**/openspec/schemas/**
+**/openspec/changes/**/discovery/**
 ```
 
 Rationale to preserve: `openspec/specs/**`, `proposal.md`, and `design.md` stay linted on purpose; only machine output and scaffolding templates are exempt.
 
 - [ ] **Step 2: Extend cspell ignorePaths**
 
-Open `cspell.json` and add to `ignorePaths`:
+Open `cspell.json` and add to `ignorePaths` (`"openspec/schemas"` already landed in Task 3):
 
 ```json
-"openspec/changes/**/discovery",
-"openspec/schemas"
+"openspec/changes/**/discovery"
 ```
 
 - [ ] **Step 3: Run both prose gates over the whole tree**

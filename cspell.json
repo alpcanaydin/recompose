@@ -16,6 +16,7 @@
     ".claude/skills",
     ".claude/commands",
     ".claude/worktrees",
+    "openspec/schemas",
     ".vale/styles",
     "docs/superpowers/plans",
     "pnpm-lock.yaml",
