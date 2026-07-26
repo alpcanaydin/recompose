@@ -39,7 +39,7 @@ Planning runs as five parallel discovery arms, one interactive brainstorm, and t
 2. **Discover** (parallel, capped at six subagents): technical research, codebase readers with a zero-token citation validator, Mobbin screen and flow references, acceptance-criteria references from vendor docs and issue trackers, and a rider-ledger lookup.
 3. **Brainstorm** (interactive): three candidate approaches with scores arrive as table stakes, not as a decision. The maintainer and the session lock decisions together.
 4. **Design document**: includes a design-system gap analysis and a Claude Design sync. Born Vale-compliant. **Approval gate 1.**
-5. **Gherkin and solution design** (parallel, both consume the approved design): scenarios from the in-house prompt, and a solution design on the repo template with a filled five-layer test matrix and an ADR draft. **Approval gate 2.** The scenario set freezes here. Later changes go through a spec amendment and a fresh approval.
+5. **Gherkin and solution design** (parallel, both consume the approved design): scenarios from the in-house prompt, and a solution design on the repo template with a filled five-layer test matrix (unit, integration, end-to-end, property, and mutation scope) and an ADR draft. **Approval gate 2.** The scenario set freezes here. Later changes go through a spec amendment and a fresh approval.
 
 Every human gate returns approve, reject with notes, or park. A rejection regenerates only the rejected artifact and keeps approved siblings frozen. The manifest records phase transitions only at gates, because fine-grained checklist writes drift.
 
@@ -60,9 +60,10 @@ Implementation wraps the subagent-driven development executor and adds the paral
 
 ## Verification and pull request pipeline
 
-One heavy judgment pass runs inside the worktree before the pull request opens, and deterministic gates stay the only merge blockers.
+Two passes run inside the worktree before the pull request opens, one judgment and one mutation, and deterministic gates stay the only merge blockers.
 
 - **Adversarial review workflow**: a reviewer pair with deliberate model diversity, one Fable 5 and one Opus 5, because same-model panels amplify correlated errors. Disagreements escalate to a Fable 5 judge at maximum effort. Machine-checkable claims follow reproduce-or-drop. A confidence threshold filters the report. Findings get fixed before the first push.
+- **Mutation pass**: the diff-scoped Stryker run executes in the worktree next to the review, because both consume the finished suite. A surviving mutant means a weak test, and the fix is a better test, not a lower threshold. The mutation gate on `main` (ADR-0036) stays the enforcing backstop.
 - **Commit chain**: caveman-commit style, red-proof pairs preserved, and a pipeline marker recorded for the path guard.
 - **Path guard** (deterministic, in continuous integration): a pull request that touches blast-radius paths without the pipeline marker triggers a demand for the heavy pass. Blast-radius paths are the Electron main and preload sources, the contracts package, storage, workflow definitions, and package manifests.
 - **CodeRabbit**: unchanged, on every pull request, with the existing thread protocol.
@@ -156,7 +157,9 @@ flowchart TD
     MT --> OG
 
     OG --> W1["adversarial review, pre-PR:<br>Fable 5 + Opus 5 pair, judge on disagreement,<br>reproduce-or-drop, confidence threshold"]
-    W1 --> CC["fixes before push, commit chain,<br>pipeline marker recorded"]
+    OG --> MUT["mutation pass: diff-scoped Stryker,<br>surviving mutant = weak test,<br>killed with a better test"]
+    W1 ==> CC["fixes before push, commit chain,<br>pipeline marker recorded"]
+    MUT ==> CC
     CC --> PR["pull request"]
     DIRECT --> PR
 
