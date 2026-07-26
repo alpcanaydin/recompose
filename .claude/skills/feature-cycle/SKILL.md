@@ -75,11 +75,13 @@ Every phase pins a hard subagent-count cap and a tool-call budget. The overrides
 | Phase                    | Subagents                                                     | Cap                                                    | Dispatch-time override                          |
 | ------------------------ | ------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------- |
 | classify                 | the classifier                                                | 1                                                      | Haiku                                           |
-| discovery (full)         | `code-analyzer`, `researcher` instances                       | six subagents total                                    | Opus 5; folds to one `researcher` on `standard` |
+| discovery (full)         | `code-analyzer`, `researcher` instances                       | six subagents total                                    | Opus 5; folds to one `researcher` and one `code-analyzer` on `standard` |
 | candidate panel          | approach writers                                              | 3 approaches                                           | Fable 5; `full` tier only                       |
 | design and solution      | one writer each (`standard` uses a single subagent for both)  | 1 per document                                         | Fable 5                                         |
+| design critique          | `design-critic`                                              | 1, read-only                                           | UI features only; feeds gate 1, never blocks    |
 | implementation           | `tdd-implementer`                                             | one per cluster, one worktree each; one task per invariant and per scenario | Opus 5; hardest clusters Fable 5                |
 | adversarial review       | `adversarial-reviewer`                                        | 2 as a pair, plus 1 judge on disagreement              | one review seat and the judge to Fable 5        |
+| rules review             | `rules-reviewer`                                             | 1, read-only                                           | before the commit chain                         |
 | mutation                 | none                                                          | deterministic Stryker run, no subagent                 | not applicable                                  |
 
 The roster dispatched by name: `code-analyzer`, `researcher`, `tdd-implementer`, `adversarial-reviewer`, `design-critic`, `rules-reviewer`. Their definitions live under `.claude/agents/`.

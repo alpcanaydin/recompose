@@ -19,6 +19,10 @@ Two `adversarial-reviewer` instances review the same diff, for deliberate model 
 
 The diff-scoped Stryker run executes in the worktree next to the review. A surviving mutant means a weak test. Kill it with a better test, never by lowering the threshold. The mutation gate on `main` (ADR-0036) stays the enforcing backstop.
 
+## Rules review
+
+Before the commit chain, a `rules-reviewer` makes one read-only pass over the diff for the CLAUDE.md and `.claude/rules/` constraints that linters cannot catch. Its findings get fixed in the worktree before the first push.
+
 ## Commit chain
 
 Write the commit chain in caveman-commit style. Preserve the red-proof pairs from implementation: no squash crosses a failing-spec-to-implementation boundary. Record the pipeline marker for the path guard once the process assertion passes.

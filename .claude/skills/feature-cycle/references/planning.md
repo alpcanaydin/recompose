@@ -24,15 +24,17 @@ Acceptance references come from vendor docs, issue trackers, and community compl
 
 ## Step 3: Brainstorm
 
-Interactive, with the maintainer. On the `full` tier a Fable 5 panel writes three candidate approaches with scores. Those arrive as input to the table, not as a decision. The maintainer and the session lock the decisions together, borrowing the `superpowers:subagent-driven-development` brainstorming question discipline. The locked decisions land in `openspec/changes/<slug>/`.
+Interactive, with the maintainer. On the `full` tier a Fable 5 panel writes three candidate approaches with scores. Those arrive as input to the table, not as a decision. The maintainer and the session lock the decisions together, borrowing the `superpowers:brainstorming` question discipline. The locked decisions land in `openspec/changes/<slug>/`.
 
 **Standard tier:** skip the candidate panel. Move the discovery findings straight into the brainstorm.
 
 ## Step 4: Design document (Approval gate 1)
 
-A single writer produces the design document: the locked decisions, a design-system gap analysis, and a Claude Design sync. It is born Vale-compliant, because it is a human-approved document, not machine discovery output.
+A single writer amends `proposal.md` in the change directory with the brainstorm's locked decisions and a design-system gap analysis, alongside a Claude Design sync. That revision of `proposal.md` is the gate-1 design document, so a fresh session reads it from the change directory rather than from a separate schema artifact. It is born Vale-compliant, because it is a human-approved document, not machine discovery output.
 
-**Approval gate 1.** The maintainer returns one of three verdicts:
+On features that touch UI, a `design-critic` makes one read-only critique pass over that revision before the maintainer sees gate 1. Its findings enter the gate as input, never as a blocker on their own.
+
+**Approval gate 1.** The maintainer returns one of three verdicts on that revision:
 
 - **approve**: the design document freezes and the next step opens.
 - **reject with notes**: regenerate only the design document. Approved siblings stay frozen.
