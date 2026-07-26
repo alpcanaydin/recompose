@@ -143,15 +143,15 @@ git commit -m "docs: route features through feature-cycle"
 
 - Consumes: every decision from `design.md` in this change plus the execution learnings the task brief lists.
 
-- [ ] **Step 1: Write the record through the new-adr skill**
+- [x] **Step 1: Write the record through the new-adr skill**
 
 Cover: the skill as process definition, the subagent conventions, the template adoption, the change-hygiene policy with the archive-only `skipSpecs` finding, and the surgical Vale section for delta trees. Full prose, Vale and cspell clean.
 
-- [ ] **Step 2: Update the index**
+- [x] **Step 2: Update the index**
 
 Add the row to `docs/adr/README.md` in the existing format.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `mise exec -- vale docs/adr/0038-feature-cycle-process.md && pnpm exec cspell --no-progress docs/adr/`
 Expected: 0 errors.

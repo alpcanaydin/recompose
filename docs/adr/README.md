@@ -43,3 +43,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0035](0035-release-operations.md)                             | Release Operations, Unsigned Phase A, and the Homebrew Tap                          | Accepted | 2026-07-25 |
 | [0036](0036-stryker-mutation-gate.md)                          | Stryker Mutation Gate Over the Node-Tested Surfaces                                 | Accepted | 2026-07-26 |
 | [0037](0037-openspec-artifact-layer.md)                        | OpenSpec as the Artifact Layer for the Feature Cycle                                | Accepted | 2026-07-26 |
+| [0038](0038-feature-cycle-process.md)                          | The Feature Cycle as an Executable Process                                          | Accepted | 2026-07-26 |
