@@ -19,12 +19,7 @@
     },
     ".": {
       "entry": ["steiger.config.ts"],
-      "ignoreDependencies": [
-        "@fission-ai/openspec",
-        "@playwright/mcp",
-        "@steiger/toolkit",
-        "@swc/core"
-      ],
+      "ignoreDependencies": ["@playwright/mcp", "@steiger/toolkit", "@swc/core"],
       "ignoreBinaries": ["mise"]
     }
   }

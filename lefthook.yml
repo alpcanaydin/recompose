@@ -33,7 +33,9 @@ pre-commit:
       run: mise install -q && (test .vale/styles/Microsoft -nt .vale.ini || mise exec -- vale sync) && pnpm run lint:prose
     - name: openspec
       priority: 1
-      glob: 'openspec/**'
+      glob:
+        - 'openspec/*'
+        - 'openspec/**'
       run: pnpm run lint:openspec
     - name: fmt
       priority: 2
