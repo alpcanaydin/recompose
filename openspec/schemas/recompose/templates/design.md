@@ -27,13 +27,19 @@ State the problem this design solves and the situation it lands in — enough th
 
 List each code-map entry, research finding, and rider hit that shaped this design, with the one thing it changed. List any input consulted but not acted on as "consulted, no impact."
 
+- <input>: <what it changed in this design, or "consulted, no impact">
+
 ## Goals and non-goals
 
 <!-- Fence the scope; non-goals are the cheapest defense against overscope and underspecification. -->
 
-**Goals:** <what this design must achieve>
+**Goals:**
 
-**Non-goals:** <what this design deliberately excludes — treat each as a hard scope fence>
+- <a goal this design must achieve>
+
+**Non-goals:**
+
+- <what this design deliberately excludes — treat each as a hard scope fence>
 
 ## Constraints and invariants
 
@@ -109,6 +115,8 @@ Fill every row. A row states what its layer proves, or gives the reason none app
 <!-- Mark the task boundaries, their dependency order, and the interface handoff each one gives the next, so tasks.md derives mechanically. -->
 
 Name the intended tasks, their dependency order, and the interface each task hands off, so tasks.md follows without reinterpretation.
+
+- Task <n>: <name> — depends on: <task or none> — hands off: <interface>
 
 ## Risks
 
