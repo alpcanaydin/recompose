@@ -47,8 +47,9 @@
 
 ## Feature development
 
-- Every feature goes through the `superpowers` workflow (`using-superpowers` entry point): brainstorm → plan → Test-Driven Development (TDD) implementation → verification.
-- Trivial work (config tweaks, docs, single-file fixes) skips the full cycle. Just do it. The workflow is for features.
+- Every feature starts with `/feature-cycle <description>`. The `feature-cycle` skill classifies the tier as trivial, standard, or full, the maintainer confirms it, and the phases run from there.
+- The skill calls `superpowers` as its executor library: `superpowers:subagent-driven-development` runs the Test-Driven Development (TDD) implementation and `superpowers:brainstorming` supplies the brainstorm discipline.
+- Trivial work (config tweaks, docs, single-file fixes) keeps its escape hatch: the `trivial` tier exits the pipeline, so just do it.
 
 ## Test-driven and behavior-driven development
 
