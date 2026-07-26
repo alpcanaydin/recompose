@@ -21,6 +21,7 @@
     "lint:dead": "knip",
     "lint:dup": "jscpd -c .jscpd.json apps packages",
     "lint:prose": "mise exec -- vale .",
+    "lint:openspec": "openspec validate --all --strict --no-interactive",
     "lint:spell": "cspell --no-progress \"**\"",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "lint:licenses": "node scripts/check-licenses.mjs",
