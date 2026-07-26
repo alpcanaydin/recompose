@@ -1,12 +1,12 @@
 # Verification and pull-request phase
 
-Two passes run inside the worktree before the pull request opens, one judgment and one mutation. Deterministic gates stay the only automated merge blockers. Both passes consume the finished suite, so they run side by side.
+The spec mandates two passes inside the worktree before the pull request opens, the adversarial review and the mutation pass. A rules review also runs ahead of the commit chain. Deterministic gates stay the only automated merge blockers. Both spec-mandated passes consume the finished suite, so they run side by side.
 
 ## Adversarial review
 
 Two `adversarial-reviewer` instances review the same diff, for deliberate model diversity and deliberate angle diversity.
 
-- **Model diversity.** One seat keeps its `opus` default and one seat is overridden at dispatch to the most capable model, because same-model panels amplify correlated errors.
+- **Model diversity.** One seat keeps its `opus` default and one seat is overridden at dispatch to the most capable model, because same-model panels amplify correlated errors. The dispatch passes the `model` parameter on the Agent tool call, which overrides the definition's pin for that instance.
 - **Angle diversity.** The two reviewers take distinct lenses, so coverage spans more than one failure mode.
 - **The judge.** A disagreement escalates to a Fable 5 judge at maximum effort, which settles the conflicting verdicts.
 - **Reproduce-or-drop.** A machine-checkable claim is either reproduced or dropped. Nothing unverified reaches the report.

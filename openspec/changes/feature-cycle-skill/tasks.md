@@ -12,7 +12,7 @@
 
 - Produces: the seventeen-section template every future solution design instantiates. Section ids come verbatim from the research record in the process memory, restated in the task brief.
 
-- [ ] **Step 1: Replace the scaffold template**
+- [x] **Step 1: Replace the scaffold template**
 
 Write the seventeen sections in order, each with a one-line purpose comment in HTML form and a placeholder body. Mark the always-on sections and the when-applicable ones. The decisions section links an Architecture Decision Record (ADR) draft. The section order:
 
@@ -28,12 +28,12 @@ open questions, end-to-end verification
 
 Two fill rules matter. A test-matrix row says what the layer proves, or gives a reason for none. An empty open-questions section asserts completeness.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `pnpm exec openspec schema validate recompose --verbose`
 Expected: exit 0.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add openspec/schemas/
@@ -52,20 +52,20 @@ git commit -m "docs: seventeen-section solution-design template"
 - Consumes: the convention block from `design.md` in this change directory.
 - Produces: the subagent names the skill dispatches by: `code-analyzer`, `researcher`, `tdd-implementer`, `adversarial-reviewer`, `design-critic`, `rules-reviewer`.
 
-- [ ] **Step 1: Write the five new definitions**
+- [x] **Step 1: Write the five new definitions**
 
-Each frontmatter carries: `name`, a trigger-rule `description` that states when it fires, `tools` or `disallowedTools` per role, an explicit `model` pin, `skills:` preloads, `memory: project` for the two reviewers, and `isolation: worktree` for the implementer. Judges (`adversarial-reviewer`, `design-critic`, `rules-reviewer`) stay read-only. Bodies stay short: role, inputs, output contract, escalation rule. All prose passes Vale and cspell.
+Each frontmatter carries: `name`, a trigger-rule `description` that states when it fires, an explicit `model` pin, `skills:` preloads, `memory: project` for the two reviewers, and `isolation: worktree` for the implementer. A restricted role carries a `tools` list, and a full-tool role omits the key, as the shipped `tdd-implementer` does. Judges (`adversarial-reviewer`, `design-critic`, `rules-reviewer`) stay read-only. Bodies stay short: role, inputs, output contract, escalation rule. All prose passes Vale and cspell.
 
-- [ ] **Step 2: Upgrade rules-reviewer**
+- [x] **Step 2: Upgrade rules-reviewer**
 
 Add the same convention to the existing definition without changing its role text beyond what the convention needs.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `mise exec -- vale .claude/agents/ && pnpm exec cspell --no-progress .claude/agents/`
 Expected: 0 errors from both.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add .claude/agents/
@@ -84,7 +84,7 @@ git commit -m "feat: feature-cycle subagent roster"
 - Consumes: the subagent names from Task 2 and the template from Task 1.
 - Produces: the `/feature-cycle` entry point `CLAUDE.md` references in Task 4.
 
-- [ ] **Step 1: Write the skill**
+- [x] **Step 1: Write the skill**
 
 `SKILL.md` holds the entry contract and the tier rubric with recommend-then-confirm and the one-way ratchet. It states the change-hygiene rule: create the change and seed a real delta in one commit. It records the sync rule: fetch, rebase, gate suite, ledger hygiene. Three reference files carry the phase details:
 
@@ -94,12 +94,12 @@ git commit -m "feat: feature-cycle subagent roster"
 
 Subagent-count caps and model pins appear as tables. The skills tree is prose-gate exempt.
 
-- [ ] **Step 2: Verify structure**
+- [x] **Step 2: Verify structure**
 
 Run: `pnpm exec openspec validate --all --strict --no-interactive`
 Expected: exit 0 (no openspec artifacts changed, the gate stays green).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .claude/skills/feature-cycle/
@@ -116,16 +116,16 @@ git commit -m "feat: feature-cycle process skill"
 
 - Consumes: the `/feature-cycle` entry point from Task 3.
 
-- [ ] **Step 1: Rewrite the feature development section**
+- [x] **Step 1: Rewrite the feature development section**
 
 Every feature starts with `/feature-cycle <description>`. Trivial work keeps its escape hatch. Superpowers stays referenced as the executor library the skill calls for implementation. No other section changes.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `mise exec -- vale CLAUDE.md && pnpm exec cspell --no-progress CLAUDE.md`
 Expected: 0 errors from both.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add CLAUDE.md
