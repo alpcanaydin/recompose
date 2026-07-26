@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change feature-cycle-skill. Update Purpose after archive.
+The behavioral contract of the recompose feature pipeline: how a feature idea becomes a merged pull request. The feature-cycle skill implements this contract, and the pipeline's gates enforce it.
 
 ## Requirements
 
