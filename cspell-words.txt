@@ -78,6 +78,7 @@ Ollama's
 opencodex
 openrouter
 openspec
+opsx
 osascript
 oxfmtrc
 oxlint
