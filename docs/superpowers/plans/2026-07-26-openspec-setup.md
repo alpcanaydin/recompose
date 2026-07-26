@@ -107,11 +107,11 @@ Add nothing to `skills-lock.json`. The `.claude/skills/openspec-*` skills are ge
 - [ ] **Step 6: Commit**
 
 ```bash
-git add openspec/ .claude/skills/ skills-lock.json CLAUDE.md AGENTS.md
+git add openspec/ .claude/commands/ .claude/skills/ .vale.ini cspell.json docs/superpowers/plans/2026-07-26-openspec-setup.md
 git commit -m "build: initialize openspec tree"
 ```
 
-(Include `CLAUDE.md`/`AGENTS.md` only if init actually touched them.)
+(Stage only paths `git status --short` confirms exist; init touched neither `CLAUDE.md` nor `AGENTS.md`, and `skills-lock.json` stays untouched per the Step 5 decision.)
 
 ---
 
@@ -232,7 +232,7 @@ git commit -m "build: recompose change schema"
 
 Open `.vale.ini`. The second section header is a brace-union glob starting with `[{.claude/worktrees/**,`. Add one entry inside the braces, keeping the comma-separated single-line format (`**/openspec/schemas/**` already landed in Task 3):
 
-```
+```text
 **/openspec/changes/**/discovery/**
 ```
 
@@ -310,6 +310,12 @@ In `.github/workflows/ci.yml`, in the `check` job, add a step directly after the
 ```
 
 The `check` job is in `ci-success`'s needs list already, so the gate is transitively required; do not touch the ruleset.
+
+Also add the same step to the `prose` job (after its lint steps), because `check` skips markdown-only pull requests and OpenSpec artifacts are mostly markdown — the two jobs together cover every path class:
+
+```yaml
+- run: pnpm run lint:openspec
+```
 
 - [ ] **Step 5: Verify lefthook end-to-end**
 

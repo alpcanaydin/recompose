@@ -58,11 +58,11 @@ Implementation wraps the subagent-driven development executor and adds the paral
 - A serial merge train integrates clusters one at a time: merge, full suite, then every remaining worktree rebases and reruns. A repair subagent owns red rebases. Design conflicts escalate to a replan.
 - Any cluster can raise a replan: a plan delta plus an ADR delta, a human micro-approval, and a version broadcast to the other clusters.
 - The outer loop must go green on mock traffic before the phase ends.
-- The TDD Guard hook watches every edit through the Vitest reporter and blocks implementation code that has no failing test behind it.
+- The TDD Guard hook intercepts every implementation edit at the tool boundary, reads the latest test state from a Vitest reporter, and blocks code that has no failing test behind it.
 
 ## Verification and pull request pipeline
 
-Two passes run inside the worktree before the pull request opens, one judgment and one mutation, and deterministic gates stay the only merge blockers.
+Two passes run inside the worktree before the pull request opens, one judgment and one mutation, and deterministic gates stay the only automated merge blockers. The merge itself also needs the ruleset's required statuses and the maintainer's final approval, as the merge item below records.
 
 - **Adversarial review workflow**: a reviewer pair with deliberate model diversity, one Fable 5 and one Opus 5, because same-model panels amplify correlated errors. The two reviewers also take distinct lenses, so diversity covers angle as well as model. Disagreements escalate to a Fable 5 judge at maximum effort. Machine-checkable claims follow reproduce-or-drop. A confidence threshold filters the report, starting at the code-review plugin default of 80. Findings get fixed before the first push.
 - **Process assertion**: a deterministic check confirms that two distinct reviewer subagents ran before the commit chain writes the pipeline marker, because orchestrators drift back to self-review.
@@ -110,7 +110,8 @@ flowchart TD
     F["/feature-cycle description"] --> CLS["classifier (Haiku): fills fields,<br>recommends tier via rubric"]
     CLS --> T0["human: tier confirmation,<br>written to manifest frontmatter"]
     T0 -- "trivial" --> DIRECT["do it directly"]
-    T0 -- "standard: no panel,<br>single design and spec agent" --> A1
+    T0 -- "standard: no panel,<br>arms fold into one research pass" --> STD["single subagent writes design<br>and solution design"]
+    STD ==> A1
     T0 -- "full" --> D1
 
     subgraph DISC["discovery: five parallel arms (Opus 5)"]
