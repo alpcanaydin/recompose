@@ -87,7 +87,7 @@ The change adds the missing tier to a stack that already has two. Edit-time enfo
 
 Two properties make this safe to depend on. The derivation is a pure function over the payload plus one existence check, so a specification covers every branch. The fallback keeps a harness that stops writing per-subagent records from breaking the gate: it degrades to today's behavior, and the arming probe detects it.
 
-**Scope.** The configuration lives at `probity.config.ts` in the repository root and declares an allow list: the test-first rule binds to the source trees, `apps/desktop/src` and `packages/contracts/src`, where the inner loop runs. Everything outside them faces no rule at all. Test files, type-level specs, stories, generated modules, and configuration modules stay outside the rule, so writing a test never trips the gate that demands one. Globs resolve against the configuration file's directory, and every worktree carries its own copy of that file, so a worktree resolves to itself with no absolute path anywhere.
+**Scope.** The configuration lives at `probity.config.ts` in the repository root and declares an allow list: the test-first rule binds to the source trees, `apps/*/src/**` and `packages/*/src/**`, where the inner loop runs. Everything outside those trees faces no rule at all. Inside them the negations carve out test files, type-level specs, stories, generated modules, stylesheets, and markup, so writing a test never trips the gate that demands one. A configuration module keeps its exemption by sitting outside the two guarded trees, because no negation names one. Globs resolve against the configuration file's directory, and every worktree carries its own copy of that file, so a worktree resolves to itself with no absolute path anywhere.
 
 **Formatter hook.** The hook keeps its shape and gains the flag that turns an out-of-scope path from a failure into a no-op. A behavior spec runs the configured command against sample payloads and asserts the outcome, which also catches a future hook-contract drift.
 
@@ -157,7 +157,7 @@ The gate pins exact in the manifest and runs from the workspace, so the lockfile
 
 ### 3. The scope is an allow list over the source trees
 
-The inner test-driven loop runs in `apps/desktop/src` and `packages/contracts/src`. Configuration modules, stories, the end-to-end tree, and the tooling under `.claude` follow other rhythms, and guarding them would produce blocks the rule never intended. An allow list also caps the cost, because each in-scope edit that misses the fast path spends a model call.
+The inner test-driven loop runs under `apps/*/src/**` and `packages/*/src/**`. Stories, the end-to-end tree, the tooling under `.claude`, and every configuration module outside those trees follow other rhythms, and guarding them would produce blocks the rule never intended. An allow list also caps the cost, because each in-scope edit that misses the fast path spends a model call.
 
 **Alternatives considered:** guarding everything and excluding by exception, rejected because the exception list is the failure mode the predecessor demonstrated.
 

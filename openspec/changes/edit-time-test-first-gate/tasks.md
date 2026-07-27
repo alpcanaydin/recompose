@@ -38,7 +38,7 @@ Add `--no-error-on-unmatched-pattern` to both the formatter and the linter invoc
 
 > Read the upstream reference before writing anything, because this project ships weekly and memory is stale. Fetch `https://raw.githubusercontent.com/nizos/probity/main/docs/configuration.md` and `https://raw.githubusercontent.com/nizos/probity/main/docs/rules.md`, and follow their current shape rather than any example in this file.
 
-- [ ] **Step 1: Pin the dependency and confirm the binary resolves**
+- [x] **Step 1: Pin the dependency and confirm the binary resolves**
 
 Add `@nizos/probity` at exactly `1.10.0` to the root `package.json` dev dependencies. It's a command a hook runs, not a module any package imports, so it belongs at the root and nowhere else. Install through `pnpm add --save-dev --save-exact --workspace-root`, never by editing the lockfile, which a hook blocks.
 
@@ -46,7 +46,7 @@ The package declares peer dependencies on several syntax-tree language packs thi
 
 Verify: `./node_modules/.bin/probity --help` resolves and prints usage. Record that output in the report, with the flag that selects Claude Code as the host, because Task 4 needs the exact command.
 
-- [ ] **Step 2: Write the scope contract**
+- [x] **Step 2: Write the scope contract**
 
 Create `probity.config.ts` at the repository root, following the upstream flat shape. Bind the test-first rule to the source trees alone:
 
@@ -57,7 +57,7 @@ Writing a test must never trip the rule that demands one. Confirm against the up
 
 Globs resolve against this file's own directory. Never write an absolute path.
 
-- [ ] **Step 3: Clear the gates and commit**
+- [x] **Step 3: Clear the gates and commit**
 
 Nothing imports the binary, so the dead-code gate will flag it. Run `pnpm run lint:dead` and record it in the root workspace's `ignoreDependencies`. Add any new vocabulary to `cspell-words.txt`. Keep `probity.config.ts` under the repository's strict settings with no comments, because the typecheck and lint gates cover the repository root.
 
@@ -81,7 +81,7 @@ git commit -m "build: pin the probity gate and its scope"
 
 Background, already measured, so use it rather than deriving it again. A subagent's `PreToolUse` payload carries the PARENT session's transcript path, byte-identical to the main loop's. The payload also carries `agent_id` and `agent_type`. The subagent's own record sits at the transcript path with the `.jsonl` extension stripped, followed by `/subagents/agent-<agent id>.jsonl`. A live probe confirmed it. The derived file existed and held exactly that subagent's single write. Without the rewrite the gate reads a record holding none of the acting subagent's work, so it denies every implementer edit.
 
-- [ ] **Step 1: Write the failing spec and capture its red run**
+- [x] **Step 1: Write the failing spec and capture its red run**
 
 Colocate `resolve-transcript.test.mts` next to the script, in the style of `.claude/workflows/path-guard/path-guard.test.mts`: `node:test`, `node:assert/strict`, behavior names in domain language, no comments.
 
@@ -95,7 +95,7 @@ Three cases:
 
 Run `pnpm run test:workflows` and paste the full failing output into the task report.
 
-- [ ] **Step 2: Implement to green and land one commit**
+- [x] **Step 2: Implement to green and land one commit**
 
 Keep the script self-contained, matching how `path-guard.mts` exports its pure decision and calls it from a thin main. The main path reads the payload from standard input and resolves the transcript path. It writes the payload back out with that path substituted and runs the gate with it on standard input. It then forwards the gate's standard output, standard error, and exit status without alteration. Standard output is the load-bearing channel: this gate answers every processed payload with exit status 0 and expresses a denial as a structured decision on standard output. Capturing that stream instead of passing it through turns the gate off while every check stays green, so treat the exit status as necessary but never sufficient.
 
@@ -119,19 +119,19 @@ git commit -m "feat: resolve the subagent transcript for the gate"
 - Consumes: the resolver command from Task 3 and the scope contract from Task 2.
 - Produces: the armed hook and the probe evidence in the task report.
 
-- [ ] **Step 1: Close the two scope holes the Task 2 review found**
+- [x] **Step 1: Close the two scope holes the Task 2 review found**
 
 The committed allow list names `.ts` and `.tsx`, so any other extension under a guarded tree arrives unguarded and no gate says so. This repository writes new scripts as `.mts`, so that hole is live. Widen the positive globs to the trees themselves and negate the non-source extensions instead. Second, `packages/contracts/src` names the only package that exists today. Use a pattern that covers the next one.
 
 Prove the change rather than asserting it. Exercise the edited configuration through the tool's own loader over a path list, the way the Task 2 report did, and paste the table into your report. The list must include an `.mts` path under a guarded tree, a stylesheet, a package that doesn't exist yet, and one path from each existing negation.
 
-- [ ] **Step 2: Arm the hook**
+- [x] **Step 2: Arm the hook**
 
 Add a `PreToolUse` entry matching the editing tools, running the resolver through `node`, the way the continuous integration job runs the path guard. Match the existing hooks' style in that file, and set an explicit timeout the way the other entries do. Don't match shell commands: Decision 6 in `design.md` states that boundary and its reason. Leave every existing hook untouched.
 
 A hook entry loads at session start, so the maintainer restarts the session before the probe.
 
-- [ ] **Step 3: Probe both directions and record the evidence**
+- [x] **Step 3: Probe both directions and record the evidence**
 
 A gate that blocks everything and a gate that blocks nothing both look quiet from the outside, so prove each direction and paste every outcome into the report:
 
@@ -142,7 +142,7 @@ Read the verdict on standard output, never from the exit status. This gate retur
 
 Revert any scratch edit the probe made.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Verify: the commit passes lefthook without bypass, and `pnpm run test:workflows` still passes with the new settings content.
 
@@ -161,19 +161,19 @@ git commit -m "build: arm the edit-time test-first gate"
 
 - Consumes: the armed gate from Task 4 and Decision 7 from `design.md`.
 
-- [ ] **Step 1: Move the gate out of the deferred list**
+- [x] **Step 1: Move the gate out of the deferred list**
 
 The Enforcement rollout note in `SKILL.md` lists the gate among the deferred machinery. Move it to the shipped sentence and name where it lives: a pinned dependency, a resolver, a `PreToolUse` hook, and `probity.config.ts` for the scope.
 
-- [ ] **Step 2: Make the mechanism concrete in the implementation reference**
+- [x] **Step 2: Make the mechanism concrete in the implementation reference**
 
 The Red-run evidence section describes the gate in the abstract. Replace that with the mechanism. The gate reads the acting worker's own record, it covers subagent tool calls, and its scope is the source trees. It sits above the deterministic gates rather than replacing them. State the operational consequence for implementers: the failing test run must happen in the same session as the edit.
 
-- [ ] **Step 3: Add the incremental convention to the verification reference**
+- [x] **Step 3: Add the incremental convention to the verification reference**
 
 The Commit chain section describes the review pass. Add the convention: the first pass takes the pull request base, and each later pass takes the previous reviewed head as `baseSha`, so it reviews the increment. State the ceiling in one line, that the guard can't walk the chain, and point at the record.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Verify: the commit passes lefthook without bypass.
 
@@ -193,15 +193,15 @@ git commit -m "docs: shipped tdd gate and incremental review"
 
 - Consumes: every decision from `design.md` in this change.
 
-- [ ] **Step 1: Write the record through the new-adr skill**
+- [x] **Step 1: Write the record through the new-adr skill**
 
 Cover the three-tier enforcement stack and why the edit-time tier is probabilistic rather than deterministic. Cover both tool evaluations. The rollout note named the predecessor, its maintainer steers new projects away from it, and its single-project-root state storage collides with parallel worktree clusters. Its successor carries no state, but the measurement showed a subagent's payload hands over the parent record, and the resolver is what closes that. Record the resolver's ceiling: the derived path is a convention the harness never documented, and the fallback plus the arming probe are the containment. Cover the pinned dependency over the plugin, the allow-list scope, and the editing-tools-only matcher with the shell path named as the upgrade. Cover the incremental review convention with its chain ceiling. Record the deliberate test gap: deterministic specs cover the resolver and the formatter hook, and the gate's own verdict stays a recorded arming probe. Don't cite the compliance figure from the frozen design note, because the research pass found no primary source for it.
 
-- [ ] **Step 2: Update the index**
+- [x] **Step 2: Update the index**
 
 Add the row to `docs/adr/README.md` in the existing format.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Verify: the commit passes lefthook without bypass.
 
@@ -214,7 +214,7 @@ git commit -m "docs: adr for the edit-time test gate"
 
 **Files:** none (process step).
 
-- [ ] **Step 1: Rules review and full gate sweep**
+- [x] **Step 1: Rules review and full gate sweep**
 
 Run a `rules-reviewer` pass over the branch diff and fix its findings in the worktree. Then run `pnpm run lint:openspec`, `pnpm run lint:prose`, `pnpm run lint:spell`, `pnpm run typecheck`, `pnpm run test`, and `pnpm run test:workflows`. All exit 0.
 
