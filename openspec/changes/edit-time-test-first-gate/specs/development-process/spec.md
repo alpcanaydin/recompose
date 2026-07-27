@@ -8,22 +8,27 @@ The behavioral contract of the recompose feature pipeline: how a feature idea be
 
 ### Requirement: Edit-time test-first gate
 
-The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it. The gate reads the recorded outcome of the session's own test run, never a claim in a prompt. Each session and each worktree gets its own view of that outcome, so one cluster's test state never answers for another's. Every edit-time gate declares a scope and leaves a path outside that scope untouched, so documents, specifications, and tooling definitions stay editable.
+The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays a probabilistic tier above the deterministic gates and never replaces them.
 
 #### Scenario: an implementation edit runs ahead of its test
 
 - When a subagent edits an in-scope source file and no failing test covers the change
 - Then the gate blocks the tool call and names the missing failing test
 
-#### Scenario: an edit lands outside a gate's scope
+#### Scenario: a subagent gets judged on its own record
 
-- When an edit targets a path outside an edit-time gate's declared scope
-- Then that gate passes the edit through and reports no failure
+- When the gate evaluates an edit a subagent made
+- Then it reads that subagent's own record
+- And a record the harness stops providing falls back to the record the payload names
 
-#### Scenario: two clusters run the gate at once
+### Requirement: Gate scope
 
-- When two subagents in separate worktrees edit in-scope files at the same time
-- Then each gate decision reads that subagent's own test outcome
+Every gate the pipeline runs MUST declare a scope and leave an action outside that scope untouched. A gate that reports failure for a path it doesn't cover is a defect, because it blocks legitimate work and teaches the pipeline to route around its own gates.
+
+#### Scenario: a gate meets a path outside its scope
+
+- When a gate runs against a path its own configuration excludes
+- Then the gate reports success and changes nothing
 
 ## MODIFIED Requirements
 

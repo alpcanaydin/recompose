@@ -1,8 +1,8 @@
-# Tdd-guard-hook design
+# Edit-time-test-first-gate design
 
 ## Header and change linkage
 
-- Change id: tdd-guard-hook
+- Change id: edit-time-test-first-gate
 - Schema: recompose
 - Proposal: [proposal.md](proposal.md)
 - Specs: [specs/development-process/spec.md](specs/development-process/spec.md)
@@ -32,7 +32,10 @@ Two defects in the surrounding tooling sit in the way. The `PostToolUse` formatt
   That banner alone moved the tool choice, and Decision 1 records the rest of the case.
 
 - Storage audit of the rejected tool, confirmed against its source: fixed filenames in one project-root data directory, plain unlocked writes, and no session or subagent component in the path. The pipeline runs many implementers in separate worktrees at once, so one cluster's test state would answer for another's. That mismatch is disqualifying rather than inconvenient.
-- Probity architecture, confirmed against its own decision record: "Host coding agents already write a session transcript to disk; Probity reads it and carries no session state." No storage directory, no socket, no lock file, and no reporter. Each hook call is a function of the payload and the configuration, which is what makes concurrent worktrees safe.
+- Probity architecture, confirmed against its own decision record: "Host coding agents already write a session transcript to disk; Probity reads it and carries no session state." No storage directory, no socket, no lock file, and no reporter. That removes the predecessor's failure mode, and an early reading treated it as proof that concurrent worktrees are safe. That reading was wrong, and the next two entries record why.
+- Reader audit: `src/vendors/claude-code/transcript.ts` parses each entry against a schema of `{type, message.content}` alone. It never reads a working directory, a session identifier, or a subagent identifier, so it holds no field that separates one work stream from another inside whatever record it gets handed.
+- Live measurement, and the one that settled the design. A payload-logging `PreToolUse` hook captured one main-loop write and one subagent write. The `transcript_path` was byte-identical for both: the parent session's record. The payload does carry `agent_id` and `agent_type`. A gate reading the parent record would judge an implementer against a record that holds none of that implementer's work, so it would deny every implementer edit.
+- Derivation check: the per-subagent record exists at the payload's transcript path with its extension stripped, followed by `subagents/agent-<agent id>.jsonl`. Confirmed against the probe's own identifiers, and the file held exactly that subagent's single write. The gap is which record reaches the gate, not whether the record exists, which is what makes a small resolver enough.
 - Probity scoping model: an allow list shaped like a flat lint configuration, with `files` globs anchored to the configuration file's directory and discovery walking up from the working directory. The rejected tool offered a deny list alone, which produced a trap this change already hit: a pattern covering `.claude` also covers `.claude/worktrees`, so the gate went inert for every worktree it targets. An allow list removes the trap outright.
 - Registry metadata: `@nizos/probity` sits at 1.10.0, published 2026-07-08, permissively licensed, Node 22 or newer, with a `probity` binary. Sixteen releases in three months, and the repository took a push the day this change opened.
 - Rule audit: four of the five built-in rules evaluate in code. The test-first rule makes a model call per matching edit through the vendor software development kit, with an opt-in syntax-tree fast path for a single added test. Decision 4 places that call in the tier stack.
@@ -78,7 +81,11 @@ The change adds the missing tier to a stack that already has two. Edit-time enfo
 
 **Installation.** `@nizos/probity` pins exact as a root development dependency, and the hook command runs the workspace binary at `./node_modules/.bin/probity`, matching how the existing formatter hook calls its tools. The version lands in the lockfile, Renovate tracks it, and no hook fire reaches the network. The upstream plugin exists and installs in two commands, but its hook runs the package unpinned, which sits against this repository's pinning posture.
 
-**How the decision gets made.** Claude Code hands each `PreToolUse` call the path of the session's transcript. Probity parses that transcript, reconstructs the recorded tool calls and their results, and learns from them whether the session ran its tests and what came back. Nothing writes shared state, so two clusters in two worktrees each answer from their own record. This is the property that decides the tool choice.
+**How the decision gets made.** Claude Code hands each `PreToolUse` call the path of a transcript. The gate parses it, reconstructs the recorded tool calls and their results, and learns from them whether the caller ran its tests and what came back. Nothing writes shared state, so no two callers corrupt each other.
+
+**The resolver.** The payload names the parent session's transcript even when a subagent makes the call. The gate would then read a record holding none of that subagent's work. A resolver sits between the hook and the gate and fixes the input. It reads the payload, and when `agent_id` is present it derives that subagent's own record by stripping the extension from the transcript path and appending `subagents/agent-<agent id>.jsonl`. It rewrites the payload's transcript path only when that file exists, and otherwise passes the payload through unchanged. It then runs the gate on the result and forwards the gate's output and exit status untouched.
+
+Two properties make this safe to depend on. The derivation is a pure function over the payload plus one existence check, so a specification covers every branch. The fallback keeps a harness that stops writing per-subagent records from breaking the gate: it degrades to today's behavior, and the arming probe detects it.
 
 **Scope.** The configuration lives at `probity.config.ts` in the repository root and declares an allow list: the test-first rule binds to the source trees, `apps/desktop/src` and `packages/contracts/src`, where the inner loop runs. Everything outside them faces no rule at all. Test files, type-level specs, stories, generated modules, and configuration modules stay outside the rule, so writing a test never trips the gate that demands one. Globs resolve against the configuration file's directory, and every worktree carries its own copy of that file, so a worktree resolves to itself with no absolute path anywhere.
 
@@ -104,13 +111,15 @@ The exact rule names and option keys come from the upstream reference at impleme
 - **Edit with no failing test.** The hook denies the tool call and returns the reason to the caller. The subagent writes the test first and retries.
 - **No test run in the transcript.** The gate has nothing to read, so it treats the edit as unproven and denies it. The recovery is a test run inside the same session.
 - **Out-of-scope path.** No rule binds, so the edit proceeds. Silence here is the correct outcome, not a swallowed failure.
-- **Validation failure.** A model or configuration error leaves the gate unable to rule, and it fails closed. A closed failure stops work in the open instead of passing an unproven edit, and the arming probe in Task 3 makes both broken states visible.
+- **Validation failure.** A model or configuration error leaves the gate unable to rule, and it fails closed. A closed failure stops work in the open instead of passing an unproven edit, and the arming probe in Task 4 makes both broken states visible.
 - **Formatter hook on an out-of-scope path.** With the flag in place the linter reports success and writes nothing, so the hook returns 0 and the edit stands.
 
 ## File map
 
 - `.claude/settings.json`: adds the gate hook, and adds the flag to the formatter hook (modify)
 - `probity.config.ts`: the guarded scope as an allow list (create)
+- `.claude/workflows/hooks/resolve-transcript.mts`: the pure derivation plus the pipe that runs the gate (create)
+- `.claude/workflows/hooks/resolve-transcript.test.mts`: the specification for the derivation's three branches (create)
 - `.claude/workflows/hooks/hook-scope.test.mts`: the behavior spec for the formatter hook's scope invariant (create)
 - `package.json`: pins the gate dependency and widens the workflow test glob (modify)
 - `knip.json`: records the gate binary as a dependency no module imports (modify)
@@ -130,7 +139,7 @@ The exact rule names and option keys come from the upstream reference at impleme
 
 ### 1. Probity replaces the tool the rollout note named
 
-The rollout note named `tdd-guard`, and verification turned that choice over. Its README steers new projects to Probity. Its storage keeps test state in fixed filenames under one project root, with unlocked writes and no session or subagent key. This pipeline runs many implementers in separate worktrees at once, so that storage model lets one cluster's state answer for another's. Probity carries no state and reads the calling session's own transcript, which makes the concurrent case correct by construction rather than by luck. The scoping model settles it further. An allow list expresses "guard the source trees" directly. A deny list produced a live trap, where excluding `.claude` also excluded every worktree beneath it.
+The rollout note named `tdd-guard`, and verification turned that choice over. Its README steers new projects to Probity. Its storage keeps test state in fixed filenames under one project root, with unlocked writes and no session or subagent key. This pipeline runs many implementers in separate worktrees at once, so that storage model lets one cluster's state answer for another's, and no configuration fixes it. Probity carries no state, which removes that failure outright. It doesn't by itself solve the concurrent case, as the measurement in the discovery inputs shows, but the remaining gap is one resolvable input rather than a storage design. Decision 9 covers that. The scoping model settles the rest. An allow list expresses "guard the source trees" directly. A deny list produced a live trap, where excluding `.claude` also excluded every worktree beneath it.
 
 **Alternatives considered:** staying on `tdd-guard`, rejected on the concurrency mismatch and the upstream steer. Deferring the gate entirely, rejected because the maintained replacement removes the objections that would have justified waiting.
 
@@ -178,38 +187,45 @@ The formatter hook's command lives in a settings file this change owns, so a spe
 
 **Alternatives considered:** a glob-matching spec over the configuration, rejected as a re-implementation of the matcher that proves nothing about the gate. No spec at all, rejected because a broken hook that gave no signal has already cost this repository a defect.
 
+### 9. A resolver hands the gate the right record
+
+The payload names the parent session's transcript even for a subagent call. The gate would then read a record holding none of the acting subagent's work, and deny every implementer edit. The payload also carries the subagent's identity, and the per-subagent record sits at a path derived from the transcript path plus that identity. A resolver in front of the gate rewrites the path when the derived record exists and passes the payload through when it doesn't. Twelve lines of derivation buy the property the whole design rests on, and the fallback keeps a harness change from turning into an outage.
+
+**Alternatives considered:** waiting for upstream to read the identity itself, rejected because that tracker never mentions subagents, and the pipeline needs the gate now. One top-level session per worktree, rejected because it replaces the executor's dispatch model to work around twelve lines. Running the clusters one at a time, rejected because it trades a contract the living specification already states for a probabilistic gate.
+
 ## Test matrix
 
-| Layer          | What this layer proves (or why none)                                                                                                             | Check command             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
-| Unit           | The configured formatter hook returns success for a path outside the linter's scope and failure for a real lint error                            | `pnpm run test:workflows` |
-| Integration    | None. The gate's decision path runs a third-party binary against a model, so an automated run would spend a model call and return a soft verdict | none                      |
-| End-to-end     | None. No user-facing behavior changes, and the pipeline surface has no scenario                                                                  | none                      |
-| Property       | None. The hook decision has no invariant over a generated input space that the three-case spec misses                                            | none                      |
-| Mutation scope | None. The mutation runner covers the application packages, and `.claude` stays outside its scope, matching the precedent the path guard set      | none                      |
+| Layer          | What this layer proves (or why none)                                                                                                                                                                                                                                                              | Check command             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Unit           | The transcript derivation returns the subagent's record when it exists, the payload's own path when the payload names no subagent, and the payload's own path when the derived record is missing. The formatter hook returns success outside the linter's scope and failure for a real lint error | `pnpm run test:workflows` |
+| Integration    | None. The gate's decision path runs a third-party binary against a model, so an automated run would spend a model call and return a soft verdict                                                                                                                                                  | none                      |
+| End-to-end     | None. No user-facing behavior changes, and the pipeline surface has no scenario                                                                                                                                                                                                                   | none                      |
+| Property       | None. The hook decision has no invariant over a generated input space that the three-case spec misses                                                                                                                                                                                             | none                      |
+| Mutation scope | None. The mutation runner covers the application packages, and `.claude` stays outside its scope, matching the precedent the path guard set                                                                                                                                                       | none                      |
 
 ## Task decomposition hooks
 
 - Task 1: Restore edits under `.claude` (depends on: none, hands off: a working edit path for every later task, plus the spec directory the test script reaches)
 - Task 2: Pin the gate and declare its scope (depends on: Task 1, hands off: the dependency and the committed scope contract)
-- Task 3: Arm the gate and prove both failure directions (depends on: Task 2, hands off: the hook entry and the probe evidence)
-- Task 4: Fold the mechanism into the skill (depends on: Task 3, hands off: the shipped-gate language and the incremental convention)
-- Task 5: Process record (depends on: Task 4, hands off: the record every later reader cites)
-- Task 6: Verification and pull request (depends on: Task 5, hands off: the pushed branch and the review status)
+- Task 3: Build the transcript resolver (depends on: Task 2, hands off: the command the hook entry runs)
+- Task 4: Arm the gate and prove both directions (depends on: Task 3, hands off: the hook entry and the probe evidence)
+- Task 5: Fold the mechanism into the skill (depends on: Task 4, hands off: the shipped-gate language and the incremental convention)
+- Task 6: Process record (depends on: Task 5, hands off: the record every later reader cites)
+- Task 7: Verification and pull request (depends on: Task 6, hands off: the pushed branch and the review status)
 
 ## Risks
 
-- [Risk] The gate is three months old and ships weekly, so an update can change behavior → Mitigation: the exact pin plus Renovate puts every update through review, and the arming probe in Task 3 becomes the check a reviewer reruns.
+- [Risk] The gate is three months old and ships weekly, so an update can change behavior → Mitigation: the exact pin plus Renovate puts every update through review, and the arming probe in Task 4 becomes the check a reviewer reruns.
 - [Risk] A model call on each in-scope edit adds latency and cost → Mitigation: the allow list holds the rule to two source trees, and the upstream fast path covers the common single-test edit.
-- [Risk] A validation failure fails closed and stops all in-scope work → Mitigation: the probe in Task 3 gives the maintainer a one-command way to tell a broken gate from a working one, and the scope keeps the blast radius off documents and tooling.
-- [Risk] The transcript may not carry a subagent's own test run, which would make the gate wrong for the exact case it targets → Mitigation: Task 3 probes this first and reports the evidence. A negative result is a stop-and-report, not a workaround.
+- [Risk] A validation failure fails closed and stops all in-scope work → Mitigation: the probe in Task 4 gives the maintainer a one-command way to tell a broken gate from a working one, and the scope keeps the blast radius off documents and tooling.
+- [Risk] The per-subagent record path is a convention the harness never documented, so a harness change breaks the derivation → Mitigation: the resolver falls back to the payload's own path when the derived record is missing, which restores today's behavior rather than an outage, and the arming probe in Task 4 is the check that detects it.
 - [Risk] The gate binary is a dependency no module imports, so the dead-code gate flags it → Mitigation: Task 2 records it in the dead-code configuration with the hook as its consumer.
 - [Risk] Shell-driven writes skip the gate → Mitigation: Decision 6 states the boundary and names the matcher widening as the upgrade.
 - [Risk] The incremental convention lets a reviewed range skip commits → Mitigation: the record names the ceiling and its upgrade path, inside the drift-protection model record 0039 already set.
 
 ## Migration and rollout
 
-The scope contract and the dependency land before the hook, so the first armed edit reads a configuration that already exists. Task 3 then adds the hook entry and runs the probe in both directions. An in-scope edit with no failing test must stop, and the same edit after a failing test must proceed. A new hook entry may load only after a session restart. Rollback is one line: remove the hook entry and the gate stops firing, leaving a pinned dependency and a configuration file that do nothing.
+The scope contract and the dependency land before the hook, so the first armed edit reads a configuration that already exists. Task 4 then adds the hook entry and runs the probe in both directions. An in-scope edit with no failing test must stop, and the same edit after a failing test must proceed. A new hook entry may load only after a session restart. Rollback is one line: remove the hook entry and the gate stops firing, leaving a pinned dependency and a configuration file that do nothing.
 
 ## Open questions
 
