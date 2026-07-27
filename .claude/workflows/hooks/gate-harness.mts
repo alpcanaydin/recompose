@@ -35,9 +35,19 @@ export const DENIAL_DECISION = JSON.stringify({
   },
 });
 
-const RESOLVER_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'resolve-transcript.mts');
+const HOOKS_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 
-const RESOLVER_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks', 'resolve-transcript.mts');
+const HOOKS_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks');
+
+const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
+
+const RESOLVER_MODULE_NAMES: readonly string[] = [
+  RESOLVER_SCRIPT_NAME,
+  'hook-payload.mts',
+  'owning-checkout.mts',
+];
+
+const RESOLVER_PATH_IN_CHECKOUT = join(HOOKS_PATH_IN_CHECKOUT, RESOLVER_SCRIPT_NAME);
 
 const scratchWorkspaces: string[] = [];
 
@@ -57,10 +67,13 @@ export function scratchWorkspace(): string {
 
 export function checkoutWithResolver(): string {
   const checkout = scratchWorkspace();
-  const resolver = join(checkout, RESOLVER_PATH_IN_CHECKOUT);
+  const hooks = join(checkout, HOOKS_PATH_IN_CHECKOUT);
 
-  mkdirSync(dirname(resolver), { recursive: true });
-  copyFileSync(RESOLVER_SCRIPT, resolver);
+  mkdirSync(hooks, { recursive: true });
+
+  for (const moduleName of RESOLVER_MODULE_NAMES) {
+    copyFileSync(join(HOOKS_DIRECTORY, moduleName), join(hooks, moduleName));
+  }
 
   return checkout;
 }

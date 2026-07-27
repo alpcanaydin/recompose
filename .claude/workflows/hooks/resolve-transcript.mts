@@ -1,7 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { readEditedPath } from './hook-payload.mts';
+import { owningCheckoutRoot } from './owning-checkout.mts';
 
 type SubagentAwarePayload = {
   readonly transcript_path: string;
@@ -67,33 +70,14 @@ export function resolveTranscriptPath(payload: SubagentAwarePayload, search: Rec
   );
 }
 
-function ancestorDirectories(startDirectory: string): readonly string[] {
-  const directories = [startDirectory];
-  let directory = startDirectory;
-
-  while (dirname(directory) !== directory) {
-    directory = dirname(directory);
-    directories.push(directory);
-  }
-
-  return directories;
-}
-
 export function gateConfigurationPath(
   editedPath: string | undefined,
   checkoutRoot: string,
   configurationExists: (path: string) => boolean,
 ): string {
-  const checkoutConfiguration = join(checkoutRoot, GATE_CONFIGURATION_NAME);
-
-  if (editedPath === undefined) {
-    return checkoutConfiguration;
-  }
-
-  return (
-    ancestorDirectories(dirname(resolve(checkoutRoot, editedPath)))
-      .map((directory) => join(directory, GATE_CONFIGURATION_NAME))
-      .find(configurationExists) ?? checkoutConfiguration
+  return join(
+    owningCheckoutRoot(editedPath, checkoutRoot, GATE_CONFIGURATION_NAME, configurationExists),
+    GATE_CONFIGURATION_NAME,
   );
 }
 
@@ -160,19 +144,6 @@ function announceMissingSubagentRecord(payload: SubagentAwarePayload, resolved: 
   console.error(
     `the subagent record ${soughtRecord} is missing, so the test-first gate reads the session transcript ${payload.transcript_path} instead`,
   );
-}
-
-function readToolInput(payload: object): object {
-  const toolInput = 'tool_input' in payload ? payload.tool_input : undefined;
-
-  return typeof toolInput === 'object' && toolInput !== null ? toolInput : {};
-}
-
-function readEditedPath(payload: object): string | undefined {
-  const toolInput = readToolInput(payload);
-  const editedPath = 'file_path' in toolInput ? toolInput.file_path : '';
-
-  return typeof editedPath === 'string' && editedPath.length > 0 ? editedPath : undefined;
 }
 
 function buildGateInvocation(): GateInvocation {
