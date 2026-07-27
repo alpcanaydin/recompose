@@ -35,6 +35,7 @@
     "@commitlint/config-conventional": "21.2.0",
     "@feature-sliced/steiger-plugin": "0.7.0",
     "@fission-ai/openspec": "1.6.0",
+    "@nizos/probity": "1.10.0",
     "@playwright/mcp": "0.0.78",
     "@steiger/toolkit": "0.2.3",
     "@stylistic/eslint-plugin": "5.10.0",

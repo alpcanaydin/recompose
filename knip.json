@@ -18,7 +18,7 @@
       "ignoreDependencies": ["fast-check"]
     },
     ".": {
-      "entry": ["steiger.config.ts"],
+      "entry": ["steiger.config.ts", "probity.config.ts"],
       "ignore": [".claude/workflows/**"],
       "ignoreDependencies": ["@playwright/mcp", "@steiger/toolkit", "@swc/core"],
       "ignoreBinaries": ["mise"]
