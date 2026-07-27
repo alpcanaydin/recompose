@@ -9,7 +9,7 @@ pre-commit:
       run: mise install -q && mise exec -- gitleaks git --staged --redact --no-banner
     - name: lint
       priority: 1
-      glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
+      glob: '*.{ts,tsx,mts,js,jsx,mjs,cjs}'
       run: ./node_modules/.bin/oxlint --fix --deny-warnings --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: boundaries
@@ -39,7 +39,7 @@ pre-commit:
       run: pnpm run lint:openspec
     - name: fmt
       priority: 2
-      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'
+      glob: '*.{ts,tsx,mts,js,jsx,mjs,cjs,json,md,yaml,yml,html,css}'
       run: ./node_modules/.bin/oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: typecheck

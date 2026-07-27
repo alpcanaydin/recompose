@@ -18,11 +18,13 @@ const LINTER_BINARY = 'oxlint';
 
 const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
 
-const IGNORED_FIXTURE = '.claude/workflows/hooks/hook-scope-ignored-fixture.ts';
+const IGNORED_FIXTURE = '.claude/workflows/hook-scope-ignored-fixture.ts';
 
 const CLEAN_FIXTURE = 'hook-scope-clean-fixture.ts';
 
 const LINT_ERROR_FIXTURE = 'hook-scope-lint-error-fixture.ts';
+
+const LINT_ERROR_MODULE_FIXTURE = 'hook-scope-lint-error-fixture.mts';
 
 const CLEAN_FIXTURE_SOURCE = 'export const hookScopeFixtureValue = 1;\n';
 
@@ -125,12 +127,14 @@ before(() => {
   writeFileSync(fixturePath(IGNORED_FIXTURE), LINT_ERROR_FIXTURE_SOURCE, 'utf8');
   writeFileSync(fixturePath(CLEAN_FIXTURE), CLEAN_FIXTURE_SOURCE, 'utf8');
   writeFileSync(fixturePath(LINT_ERROR_FIXTURE), LINT_ERROR_FIXTURE_SOURCE, 'utf8');
+  writeFileSync(fixturePath(LINT_ERROR_MODULE_FIXTURE), LINT_ERROR_FIXTURE_SOURCE, 'utf8');
 });
 
 after(() => {
   rmSync(fixturePath(IGNORED_FIXTURE), { force: true });
   rmSync(fixturePath(CLEAN_FIXTURE), { force: true });
   rmSync(fixturePath(LINT_ERROR_FIXTURE), { force: true });
+  rmSync(fixturePath(LINT_ERROR_MODULE_FIXTURE), { force: true });
   rmSync(DIRECTORY_OUTSIDE_CHECKOUT, { recursive: true, force: true });
 });
 
@@ -149,6 +153,12 @@ describe('post-edit format hook: an edited source file the linter finds clean', 
 describe('post-edit format hook: an edited source file carrying a lint error', () => {
   it('blocks the edit', () => {
     assert.equal(exitCodeForEditedFile(LINT_ERROR_FIXTURE, REPOSITORY_ROOT), 2);
+  });
+});
+
+describe('post-edit format hook: an edited module script carrying a lint error', () => {
+  it('blocks the edit', () => {
+    assert.equal(exitCodeForEditedFile(LINT_ERROR_MODULE_FIXTURE, REPOSITORY_ROOT), 2);
   });
 });
 

@@ -56,17 +56,26 @@ function readPayloadObject(raw: string): object {
   return parsed;
 }
 
-function readSubagentAwarePayload(payload: object): SubagentAwarePayload {
+function readTranscriptPath(payload: object): string {
   const transcriptPath = 'transcript_path' in payload ? payload.transcript_path : undefined;
-  const agentId = 'agent_id' in payload ? payload.agent_id : undefined;
 
   if (typeof transcriptPath !== 'string' || transcriptPath.length === 0) {
     throw new Error('the payload names no transcript path');
   }
 
+  return transcriptPath;
+}
+
+function readAgentId(payload: object): string | undefined {
+  const agentId = 'agent_id' in payload ? payload.agent_id : undefined;
+
+  return typeof agentId === 'string' ? agentId : undefined;
+}
+
+function readSubagentAwarePayload(payload: object): SubagentAwarePayload {
   return {
-    transcript_path: transcriptPath,
-    agent_id: typeof agentId === 'string' ? agentId : undefined,
+    transcript_path: readTranscriptPath(payload),
+    agent_id: readAgentId(payload),
   };
 }
 

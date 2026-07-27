@@ -86,7 +86,13 @@ function readChangedPaths(baseSha: string, headSha: string): string[] {
 function readStatusContexts(repo: string, headSha: string): string[] {
   const output = execFileSync(
     'gh',
-    ['api', '--paginate', `repos/${repo}/commits/${headSha}/statuses`, '--jq', '.[] | select(.state == "success") | .context'],
+    [
+      'api',
+      '--paginate',
+      `repos/${repo}/commits/${headSha}/statuses`,
+      '--jq',
+      '.[] | select(.state == "success") | .context',
+    ],
     { encoding: 'utf8' },
   );
 
