@@ -25,7 +25,7 @@ Before the commit chain, a `rules-reviewer` makes one read-only pass over the di
 
 ## Commit chain
 
-Write the commit chain in caveman-commit style. The task reports carry the red runs, so the commit chain stays green at every commit. The `review-pr` workflow posts the `feature-cycle/reviewed` commit status on the reviewed head commit through `gh api`, once the process assertion passes.
+Write the commit chain in caveman-commit style. The task reports carry the red runs, so the commit chain stays green at every commit. The `review-pr` workflow posts the `feature-cycle/reviewed` commit status on the reviewed head commit through `gh api`, once the process assertion passes and no finding survives.
 
 The **path guard** runs deterministically in continuous integration. It reads the `feature-cycle/reviewed` status on the head commit. A pull request that touches blast-radius paths without that status fails the guard, which names the heavy pass as the way to clear it. A new push carries no status, so a re-review follows any change. Blast-radius paths are the Electron main and preload sources, the contracts package, storage, workflow definitions, and package manifests.
 
