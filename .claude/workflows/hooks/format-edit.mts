@@ -3,8 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { configurationRoot } from './configuration-scope.mts';
 import { readEditedPath } from './hook-payload.mts';
-import { owningCheckoutRoot } from './owning-checkout.mts';
+import { repositoryDirectories } from './repository-scope.mts';
 
 const CHECKOUT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
@@ -46,16 +47,15 @@ function readPayloadObject(raw: string): object {
   }
 }
 
-function runInCheckout(
-  checkout: string,
+function runFromCheckout(
   binaryName: string,
-  configurationName: string,
+  configurationPath: string,
   editedPath: string,
 ): SpawnSyncReturns<string> {
   return spawnSync(
-    join(checkout, 'node_modules', '.bin', binaryName),
-    [UNMATCHED_PATTERN_ARGUMENT, '--config', join(checkout, configurationName), editedPath],
-    { cwd: checkout, encoding: 'utf8' },
+    join(CHECKOUT_ROOT, 'node_modules', '.bin', binaryName),
+    [UNMATCHED_PATTERN_ARGUMENT, '--config', configurationPath, editedPath],
+    { cwd: CHECKOUT_ROOT, encoding: 'utf8' },
   );
 }
 
@@ -64,20 +64,24 @@ function blockEdit(reason: string): never {
   process.exit(BLOCKING_EXIT_STATUS);
 }
 
-function reportLintOutcome(
-  lint: SpawnSyncReturns<string>,
-  checkout: string,
-  editedPath: string,
-): void {
+function reportLintOutcome(lint: SpawnSyncReturns<string>, editedPath: string): void {
   if (lint.error !== undefined) {
     blockEdit(
-      `${LINTER_BINARY_NAME} did not start in ${checkout}, so ${editedPath} went unlinted: ${lint.error.message}`,
+      `${LINTER_BINARY_NAME} did not start in ${CHECKOUT_ROOT}, so ${editedPath} went unlinted: ${lint.error.message}`,
     );
   }
 
   if (lint.status !== 0) {
     blockEdit(`${lint.stdout}${lint.stderr}`);
   }
+}
+
+function governingRoot(editedPath: string): string {
+  return configurationRoot(editedPath, CHECKOUT_ROOT, {
+    configurationName: LINTER_CONFIGURATION_NAME,
+    configurationExists: existsSync,
+    reachableDirectories: (start) => repositoryDirectories(start, CHECKOUT_ROOT),
+  });
 }
 
 function main(): void {
@@ -87,17 +91,11 @@ function main(): void {
     return;
   }
 
-  const checkout = owningCheckoutRoot(
-    editedPath,
-    CHECKOUT_ROOT,
-    LINTER_CONFIGURATION_NAME,
-    existsSync,
-  );
+  const root = governingRoot(editedPath);
 
-  runInCheckout(checkout, FORMATTER_BINARY_NAME, FORMATTER_CONFIGURATION_NAME, editedPath);
+  runFromCheckout(FORMATTER_BINARY_NAME, join(root, FORMATTER_CONFIGURATION_NAME), editedPath);
   reportLintOutcome(
-    runInCheckout(checkout, LINTER_BINARY_NAME, LINTER_CONFIGURATION_NAME, editedPath),
-    checkout,
+    runFromCheckout(LINTER_BINARY_NAME, join(root, LINTER_CONFIGURATION_NAME), editedPath),
     editedPath,
   );
 }

@@ -1,20 +1,22 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { fileURLToPath } from 'node:url';
 
-const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-
-const PROJECT_DIRECTORY_PLACEHOLDER = '${CLAUDE_PROJECT_DIR}';
-
-const EDITING_TOOL_MATCHER = 'Edit|Write';
+import {
+  configuredHook,
+  isRecord,
+  LINT_ERROR_SOURCE,
+  outcomeForPath,
+  readProperty,
+  readStrings,
+  REPOSITORY_ROOT,
+  runHook,
+  scratchDirectory,
+  worktreeOfRepository,
+} from './format-harness.mts';
 
 const GATED_TOOL_MATCHER = 'Edit|Write|NotebookEdit';
-
-const FORMAT_SCRIPT_NAME = 'format-edit.mts';
 
 const LAUNCHER_SCRIPT_NAME = 'launch-gate.mjs';
 
@@ -28,13 +30,11 @@ const LINT_ERROR_MODULE_FIXTURE = 'hook-scope-lint-error-fixture.mts';
 
 const CLEAN_FIXTURE_SOURCE = 'export const hookScopeFixtureValue = 1;\n';
 
-const LINT_ERROR_FIXTURE_SOURCE = 'export const hookScopeFixtureValue: any = 1;\n';
-
-const DIRECTORY_OUTSIDE_CHECKOUT = mkdtempSync(join(tmpdir(), 'hook-scope-'));
+const DIRECTORY_OUTSIDE_CHECKOUT = scratchDirectory('hook-scope-');
 
 const UNANCHORED_LINT_ERROR_FIXTURE = join(DIRECTORY_OUTSIDE_CHECKOUT, 'unanchored-fixture.ts');
 
-const SIBLING_CHECKOUT = mkdtempSync(join(tmpdir(), 'hook-scope-sibling-'));
+const SIBLING_CHECKOUT = worktreeOfRepository('hook-scope-sibling-');
 
 const SIBLING_CLEAN_FIXTURE = join(SIBLING_CHECKOUT, 'sibling-clean-fixture.ts');
 
@@ -50,95 +50,8 @@ const SIBLING_UNFORMATTED_SOURCE = "export const siblingFixtureValue = 'quoted';
 
 const SIBLING_FORMATTED_SOURCE = 'export const siblingFixtureValue = "quoted";\n';
 
-type ConfiguredHook = {
-  readonly command: string;
-  readonly args: readonly string[] | undefined;
-};
-
-type HookOutcome = {
-  readonly stderr: string;
-  readonly status: number;
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function readProperty(value: unknown, property: string): unknown {
-  return isRecord(value) ? value[property] : undefined;
-}
-
-function isList(value: unknown): value is readonly unknown[] {
-  return Array.isArray(value);
-}
-
-function readList(value: unknown): readonly unknown[] {
-  return isList(value) ? value : [];
-}
-
-function readStrings(value: unknown): readonly string[] {
-  return readList(value).filter((item): item is string => typeof item === 'string');
-}
-
-function hookNamesTarget(candidate: unknown, marker: string): boolean {
-  const command = readProperty(candidate, 'command');
-  const launcher = typeof command === 'string' ? [command] : [];
-
-  return [...launcher, ...readStrings(readProperty(candidate, 'args'))].some((piece) =>
-    piece.includes(marker),
-  );
-}
-
-function configuredHook(event: string, matcher: string, marker: string): ConfiguredHook {
-  const settings: unknown = JSON.parse(
-    readFileSync(join(REPOSITORY_ROOT, '.claude', 'settings.json'), 'utf8'),
-  );
-  const hook = readList(readProperty(readProperty(settings, 'hooks'), event))
-    .filter((entry) => readProperty(entry, 'matcher') === matcher)
-    .flatMap((entry) => readList(readProperty(entry, 'hooks')))
-    .find((candidate) => hookNamesTarget(candidate, marker));
-  const command = readProperty(hook, 'command');
-
-  if (typeof command !== 'string') {
-    throw new Error(`.claude/settings.json carries no ${matcher} ${event} hook running ${marker}`);
-  }
-
-  const args = readProperty(hook, 'args');
-
-  return { command, args: isList(args) ? readStrings(args) : undefined };
-}
-
-function withProjectDirectory(value: string): string {
-  return value.replaceAll(PROJECT_DIRECTORY_PLACEHOLDER, REPOSITORY_ROOT);
-}
-
-function runHook(hook: ConfiguredHook, workingDirectory: string, payload: string): HookOutcome {
-  const args = hook.args?.map(withProjectDirectory);
-  const run = spawnSync(withProjectDirectory(hook.command), args ?? [], {
-    cwd: workingDirectory,
-    encoding: 'utf8',
-    env: { ...process.env, CLAUDE_PROJECT_DIR: REPOSITORY_ROOT },
-    input: payload,
-    shell: args === undefined,
-  });
-
-  if (run.status === null) {
-    throw new Error('the hook was killed before it reported');
-  }
-
-  return { stderr: run.stderr, status: run.status };
-}
-
 function fixturePath(relativePath: string): string {
   return join(REPOSITORY_ROOT, relativePath);
-}
-
-function outcomeForPath(editedPath: string, workingDirectory: string): HookOutcome {
-  return runHook(
-    configuredHook('PostToolUse', EDITING_TOOL_MATCHER, FORMAT_SCRIPT_NAME),
-    workingDirectory,
-    JSON.stringify({ tool_input: { file_path: editedPath } }),
-  );
 }
 
 function exitCodeForPath(editedPath: string, workingDirectory: string): number {
@@ -166,17 +79,17 @@ function buildSiblingCheckout(): void {
   writeFileSync(join(SIBLING_CHECKOUT, '.oxfmtrc.json'), SIBLING_FORMATTER_CONFIGURATION, 'utf8');
   symlinkSync(fixturePath('node_modules'), join(SIBLING_CHECKOUT, 'node_modules'), 'dir');
   writeFileSync(SIBLING_CLEAN_FIXTURE, SIBLING_UNFORMATTED_SOURCE, 'utf8');
-  writeFileSync(SIBLING_LINT_ERROR_FIXTURE, LINT_ERROR_FIXTURE_SOURCE, 'utf8');
+  writeFileSync(SIBLING_LINT_ERROR_FIXTURE, LINT_ERROR_SOURCE, 'utf8');
   mkdirSync(join(SIBLING_CHECKOUT, SIBLING_IGNORED_DIRECTORY), { recursive: true });
-  writeFileSync(SIBLING_IGNORED_FIXTURE, LINT_ERROR_FIXTURE_SOURCE, 'utf8');
+  writeFileSync(SIBLING_IGNORED_FIXTURE, LINT_ERROR_SOURCE, 'utf8');
 }
 
 before(() => {
-  writeFileSync(fixturePath(IGNORED_FIXTURE), LINT_ERROR_FIXTURE_SOURCE, 'utf8');
+  writeFileSync(fixturePath(IGNORED_FIXTURE), LINT_ERROR_SOURCE, 'utf8');
   writeFileSync(fixturePath(CLEAN_FIXTURE), CLEAN_FIXTURE_SOURCE, 'utf8');
-  writeFileSync(fixturePath(LINT_ERROR_FIXTURE), LINT_ERROR_FIXTURE_SOURCE, 'utf8');
-  writeFileSync(fixturePath(LINT_ERROR_MODULE_FIXTURE), LINT_ERROR_FIXTURE_SOURCE, 'utf8');
-  writeFileSync(UNANCHORED_LINT_ERROR_FIXTURE, LINT_ERROR_FIXTURE_SOURCE, 'utf8');
+  writeFileSync(fixturePath(LINT_ERROR_FIXTURE), LINT_ERROR_SOURCE, 'utf8');
+  writeFileSync(fixturePath(LINT_ERROR_MODULE_FIXTURE), LINT_ERROR_SOURCE, 'utf8');
+  writeFileSync(UNANCHORED_LINT_ERROR_FIXTURE, LINT_ERROR_SOURCE, 'utf8');
   buildSiblingCheckout();
 });
 
@@ -185,8 +98,6 @@ after(() => {
   rmSync(fixturePath(CLEAN_FIXTURE), { force: true });
   rmSync(fixturePath(LINT_ERROR_FIXTURE), { force: true });
   rmSync(fixturePath(LINT_ERROR_MODULE_FIXTURE), { force: true });
-  rmSync(DIRECTORY_OUTSIDE_CHECKOUT, { recursive: true, force: true });
-  rmSync(SIBLING_CHECKOUT, { recursive: true, force: true });
 });
 
 describe('post-edit format hook: an edited script the linter is configured to ignore', () => {

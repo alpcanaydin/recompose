@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { dirname } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { gateConfigurationPath, resolveTranscriptPath } from './resolve-transcript.mts';
@@ -15,6 +16,30 @@ const NESTED_WORKTREE_CONFIGURATION =
   '/workspace/recompose/.claude/worktrees/cluster-1/probity.config.ts';
 
 const noConfigurationExists = (): boolean => false;
+
+const OUTSIDE_THE_REPOSITORY: readonly string[] = [];
+
+function ancestorsWithin(root: string): (start: string) => readonly string[] {
+  return (start) => {
+    const reachable = [start];
+    let directory = start;
+
+    while (directory !== root && directory.startsWith(`${root}/`)) {
+      directory = dirname(directory);
+      reachable.push(directory);
+    }
+
+    return directory === root ? reachable : OUTSIDE_THE_REPOSITORY;
+  };
+}
+
+const withinTheCheckout = ancestorsWithin(CHECKOUT_ROOT);
+
+const withinTheSiblingWorktree = ancestorsWithin('/workspace/cluster-1');
+
+const withinTheNestedWorktree = ancestorsWithin('/workspace/recompose/.claude/worktrees/cluster-1');
+
+const outsideEveryWorktree = (): readonly string[] => OUTSIDE_THE_REPOSITORY;
 
 const SUBAGENT_ID = 'a1b2c3d4e5f6';
 
@@ -86,6 +111,7 @@ describe('gate scope: an edit inside a worktree beside the checkout', () => {
       '/workspace/cluster-1/apps/desktop/src/main/index.ts',
       CHECKOUT_ROOT,
       (path) => path === SIBLING_WORKTREE_CONFIGURATION,
+      withinTheSiblingWorktree,
     );
 
     assert.equal(configuration, SIBLING_WORKTREE_CONFIGURATION);
@@ -98,6 +124,7 @@ describe('gate scope: an edit inside a worktree nested under the checkout', () =
       '/workspace/recompose/.claude/worktrees/cluster-1/packages/contracts/src/ipc.ts',
       CHECKOUT_ROOT,
       (path) => path === NESTED_WORKTREE_CONFIGURATION || path === CHECKOUT_CONFIGURATION,
+      withinTheNestedWorktree,
     );
 
     assert.equal(configuration, NESTED_WORKTREE_CONFIGURATION);
@@ -110,6 +137,33 @@ describe('gate scope: an edit no gate configuration covers', () => {
       '/elsewhere/notes/scratch.ts',
       CHECKOUT_ROOT,
       noConfigurationExists,
+      outsideEveryWorktree,
+    );
+
+    assert.equal(configuration, CHECKOUT_CONFIGURATION);
+  });
+});
+
+describe('gate scope: an edit beside a gate configuration outside every worktree', () => {
+  it('refuses that configuration and keeps the checkout that owns the resolver', () => {
+    const configuration = gateConfigurationPath(
+      '/tmp/planted/index.ts',
+      CHECKOUT_ROOT,
+      (path) => path === '/tmp/planted/probity.config.ts',
+      outsideEveryWorktree,
+    );
+
+    assert.equal(configuration, CHECKOUT_CONFIGURATION);
+  });
+});
+
+describe('gate scope: an edit under a gate configuration above the worktree root', () => {
+  it('stops climbing at the worktree root rather than reaching that configuration', () => {
+    const configuration = gateConfigurationPath(
+      '/workspace/cluster-1/apps/desktop/src/main/index.ts',
+      CHECKOUT_ROOT,
+      (path) => path === '/workspace/probity.config.ts',
+      withinTheSiblingWorktree,
     );
 
     assert.equal(configuration, CHECKOUT_CONFIGURATION);
@@ -118,7 +172,12 @@ describe('gate scope: an edit no gate configuration covers', () => {
 
 describe('gate scope: a payload naming no edited file', () => {
   it('falls back to the checkout that owns the resolver', () => {
-    const configuration = gateConfigurationPath(undefined, CHECKOUT_ROOT, noConfigurationExists);
+    const configuration = gateConfigurationPath(
+      undefined,
+      CHECKOUT_ROOT,
+      noConfigurationExists,
+      outsideEveryWorktree,
+    );
 
     assert.equal(configuration, CHECKOUT_CONFIGURATION);
   });
@@ -130,6 +189,7 @@ describe('gate scope: a payload naming the edited file relative to the checkout'
       'apps/desktop/src/main/index.ts',
       CHECKOUT_ROOT,
       (path) => path === CHECKOUT_CONFIGURATION,
+      withinTheCheckout,
     );
 
     assert.equal(configuration, CHECKOUT_CONFIGURATION);

@@ -3,8 +3,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { configurationRoot } from './configuration-scope.mts';
 import { readEditedPath } from './hook-payload.mts';
-import { owningCheckoutRoot } from './owning-checkout.mts';
+import { repositoryDirectories } from './repository-scope.mts';
 
 type SubagentAwarePayload = {
   readonly transcript_path: string;
@@ -74,9 +75,14 @@ export function gateConfigurationPath(
   editedPath: string | undefined,
   checkoutRoot: string,
   configurationExists: (path: string) => boolean,
+  reachableDirectories: (start: string) => readonly string[],
 ): string {
   return join(
-    owningCheckoutRoot(editedPath, checkoutRoot, GATE_CONFIGURATION_NAME, configurationExists),
+    configurationRoot(editedPath, checkoutRoot, {
+      configurationName: GATE_CONFIGURATION_NAME,
+      configurationExists,
+      reachableDirectories,
+    }),
     GATE_CONFIGURATION_NAME,
   );
 }
@@ -156,7 +162,12 @@ function buildGateInvocation(): GateInvocation {
 
     return {
       payload: JSON.stringify({ ...payload, transcript_path: transcriptPath }),
-      configuration: gateConfigurationPath(readEditedPath(payload), CHECKOUT_ROOT, existsSync),
+      configuration: gateConfigurationPath(
+        readEditedPath(payload),
+        CHECKOUT_ROOT,
+        existsSync,
+        (start) => repositoryDirectories(start, CHECKOUT_ROOT),
+      ),
     };
   } catch (cause) {
     return blockToolCall(`the PreToolUse payload was unusable: ${describeFailure(cause)}`);

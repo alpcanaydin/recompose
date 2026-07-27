@@ -44,7 +44,8 @@ const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
 const RESOLVER_MODULE_NAMES: readonly string[] = [
   RESOLVER_SCRIPT_NAME,
   'hook-payload.mts',
-  'owning-checkout.mts',
+  'configuration-scope.mts',
+  'repository-scope.mts',
 ];
 
 const RESOLVER_PATH_IN_CHECKOUT = join(HOOKS_PATH_IN_CHECKOUT, RESOLVER_SCRIPT_NAME);
@@ -65,6 +66,21 @@ export function scratchWorkspace(): string {
   return workspace;
 }
 
+const AUTHORED_BY_THE_FIXTURE: readonly string[] = [
+  '-c',
+  'user.email=fixture@example.invalid',
+  '-c',
+  'user.name=fixture',
+];
+
+function runGit(workingDirectory: string, args: readonly string[]): void {
+  const run = spawnSync('git', [...args], { cwd: workingDirectory, encoding: 'utf8' });
+
+  if (run.status !== 0) {
+    throw new Error(`the fixture could not run git ${args.join(' ')}: ${run.stderr}`);
+  }
+}
+
 export function checkoutWithResolver(): string {
   const checkout = scratchWorkspace();
   const hooks = join(checkout, HOOKS_PATH_IN_CHECKOUT);
@@ -74,6 +90,9 @@ export function checkoutWithResolver(): string {
   for (const moduleName of RESOLVER_MODULE_NAMES) {
     copyFileSync(join(HOOKS_DIRECTORY, moduleName), join(hooks, moduleName));
   }
+
+  runGit(checkout, ['init', '-q']);
+  runGit(checkout, [...AUTHORED_BY_THE_FIXTURE, 'commit', '-q', '--allow-empty', '-m', 'fixture']);
 
   return checkout;
 }
@@ -98,11 +117,34 @@ export function aliasedCheckout(checkout: string): string {
   return alias;
 }
 
-export function bareWorktree(root: string): string {
+export function worktreeOfCheckout(checkout: string, root: string): string {
+  runGit(checkout, ['worktree', 'add', '--no-checkout', '--detach', root]);
+
+  return root;
+}
+
+export function configuredWorktreeOfCheckout(checkout: string, root: string): string {
+  writeFileSync(
+    join(worktreeOfCheckout(checkout, root), GATE_CONFIGURATION_NAME),
+    GATE_CONFIGURATION,
+    'utf8',
+  );
+
+  return root;
+}
+
+export function plantedRepository(root: string): string {
   mkdirSync(root, { recursive: true });
+  runGit(root, ['init', '-q']);
   writeFileSync(join(root, GATE_CONFIGURATION_NAME), GATE_CONFIGURATION, 'utf8');
 
   return root;
+}
+
+export function plantConfigurationIn(directory: string): string {
+  writeFileSync(join(directory, GATE_CONFIGURATION_NAME), GATE_CONFIGURATION, 'utf8');
+
+  return directory;
 }
 
 export function editPayload(filePath: string): string {
