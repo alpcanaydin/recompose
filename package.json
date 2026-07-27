@@ -15,7 +15,7 @@
     "test:e2e": "pnpm --filter @recompose/desktop run test:e2e",
     "storybook": "pnpm --filter @recompose/desktop run storybook",
     "typecheck": "turbo run typecheck && pnpm run typecheck:workflows",
-    "typecheck:workflows": "pnpm --filter @recompose/desktop exec tsc -p ../../.claude/workflows/path-guard/tsconfig.json",
+    "typecheck:workflows": "pnpm --filter @recompose/desktop exec tsc -p ../../.claude/workflows/tsconfig.json",
     "lint": "turbo run lint",
     "lint:root": "oxlint",
     "lint:fix": "oxlint --fix",
@@ -26,7 +26,7 @@
     "lint:openspec": "openspec validate --all --strict --no-interactive",
     "lint:spell": "cspell --no-progress \"**\"",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
-    "lint:licenses": "node scripts/check-licenses.mjs",
+    "lint:licenses": "node .claude/workflows/check-licenses/check-licenses.mts",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },

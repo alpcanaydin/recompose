@@ -33,7 +33,7 @@ git commit -m "feat: review-pr saved workflow"
 
 **Files:**
 
-- Create: `.claude/workflows/path-guard/path-guard.mts`, self-contained like `check-licenses.mjs`.
+- Create: `.claude/workflows/path-guard/path-guard.mts`, self-contained like the `check-licenses` gate.
 - Create: `.claude/workflows/path-guard/path-guard.test.mts`, colocated next to the script.
 - Modify: `.github/workflows/ci.yml`
 
@@ -48,7 +48,7 @@ Colocate `.claude/workflows/path-guard/path-guard.test.mts` next to the script. 
 
 - [x] **Step 2: Implement the guard and land one green commit**
 
-Keep the whole guard self-contained in `.claude/workflows/path-guard/path-guard.mts`, like `check-licenses.mjs`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception. The spec and its implementation land together as one green commit.
+Keep the whole guard self-contained in `.claude/workflows/path-guard/path-guard.mts`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception. The spec and its implementation land together as one green commit.
 
 ```bash
 git add .claude/workflows/path-guard/

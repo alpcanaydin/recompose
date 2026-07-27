@@ -19,7 +19,9 @@ const raw = execFileSync('pnpm', ['licenses', 'list', '--prod', '--json'], {
   encoding: 'utf8',
   shell: process.platform === 'win32',
 });
-const byLicense = JSON.parse(raw);
+type LicensePackage = { name: string; versions: string[] };
+
+const byLicense: Record<string, LicensePackage[]> = JSON.parse(raw);
 
 const offenders = Object.entries(byLicense)
   .filter(([license]) => !allowlist.has(license))
