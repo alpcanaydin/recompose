@@ -65,7 +65,19 @@ const statusSchema = {
   },
 }
 
-function requireArgs(input) {
+function parsedArgs(delivered) {
+  if (typeof delivered !== 'string') {
+    return delivered
+  }
+  try {
+    return JSON.parse(delivered)
+  } catch (error) {
+    throw new Error(`review-pr received args as a string that is not valid JSON: ${error.message}`)
+  }
+}
+
+function requireArgs(delivered) {
+  const input = parsedArgs(delivered)
   const keys = ['sha', 'repo', 'baseSha']
   const missing = keys.filter((key) => !input || typeof input[key] !== 'string' || input[key].length === 0)
   if (missing.length > 0) {
