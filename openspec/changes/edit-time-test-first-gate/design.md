@@ -95,16 +95,20 @@ Two properties make this safe to depend on. The derivation is a pure function ov
 
 ## Data model and contracts
 
-The gate configuration is the one contract this change introduces. It follows the upstream flat shape, an array of blocks that each bind rules to a set of files:
+The gate configuration is the one contract this change introduces. It follows the upstream shape, a call that carries blocks binding rule factories to a set of files:
 
 ```ts
-export default [{ files: ['<glob>'], rules: {/* rule entries */} }];
+import { defineConfig, enforceTdd } from '@nizos/probity';
+
+export default defineConfig({
+  rules: [{ files: ['<glob>', '!<negated glob>'], rules: [enforceTdd()] }],
+});
 ```
 
-- `files`: globs resolved against the directory holding this file, never absolute.
-- `rules`: the rule entries that apply to those files, with the test-first rule carrying its own options.
+- `files`: globs resolved against the directory holding this file, never absolute. A leading `!` negates.
+- `rules`: rule factories, not a record of names. The test-first factory carries its own options.
 
-The exact rule names and option keys come from the upstream reference at implementation time rather than from memory, because the project ships weekly.
+Because the project ships weekly, the implementing task reads the upstream reference and follows whatever shape it finds. This snippet records the shape at the commit that wrote it.
 
 ## Error handling
 
@@ -216,11 +220,14 @@ The payload names the parent session's transcript even for a subagent call. The 
 ## Risks
 
 - [Risk] The gate is three months old and ships weekly, so an update can change behavior → Mitigation: the exact pin plus Renovate puts every update through review, and the arming probe in Task 4 becomes the check a reviewer reruns.
-- [Risk] A model call on each in-scope edit adds latency and cost → Mitigation: the allow list holds the rule to two source trees, and the upstream fast path covers the common single-test edit.
+- [Risk] A model call on each in-scope edit adds latency and cost → Mitigation: the allow list holds the rule to two source trees, and that list is the only mitigation here. The upstream fast path stays off by default, and it fires only on a write that adds a test node, which the allow list already keeps outside the rule.
 - [Risk] A validation failure fails closed and stops all in-scope work → Mitigation: the probe in Task 4 gives the maintainer a one-command way to tell a broken gate from a working one, and the scope keeps the blast radius off documents and tooling.
 - [Risk] The per-subagent record path is a convention the harness never documented, so a harness change breaks the derivation → Mitigation: the resolver falls back to the payload's own path when the derived record is missing, which restores today's behavior rather than an outage, and the arming probe in Task 4 is the check that detects it.
 - [Risk] The gate binary is a dependency no module imports, so the dead-code gate flags it → Mitigation: Task 2 records it in the dead-code configuration with the hook as its consumer.
 - [Risk] Shell-driven writes skip the gate → Mitigation: Decision 6 states the boundary and names the matcher widening as the upgrade.
+- [Risk] Naming file extensions in the allow list exempts every other extension in silence, and this repository writes new scripts as `.mts` → Mitigation: Task 4 widens the positive globs to the trees and negates the non-source extensions instead, so a new extension arrives guarded.
+- [Risk] Configuration discovery walks up from the working directory, so a worktree created before this change anchors to the parent checkout's configuration and binds the rule to the wrong tree without reporting anything → Mitigation: Task 4 probes which configuration resolves inside a worktree and records the evidence.
+- [Risk] The pin pulls three vendor software development kits as hard dependencies, and this repository invokes only one → Mitigation: they stay development-only, the lockfile records them, and Renovate reviews every bump. Upstream offers no lighter install.
 - [Risk] The incremental convention lets a reviewed range skip commits → Mitigation: the record names the ceiling and its upgrade path, inside the drift-protection model record 0039 already set.
 
 ## Migration and rollout

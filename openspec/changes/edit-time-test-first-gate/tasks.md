@@ -112,35 +112,42 @@ git commit -m "feat: resolve the subagent transcript for the gate"
 
 **Files:**
 
-- Modify: `.claude/settings.json`
+- Modify: `.claude/settings.json`, `probity.config.ts`
 
 **Interfaces:**
 
 - Consumes: the resolver command from Task 3 and the scope contract from Task 2.
 - Produces: the armed hook and the probe evidence in the task report.
 
-- [ ] **Step 1: Arm the hook**
+- [ ] **Step 1: Close the two scope holes the Task 2 review found**
+
+The committed allow list names `.ts` and `.tsx`, so any other extension under a guarded tree arrives unguarded and no gate says so. This repository writes new scripts as `.mts`, so that hole is live. Widen the positive globs to the trees themselves and negate the non-source extensions instead. Second, `packages/contracts/src` names the only package that exists today. Use a pattern that covers the next one.
+
+Prove the change rather than asserting it. Exercise the edited configuration through the tool's own loader over a path list, the way the Task 2 report did, and paste the table into your report. The list must include an `.mts` path under a guarded tree, a stylesheet, a package that doesn't exist yet, and one path from each existing negation.
+
+- [ ] **Step 2: Arm the hook**
 
 Add a `PreToolUse` entry matching the editing tools, running the resolver through `node`, the way the continuous integration job runs the path guard. Match the existing hooks' style in that file, and set an explicit timeout the way the other entries do. Don't match shell commands: Decision 6 in `design.md` states that boundary and its reason. Leave every existing hook untouched.
 
 A hook entry loads at session start, so the maintainer restarts the session before the probe.
 
-- [ ] **Step 2: Probe both directions and record the evidence**
+- [ ] **Step 3: Probe both directions and record the evidence**
 
 A gate that blocks everything and a gate that blocks nothing both look quiet from the outside, so prove each direction and paste every outcome into the report:
 
 1. From a subagent, edit a file under `apps/desktop/src` with no failing test in that subagent's session. The gate denies the call and gives a reason.
 2. From the same subagent, write a failing test, run that package's suite, then repeat the edit. The gate lets it through. This is the case the resolver exists for, so it carries the most weight.
 3. Edit a markdown file, a configuration module, and a file under `.claude`. No gate interferes, which also confirms Task 1 holds with both hooks armed.
+4. Report which configuration file resolved during the probe. Discovery walks up from the working directory, so a worktree created before this change finds the parent checkout's configuration, whose globs anchor to the parent's trees. That binds the rule to the wrong tree and reports nothing. Name the resolved path and say whether it belonged to the worktree.
 
-Revert any scratch edit the probe made. The commit carries the settings change alone.
+Revert any scratch edit the probe made.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 Verify: the commit passes lefthook without bypass, and `pnpm run test:workflows` still passes with the new settings content.
 
 ```bash
-git add .claude/settings.json
+git add .claude/settings.json probity.config.ts
 git commit -m "build: arm the edit-time test-first gate"
 ```
 
