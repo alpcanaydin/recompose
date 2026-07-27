@@ -26,3 +26,12 @@ The pipeline MUST implement through the subagent-driven executor with the parall
 
 - When the plan assigns one file to two clusters
 - Then the clusters run serially instead of in parallel
+
+### Requirement: Verification before the pull request
+
+The pipeline MUST run two passes inside the worktree before the pull request opens: an adversarial review with a model-diverse reviewer pair and a diff-scoped mutation pass. Findings get fixed before the pull request opens.
+
+#### Scenario: the reviewers disagree on a finding
+
+- When the two reviewers return conflicting verdicts on a finding
+- Then a judge at maximum effort settles the finding before the review status posts
