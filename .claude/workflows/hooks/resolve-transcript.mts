@@ -1,11 +1,18 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 type SubagentAwarePayload = {
   readonly transcript_path: string;
   readonly agent_id?: string | undefined;
+};
+
+type WorkflowListing = (directory: string) => readonly string[];
+
+type RecordSearch = {
+  readonly recordExists: (path: string) => boolean;
+  readonly listWorkflows: WorkflowListing;
 };
 
 type GateInvocation = {
@@ -23,25 +30,41 @@ const GATE_CONFIGURATION_NAME = 'probity.config.ts';
 
 const BLOCKING_EXIT_STATUS = 2;
 
-function subagentRecordPath(transcriptPath: string, agentId: string): string {
-  const sessionDirectory = transcriptPath.replace(/\.jsonl$/, '');
-
-  return `${sessionDirectory}/subagents/agent-${agentId}.jsonl`;
+function subagentsDirectory(transcriptPath: string): string {
+  return `${transcriptPath.replace(/\.jsonl$/, '')}/subagents`;
 }
 
-export function resolveTranscriptPath(
-  payload: SubagentAwarePayload,
-  recordExists: (path: string) => boolean,
-): string {
+function subagentRecordPath(transcriptPath: string, agentId: string): string {
+  return `${subagentsDirectory(transcriptPath)}/agent-${agentId}.jsonl`;
+}
+
+function subagentRecordCandidates(
+  transcriptPath: string,
+  agentId: string,
+  listWorkflows: WorkflowListing,
+): readonly string[] {
+  const workflowsDirectory = `${subagentsDirectory(transcriptPath)}/workflows`;
+
+  return [
+    subagentRecordPath(transcriptPath, agentId),
+    ...listWorkflows(workflowsDirectory).map(
+      (workflow) => `${workflowsDirectory}/${workflow}/agent-${agentId}.jsonl`,
+    ),
+  ];
+}
+
+export function resolveTranscriptPath(payload: SubagentAwarePayload, search: RecordSearch): string {
   const agentId = payload.agent_id;
 
   if (agentId === undefined) {
     return payload.transcript_path;
   }
 
-  const subagentRecord = subagentRecordPath(payload.transcript_path, agentId);
-
-  return recordExists(subagentRecord) ? subagentRecord : payload.transcript_path;
+  return (
+    subagentRecordCandidates(payload.transcript_path, agentId, search.listWorkflows).find(
+      search.recordExists,
+    ) ?? payload.transcript_path
+  );
 }
 
 function ancestorDirectories(startDirectory: string): readonly string[] {
@@ -73,6 +96,15 @@ export function gateConfigurationPath(
       .find(configurationExists) ?? checkoutConfiguration
   );
 }
+
+function listWorkflowDirectories(directory: string): readonly string[] {
+  return existsSync(directory) ? readdirSync(directory) : [];
+}
+
+const RECORD_SEARCH: RecordSearch = {
+  recordExists: existsSync,
+  listWorkflows: listWorkflowDirectories,
+};
 
 function blockToolCall(reason: string): never {
   console.error(`the test-first gate never ran, so the tool call is denied: ${reason}`);
@@ -147,7 +179,7 @@ function buildGateInvocation(): GateInvocation {
   try {
     const payload = readPayloadObject(readFileSync(0, 'utf8'));
     const subagentAwarePayload = readSubagentAwarePayload(payload);
-    const transcriptPath = resolveTranscriptPath(subagentAwarePayload, existsSync);
+    const transcriptPath = resolveTranscriptPath(subagentAwarePayload, RECORD_SEARCH);
 
     announceMissingSubagentRecord(subagentAwarePayload, transcriptPath);
 

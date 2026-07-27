@@ -88,6 +88,37 @@ describe('the test-first gate pipe: a subagent call whose own record exists', ()
   });
 });
 
+describe('the test-first gate pipe: a subagent a saved workflow dispatched', () => {
+  it('hands the gate the record nested under that workflow', () => {
+    const workspace = checkoutWithStandInGate('cat stdin.json');
+    const sessionTranscript = join(workspace, 'transcripts', 'session-0001.jsonl');
+    const workflowRecord = join(
+      workspace,
+      'transcripts',
+      'session-0001',
+      'subagents',
+      'workflows',
+      'wf_9c2aa127-a1f',
+      `agent-${SUBAGENT_ID}.jsonl`,
+    );
+
+    mkdirSync(dirname(workflowRecord), { recursive: true });
+    writeFileSync(sessionTranscript, '', 'utf8');
+    writeFileSync(workflowRecord, '', 'utf8');
+
+    const outcome = runResolverIn(workspace, subagentPayload(sessionTranscript));
+
+    assert.deepEqual(JSON.parse(outcome.stdout), {
+      session_id: 'session-0001',
+      transcript_path: workflowRecord,
+      agent_id: SUBAGENT_ID,
+      agent_type: 'tdd-implementer',
+      tool_name: 'Write',
+    });
+    assert.equal(outcome.stderr, '');
+  });
+});
+
 describe('the test-first gate pipe: a subagent call whose own record is missing', () => {
   it('announces which record was sought and which one the gate read instead', () => {
     const workspace = checkoutWithStandInGate('cat stdin.json');
