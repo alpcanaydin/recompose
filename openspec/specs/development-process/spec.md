@@ -74,10 +74,10 @@ Every change directory MUST carry at least one spec delta with a scenario from i
 
 ### Requirement: Blast-radius path guard
 
-The pipeline MUST verify in continuous integration that a pull request touching blast-radius paths carries the `feature-cycle/reviewed` commit status on its head commit. A missing status fails the guard and names the heavy review pass as the way to clear it. The blast-radius path classes are the Electron main and preload sources, the contracts package, the storage layer, the workflow definitions, and the package manifests. The workflow definitions class spans both the continuous integration tree and the saved-workflow tree.
+The pipeline MUST verify in continuous integration that a pull request touching blast-radius paths carries a successful `feature-cycle/reviewed` commit status on its head commit. A missing or unsuccessful status fails the guard, and the failure names the heavy review pass as the way to clear it. The blast-radius path classes are the Electron main and preload sources, the contracts package, the storage layer, the workflow definitions, and the package manifests. The workflow definitions class spans both the continuous integration tree and the saved-workflow tree.
 
 #### Scenario: a blast-radius pull request lacks the review marker
 
-- When a pull request changes a blast-radius path without the `feature-cycle/reviewed` status on its head commit
+- When a pull request changes a blast-radius path without a successful `feature-cycle/reviewed` status on its head commit
 - Then the path guard fails the check
 - And the failure names the heavy review pass as the way to clear the guard
