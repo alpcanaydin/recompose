@@ -103,15 +103,15 @@ git commit -m "docs: concrete review marker in the skill"
 
 - Consumes: every decision from `design.md` in this change.
 
-- [ ] **Step 1: Write the record through the new-adr skill**
+- [x] **Step 1: Write the record through the new-adr skill**
 
 Cover the per-commit status marker with its staleness rationale, the guard-in-script placement with the mutation constraint, and the concrete blast-radius set. The record also covers the saved-workflow reviewer mechanics and the drift-protection trust model. It records the mutation-scope exception and its compensating three-case unit spec. Full prose, Vale and cspell clean.
 
-- [ ] **Step 2: Update the index**
+- [x] **Step 2: Update the index**
 
 Add the row to `docs/adr/README.md` in the existing format.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `mise exec -- vale docs/adr/0039-review-pass-marker-and-path-guard.md && pnpm exec cspell --no-progress docs/adr/`
 Expected: 0 errors from both.
