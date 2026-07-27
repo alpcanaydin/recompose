@@ -97,7 +97,7 @@ Run `pnpm run test:workflows` and paste the full failing output into the task re
 
 - [ ] **Step 2: Implement to green and land one commit**
 
-Keep the script self-contained, matching how `path-guard.mts` exports its pure decision and calls it from a thin main. The main path reads the payload from standard input and resolves the transcript path. It writes the payload back out with that path substituted and runs the gate with it on standard input. It then forwards the gate's standard output, standard error, and exit status without alteration. Forwarding the exact status is load-bearing, because the block signal travels in the exit code.
+Keep the script self-contained, matching how `path-guard.mts` exports its pure decision and calls it from a thin main. The main path reads the payload from standard input and resolves the transcript path. It writes the payload back out with that path substituted and runs the gate with it on standard input. It then forwards the gate's standard output, standard error, and exit status without alteration. Standard output is the load-bearing channel: this gate answers every processed payload with exit status 0 and expresses a denial as a structured decision on standard output. Capturing that stream instead of passing it through turns the gate off while every check stays green, so treat the exit status as necessary but never sufficient.
 
 A payload that fails to parse isn't a reason to swallow the gate. Decide the behavior, state it in the report, and make it visible rather than silent.
 
@@ -137,8 +137,8 @@ A gate that blocks everything and a gate that blocks nothing both look quiet fro
 
 1. From a subagent, edit a file under `apps/desktop/src` with no failing test in that subagent's session. The gate denies the call and gives a reason.
 2. From the same subagent, write a failing test, run that package's suite, then repeat the edit. The gate lets it through. This is the case the resolver exists for, so it carries the most weight.
-3. Edit a markdown file, a configuration module, and a file under `.claude`. No gate interferes, which also confirms Task 1 holds with both hooks armed.
-4. Report which configuration file resolved during the probe. Discovery walks up from the working directory, so a worktree created before this change finds the parent checkout's configuration, whose globs anchor to the parent's trees. That binds the rule to the wrong tree and reports nothing. Name the resolved path and say whether it belonged to the worktree.
+
+Read the verdict on standard output, never from the exit status. This gate returns 0 for both answers, so an exit-status comparison reports success in both directions and proves nothing. A denial arrives as a structured decision on standard output, and an allow arrives as empty standard output. 3. Edit a markdown file, a configuration module, and a file under `.claude`. No gate interferes, which also confirms Task 1 holds with both hooks armed. 4. Report which configuration file resolved during the probe. Discovery walks up from the working directory, so a worktree created before this change finds the parent checkout's configuration, whose globs anchor to the parent's trees. That binds the rule to the wrong tree and reports nothing. Name the resolved path and say whether it belonged to the worktree.
 
 Revert any scratch edit the probe made.
 

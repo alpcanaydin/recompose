@@ -83,7 +83,7 @@ The change adds the missing tier to a stack that already has two. Edit-time enfo
 
 **How the decision gets made.** Claude Code hands each `PreToolUse` call the path of a transcript. The gate parses it, reconstructs the recorded tool calls and their results, and learns from them whether the caller ran its tests and what came back. Nothing writes shared state, so no two callers corrupt each other.
 
-**The resolver.** The payload names the parent session's transcript even when a subagent makes the call. The gate would then read a record holding none of that subagent's work. A resolver sits between the hook and the gate and fixes the input. It reads the payload, and when `agent_id` is present it derives that subagent's own record by stripping the extension from the transcript path and appending `subagents/agent-<agent id>.jsonl`. It rewrites the payload's transcript path only when that file exists, and otherwise passes the payload through unchanged. It then runs the gate on the result and forwards the gate's output and exit status untouched.
+**The resolver.** The payload names the parent session's transcript even when a subagent makes the call. The gate would then read a record holding none of that subagent's work. A resolver sits between the hook and the gate and fixes the input. It reads the payload, and when `agent_id` is present it derives that subagent's own record by stripping the extension from the transcript path and appending `subagents/agent-<agent id>.jsonl`. It rewrites the payload's transcript path only when that file exists, and otherwise passes the payload through unchanged. It then runs the gate on the result and forwards the gate's standard output, standard error, and exit status untouched. The standard output carries the load-bearing signal: this gate answers every processed payload with exit status 0 and expresses a denial as a structured decision on standard output. A resolver that captures standard output instead of passing it through turns the gate off while every check stays green.
 
 Two properties make this safe to depend on. The derivation is a pure function over the payload plus one existence check, so a specification covers every branch. The fallback keeps a harness that stops writing per-subagent records from breaking the gate: it degrades to today's behavior, and the arming probe detects it.
 
@@ -112,7 +112,7 @@ Because the project ships weekly, the implementing task reads the upstream refer
 
 ## Error handling
 
-- **Edit with no failing test.** The hook denies the tool call and returns the reason to the caller. The subagent writes the test first and retries.
+- **Edit with no failing test.** The gate answers with a structured denial on standard output, which the harness reads as the block, and the subagent writes the test first and retries. The exit status stays 0 for allow and deny alike, so nothing downstream may treat the status as the verdict.
 - **No test run in the transcript.** The gate has nothing to read, so it treats the edit as unproven and denies it. The recovery is a test run inside the same session.
 - **Out-of-scope path.** No rule binds, so the edit proceeds. Silence here is the correct outcome, not a swallowed failure.
 - **Validation failure.** A model or configuration error leaves the gate unable to rule, and it fails closed. A closed failure stops work in the open instead of passing an unproven edit, and the arming probe in Task 4 makes both broken states visible.
@@ -187,7 +187,7 @@ The heavy pass gets a smaller base on each later run, which cuts the cost the ma
 
 ### 8. One deterministic spec, and an honest gap
 
-The formatter hook's command lives in a settings file this change owns, so a spec can run it against sample payloads and assert the outcome. The gate's own decision runs a third-party binary against a model, so an automated spec over it would spend a model call and return a soft verdict. The gate's behavior stays a recorded arming probe instead of a test that can't fail for a real reason.
+The formatter hook's command lives in a settings file this change owns, so a spec can run it against sample payloads and assert the outcome. The gate's own verdict runs a third-party binary against a model, so an automated spec over that verdict would spend a model call and return a soft answer. It stays a recorded arming probe. The pipe between the resolver and the gate is a different matter, and it does get a spec. A stand-in gate proves that standard output, standard error, and the exit status all pass through. The regression that captures standard output turns the gate off with every check green.
 
 **Alternatives considered:** a glob-matching spec over the configuration, rejected as a re-implementation of the matcher that proves nothing about the gate. No spec at all, rejected because a broken hook that gave no signal has already cost this repository a defect.
 
