@@ -15,6 +15,7 @@
     ".agents",
     ".claude/skills",
     ".claude/commands",
+    ".claude/workflows",
     ".claude/worktrees",
     "openspec/schemas",
     "openspec/changes/**/discovery",
