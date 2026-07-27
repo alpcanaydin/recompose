@@ -3,10 +3,11 @@ import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
 import { defaultExclude, defineConfig } from 'vitest/config';
 
-import { coverageDefaults } from '../../vitest.shared';
+import { coverageDefaults, repositoryRoot } from '../../vitest.shared';
 
 export default defineConfig({
   test: {
+    reporters: ['default', ['tdd-guard-vitest', { projectRoot: repositoryRoot }]],
     coverage: {
       ...coverageDefaults,
       include: ['src/**/*.{ts,tsx}'],

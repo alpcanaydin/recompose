@@ -1,0 +1,21 @@
+{
+  "guardEnabled": true,
+  "ignorePatterns": [
+    "*.md",
+    "*.txt",
+    "*.log",
+    "*.json",
+    "*.yml",
+    "*.yaml",
+    "*.xml",
+    "*.html",
+    "*.css",
+    "**/.claude/*",
+    "**/.claude/!(worktrees)/**",
+    "**/*.config.*",
+    "**/*.stories.tsx",
+    "**/.storybook/**",
+    "**/e2e/**",
+    "**/scripts/**"
+  ]
+}
