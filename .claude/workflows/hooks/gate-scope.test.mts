@@ -1,0 +1,79 @@
+import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { describe, it } from 'node:test';
+
+import {
+  bareWorktree,
+  checkoutWithStandInGate,
+  DENIAL_DECISION,
+  editPayload,
+  GATE_ARGUMENT_ECHO,
+  GATE_CONFIGURATION_NAME,
+  type HookOutcome,
+  runResolverIn,
+  scratchWorkspace,
+} from './gate-harness.mts';
+
+const IN_SCOPE_SOURCE_PATH = join('apps', 'desktop', 'src', 'main', 'index.ts');
+
+function worktreeBesideTheCheckout(): string {
+  return bareWorktree(join(scratchWorkspace(), 'cluster-1'));
+}
+
+function worktreeNestedInTheCheckout(checkout: string): string {
+  return bareWorktree(join(checkout, '.claude', 'worktrees', 'cluster-1'));
+}
+
+function editInside(root: string): string {
+  return editPayload(join(root, IN_SCOPE_SOURCE_PATH));
+}
+
+function gateConfigurationArgument(outcome: HookOutcome): string | undefined {
+  const gateArguments = outcome.stdout.split('\n');
+  const flag = gateArguments.indexOf('--config');
+
+  return flag === -1 ? undefined : gateArguments[flag + 1];
+}
+
+describe('the test-first gate scope: an edit inside a worktree beside the checkout', () => {
+  it('hands the gate that worktree own configuration, so the edit stays in scope', () => {
+    const checkout = checkoutWithStandInGate(GATE_ARGUMENT_ECHO);
+    const worktree = worktreeBesideTheCheckout();
+
+    const outcome = runResolverIn(checkout, editInside(worktree));
+
+    assert.equal(gateConfigurationArgument(outcome), join(worktree, GATE_CONFIGURATION_NAME));
+  });
+
+  it('starts the gate from the resolver checkout, so a worktree needs no install', () => {
+    const checkout = checkoutWithStandInGate(`printf '%s' '${DENIAL_DECISION}'`);
+    const worktree = worktreeBesideTheCheckout();
+
+    const outcome = runResolverIn(checkout, editInside(worktree));
+
+    assert.equal(outcome.stdout, DENIAL_DECISION);
+    assert.equal(outcome.status, 0);
+  });
+});
+
+describe('the test-first gate scope: an edit inside a worktree nested under the checkout', () => {
+  it('hands the gate the nested worktree own configuration', () => {
+    const checkout = checkoutWithStandInGate(GATE_ARGUMENT_ECHO);
+    const worktree = worktreeNestedInTheCheckout(checkout);
+
+    const outcome = runResolverIn(checkout, editInside(worktree));
+
+    assert.equal(gateConfigurationArgument(outcome), join(worktree, GATE_CONFIGURATION_NAME));
+  });
+});
+
+describe('the test-first gate scope: an edit no gate configuration covers', () => {
+  it('falls back to the resolver own checkout configuration', () => {
+    const checkout = checkoutWithStandInGate(GATE_ARGUMENT_ECHO);
+    const outside = join(scratchWorkspace(), 'notes', 'scratch.ts');
+
+    const outcome = runResolverIn(checkout, editPayload(outside));
+
+    assert.equal(gateConfigurationArgument(outcome), join(checkout, GATE_CONFIGURATION_NAME));
+  });
+});

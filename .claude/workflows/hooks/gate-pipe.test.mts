@@ -1,120 +1,31 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { after, describe, it } from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { describe, it } from 'node:test';
 
-const SESSION_TRANSCRIPT = '/claude-projects/example-project/session-0001.jsonl';
+import {
+  aliasedCheckout,
+  checkoutWithResolver,
+  checkoutWithStandInGate,
+  DENIAL_DECISION,
+  GATE_CONFIGURATION,
+  mainLoopPayload,
+  runResolverIn,
+  runResolverOutside,
+} from './gate-harness.mts';
 
 const SUBAGENT_ID = 'a1b2c3d4e5f6';
 
-const RESOLVER_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'resolve-transcript.mts');
-
-const RESOLVER_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks', 'resolve-transcript.mts');
-
-const GATE_CONFIGURATION = 'export default { rules: [] };\n';
-
-const DENIAL_DECISION = JSON.stringify({
-  hookSpecificOutput: {
-    hookEventName: 'PreToolUse',
-    permissionDecision: 'deny',
-    permissionDecisionReason: 'the edit adds behavior that no failing test asked for',
-  },
-});
-
 const GATE_DIAGNOSTIC = 'Probity: the configuration named an unknown rule\n';
 
-type HookOutcome = {
-  readonly stdout: string;
-  readonly stderr: string;
-  readonly status: number;
-};
-
-const scratchWorkspaces: string[] = [];
-
-after(() => {
-  for (const workspace of scratchWorkspaces) {
-    rmSync(workspace, { recursive: true, force: true });
-  }
-});
-
-function scratchWorkspace(): string {
-  const workspace = realpathSync(mkdtempSync(join(tmpdir(), 'transcript-resolver-')));
-
-  scratchWorkspaces.push(workspace);
-
-  return workspace;
-}
-
-function checkoutWithResolver(): string {
-  const checkout = scratchWorkspace();
-  const resolver = join(checkout, RESOLVER_PATH_IN_CHECKOUT);
-
-  mkdirSync(dirname(resolver), { recursive: true });
-  copyFileSync(RESOLVER_SCRIPT, resolver);
-
-  return checkout;
-}
-
-function checkoutWithStandInGate(gateBody: string): string {
-  const checkout = checkoutWithResolver();
-  const binDirectory = join(checkout, 'node_modules', '.bin');
-
-  mkdirSync(binDirectory, { recursive: true });
-  writeFileSync(join(binDirectory, 'probity'), `#!/bin/sh\ncat >stdin.json\n${gateBody}\n`, {
-    mode: 0o755,
-  });
-
-  return checkout;
-}
-
-function aliasedCheckout(checkout: string): string {
-  const alias = join(scratchWorkspace(), 'aliased-checkout');
-
-  symlinkSync(checkout, alias, 'dir');
-
-  return alias;
-}
-
-function mainLoopPayload(): string {
+function subagentPayload(transcriptPath: string): string {
   return JSON.stringify({
     session_id: 'session-0001',
-    transcript_path: SESSION_TRANSCRIPT,
+    transcript_path: transcriptPath,
+    agent_id: SUBAGENT_ID,
+    agent_type: 'tdd-implementer',
     tool_name: 'Write',
-    tool_input: { file_path: 'apps/desktop/src/main/index.ts' },
   });
-}
-
-function runResolver(checkout: string, workingDirectory: string, payload: string): HookOutcome {
-  const run = spawnSync(process.execPath, [join(checkout, RESOLVER_PATH_IN_CHECKOUT)], {
-    cwd: workingDirectory,
-    encoding: 'utf8',
-    input: payload,
-  });
-
-  if (run.status === null) {
-    throw new Error(`the resolver was killed by ${String(run.signal)} before it reported`);
-  }
-
-  return { stdout: run.stdout, stderr: run.stderr, status: run.status };
-}
-
-function runResolverIn(checkout: string, payload: string): HookOutcome {
-  return runResolver(checkout, checkout, payload);
-}
-
-function runResolverOutside(checkout: string, payload: string): HookOutcome {
-  return runResolver(checkout, scratchWorkspace(), payload);
 }
 
 describe('the test-first gate pipe: a gate that denies on standard output', () => {
@@ -165,16 +76,7 @@ describe('the test-first gate pipe: a subagent call whose own record exists', ()
     writeFileSync(sessionTranscript, '', 'utf8');
     writeFileSync(subagentRecord, '', 'utf8');
 
-    const outcome = runResolverIn(
-      workspace,
-      JSON.stringify({
-        session_id: 'session-0001',
-        transcript_path: sessionTranscript,
-        agent_id: SUBAGENT_ID,
-        agent_type: 'tdd-implementer',
-        tool_name: 'Write',
-      }),
-    );
+    const outcome = runResolverIn(workspace, subagentPayload(sessionTranscript));
 
     assert.deepEqual(JSON.parse(outcome.stdout), {
       session_id: 'session-0001',
@@ -201,16 +103,7 @@ describe('the test-first gate pipe: a subagent call whose own record is missing'
     mkdirSync(dirname(sessionTranscript), { recursive: true });
     writeFileSync(sessionTranscript, '', 'utf8');
 
-    const outcome = runResolverIn(
-      workspace,
-      JSON.stringify({
-        session_id: 'session-0001',
-        transcript_path: sessionTranscript,
-        agent_id: SUBAGENT_ID,
-        agent_type: 'tdd-implementer',
-        tool_name: 'Write',
-      }),
-    );
+    const outcome = runResolverIn(workspace, subagentPayload(sessionTranscript));
 
     assert.equal(
       outcome.stderr,
