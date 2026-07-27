@@ -29,6 +29,8 @@ Write the commit chain in caveman-commit style. The task reports carry the red r
 
 The **path guard** runs deterministically in continuous integration. It reads the `feature-cycle/reviewed` status on the head commit. A pull request that touches blast-radius paths without that status fails the guard, which names the heavy pass as the way to clear it. A new push carries no status, so a re-review follows any change. Blast-radius paths are the Electron main and preload sources, the contracts package, storage, workflow definitions, and package manifests.
 
+**Incremental re-review.** `baseSha` is a free parameter, so a re-review costs only the increment. The first pass takes the pull request base, and each later pass takes the previous reviewed head as `baseSha`. One ceiling comes with the convention. The path guard reads only whether the head carries the status, so it cannot walk the chain and confirm the reviewed ranges cover the branch, which keeps the marker inside the drift-protection scope ADR-0039 set. ADR-0040 carries the reasoning.
+
 ## Pull-request line
 
 Open the pull request. On it:

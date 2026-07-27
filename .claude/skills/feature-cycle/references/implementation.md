@@ -17,7 +17,13 @@ Every cluster runs a `tdd-implementer` subagent, one per cluster, one worktree e
 
 ## Red-run evidence
 
-Every task stays test-first. The failing test run is captured into the task report before any implementation, and the task lands as one green commit. The TDD Guard hook enforces test-first at the tool boundary. It intercepts every implementation edit, reads the latest test state from the Vitest reporter, and blocks code that has no failing test behind it.
+Every task stays test-first. The failing test run is captured into the task report before any implementation, and the task lands as one green commit.
+
+An edit-time gate enforces the same rule at the tool boundary. A `PreToolUse` hook on the editing tools runs the resolver at `.claude/workflows/hooks/resolve-transcript.mts`, which hands `@nizos/probity` the acting worker's own transcript, so a subagent's tool calls get judged against that subagent's record and never the parent session's. The scope in `probity.config.ts` is the source trees, `apps/*/src/**` and `packages/*/src/**`, with tests, type-level specs, stories, generated modules, stylesheets, and markup outside every rule. The verdict arrives on standard output as a structured decision, and the gate returns 0 for allow and deny alike, so the exit status answers nothing.
+
+**Same session or it does not count.** The failing test run has to happen in the session that makes the edit, because the gate reads that session's record. A red run from an earlier session proves nothing to it.
+
+The gate is a tier above the deterministic gates, never a replacement for them. Patch coverage, the diff-scoped mutation run, and the adversarial review stay the merge blockers, because a model judging an edit returns a probabilistic answer. Two limits come with that. A whitespace-only edit passes, since the gate judges a semantic behavior change rather than a byte diff. And a hook that exceeds its timeout counts as non-blocking, so a slow verdict lets the edit through, which is the one fail-open edge in an otherwise fail-closed design.
 
 ## Explicit test-layer tasks
 
