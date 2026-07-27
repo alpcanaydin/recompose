@@ -1,10 +1,9 @@
 import { defineConfig } from 'vitest/config';
 
-import { coverageDefaults, repositoryRoot } from '../../vitest.shared';
+import { coverageDefaults } from '../../vitest.shared';
 
 export default defineConfig({
   test: {
-    reporters: ['default', ['tdd-guard-vitest', { projectRoot: repositoryRoot }]],
     environment: 'node',
     include: ['src/**/*.test.ts'],
     typecheck: {

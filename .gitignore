@@ -15,5 +15,3 @@ test-results/
 playwright-report/
 .stryker-tmp/
 reports/
-.claude/tdd-guard/data/*
-!.claude/tdd-guard/data/config.json
