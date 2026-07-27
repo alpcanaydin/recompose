@@ -33,8 +33,8 @@ git commit -m "feat: review-pr saved workflow"
 
 **Files:**
 
-- Create: `scripts/path-guard.mjs`, self-contained like `check-licenses.mjs`.
-- Create: `scripts/path-guard.test.mjs`, colocated next to the script.
+- Create: `.claude/workflows/path-guard/path-guard.mts`, self-contained like `check-licenses.mjs`.
+- Create: `.claude/workflows/path-guard/path-guard.test.mts`, colocated next to the script.
 - Modify: `.github/workflows/ci.yml`
 
 **Interfaces:**
@@ -44,19 +44,19 @@ git commit -m "feat: review-pr saved workflow"
 
 - [ ] **Step 1: Write the failing spec (red)**
 
-Colocate `scripts/path-guard.test.mjs` next to the script. Wire it into the existing node-side vitest project, or add a minimal project when none covers `scripts/`. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet.
+Colocate `.claude/workflows/path-guard/path-guard.test.mts` next to the script. Wire it into the existing node-side vitest project, or add a minimal project when none covers `scripts/`. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet.
 
 ```bash
-git add scripts/path-guard.test.mjs
+git add .claude/workflows/path-guard/path-guard.test.mts
 git commit -m "test: path-guard decision spec"
 ```
 
 - [ ] **Step 2: Implement the guard (green)**
 
-Keep the whole guard self-contained in `scripts/path-guard.mjs`, like `check-licenses.mjs`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception.
+Keep the whole guard self-contained in `.claude/workflows/path-guard/path-guard.mts`, like `check-licenses.mjs`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception.
 
 ```bash
-git add scripts/path-guard.mjs
+git add .claude/workflows/path-guard/path-guard.mts
 git commit -m "feat: blast-radius path-guard logic"
 ```
 
