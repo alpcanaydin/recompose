@@ -1,6 +1,6 @@
 # Review-workflow tasks
 
-> For agentic workers: use `superpowers:subagent-driven-development` to execute task by task. Every commit passes lefthook without bypass. Global constraints: never commit to `main`, no code comments, commit subjects at most 50 characters, and `pnpm exec openspec validate --all --strict --no-interactive` stays green after every task.
+> For agentic workers: use `superpowers:subagent-driven-development` to execute task by task. Every commit passes lefthook without bypass. Global constraints: never commit to `main`, no code comments, commit style `<type>: <imperative subject>` with at most 50 characters, and `pnpm exec openspec validate --all --strict --no-interactive` stays green after every task.
 
 ## Task 1: The review-pr saved workflow
 
@@ -33,8 +33,8 @@ git commit -m "feat: review-pr saved workflow"
 
 **Files:**
 
-- Create: the guard decision module and its spec, within the mutation scope.
-- Create: `scripts/path-guard.mjs` as the thin entry.
+- Create: `scripts/path-guard.mjs`, self-contained like `check-licenses.mjs`.
+- Create: `scripts/path-guard.test.mjs`, colocated next to the script.
 - Modify: `.github/workflows/ci.yml`
 
 **Interfaces:**
@@ -44,19 +44,19 @@ git commit -m "feat: review-pr saved workflow"
 
 - [ ] **Step 1: Write the failing spec (red)**
 
-Add a unit spec for the pure decision function. The function takes the changed-path list and the head commit statuses, then returns pass or fail. Cover the blast-radius hit without the status, the blast-radius hit with the status, and the clean path that skips the guard. The spec fails because the function doesn't exist yet.
+Colocate `scripts/path-guard.test.mjs` next to the script. Wire it into the existing node-side vitest project, or add a minimal project when none covers `scripts/`. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet.
 
 ```bash
-git add <spec-file>
+git add scripts/path-guard.test.mjs
 git commit -m "test: path-guard decision spec"
 ```
 
-- [ ] **Step 2: Implement the decision function (green)**
+- [ ] **Step 2: Implement the guard (green)**
 
-Write the pure function so the spec passes. Keep the file inside the mutation scope. Add `scripts/path-guard.mjs` as the thin entry that reads the two inputs and calls the function. Confirm the mutation gate mutates the function, and extend the mutation scope if it doesn't.
+Keep the whole guard self-contained in `scripts/path-guard.mjs`, like `check-licenses.mjs`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception.
 
 ```bash
-git add <module-file> scripts/path-guard.mjs
+git add scripts/path-guard.mjs
 git commit -m "feat: blast-radius path-guard logic"
 ```
 
@@ -110,7 +110,7 @@ git commit -m "docs: concrete review marker in the skill"
 
 - [ ] **Step 1: Write the record through the new-adr skill**
 
-Cover the per-commit status marker with its staleness rationale, the guard-in-script placement with the mutation constraint, and the concrete blast-radius set. Also cover the saved-workflow reviewer mechanics and the drift-protection trust model. Full prose, Vale and cspell clean.
+Cover the per-commit status marker with its staleness rationale, the guard-in-script placement with the mutation constraint, and the concrete blast-radius set. The record also covers the saved-workflow reviewer mechanics and the drift-protection trust model. It records the mutation-scope exception and its compensating three-case unit spec. Full prose, Vale and cspell clean.
 
 - [ ] **Step 2: Update the index**
 
