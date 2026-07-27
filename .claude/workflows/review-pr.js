@@ -1,7 +1,7 @@
 export const meta = {
   name: 'review-pr',
   description:
-    'Heavy adversarial review over a PR diff. Args: sha is the reviewed head commit, repo is the owner/repo slug, diffRange is the range to review. Runs two adversarial-reviewer seats with model and angle diversity, escalates conflicting verdicts to a Fable judge at maximum effort, and posts the feature-cycle/reviewed commit status only when no finding survives.',
+    'Heavy adversarial review over a PR diff. Args: sha is the reviewed head commit, repo is the owner/repo slug, baseSha is the base commit the reviewed range starts from. Runs two adversarial-reviewer seats with model and angle diversity, escalates conflicting verdicts to a Fable judge at maximum effort, and posts the feature-cycle/reviewed commit status only when no finding survives.',
   phases: ['Review', 'Judge', 'Verify'],
 }
 
@@ -66,14 +66,14 @@ const statusSchema = {
 }
 
 function requireArgs(input) {
-  const keys = ['sha', 'repo', 'diffRange']
+  const keys = ['sha', 'repo', 'baseSha']
   const missing = keys.filter((key) => !input || typeof input[key] !== 'string' || input[key].length === 0)
   if (missing.length > 0) {
     throw new Error(
-      `review-pr needs string args { sha, repo, diffRange }; missing or empty: ${missing.join(', ')}`,
+      `review-pr needs string args { sha, repo, baseSha }; missing or empty: ${missing.join(', ')}`,
     )
   }
-  return { sha: input.sha, repo: input.repo, diffRange: input.diffRange }
+  return { sha: input.sha, repo: input.repo, baseSha: input.baseSha }
 }
 
 function seatModel(seat) {
@@ -95,7 +95,7 @@ function seatOptions(seat, schema) {
 
 function reviewPrompt(seat, input) {
   return [
-    `You are one seat of a two-seat adversarial review over the diff at ${input.diffRange} in ${input.repo} at commit ${input.sha}.`,
+    `You are one seat of a two-seat adversarial review over the diff at ${input.reviewedRange} in ${input.repo} at commit ${input.sha}.`,
     `Your lens is ${seat.lens}.`,
     'Read the diff and its surrounding context with the tools you have. Change nothing.',
     'For every candidate defect, reproduce it yourself by running the commands that show the break. Reproduce or drop: a claim you cannot reproduce is dropped.',
@@ -114,7 +114,7 @@ function judgePrompt(group, input) {
     )
     .join('\n')
   return [
-    `Two adversarial seats disagree on one finding in ${input.repo} at commit ${input.sha}, diff range ${input.diffRange}.`,
+    `Two adversarial seats disagree on one finding in ${input.repo} at commit ${input.sha}, diff range ${input.reviewedRange}.`,
     `Location: ${lead.location}.`,
     `Defect: ${lead.defect}.`,
     perspectives,
@@ -251,10 +251,11 @@ function settleGroups(groups, disputes, rulings) {
   return { confirmed, dropped }
 }
 
-const input = requireArgs(args)
+const validated = requireArgs(args)
+const input = { ...validated, reviewedRange: `${validated.baseSha}...${validated.sha}` }
 
 phase('Review')
-log(`Dispatching two adversarial seats over ${input.diffRange}`)
+log(`Dispatching two adversarial seats over ${input.reviewedRange}`)
 const seatResults = await parallel(
   seatBlueprints.map((seat) => () => agent(reviewPrompt(seat, input), seatOptions(seat, findingsSchema))),
 )
