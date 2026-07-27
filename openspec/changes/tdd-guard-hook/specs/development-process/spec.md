@@ -8,7 +8,7 @@ The behavioral contract of the recompose feature pipeline: how a feature idea be
 
 ### Requirement: Edit-time test-first gate
 
-The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it. The gate reads the live test state that the test runner reports, never a claim in a prompt. Every edit-time gate declares a scope and leaves a path outside that scope untouched, so documents, specifications, and tooling definitions stay editable.
+The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it. The gate reads the recorded outcome of the session's own test run, never a claim in a prompt. Each session and each worktree gets its own view of that outcome, so one cluster's test state never answers for another's. Every edit-time gate declares a scope and leaves a path outside that scope untouched, so documents, specifications, and tooling definitions stay editable.
 
 #### Scenario: an implementation edit runs ahead of its test
 
@@ -19,6 +19,11 @@ The pipeline MUST block an implementation edit that no failing test precedes. Th
 
 - When an edit targets a path outside an edit-time gate's declared scope
 - Then that gate passes the edit through and reports no failure
+
+#### Scenario: two clusters run the gate at once
+
+- When two subagents in separate worktrees edit in-scope files at the same time
+- Then each gate decision reads that subagent's own test outcome
 
 ## MODIFIED Requirements
 

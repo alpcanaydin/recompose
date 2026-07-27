@@ -8,11 +8,12 @@ Two defects in the surrounding machinery block that work and land with it. The f
 
 ## What changes
 
-- The `tdd-guard` gate lands as a `PreToolUse` hook. It reads the live test state that a Vitest reporter writes, and it blocks an implementation edit with no failing test behind it. The gate covers the source trees and leaves every other path alone.
-- A behavior spec drives the scope invariant for both edit-time hooks. The spec runs the configured hook commands against sample payloads and asserts which edits pass.
+- The `@nizos/probity` gate lands as a `PreToolUse` hook, pinned exact and resolved from the workspace. It reads the session's own transcript to learn whether a failing test precedes an edit, and it blocks an implementation edit that has none. Reading the session transcript rather than a shared results file is what keeps parallel clusters honest: each worktree answers from its own record.
+- A `probity.config.ts` at the repository root declares the guarded scope as an allow list, so the source trees face the gate and every other tree stays editable.
+- A behavior spec drives the scope invariant for the formatter hook. The spec runs the configured hook command against sample payloads and asserts which edits pass.
 - The formatter hook gains the `--no-error-on-unmatched-pattern` flag that lefthook already passes, so an ignored path stops reading as a lint failure.
 - The verification phase gains the incremental re-review convention. A later `review-pr` run takes the previous reviewed head as `baseSha`, so the pass covers the increment instead of the whole branch.
-- A process Architecture Decision Record (ADR) records the edit-time tier, the scope boundary, the heuristic trust model, and the chain ceiling the incremental convention leaves open.
+- A process Architecture Decision Record (ADR) records the edit-time tier, the rejection of the predecessor tool, the scope boundary, the probabilistic trust model, and the chain ceiling the incremental convention leaves open.
 
 ## Capabilities
 
@@ -22,11 +23,12 @@ None.
 
 ### Modified capabilities
 
-- `development-process`: an edit-time gate blocks implementation edits that no failing test precedes, every edit-time gate stays inside its own scope, and the heavy review pass runs against the increment after the first pass.
+- `development-process`: an edit-time gate blocks implementation edits that no failing test precedes, each session and worktree reads its own test outcome, every edit-time gate stays inside its own scope, and the heavy review pass runs against the increment after the first pass.
 
 ## Impact
 
 - An implementer that reaches for code before its test meets a blocked tool call instead of a later review finding.
-- The gate spends a model call on each in-scope edit, so the scope boundary carries the cost control.
+- The test-first rule spends a model call on each in-scope edit that misses the fast path, so the scope boundary carries the cost control.
 - Script edits under `.claude` stop failing the formatter hook, which unblocks the saved-workflow tree for every future change.
 - The incremental convention trades a verifiable single range for a chain of ranges the guard can't walk. The record names that ceiling and its upgrade path.
+- The gate stays a probabilistic layer above the deterministic gates. Patch coverage, the mutation gate, and the path guard remain the merge blockers.

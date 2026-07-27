@@ -1,6 +1,6 @@
 # Tdd-guard-hook tasks
 
-> For agentic workers: use `superpowers:subagent-driven-development` to execute task by task. Every commit passes lefthook without bypass. Global constraints: never commit to `main`, no code comments, no em dash in prose, commit style `<type>: <imperative subject>` with at most 50 characters, and one green commit per task. Never commit a failing state: write the failing spec, run it, paste the full red output into the task report, then implement to green and commit once.
+> For agentic workers: use `superpowers:subagent-driven-development` to execute task by task. Every commit passes lefthook without bypass. Global constraints: never commit to `main`, no code comments, no em dash in prose, commit style `<type>: <imperative subject>` with at most 50 characters, and one green commit per task. Never commit a failing state: write the failing spec, run it, paste the full red output into the task report, then implement to green and commit once. Every dependency pins to an exact version. No committed file carries an absolute machine path.
 
 ## Task 1: Restore edits under `.claude`
 
@@ -14,73 +14,69 @@
 - Consumes: the `PostToolUse` hook command already configured for `Edit|Write`.
 - Produces: a working edit path under `.claude` that every later task depends on, and the spec directory the `test:workflows` script reaches.
 
-- [ ] **Step 1: Write the failing spec and capture its red run**
+- [x] **Step 1: Write the failing spec and capture its red run**
 
 The current hook exits 2 for a script edit under `.claude`, because `.claude/**` sits in the linter's ignore list and the linter answers an ignored path with exit 1 and `No files found to lint`. The hook reads that as a lint failure. The hook's pattern list covers `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, and `.cjs`, and skips `.mts`, so `.claude/workflows/review-pr.js` is the file affected today.
 
-Write `.claude/workflows/hooks/hook-scope.test.mts` with `node:test`, matching the style of `.claude/workflows/path-guard/path-guard.test.mts`. The spec reads the `Edit|Write` `PostToolUse` command out of `.claude/settings.json`, then runs it through a shell with the hook payload on standard input and the repository root as the working directory. Name each case in domain language, and assert on the exit code.
+Write `.claude/workflows/hooks/hook-scope.test.mts` with `node:test`, matching the style of `.claude/workflows/path-guard/path-guard.test.mts`. The spec reads the `Edit|Write` `PostToolUse` command out of `.claude/settings.json`, then runs it through a shell with the hook payload on standard input and the repository root as the working directory.
 
 Three cases:
 
 1. A path inside the linter's ignore scope whose extension the hook does match, such as `.claude/workflows/review-pr.js`, exits 0. An `.mts` path would skip the branch under test, so don't use one here.
 2. A clean source file the linter does lint, such as `vitest.shared.ts`, exits 0.
-3. A source file carrying a real lint error exits 2. Create that file in the spec and remove it in a teardown hook, so the tree stays clean when the spec fails. A root-level `.ts` file with a blank-line violation reproduces an error-level exit.
+3. A source file carrying a real lint error exits 2. Create that file in the spec and remove it in a teardown hook.
 
-Widen the `test:workflows` script in `package.json` so it reaches the new directory as well as the path-guard directory. Run `pnpm run test:workflows` and paste the full failing output into the task report. Case 1 fails before the fix and cases 2 and 3 pass.
+Widen the `test:workflows` script so it reaches the new directory as well as the path-guard directory.
 
-- [ ] **Step 2: Apply the flag and land one green commit**
+- [x] **Step 2: Apply the flag and land one green commit**
 
-Add `--no-error-on-unmatched-pattern` to both the formatter and the linter invocation inside the `PostToolUse` command in `.claude/settings.json`. The flag already appears in `lefthook.yml` for the same reason, so the hook stops inventing a second copy of an ignore list that the linter configuration already holds.
+Add `--no-error-on-unmatched-pattern` to both the formatter and the linter invocation inside the `PostToolUse` command.
 
-Verify: `pnpm run test:workflows` passes all three cases, and `pnpm run typecheck:workflows` exits 0. The spec and the fix land together as one green commit.
-
-```bash
-git add .claude/settings.json .claude/workflows/hooks/ package.json
-git commit -m "fix: stop the format hook blocking .claude edits"
-```
-
-## Task 2: Wire the reporter and the guard scope
+## Task 2: Pin the gate and declare its scope
 
 **Files:**
 
-- Create: `.claude/tdd-guard/data/config.json`
-- Modify: `apps/desktop/vitest.config.ts`, `apps/desktop/package.json`, `packages/contracts/vitest.config.ts`, `packages/contracts/package.json`, `.gitignore`
+- Create: `probity.config.ts`
+- Modify: `package.json`, `knip.json`
 
 **Interfaces:**
 
 - Consumes: the working edit path from Task 1.
-- Produces: the committed scope contract and the reporter registration the gate reads in Task 3.
+- Produces: the pinned binary and the committed scope contract that Task 3 arms.
 
-- [ ] **Step 1: Register the reporter in both vitest configurations**
+> Read the upstream reference before writing anything, because this project ships weekly and memory is stale. Fetch `https://raw.githubusercontent.com/nizos/probity/main/docs/configuration.md` and `https://raw.githubusercontent.com/nizos/probity/main/docs/rules.md`, and follow their current shape rather than any example in this file.
 
-Add `tdd-guard-vitest` at its exact current version to the dev dependencies of both `apps/desktop` and `packages/contracts`. The reporter declares a `vitest >=3.2.4` peer range, which 4.1.10 satisfies.
+- [ ] **Step 1: Pin the dependency and confirm the binary resolves**
 
-Register it at the root of the `test` block in each configuration, next to the existing default reporter. A root-level reporter receives modules from every entry of a `projects` array, so `apps/desktop` needs one registration rather than three.
+Add `@nizos/probity` at exactly `1.10.0` to the root `package.json` dev dependencies. It's a command the hook runs, not a module any package imports, so it belongs at the root and nowhere else. Install through `pnpm add --save-dev --save-exact --workspace-root`, never by editing the lockfile, which a hook blocks.
 
-Pass `projectRoot` as the repository root resolved from `import.meta.url`. Never write a literal absolute path: a committed file must not carry a machine path or an account name.
+The package declares peer dependencies on several syntax-tree language packs this repository has no use for. Don't add them. If the install demands them, reach for the workspace's peer-dependency ignore mechanism rather than pulling four unused native packages into the lockfile.
 
-Verify: run each package's suite and confirm `.claude/tdd-guard/data/test.json` appears and holds the run.
+Verify: `./node_modules/.bin/probity --help` resolves and prints usage. Record the output in the report, along with the subcommands it offers, because Task 3 needs to know whether the binary can explain a configuration without a live edit.
 
-- [ ] **Step 2: Write the guard scope and keep the state out of version control**
+- [ ] **Step 2: Write the scope contract**
 
-Create `.claude/tdd-guard/data/config.json` with `guardEnabled` set to true and an `ignorePatterns` list. A custom list replaces the upstream defaults outright. Restate every default this repository keeps: `*.md`, `*.txt`, `*.log`, `*.json`, `*.yml`, `*.yaml`, `*.xml`, `*.html`, `*.css`. Then add the trees outside the inner loop: `.claude/**`, `**/*.config.*`, `**/*.stories.tsx`, `**/.storybook/**`, `**/e2e/**`, and `scripts/**`. What stays guarded is `apps/desktop/src` and `packages/contracts/src`.
+Create `probity.config.ts` at the repository root, following the upstream flat shape. Bind the test-first rule to the source trees alone:
 
-Settle one upstream detail against the running guard rather than against the documentation: whether the matcher applies patterns to a repository-relative path or an absolute path. Record the evidence in the task report, and adjust the pattern list to whichever base the guard uses.
+- Guarded: `apps/desktop/src` and `packages/contracts/src`.
+- Outside every rule: test files, type-level specs, stories, generated modules, configuration modules, the end-to-end tree, the Storybook configuration, and everything under `.claude`.
 
-Add the ignore rule that excludes the guard's state directory and re-admits this one file. The shared contract stays in version control, and the machine-local run state stays out.
+Writing a test must never trip the rule that demands one. Confirm against the upstream reference how the tool classifies a test file. State in the report which mechanism handles it: a built-in classification, or an explicit exclusion you wrote.
+
+Globs resolve against this file's own directory. Never write an absolute path.
 
 - [ ] **Step 3: Clear the gates and commit**
 
-The reporter reaches the configuration as a string, so the dead-code gate may read the dependency as unused. Run `pnpm run lint:dead` and add the dependency to the matching `ignoreDependencies` list in `knip.json` when the gate flags it. Add any new vocabulary to `cspell-words.txt`.
+Nothing imports the binary, so the dead-code gate will flag it. Run `pnpm run lint:dead` and record it in the root workspace's `ignoreDependencies`. Add any new vocabulary to `cspell-words.txt`. `probity.config.ts` sits at the repository root, so the typecheck and lint gates cover it: keep it under the repository's strict settings with no comments.
 
-Verify: the commit passes lefthook without bypass, and `pnpm run test` stays green.
+Verify: the commit passes lefthook without bypass, and `pnpm run typecheck` exits 0.
 
 ```bash
-git add apps/desktop packages/contracts .claude/tdd-guard .gitignore pnpm-lock.yaml
-git commit -m "build: wire the tdd-guard vitest reporter"
+git add package.json pnpm-lock.yaml probity.config.ts knip.json cspell-words.txt
+git commit -m "build: pin the probity gate and its scope"
 ```
 
-## Task 3: Install the plugin and confirm the gate
+## Task 3: Arm the gate and prove both directions
 
 **Files:**
 
@@ -88,31 +84,38 @@ git commit -m "build: wire the tdd-guard vitest reporter"
 
 **Interfaces:**
 
-- Consumes: the reporter registration and the scope contract from Task 2.
-- Produces: the settings entries that arm the gate, and the smoke evidence in the task report.
+- Consumes: the pinned binary and the scope contract from Task 2.
+- Produces: the armed hook and the probe evidence in the task report.
 
-> This task needs the maintainer. A marketplace command runs in the interactive session, so a subagent can't finish it alone. Prepare the commands, hand them over, then commit the result.
+- [ ] **Step 1: Settle the load-bearing assumption first, before arming anything**
 
-- [ ] **Step 1: Hand the install commands to the maintainer**
+The whole design rests on one claim: the gate reads the calling session's own transcript, so a subagent sees its own test run and never another worktree's. Prove or disprove it before adding the hook.
 
-The two commands are `/plugin marketplace add nizos/tdd-guard` and `/plugin install tdd-guard@tdd-guard`. They add a marketplace entry and an enabled-plugin entry to `.claude/settings.json`, matching the shape the five existing plugins already use. The hooks may load only after a session restart.
+Read how the tool resolves the transcript. Then check whether a subagent's hook payload carries a transcript path pointing at that subagent's own record rather than the parent session's. The repository already proved that `PreToolUse` fires inside subagents, so the open half is whose transcript arrives.
 
-- [ ] **Step 2: Smoke the gate and record the evidence**
+If the answer is negative, stop and report BLOCKED with the evidence. Don't work around it. A gate that reads the wrong session is worse than no gate, and the maintainer decides what happens next.
 
-With the plugin loaded, run four checks and paste each outcome into the task report:
+- [ ] **Step 2: Arm the hook**
 
-1. Edit a file under `apps/desktop/src` with no failing test behind it. The gate denies the call and gives a reason.
-2. Write a failing test, run the suite, then repeat the edit. The gate lets it through.
-3. Edit a markdown file. No gate interferes.
-4. Edit a file under `.claude`. No gate interferes, which also confirms Task 1 holds with both hooks armed.
+Add a `PreToolUse` entry to `.claude/settings.json` matching the editing tools, running `./node_modules/.bin/probity` with the flag that selects Claude Code as the host. Match the existing hooks' style in that file, and set an explicit timeout the way the other entries do. Don't match shell commands: Decision 6 in `design.md` states that boundary and its reason. Leave every existing hook untouched.
 
-- [ ] **Step 3: Commit the settings entries**
+- [ ] **Step 3: Probe both directions and record the evidence**
+
+A gate that blocks everything and a gate that blocks nothing both look quiet from the outside, so prove each direction and paste both outcomes into the report:
+
+1. Edit a file under `apps/desktop/src` with no failing test in the session. The gate denies the call and gives a reason.
+2. Write a failing test, run that package's suite in the same session, then repeat the edit. The gate lets it through.
+3. Edit a markdown file, a configuration module, and a file under `.claude`. No gate interferes, which also confirms Task 1 holds with both hooks armed.
+
+Revert any scratch edit the probe made. The commit carries the settings change alone.
+
+- [ ] **Step 4: Commit**
 
 Verify: the commit passes lefthook without bypass, and `pnpm run test:workflows` still passes with the new settings content.
 
 ```bash
 git add .claude/settings.json
-git commit -m "build: arm the tdd-guard edit-time gate"
+git commit -m "build: arm the edit-time test-first gate"
 ```
 
 ## Task 4: Fold the mechanism into the skill
@@ -123,15 +126,15 @@ git commit -m "build: arm the tdd-guard edit-time gate"
 
 **Interfaces:**
 
-- Consumes: the shipped gate from Task 3 and Decision 5 from `design.md`.
+- Consumes: the armed gate from Task 3 and Decision 7 from `design.md`.
 
 - [ ] **Step 1: Move the gate out of the deferred list**
 
-The Enforcement rollout note in `SKILL.md` lists the gate among the deferred machinery. Move it to the shipped sentence and name where it lives: the upstream plugin supplies the hooks, and `.claude/tdd-guard/data/config.json` holds the scope.
+The Enforcement rollout note in `SKILL.md` lists the gate among the deferred machinery. Move it to the shipped sentence and name where it lives: a pinned dependency, a `PreToolUse` hook, and `probity.config.ts` for the scope.
 
 - [ ] **Step 2: Make the mechanism concrete in the implementation reference**
 
-The Red-run evidence section already describes the gate in the abstract. Replace that description with the mechanism and its scope, and state that the gate covers subagent tool calls, so the executor's implementers run under it.
+The Red-run evidence section describes the gate in the abstract. Replace that with the mechanism. The gate reads the session's own transcript, it covers subagent tool calls, and its scope is the source trees. It sits above the deterministic gates rather than replacing them. State the one operational consequence for implementers: the failing test run must happen in the same session as the edit.
 
 - [ ] **Step 3: Add the incremental convention to the verification reference**
 
@@ -139,7 +142,7 @@ The Commit chain section describes the review pass. Add the convention: the firs
 
 - [ ] **Step 4: Verify and commit**
 
-Verify: the commit passes lefthook without bypass. The skills tree stays exempt from the prose gates, so the validation gate is the one that matters here.
+Verify: the commit passes lefthook without bypass.
 
 ```bash
 git add .claude/skills/feature-cycle/
@@ -159,7 +162,7 @@ git commit -m "docs: shipped tdd gate and incremental review"
 
 - [ ] **Step 1: Write the record through the new-adr skill**
 
-Cover the three-tier enforcement stack and why the edit-time tier is a heuristic rather than a deterministic gate. Cover the plugin installation with its unpinned-command exposure and the reasoning that accepted it. Cover the source-tree scope, the computed project root, the formatter-hook flag, and the incremental review convention with its chain ceiling and named upgrade path. Record the deliberate test gap: one deterministic spec covers the formatter hook, and the guard's own scope stays a recorded manual smoke step. Full prose, clean under both prose gates.
+Cover the three-tier enforcement stack and why the edit-time tier is probabilistic rather than deterministic. Cover the tool reversal. The rollout note named the predecessor, its maintainer steers new projects away from it, and its single-project-root state storage collides with parallel worktree clusters. Cover the pinned dependency over the plugin, the allow-list scope, and the editing-tools-only matcher with the shell path named as the upgrade. Cover the incremental review convention with its chain ceiling. Record the deliberate test gap: one deterministic spec covers the formatter hook, and the gate's own behavior stays a recorded arming probe. Don't cite the compliance figure from the frozen design note, because the research pass found no primary source for it. Full prose, clean under both prose gates.
 
 - [ ] **Step 2: Update the index**
 
