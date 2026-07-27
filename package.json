@@ -61,5 +61,8 @@
       "onFail": "download"
     }
   },
+  "engines": {
+    "node": "^22.18.0 || >=23.6.0"
+  },
   "packageManager": "pnpm@11.15.1"
 }

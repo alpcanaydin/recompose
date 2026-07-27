@@ -30,7 +30,7 @@
             "type": "command",
             "command": "node",
             "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/workflows/hooks/resolve-transcript.mts"
+              "${CLAUDE_PROJECT_DIR}/.claude/workflows/hooks/launch-gate.mjs"
             ],
             "timeout": 120,
             "statusMessage": "test-first gate"

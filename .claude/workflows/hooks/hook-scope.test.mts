@@ -16,7 +16,7 @@ const GATED_TOOL_MATCHER = 'Edit|Write|NotebookEdit';
 
 const LINTER_BINARY = 'oxlint';
 
-const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
+const LAUNCHER_SCRIPT_NAME = 'launch-gate.mjs';
 
 const IGNORED_FIXTURE = '.claude/workflows/hook-scope-ignored-fixture.ts';
 
@@ -179,7 +179,7 @@ describe('post-edit format hook: an edit made from a working directory outside t
 describe('test-first gate hook: a tool call made from a working directory outside the checkout', () => {
   it('reaches the gate and blocks the tool call', () => {
     const outcome = runHook(
-      configuredHook('PreToolUse', GATED_TOOL_MATCHER, RESOLVER_SCRIPT_NAME),
+      configuredHook('PreToolUse', GATED_TOOL_MATCHER, LAUNCHER_SCRIPT_NAME),
       DIRECTORY_OUTSIDE_CHECKOUT,
       'not a hook payload',
     );

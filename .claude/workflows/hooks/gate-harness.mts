@@ -105,22 +105,30 @@ export function mainLoopPayload(): string {
   return editPayload('apps/desktop/src/main/index.ts');
 }
 
-export function runResolver(
-  checkout: string,
+export function runHookScript(
+  script: string,
   workingDirectory: string,
   payload: string,
 ): HookOutcome {
-  const run = spawnSync(process.execPath, [join(checkout, RESOLVER_PATH_IN_CHECKOUT)], {
+  const run = spawnSync(process.execPath, [script], {
     cwd: workingDirectory,
     encoding: 'utf8',
     input: payload,
   });
 
   if (run.status === null) {
-    throw new Error(`the resolver was killed by ${String(run.signal)} before it reported`);
+    throw new Error(`${script} was killed by ${String(run.signal)} before it reported`);
   }
 
   return { stdout: run.stdout, stderr: run.stderr, status: run.status };
+}
+
+export function runResolver(
+  checkout: string,
+  workingDirectory: string,
+  payload: string,
+): HookOutcome {
+  return runHookScript(join(checkout, RESOLVER_PATH_IN_CHECKOUT), workingDirectory, payload);
 }
 
 export function runResolverIn(checkout: string, payload: string): HookOutcome {
