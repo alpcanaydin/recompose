@@ -125,11 +125,11 @@ git commit -m "docs: adr for the review path guard"
 
 **Files:** none (process step).
 
-- [ ] **Step 1: Final validation sweep**
+- [x] **Step 1: Final validation sweep**
 
 Run: `pnpm exec openspec validate --all --strict --no-interactive && pnpm run lint:prose && pnpm run lint:spell`
 Expected: all exit 0.
 
-- [ ] **Step 2: Push and hand over**
+- [x] **Step 2: Push and hand over**
 
 Push the branch. Prepare the `gh pr create` command for the owner with a body that names the change directory, the modified capability, and the Architecture Decision Record (ADR).
