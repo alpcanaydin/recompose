@@ -37,7 +37,7 @@ Every planning artifact MUST pass a human gate before downstream work consumes i
 
 ### Requirement: Implementation discipline
 
-The pipeline MUST implement through the subagent-driven executor with the parallelization policy. The contracts cluster merges alone first. Only clusters with disjoint file ownership run in parallel, and a serial merge train integrates them. Every task keeps a red-proof commit pair, and property tests, step definitions, and stories are explicit tasks.
+The pipeline MUST implement through the subagent-driven executor with the parallelization policy. The contracts cluster merges alone first. Only clusters with disjoint file ownership run in parallel, and a serial merge train integrates them. Every task captures its failing test run in the task report and lands as one green commit, and property tests, step definitions, and stories are explicit tasks.
 
 #### Scenario: two clusters touch the same file
 
@@ -46,12 +46,12 @@ The pipeline MUST implement through the subagent-driven executor with the parall
 
 ### Requirement: Verification before the pull request
 
-The pipeline MUST run two passes inside the worktree before the pull request opens: an adversarial review with a model-diverse reviewer pair and a diff-scoped mutation pass. Findings get fixed before the first push.
+The pipeline MUST run two passes inside the worktree before the pull request opens: an adversarial review with a model-diverse reviewer pair and a diff-scoped mutation pass. Findings get fixed before the pull request opens.
 
 #### Scenario: the reviewers disagree on a finding
 
 - When the two reviewers return conflicting verdicts on a finding
-- Then a judge at maximum effort settles the finding before the push
+- Then a judge at maximum effort settles the finding before the review status posts
 
 ### Requirement: Merge policy
 
@@ -71,3 +71,13 @@ Every change directory MUST carry at least one spec delta with a scenario from i
 - When the pipeline creates a change directory
 - Then the same commit adds a spec delta with at least one scenario
 - And the validation gate stays green on every commit
+
+### Requirement: Blast-radius path guard
+
+The pipeline MUST verify in continuous integration that a pull request touching blast-radius paths carries the `feature-cycle/reviewed` commit status on its head commit. A missing status fails the guard and names the heavy review pass as the way to clear it. The blast-radius path classes are the Electron main and preload sources, the contracts package, the storage layer, the workflow definitions, and the package manifests. The workflow definitions class spans both the continuous integration tree and the saved-workflow tree.
+
+#### Scenario: a blast-radius pull request lacks the review marker
+
+- When a pull request changes a blast-radius path without the `feature-cycle/reviewed` status on its head commit
+- Then the path guard fails the check
+- And the failure names the heavy review pass as the way to clear the guard
