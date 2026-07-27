@@ -83,6 +83,7 @@ jobs:
       - run: pnpm run lint:dup
       - run: pnpm run lint:spell
       - run: pnpm run typecheck:workflows
+      - run: pnpm run typecheck:root-configs
       - run: pnpm run test:workflows
 
   mutation:
