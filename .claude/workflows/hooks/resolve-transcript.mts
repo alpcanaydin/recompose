@@ -125,6 +125,6 @@ function main(): void {
   process.exit(run.status);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   main();
 }

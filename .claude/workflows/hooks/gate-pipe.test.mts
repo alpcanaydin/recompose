@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -68,6 +76,14 @@ function checkoutWithStandInGate(gateBody: string): string {
   });
 
   return checkout;
+}
+
+function aliasedCheckout(checkout: string): string {
+  const alias = join(scratchWorkspace(), 'aliased-checkout');
+
+  symlinkSync(checkout, alias, 'dir');
+
+  return alias;
 }
 
 function mainLoopPayload(): string {
@@ -234,6 +250,17 @@ describe('the test-first gate pipe: a checkout with no gate binary installed', (
 
     assert.equal(outcome.status, 2);
     assert.match(outcome.stderr, /probity did not start/);
+  });
+});
+
+describe('the test-first gate pipe: a checkout reached through a symlinked parent', () => {
+  it('still starts the gate and hands the caller its decision', () => {
+    const checkout = checkoutWithStandInGate(`printf '%s' '${DENIAL_DECISION}'`);
+
+    const outcome = runResolverIn(aliasedCheckout(checkout), mainLoopPayload());
+
+    assert.equal(outcome.stdout, DENIAL_DECISION);
+    assert.equal(outcome.status, 0);
   });
 });
 

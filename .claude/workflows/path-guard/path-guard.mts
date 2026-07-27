@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
 type Verdict = {
   status: 'pass' | 'fail';
@@ -116,6 +115,6 @@ function main(): void {
   console.log(`path guard passed: ${verdict.reason}`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   main();
 }

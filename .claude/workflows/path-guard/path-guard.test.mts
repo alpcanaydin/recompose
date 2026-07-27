@@ -1,9 +1,36 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { after, describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { evaluate } from './path-guard.mts';
 
 const REVIEWED = 'feature-cycle/reviewed';
+
+const GUARD_DIRECTORY = dirname(fileURLToPath(import.meta.url));
+
+const GUARD_SCRIPT_NAME = 'path-guard.mts';
+
+const scratchWorkspaces: string[] = [];
+
+after(() => {
+  for (const workspace of scratchWorkspaces) {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+function aliasedGuardDirectory(): string {
+  const workspace = mkdtempSync(join(tmpdir(), 'path-guard-'));
+  const alias = join(workspace, 'aliased-guard');
+
+  scratchWorkspaces.push(workspace);
+  symlinkSync(GUARD_DIRECTORY, alias, 'dir');
+
+  return alias;
+}
 
 describe('path guard: a blast-radius change without the review marker', () => {
   it('fails and lists the offending paths', () => {
@@ -53,5 +80,17 @@ describe('path guard: a change outside the blast radius', () => {
     );
 
     assert.equal(verdict.status, 'pass');
+  });
+});
+
+describe('path guard: a run launched through a symlinked parent', () => {
+  it('still reaches the guard and reports the missing range instead of passing silently', () => {
+    const run = spawnSync(process.execPath, [join(aliasedGuardDirectory(), GUARD_SCRIPT_NAME)], {
+      encoding: 'utf8',
+      env: { PATH: process.env['PATH'] ?? '' },
+    });
+
+    assert.notEqual(run.status, 0);
+    assert.match(run.stderr, /BASE_SHA/);
   });
 });
