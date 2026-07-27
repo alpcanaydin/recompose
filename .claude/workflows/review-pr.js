@@ -46,11 +46,12 @@ const findingsSchema = {
 const judgeSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['verdict', 'reason'],
+  required: ['verdict', 'reason', 'confidence', 'reproduced'],
   properties: {
     verdict: { type: 'string', enum: ['confirmed', 'dropped'] },
     reason: { type: 'string' },
     confidence: { type: 'number', minimum: 0, maximum: 100 },
+    reproduced: { type: 'boolean' },
   },
 }
 
@@ -119,6 +120,7 @@ function judgePrompt(group, input) {
     perspectives,
     'Settle the conflict yourself. Reproduce the claim by running the commands that would show the break.',
     'Reproduce or drop: rule confirmed only when you reproduce it at confidence 80 or above, otherwise rule dropped and give the reason.',
+    'Report your confidence from 0 to 100 and whether you reproduced the claim.',
   ].join('\n')
 }
 
@@ -179,28 +181,72 @@ function droppedReason(entries) {
   return reasons.length > 0 ? reasons.join(' | ') : 'dropped by every seat that saw it'
 }
 
+const CONFIDENCE_THRESHOLD = 80
+
+function confirmationFailure(claim) {
+  if (claim.verdict !== 'confirmed') {
+    return 'verdict was not confirmed'
+  }
+  if (typeof claim.confidence !== 'number' || claim.confidence < CONFIDENCE_THRESHOLD) {
+    return `confidence ${claim.confidence} is below ${CONFIDENCE_THRESHOLD}`
+  }
+  if (claim.reproduced !== true) {
+    return 'the claim was not reproduced'
+  }
+  return null
+}
+
+function confirmingFinding(group) {
+  const confirmations = group.entries
+    .map((entry) => entry.finding)
+    .filter((finding) => finding.verdict === 'confirmed')
+  const passing = confirmations.find((finding) => confirmationFailure(finding) === null)
+  return passing ?? confirmations[0] ?? group.entries[0].finding
+}
+
+function judgeLabel(key) {
+  const slug = key
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+  return `judge-${slug || 'dispute'}`
+}
+
+function assertJudgesResolved(disputes, rulings) {
+  const dead = disputes.filter((group, index) => !rulings[index]).map((group) => group.key)
+  if (dead.length > 0) {
+    throw new Error(`review-pr process assertion failed: the judge died on dispute(s): ${dead.join(', ')}`)
+  }
+}
+
 function settleGroups(groups, disputes, rulings) {
   const rulingByKey = new Map(disputes.map((group, index) => [group.key, rulings[index]]))
   const confirmed = []
   const dropped = []
   groups.forEach((group) => {
-    const lead = leadFinding(group)
     const seats = group.entries.map((entry) => entry.seatLabel)
+    if (group.status === 'dropped') {
+      dropped.push({ ...leadFinding(group), seats, reason: droppedReason(group.entries) })
+      return
+    }
     if (group.status === 'disputed') {
       const ruling = rulingByKey.get(group.key)
-      const record = { ...lead, seats, judge: ruling.reason }
-      if (ruling.verdict === 'confirmed') {
+      const record = { ...leadFinding(group), seats, judge: ruling.reason }
+      const failure = confirmationFailure(ruling)
+      if (failure === null) {
         confirmed.push(record)
       } else {
-        dropped.push({ ...record, reason: ruling.reason })
+        dropped.push({ ...record, reason: `judge ${failure}` })
       }
       return
     }
-    if (group.status === 'confirmed') {
-      confirmed.push({ ...lead, seats })
-      return
+    const claim = confirmingFinding(group)
+    const failure = confirmationFailure(claim)
+    if (failure === null) {
+      confirmed.push({ ...claim, seats })
+    } else {
+      dropped.push({ ...claim, seats, reason: failure })
     }
-    dropped.push({ ...lead, seats, reason: droppedReason(group.entries) })
   })
   return { confirmed, dropped }
 }
@@ -225,7 +271,7 @@ if (disputes.length > 0) {
   rulings = await parallel(
     disputes.map((group) => () =>
       agent(judgePrompt(group, input), {
-        label: `judge-${group.key}`,
+        label: judgeLabel(group.key),
         phase: 'Judge',
         model: 'fable',
         effort: 'max',
@@ -233,6 +279,7 @@ if (disputes.length > 0) {
       }),
     ),
   )
+  assertJudgesResolved(disputes, rulings)
 }
 
 const settled = settleGroups(grouped, disputes, rulings)
@@ -254,7 +301,11 @@ if (confirmedFindings.length === 0) {
     phase: 'Verify',
     schema: statusSchema,
   })
-  statusPosted = posting.posted === true
+  if (!posting || posting.posted !== true) {
+    const detail = (posting && posting.detail) || 'the posting agent reported no created status'
+    throw new Error(`review-pr failed to post the reviewed status: ${detail}`)
+  }
+  statusPosted = true
 } else {
   log(`${confirmedFindings.length} finding(s) survived; withholding the reviewed status for the fix cycle`)
 }
