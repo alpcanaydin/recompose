@@ -6,7 +6,7 @@
 
 **Files:**
 
-- Create: `.claude/workflows/review-pr.md`
+- Create: `.claude/workflows/review-pr.js`
 
 **Interfaces:**
 
@@ -25,7 +25,7 @@ Expected: 0 errors from both. The workflow carries dispatch tables and tool synt
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .claude/workflows/ .vale.ini cspell.json
+git add .claude/workflows/ .vale.ini cspell.json knip.json
 git commit -m "feat: review-pr saved workflow"
 ```
 

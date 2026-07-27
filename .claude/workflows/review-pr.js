@@ -205,66 +205,64 @@ function settleGroups(groups, disputes, rulings) {
   return { confirmed, dropped }
 }
 
-export default async function reviewPr() {
-  const input = requireArgs(args)
+const input = requireArgs(args)
 
-  phase('Review')
-  log(`Dispatching two adversarial seats over ${input.diffRange}`)
-  const seatResults = await parallel(
-    seatBlueprints.map((seat) => () => agent(reviewPrompt(seat, input), seatOptions(seat, findingsSchema))),
+phase('Review')
+log(`Dispatching two adversarial seats over ${input.diffRange}`)
+const seatResults = await parallel(
+  seatBlueprints.map((seat) => () => agent(reviewPrompt(seat, input), seatOptions(seat, findingsSchema))),
+)
+
+assertDistinctSeats(seatBlueprints, seatResults)
+
+const grouped = groupFindings(seatBlueprints, seatResults)
+const disputes = grouped.filter((group) => group.status === 'disputed')
+
+let rulings = []
+if (disputes.length > 0) {
+  phase('Judge')
+  log(`Escalating ${disputes.length} conflicting finding(s) to the judge`)
+  rulings = await parallel(
+    disputes.map((group) => () =>
+      agent(judgePrompt(group, input), {
+        label: `judge-${group.key}`,
+        phase: 'Judge',
+        model: 'fable',
+        effort: 'max',
+        schema: judgeSchema,
+      }),
+    ),
   )
+}
 
-  assertDistinctSeats(seatBlueprints, seatResults)
+const settled = settleGroups(grouped, disputes, rulings)
+const confirmedFindings = settled.confirmed
+const droppedFindings = settled.dropped
 
-  const grouped = groupFindings(seatBlueprints, seatResults)
-  const disputes = grouped.filter((group) => group.status === 'disputed')
+phase('Verify')
+const seatLabels = seatBlueprints.map((seat) => seat.label)
+const judgeCalls = disputes.map((group, index) => ({
+  finding: group.key,
+  verdict: rulings[index].verdict,
+  reason: rulings[index].reason,
+}))
 
-  let rulings = []
-  if (disputes.length > 0) {
-    phase('Judge')
-    log(`Escalating ${disputes.length} conflicting finding(s) to the judge`)
-    rulings = await parallel(
-      disputes.map((group) => () =>
-        agent(judgePrompt(group, input), {
-          label: `judge-${group.key}`,
-          phase: 'Judge',
-          model: 'fable',
-          effort: 'max',
-          schema: judgeSchema,
-        }),
-      ),
-    )
-  }
+let statusPosted = false
+if (confirmedFindings.length === 0) {
+  const posting = await agent(statusPrompt(input), {
+    label: 'post-reviewed-status',
+    phase: 'Verify',
+    schema: statusSchema,
+  })
+  statusPosted = posting.posted === true
+} else {
+  log(`${confirmedFindings.length} finding(s) survived; withholding the reviewed status for the fix cycle`)
+}
 
-  const settled = settleGroups(grouped, disputes, rulings)
-  const confirmedFindings = settled.confirmed
-  const droppedFindings = settled.dropped
-
-  phase('Verify')
-  const seatLabels = seatBlueprints.map((seat) => seat.label)
-  const judgeCalls = disputes.map((group, index) => ({
-    finding: group.key,
-    verdict: rulings[index].verdict,
-    reason: rulings[index].reason,
-  }))
-
-  let statusPosted = false
-  if (confirmedFindings.length === 0) {
-    const posting = await agent(statusPrompt(input), {
-      label: 'post-reviewed-status',
-      phase: 'Verify',
-      schema: statusSchema,
-    })
-    statusPosted = posting.posted === true
-  } else {
-    log(`${confirmedFindings.length} finding(s) survived; withholding the reviewed status for the fix cycle`)
-  }
-
-  return {
-    confirmedFindings,
-    droppedFindings,
-    seatLabels,
-    judgeCalls,
-    statusPosted,
-  }
+return {
+  confirmedFindings,
+  droppedFindings,
+  seatLabels,
+  judgeCalls,
+  statusPosted,
 }
