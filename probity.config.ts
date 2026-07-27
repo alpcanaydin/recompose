@@ -4,9 +4,10 @@ export default defineConfig({
   rules: [
     {
       files: [
-        'apps/desktop/src/**/*.ts',
-        'apps/desktop/src/**/*.tsx',
-        'packages/contracts/src/**/*.ts',
+        'apps/*/src/**',
+        'packages/*/src/**',
+        '!**/*.css',
+        '!**/*.html',
         '!**/*.test.ts',
         '!**/*.test.tsx',
         '!**/*.test-d.ts',

@@ -22,6 +22,17 @@
             "command": "c=$(jq -r '.tool_input.command // empty'); case \"$c\" in *--no-verify*|*--no-gpg-sign*) echo 'hook bypass flags are blocked - fix the failing gate instead of skipping it' >&2; exit 2;; esac"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/workflows/hooks/resolve-transcript.mts",
+            "timeout": 120,
+            "statusMessage": "test-first gate"
+          }
+        ]
       }
     ],
     "Stop": [
