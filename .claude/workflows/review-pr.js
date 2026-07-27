@@ -273,6 +273,7 @@ if (disputes.length > 0) {
       agent(judgePrompt(group, input), {
         label: judgeLabel(group.key),
         phase: 'Judge',
+        agentType: 'adversarial-reviewer',
         model: 'fable',
         effort: 'max',
         schema: judgeSchema,

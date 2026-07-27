@@ -44,7 +44,7 @@ git commit -m "feat: review-pr saved workflow"
 
 - [x] **Step 1: Write the failing spec and capture its red run**
 
-Colocate `.claude/workflows/path-guard/path-guard.test.mts` next to the script. Wire it into the existing node-side vitest project, or add a minimal project when none covers `scripts/`. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet. Capture that failing run into the task report as the red evidence.
+Colocate `.claude/workflows/path-guard/path-guard.test.mts` next to the script. Run it through `node:test` under the `test:workflows` script. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet. Capture that failing run into the task report as the red evidence.
 
 - [x] **Step 2: Implement the guard and land one green commit**
 

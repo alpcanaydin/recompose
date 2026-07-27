@@ -6,8 +6,8 @@ The feature-cycle process merged and left its enforcement machinery for later. T
 
 ## What changes
 
-- A `review-pr` saved workflow lands under `.claude/workflows/`, runnable by name. It dispatches a model-diverse reviewer pair and escalates disagreements to a judge. It applies reproduce-or-drop and the confidence threshold, asserts two distinct reviewer subagents ran, then posts the `feature-cycle/reviewed` commit status on the reviewed head commit.
-- A unit-tested `scripts/path-guard.mjs` decides pass or fail from the changed-path list and the head commit statuses. A thin job step in `.github/workflows/ci.yml` feeds the script and runs behind the `ci-success` barrier.
+- A `review-pr` saved workflow lands under `.claude/workflows/`, runnable by name. It dispatches a model-diverse reviewer pair and escalates disagreements to a judge. It applies reproduce-or-drop and the confidence threshold, asserts two distinct reviewer subagents ran, then posts the `feature-cycle/reviewed` commit status on the reviewed head commit when no finding survives.
+- A unit-tested `.claude/workflows/path-guard/path-guard.mts` decides pass or fail from the changed-path list and the head commit statuses. A thin job step in `.github/workflows/ci.yml` feeds the script and runs behind the `ci-success` barrier.
 - The feature-cycle skill gains the concrete marker mechanism in `references/verification.md`. Its Merge section gains the post-archive step that fills the living spec's Purpose from the delta.
 - A process Architecture Decision Record (ADR) records the per-commit status marker, the guard placement, the blast-radius path set, and the drift-protection trust model.
 
