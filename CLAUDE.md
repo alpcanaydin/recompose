@@ -50,6 +50,7 @@
 - Every feature starts with `/feature-cycle <description>`. The `feature-cycle` skill classifies the tier as trivial, standard, or full, the maintainer confirms it, and the phases run from there.
 - The skill calls `superpowers` as its executor library: `superpowers:subagent-driven-development` runs the Test-Driven Development (TDD) implementation and `superpowers:brainstorming` supplies the brainstorm discipline.
 - Trivial work (config tweaks, docs, single-file fixes) keeps its escape hatch: the `trivial` tier exits the pipeline, so just do it.
+- Dispatch independent work in parallel by default. Running one worker after another needs a named blocker, and only three count: one worker reads what another produces, two workers own the same file, or one worker inspects what another writes. Every dispatch names the files it owns and says that the others run on disjoint files.
 
 ## Test-driven and behavior-driven development
 
