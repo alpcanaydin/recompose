@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 type SubagentAwarePayload = {
@@ -7,7 +8,9 @@ type SubagentAwarePayload = {
   readonly agent_id?: string | undefined;
 };
 
-const GATE_COMMAND = './node_modules/.bin/probity';
+const CHECKOUT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+const GATE_COMMAND = join(CHECKOUT_ROOT, 'node_modules', '.bin', 'probity');
 
 const GATE_ARGUMENTS: readonly string[] = ['--agent', 'claude-code'];
 
@@ -97,6 +100,7 @@ function buildGateInput(): string {
 
 function main(): void {
   const run = spawnSync(GATE_COMMAND, GATE_ARGUMENTS, {
+    cwd: CHECKOUT_ROOT,
     input: buildGateInput(),
     stdio: ['pipe', 'inherit', 'inherit'],
   });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -54,6 +54,10 @@ describe('transcript resolution: a payload naming a subagent with no record on d
 
 const RESOLVER_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'resolve-transcript.mts');
 
+const RESOLVER_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks', 'resolve-transcript.mts');
+
+const GATE_CONFIGURATION = 'export default { rules: [] };\n';
+
 const DENIAL_DECISION = JSON.stringify({
   hookSpecificOutput: {
     hookEventName: 'PreToolUse',
@@ -79,23 +83,33 @@ after(() => {
 });
 
 function scratchWorkspace(): string {
-  const workspace = mkdtempSync(join(tmpdir(), 'transcript-resolver-'));
+  const workspace = realpathSync(mkdtempSync(join(tmpdir(), 'transcript-resolver-')));
 
   scratchWorkspaces.push(workspace);
 
   return workspace;
 }
 
-function workspaceWithStandInGate(gateBody: string): string {
-  const workspace = scratchWorkspace();
-  const binDirectory = join(workspace, 'node_modules', '.bin');
+function checkoutWithResolver(): string {
+  const checkout = scratchWorkspace();
+  const resolver = join(checkout, RESOLVER_PATH_IN_CHECKOUT);
+
+  mkdirSync(dirname(resolver), { recursive: true });
+  copyFileSync(RESOLVER_SCRIPT, resolver);
+
+  return checkout;
+}
+
+function checkoutWithStandInGate(gateBody: string): string {
+  const checkout = checkoutWithResolver();
+  const binDirectory = join(checkout, 'node_modules', '.bin');
 
   mkdirSync(binDirectory, { recursive: true });
   writeFileSync(join(binDirectory, 'probity'), `#!/bin/sh\ncat >stdin.json\n${gateBody}\n`, {
     mode: 0o755,
   });
 
-  return workspace;
+  return checkout;
 }
 
 function mainLoopPayload(): string {
@@ -107,9 +121,9 @@ function mainLoopPayload(): string {
   });
 }
 
-function runResolverIn(workspace: string, payload: string): HookOutcome {
-  const run = spawnSync(process.execPath, [RESOLVER_SCRIPT], {
-    cwd: workspace,
+function runResolver(checkout: string, workingDirectory: string, payload: string): HookOutcome {
+  const run = spawnSync(process.execPath, [join(checkout, RESOLVER_PATH_IN_CHECKOUT)], {
+    cwd: workingDirectory,
     encoding: 'utf8',
     input: payload,
   });
@@ -121,9 +135,17 @@ function runResolverIn(workspace: string, payload: string): HookOutcome {
   return { stdout: run.stdout, stderr: run.stderr, status: run.status };
 }
 
+function runResolverIn(checkout: string, payload: string): HookOutcome {
+  return runResolver(checkout, checkout, payload);
+}
+
+function runResolverOutside(checkout: string, payload: string): HookOutcome {
+  return runResolver(checkout, scratchWorkspace(), payload);
+}
+
 describe('the test-first gate pipe: a gate that denies on standard output', () => {
   it('hands the caller that decision unchanged', () => {
-    const workspace = workspaceWithStandInGate('cat decision.json');
+    const workspace = checkoutWithStandInGate('cat decision.json');
     writeFileSync(join(workspace, 'decision.json'), DENIAL_DECISION, 'utf8');
 
     const outcome = runResolverIn(workspace, mainLoopPayload());
@@ -134,7 +156,7 @@ describe('the test-first gate pipe: a gate that denies on standard output', () =
 
 describe('the test-first gate pipe: a gate that writes a diagnostic to standard error', () => {
   it('hands the caller that diagnostic unchanged', () => {
-    const workspace = workspaceWithStandInGate('cat diagnostic.txt >&2');
+    const workspace = checkoutWithStandInGate('cat diagnostic.txt >&2');
     writeFileSync(join(workspace, 'diagnostic.txt'), GATE_DIAGNOSTIC, 'utf8');
 
     const outcome = runResolverIn(workspace, mainLoopPayload());
@@ -145,7 +167,7 @@ describe('the test-first gate pipe: a gate that writes a diagnostic to standard 
 
 describe('the test-first gate pipe: a gate that exits non-zero', () => {
   it('hands the caller that exit status unchanged', () => {
-    const outcome = runResolverIn(workspaceWithStandInGate('exit 17'), mainLoopPayload());
+    const outcome = runResolverIn(checkoutWithStandInGate('exit 17'), mainLoopPayload());
 
     assert.equal(outcome.status, 17);
   });
@@ -153,7 +175,7 @@ describe('the test-first gate pipe: a gate that exits non-zero', () => {
 
 describe('the test-first gate pipe: a subagent call whose own record exists', () => {
   it('hands the gate a payload naming that record and nothing else changed', () => {
-    const workspace = workspaceWithStandInGate('cat stdin.json');
+    const workspace = checkoutWithStandInGate('cat stdin.json');
     const sessionTranscript = join(workspace, 'transcripts', 'session-0001.jsonl');
     const subagentRecord = join(
       workspace,
@@ -190,7 +212,7 @@ describe('the test-first gate pipe: a subagent call whose own record exists', ()
 
 describe('the test-first gate pipe: a subagent call whose own record is missing', () => {
   it('announces which record was sought and which one the gate read instead', () => {
-    const workspace = workspaceWithStandInGate('cat stdin.json');
+    const workspace = checkoutWithStandInGate('cat stdin.json');
     const sessionTranscript = join(workspace, 'transcripts', 'session-0001.jsonl');
     const soughtRecord = join(
       workspace,
@@ -231,7 +253,7 @@ describe('the test-first gate pipe: a subagent call whose own record is missing'
 
 describe('the test-first gate pipe: a payload naming no subagent', () => {
   it('leaves standard error clean', () => {
-    const outcome = runResolverIn(workspaceWithStandInGate('exit 0'), mainLoopPayload());
+    const outcome = runResolverIn(checkoutWithStandInGate('exit 0'), mainLoopPayload());
 
     assert.equal(outcome.stderr, '');
   });
@@ -239,18 +261,38 @@ describe('the test-first gate pipe: a payload naming no subagent', () => {
 
 describe('the test-first gate pipe: a payload the resolver cannot parse', () => {
   it('denies the tool call and reports that the gate never ran', () => {
-    const outcome = runResolverIn(workspaceWithStandInGate('exit 0'), 'not a hook payload');
+    const outcome = runResolverIn(checkoutWithStandInGate('exit 0'), 'not a hook payload');
 
     assert.equal(outcome.status, 2);
     assert.match(outcome.stderr, /the test-first gate never ran/);
   });
 });
 
-describe('the test-first gate pipe: a working directory with no gate beneath it', () => {
+describe('the test-first gate pipe: a checkout with no gate binary installed', () => {
   it('denies the tool call and names the binary that did not start', () => {
-    const outcome = runResolverIn(scratchWorkspace(), mainLoopPayload());
+    const outcome = runResolverIn(checkoutWithResolver(), mainLoopPayload());
 
     assert.equal(outcome.status, 2);
     assert.match(outcome.stderr, /probity did not start/);
+  });
+});
+
+describe('the test-first gate pipe: a hook firing from a working directory outside the checkout', () => {
+  it('still starts the gate and hands the caller its decision', () => {
+    const checkout = checkoutWithStandInGate(`printf '%s' '${DENIAL_DECISION}'`);
+
+    const outcome = runResolverOutside(checkout, mainLoopPayload());
+
+    assert.equal(outcome.stdout, DENIAL_DECISION);
+    assert.equal(outcome.status, 0);
+  });
+
+  it('runs the gate inside the checkout that keeps the gate configuration', () => {
+    const checkout = checkoutWithStandInGate('cat probity.config.ts');
+    writeFileSync(join(checkout, 'probity.config.ts'), GATE_CONFIGURATION, 'utf8');
+
+    const outcome = runResolverOutside(checkout, mainLoopPayload());
+
+    assert.equal(outcome.stdout, GATE_CONFIGURATION);
   });
 });
