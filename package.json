@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
-    "test:workflows": "node --test .claude/workflows/path-guard/*.test.mts",
+    "test:workflows": "node --test .claude/workflows/*/*.test.mts",
     "test:e2e": "pnpm --filter @recompose/desktop run test:e2e",
     "storybook": "pnpm --filter @recompose/desktop run storybook",
     "typecheck": "turbo run typecheck && pnpm run typecheck:workflows",

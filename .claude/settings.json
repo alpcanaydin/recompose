@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) ./node_modules/.bin/oxfmt \"$f\" >/dev/null 2>&1 || true; out=$(./node_modules/.bin/oxlint \"$f\" 2>&1) || { echo \"$out\" >&2; exit 2; };; esac",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs) ./node_modules/.bin/oxfmt --no-error-on-unmatched-pattern \"$f\" >/dev/null 2>&1 || true; out=$(./node_modules/.bin/oxlint --no-error-on-unmatched-pattern \"$f\" 2>&1) || { echo \"$out\" >&2; exit 2; };; esac",
             "timeout": 60,
             "statusMessage": "oxfmt + oxlint"
           }
