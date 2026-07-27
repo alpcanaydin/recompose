@@ -44,3 +44,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0036](0036-stryker-mutation-gate.md)                          | Stryker Mutation Gate Over the Node-Tested Surfaces                                 | Accepted | 2026-07-26 |
 | [0037](0037-openspec-artifact-layer.md)                        | OpenSpec as the Artifact Layer for the Feature Cycle                                | Accepted | 2026-07-26 |
 | [0038](0038-feature-cycle-process.md)                          | The Feature Cycle as an Executable Process                                          | Accepted | 2026-07-26 |
+| [0039](0039-review-pass-marker-and-path-guard.md)              | The Review Marker and the Blast-Radius Path Guard                                   | Accepted | 2026-07-27 |

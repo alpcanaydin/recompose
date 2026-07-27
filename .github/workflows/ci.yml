@@ -82,6 +82,8 @@ jobs:
       - run: pnpm run lint:openspec
       - run: pnpm run lint:dup
       - run: pnpm run lint:spell
+      - run: pnpm run typecheck:workflows
+      - run: pnpm run test:workflows
 
   mutation:
     needs: changes
@@ -458,6 +460,30 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
 
+  path-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: read
+    steps:
+      - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: node .claude/workflows/path-guard/path-guard.mts
+
   ci-success:
     needs:
       [
@@ -473,6 +499,7 @@ jobs:
         zizmor,
         actionlint,
         commitlint-pr,
+        path-guard,
       ]
     if: always()
     runs-on: ubuntu-latest

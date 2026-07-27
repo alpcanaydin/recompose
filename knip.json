@@ -19,6 +19,7 @@
     },
     ".": {
       "entry": ["steiger.config.ts"],
+      "ignore": [".claude/workflows/**"],
       "ignoreDependencies": ["@playwright/mcp", "@steiger/toolkit", "@swc/core"],
       "ignoreBinaries": ["mise"]
     }
