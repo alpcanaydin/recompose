@@ -13,16 +13,16 @@
 - Consumes: the `adversarial-reviewer` seat, the model map, and the process assertion from the feature-cycle skill.
 - Produces: the `feature-cycle/reviewed` commit status that Task 2 reads.
 
-- [ ] **Step 1: Write the workflow**
+- [x] **Step 1: Write the workflow**
 
 The workflow runs by name and drives the heavy review pass. It dispatches two `adversarial-reviewer` seats over the same diff. One seat keeps its `opus` pin. The other takes the most capable model through the `model` parameter at dispatch. A disagreement escalates to a judge at maximum effort. The workflow applies reproduce-or-drop and the confidence threshold of 80. It asserts two distinct reviewer subagents ran, then posts the `feature-cycle/reviewed` status on the head commit through `gh api`. The status post happens only after the assertion passes.
 
-- [ ] **Step 2: Verify the prose gates**
+- [x] **Step 2: Verify the prose gates**
 
 Run: `mise exec -- vale .claude/workflows/ && pnpm exec cspell --no-progress .claude/workflows/`
 Expected: 0 errors from both. The workflow carries dispatch tables and tool syntax like the skills tree, so add `.claude/workflows` to the Vale exemption block and the cspell ignore list, matching `.claude/commands`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .claude/workflows/ .vale.ini cspell.json knip.json
