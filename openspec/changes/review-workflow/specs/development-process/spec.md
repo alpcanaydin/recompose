@@ -15,3 +15,14 @@ The pipeline MUST verify in continuous integration that a pull request touching 
 - When a pull request changes a blast-radius path without the `feature-cycle/reviewed` status on its head commit
 - Then the path guard fails the check
 - And the failure names the heavy review pass as the way to clear the guard
+
+## MODIFIED Requirements
+
+### Requirement: Implementation discipline
+
+The pipeline MUST implement through the subagent-driven executor with the parallelization policy. The contracts cluster merges alone first. Only clusters with disjoint file ownership run in parallel, and a serial merge train integrates them. Every task captures its failing test run in the task report and lands as one green commit, and property tests, step definitions, and stories are explicit tasks.
+
+#### Scenario: two clusters touch the same file
+
+- When the plan assigns one file to two clusters
+- Then the clusters run serially instead of in parallel

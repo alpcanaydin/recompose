@@ -15,9 +15,9 @@ Implementation wraps the `superpowers:subagent-driven-development` executor and 
 
 Every cluster runs a `tdd-implementer` subagent, one per cluster, one worktree each.
 
-## Red-proof pairs
+## Red-run evidence
 
-Every task keeps a red-proof pair: the failing-spec commit precedes the implementation commit, and no squash crosses that boundary. The TDD Guard hook enforces this at the tool boundary. It intercepts every implementation edit, reads the latest test state from the Vitest reporter, and blocks code that has no failing test behind it.
+Every task stays test-first. The failing test run is captured into the task report before any implementation, and the task lands as one green commit. The TDD Guard hook enforces test-first at the tool boundary. It intercepts every implementation edit, reads the latest test state from the Vitest reporter, and blocks code that has no failing test behind it.
 
 ## Explicit test-layer tasks
 

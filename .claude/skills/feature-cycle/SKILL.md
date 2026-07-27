@@ -91,9 +91,9 @@ The roster dispatched by name: `code-analyzer`, `researcher`, `tdd-implementer`,
 ## Phases
 
 - [planning.md](references/planning.md): the five discovery arms with caps, the interactive brainstorm, and the two approval gates.
-- [implementation.md](references/implementation.md): the contracts cluster, disjoint ownership, staggered worktrees, the merge train, red-proof pairs, and the explicit test-layer tasks. Task execution delegates to `superpowers:subagent-driven-development`.
+- [implementation.md](references/implementation.md): the contracts cluster, disjoint ownership, staggered worktrees, the merge train, the red-run evidence, and the explicit test-layer tasks. Task execution delegates to `superpowers:subagent-driven-development`.
 - [verification.md](references/verification.md): the reviewer pair with a judge, the mutation pass, the commit chain, and the pull-request line with the CodeRabbit protocol.
 
 ## Enforcement rollout
 
-The phases name enforcement machinery that lands in later changes. That set covers the zero-token citation validator, TDD Guard hook, process assertion, pipeline marker, path guard, environment setup script, finding-by-commit verifiers, and rider ledger. Until each one exists, the session runs those checks by hand and records riders in the pull request body.
+The phases name enforcement machinery. The citation validator, the TDD Guard hook, the environment setup script, the finding-by-commit verifiers, and the rider ledger stay deferred to later changes. Until each one exists, the session runs those checks by hand and records riders in the pull request body. The review workflow, the process assertion, the pipeline marker, and the path guard now exist. The `review-pr` saved workflow at `.claude/workflows/review-pr.js` carries the first three, and the path guard lives at `.claude/workflows/path-guard/`.

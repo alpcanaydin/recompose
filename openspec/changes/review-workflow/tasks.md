@@ -42,25 +42,20 @@ git commit -m "feat: review-pr saved workflow"
 - Consumes: the changed-path list and the head commit statuses.
 - Produces: a pass or fail exit for the `path-guard` job behind `ci-success`.
 
-- [ ] **Step 1: Write the failing spec (red)**
+- [x] **Step 1: Write the failing spec and capture its red run**
 
-Colocate `.claude/workflows/path-guard/path-guard.test.mts` next to the script. Wire it into the existing node-side vitest project, or add a minimal project when none covers `scripts/`. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet.
+Colocate `.claude/workflows/path-guard/path-guard.test.mts` next to the script. Wire it into the existing node-side vitest project, or add a minimal project when none covers `scripts/`. The spec drives the pure decision function that takes the changed-path list and the head commit statuses, then returns pass or fail. Cover three cases: a blast-radius hit without the status, a blast-radius hit with the status, and a clean path that skips the guard. The spec fails because the function doesn't exist yet. Capture that failing run into the task report as the red evidence.
 
-```bash
-git add .claude/workflows/path-guard/path-guard.test.mts
-git commit -m "test: path-guard decision spec"
-```
+- [x] **Step 2: Implement the guard and land one green commit**
 
-- [ ] **Step 2: Implement the guard (green)**
-
-Keep the whole guard self-contained in `.claude/workflows/path-guard/path-guard.mts`, like `check-licenses.mjs`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception.
+Keep the whole guard self-contained in `.claude/workflows/path-guard/path-guard.mts`, like `check-licenses.mjs`. Export the pure decision function so the spec passes, then read the two inputs and call it. Don't extend the Stryker mutation scope, and don't move the function into a domain package. The three-case unit spec is the compensating cover for that scope exception. The spec and its implementation land together as one green commit.
 
 ```bash
-git add .claude/workflows/path-guard/path-guard.mts
+git add .claude/workflows/path-guard/
 git commit -m "feat: blast-radius path-guard logic"
 ```
 
-- [ ] **Step 3: Wire the `ci.yml` job**
+- [x] **Step 3: Wire the `ci.yml` job**
 
 Add a `path-guard` job. It computes the changed-path list, fetches the head commit statuses through `gh api`, then runs the script. Add the job to the `ci-success` needs list. Keep the job step thin, so the tested function owns the decision.
 
@@ -79,15 +74,15 @@ git commit -m "ci: run the path guard behind ci-success"
 
 - Consumes: the marker decision from `design.md` in this change.
 
-- [ ] **Step 1: Make the marker concrete**
+- [x] **Step 1: Make the marker concrete**
 
 Replace the abstract pipeline-marker language with the mechanism. State that the `review-pr` workflow posts the `feature-cycle/reviewed` commit status on the head commit through `gh api` after the process assertion passes. State that the path guard reads that status in continuous integration.
 
-- [ ] **Step 2: Add the post-archive Purpose step**
+- [x] **Step 2: Add the post-archive Purpose step**
 
 The Merge section gains one step. After OpenSpec archives the change, fill the merged spec's Purpose from the delta, because the archive step leaves it empty.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `pnpm exec openspec validate --all --strict --no-interactive`
 Expected: exit 0. The skills tree stays prose-exempt, so no Vale or cspell run applies.

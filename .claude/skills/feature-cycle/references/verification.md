@@ -4,7 +4,7 @@ The spec mandates two passes inside the worktree before the pull request opens, 
 
 ## Adversarial review
 
-Two `adversarial-reviewer` instances review the same diff, for deliberate model diversity and deliberate angle diversity.
+The `review-pr` saved workflow runs the adversarial review. Two `adversarial-reviewer` instances review the same diff, for deliberate model diversity and deliberate angle diversity.
 
 - **Model diversity.** One seat keeps its `opus` default and one seat is overridden at dispatch to the most capable model, because same-model panels amplify correlated errors. The dispatch passes the `model` parameter on the Agent tool call, which overrides the definition's pin for that instance.
 - **Angle diversity.** The two reviewers take distinct lenses, so coverage spans more than one failure mode.
@@ -13,7 +13,7 @@ Two `adversarial-reviewer` instances review the same diff, for deliberate model 
 - **Confidence threshold.** The report filters at a confidence threshold, starting at the code-review plugin default of 80.
 - **Fix before push.** Findings get fixed before the first push, not after.
 
-**Process assertion.** A deterministic check confirms that two distinct reviewer subagents ran before the commit chain writes the pipeline marker, because orchestrators drift back to self-review. Prohibition rules stay deterministic: a rule phrased as never-do-x lives in a gate or a hook, not in a reviewer prompt, because reviewers miss negations.
+**Process assertion.** A deterministic check confirms that two distinct reviewer subagents ran before the workflow posts the review status, because orchestrators drift back to self-review. Prohibition rules stay deterministic: a rule phrased as never-do-x lives in a gate or a hook, not in a reviewer prompt, because reviewers miss negations.
 
 ## Mutation pass
 
@@ -25,9 +25,9 @@ Before the commit chain, a `rules-reviewer` makes one read-only pass over the di
 
 ## Commit chain
 
-Write the commit chain in caveman-commit style. Preserve the red-proof pairs from implementation: no squash crosses a failing-spec-to-implementation boundary. Record the pipeline marker for the path guard once the process assertion passes.
+Write the commit chain in caveman-commit style. The task reports carry the red runs, so the commit chain stays green at every commit. The `review-pr` workflow posts the `feature-cycle/reviewed` commit status on the reviewed head commit through `gh api`, once the process assertion passes.
 
-The **path guard** runs deterministically in continuous integration. A pull request that touches blast-radius paths without the pipeline marker triggers a demand for the heavy pass. Blast-radius paths are the Electron main and preload sources, the contracts package, storage, workflow definitions, and package manifests.
+The **path guard** runs deterministically in continuous integration. It reads the `feature-cycle/reviewed` status on the head commit. A pull request that touches blast-radius paths without that status fails the guard, which names the heavy pass as the way to clear it. A new push carries no status, so a re-review follows any change. Blast-radius paths are the Electron main and preload sources, the contracts package, storage, workflow definitions, and package manifests.
 
 ## Pull-request line
 
@@ -48,4 +48,4 @@ A finding closes only when its own verifier confirms the fix on the new commit, 
 
 ## Merge
 
-A human gives the final approval. The pipeline never approves its own merge. The ruleset demands `ci-success`, the CodeRabbit review, the `codecov/patch` status, CodeQL, and resolved threads. On merge, OpenSpec archives the change and folds its deltas into `openspec/specs/`.
+A human gives the final approval. The pipeline never approves its own merge. The ruleset demands `ci-success`, the CodeRabbit review, the `codecov/patch` status, CodeQL, and resolved threads. On merge, OpenSpec archives the change and folds its deltas into `openspec/specs/`. After the archive, the same pull request fills the living spec's Purpose from the archived delta, because the archive scaffolds that Purpose as TBD.
