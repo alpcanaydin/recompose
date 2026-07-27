@@ -67,10 +67,27 @@ function readSubagentAwarePayload(payload: object): SubagentAwarePayload {
   };
 }
 
+function announceMissingSubagentRecord(payload: SubagentAwarePayload, resolved: string): void {
+  const agentId = payload.agent_id;
+
+  if (agentId === undefined || resolved !== payload.transcript_path) {
+    return;
+  }
+
+  const soughtRecord = subagentRecordPath(payload.transcript_path, agentId);
+
+  console.error(
+    `the subagent record ${soughtRecord} is missing, so the test-first gate reads the session transcript ${payload.transcript_path} instead`,
+  );
+}
+
 function buildGateInput(): string {
   try {
     const payload = readPayloadObject(readFileSync(0, 'utf8'));
-    const transcriptPath = resolveTranscriptPath(readSubagentAwarePayload(payload), existsSync);
+    const subagentAwarePayload = readSubagentAwarePayload(payload);
+    const transcriptPath = resolveTranscriptPath(subagentAwarePayload, existsSync);
+
+    announceMissingSubagentRecord(subagentAwarePayload, transcriptPath);
 
     return JSON.stringify({ ...payload, transcript_path: transcriptPath });
   } catch (cause) {

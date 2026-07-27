@@ -188,6 +188,55 @@ describe('the test-first gate pipe: a subagent call whose own record exists', ()
   });
 });
 
+describe('the test-first gate pipe: a subagent call whose own record is missing', () => {
+  it('announces which record was sought and which one the gate read instead', () => {
+    const workspace = workspaceWithStandInGate('cat stdin.json');
+    const sessionTranscript = join(workspace, 'transcripts', 'session-0001.jsonl');
+    const soughtRecord = join(
+      workspace,
+      'transcripts',
+      'session-0001',
+      'subagents',
+      `agent-${SUBAGENT_ID}.jsonl`,
+    );
+
+    mkdirSync(dirname(sessionTranscript), { recursive: true });
+    writeFileSync(sessionTranscript, '', 'utf8');
+
+    const outcome = runResolverIn(
+      workspace,
+      JSON.stringify({
+        session_id: 'session-0001',
+        transcript_path: sessionTranscript,
+        agent_id: SUBAGENT_ID,
+        agent_type: 'tdd-implementer',
+        tool_name: 'Write',
+      }),
+    );
+
+    assert.equal(
+      outcome.stderr,
+      `the subagent record ${soughtRecord} is missing, so the test-first gate reads the session transcript ${sessionTranscript} instead\n`,
+    );
+    assert.deepEqual(JSON.parse(outcome.stdout), {
+      session_id: 'session-0001',
+      transcript_path: sessionTranscript,
+      agent_id: SUBAGENT_ID,
+      agent_type: 'tdd-implementer',
+      tool_name: 'Write',
+    });
+    assert.equal(outcome.status, 0);
+  });
+});
+
+describe('the test-first gate pipe: a payload naming no subagent', () => {
+  it('leaves standard error clean', () => {
+    const outcome = runResolverIn(workspaceWithStandInGate('exit 0'), mainLoopPayload());
+
+    assert.equal(outcome.stderr, '');
+  });
+});
+
 describe('the test-first gate pipe: a payload the resolver cannot parse', () => {
   it('denies the tool call and reports that the gate never ran', () => {
     const outcome = runResolverIn(workspaceWithStandInGate('exit 0'), 'not a hook payload');
