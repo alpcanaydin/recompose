@@ -16,13 +16,13 @@
 
 - [ ] **Step 1: Write the failing spec and capture its red run**
 
-The current hook exits 2 for every `.ts`, `.js`, or `.mts` edit under `.claude`, because `.claude/**` sits in the linter's ignore list and the linter answers an ignored path with exit 1 and `No files found to lint`. The hook reads that as a lint failure.
+The current hook exits 2 for a script edit under `.claude`, because `.claude/**` sits in the linter's ignore list and the linter answers an ignored path with exit 1 and `No files found to lint`. The hook reads that as a lint failure. The hook's pattern list covers `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, and `.cjs`, and skips `.mts`, so `.claude/workflows/review-pr.js` is the file affected today.
 
 Write `.claude/workflows/hooks/hook-scope.test.mts` with `node:test`, matching the style of `.claude/workflows/path-guard/path-guard.test.mts`. The spec reads the `Edit|Write` `PostToolUse` command out of `.claude/settings.json`, then runs it through a shell with the hook payload on standard input and the repository root as the working directory. Name each case in domain language, and assert on the exit code.
 
 Three cases:
 
-1. A path inside the linter's ignore scope, such as an existing file under `.claude/workflows/`, exits 0.
+1. A path inside the linter's ignore scope whose extension the hook does match, such as `.claude/workflows/review-pr.js`, exits 0. An `.mts` path would skip the branch under test, so don't use one here.
 2. A clean source file the linter does lint, such as `vitest.shared.ts`, exits 0.
 3. A source file carrying a real lint error exits 2. Create that file in the spec and remove it in a teardown hook, so the tree stays clean when the spec fails. A root-level `.ts` file with a blank-line violation reproduces an error-level exit.
 

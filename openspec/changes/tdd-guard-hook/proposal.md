@@ -4,7 +4,7 @@
 
 The pipeline states test-first discipline in prose and checks it after the fact. The implementation phase asks every task to capture a failing run before the code exists, and a reviewer reads that report later. Prose alone moves compliance little, and a reviewer who reads a finished branch can't tell a captured red run from a reconstructed one. Rollout item 4 hands the pipeline an edit-time gate that closes the window.
 
-Two defects in the surrounding machinery block that work and land with it. The formatter hook fails every edit under `.claude`, so the tooling tree can't take an edit through the normal path. The review marker binds to one commit, so every push after a fix pays for a full heavy pass again.
+Two defects in the surrounding machinery block that work and land with it. The formatter hook fails any script edit under `.claude`, which today means the saved workflow script and every one that follows it. The review marker binds to one commit, so every push after a fix pays for a full heavy pass again.
 
 ## What changes
 
@@ -28,5 +28,5 @@ None.
 
 - An implementer that reaches for code before its test meets a blocked tool call instead of a later review finding.
 - The gate spends a model call on each in-scope edit, so the scope boundary carries the cost control.
-- Edits under `.claude` stop failing the formatter hook, which unblocks the tooling tree for every future change.
+- Script edits under `.claude` stop failing the formatter hook, which unblocks the saved-workflow tree for every future change.
 - The incremental convention trades a verifiable single range for a chain of ranges the guard can't walk. The record names that ceiling and its upgrade path.

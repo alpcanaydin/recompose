@@ -15,11 +15,12 @@ Test-first discipline reaches the pipeline through three channels today. The imp
 
 The pipeline already runs deterministic gates at the pull request: mutation, coverage, and the blast-radius path guard. None of them fire while a subagent writes code. The tool boundary is the one place that sees the edit before it lands, and Claude Code exposes it through `PreToolUse` hooks.
 
-Two defects in the surrounding tooling sit in the way. The `PostToolUse` formatter hook fails every edit under `.claude`, which is where this change writes. The `feature-cycle/reviewed` status binds to one commit, so each fix push pays for a whole-branch review again.
+Two defects in the surrounding tooling sit in the way. The `PostToolUse` formatter hook fails a script edit under `.claude`, which is where this change writes. The `feature-cycle/reviewed` status binds to one commit, so each fix push pays for a whole-branch review again.
 
 ## Discovery inputs consumed
 
 - Formatter hook reproduction: the reported cause was wrong, so the fix changed shape. `oxfmt` holds `.claude/**` in its ignore list and leaves the file byte-identical, even with an absolute path. `oxlint` carries the same ignore entry and exits 1 with `No files found to lint`, which the hook reads as a lint failure and turns into `exit 2`. The fix became the `--no-error-on-unmatched-pattern` flag that lefthook already passes.
+- Hook extension audit: the hook's pattern list covers `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, and `.cjs`, and skips `.mts`. Under `.claude` that leaves one file affected today, the saved workflow script, and every saved workflow the rollout adds later. The scope claim shrank to match, and the spec's ignored-path case uses a matching extension so the case exercises the branch it targets.
 - Subagent hook probe: a subagent's `Write` call hit the existing `PreToolUse` hook and never reached disk. Hooks cover subagent tool calls, so the gate reaches the executor's implementers rather than the orchestrating session alone. Without that result this change would guard the wrong surface.
 - Vitest reporter probe: a root-level reporter in a config that declares a `projects` array received modules from every project. One registration in `apps/desktop/vitest.config.ts` covers the unit, browser, and Storybook projects.
 - Registry metadata: `tdd-guard` sits at 1.7.0 and `tdd-guard-vitest` at 0.2.0 with a `vitest >=3.2.4` peer range, which the repository's 4.1.10 satisfies. The command carries `@anthropic-ai/claude-agent-sdk`, which confirms model-backed validation rather than a deterministic rule engine.
