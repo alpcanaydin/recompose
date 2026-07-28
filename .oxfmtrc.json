@@ -3,7 +3,10 @@
   "ignorePatterns": [
     ".agent/**",
     ".agents/**",
-    ".claude/**",
+    ".claude/*",
+    "!.claude/workflows/",
+    ".claude/workflows/*",
+    "!.claude/workflows/*/",
     ".codex/**",
     "dist/**",
     "coverage/**",

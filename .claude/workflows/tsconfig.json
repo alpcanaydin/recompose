@@ -8,8 +8,10 @@
     "types": ["node"],
     "typeRoots": ["../../apps/desktop/node_modules/@types"],
     "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["**/*.mts"]
+  "include": ["**/*.mts", "**/*.mjs"]
 }

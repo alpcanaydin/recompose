@@ -15,19 +15,68 @@ const allowlist = new Set([
   'Unlicense',
 ]);
 
-const raw = execFileSync('pnpm', ['licenses', 'list', '--prod', '--json'], {
-  encoding: 'utf8',
-  shell: process.platform === 'win32',
-});
-type LicensePackage = { name: string; versions: string[] };
+type LicenseAudit = {
+  readonly distinctLicenses: number;
+  readonly offenders: readonly string[];
+};
 
-const byLicense: Record<string, LicensePackage[]> = JSON.parse(raw);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
 
-const offenders = Object.entries(byLicense)
-  .filter(([license]) => !allowlist.has(license))
-  .flatMap(([license, packages]) =>
-    packages.map((pkg) => `${pkg.name}@${pkg.versions.join(',')} (${license})`),
-  );
+function isList(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+function readVersions(value: unknown): readonly string[] {
+  return isList(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+function readVersionedPackages(value: unknown): readonly unknown[] {
+  return isList(value) ? value : [];
+}
+
+function describeOffender(license: string, value: unknown): string {
+  if (!isRecord(value)) {
+    throw new Error(`pnpm reported a ${license} package that is not an object`);
+  }
+
+  const name = value['name'];
+
+  if (typeof name !== 'string') {
+    throw new Error(`pnpm reported a ${license} package carrying no name`);
+  }
+
+  return `${name}@${readVersions(value['versions']).join(',')} (${license})`;
+}
+
+function auditLicenses(report: string): LicenseAudit {
+  const parsed: unknown = JSON.parse(report);
+
+  if (!isRecord(parsed)) {
+    throw new Error('pnpm licenses list did not report a JSON object');
+  }
+
+  const entries = Object.entries(parsed);
+  const offenders: string[] = [];
+
+  for (const [license, packages] of entries) {
+    if (!allowlist.has(license)) {
+      offenders.push(
+        ...readVersionedPackages(packages).map((value) => describeOffender(license, value)),
+      );
+    }
+  }
+
+  return { distinctLicenses: entries.length, offenders };
+}
+
+const { distinctLicenses, offenders } = auditLicenses(
+  execFileSync('pnpm', ['licenses', 'list', '--prod', '--json'], {
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  }),
+);
 
 if (offenders.length > 0) {
   console.error('licenses outside the allowlist:');
@@ -39,6 +88,4 @@ if (offenders.length > 0) {
   process.exit(1);
 }
 
-console.log(
-  `license gate passed: ${Object.keys(byLicense).length} distinct licenses, all allowlisted`,
-);
+console.log(`license gate passed: ${distinctLicenses} distinct licenses, all allowlisted`);

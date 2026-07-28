@@ -21,6 +21,7 @@ cliproxyapi
 Codechecks
 codegen
 coderabbit
+componentwise
 cooldown
 covguard
 cyclonedx
@@ -48,6 +49,7 @@ frontmatter
 frontmost
 fuite
 Gebert
+gitdir
 glassmorphism
 idempotently
 inspectable
@@ -69,6 +71,7 @@ Menlo
 Meridius
 Mobbin
 negotiables
+nizos
 nofilter
 nonblocking
 noninteractive
@@ -132,6 +135,7 @@ undeferred
 unscanned
 unstub
 untypes
+unjudged
 unvalidated
 unwritable
 upserts

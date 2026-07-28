@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.strict.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "esnext",
+    "lib": ["esnext"],
+    "types": ["node"],
+    "typeRoots": ["./apps/desktop/node_modules/@types"],
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["*.ts"]
+}

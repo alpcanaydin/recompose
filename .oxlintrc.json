@@ -140,7 +140,23 @@
     "typescript/no-deprecated": "error",
     "typescript/no-duplicate-type-constituents": "error",
     "typescript/no-explicit-any": "error",
-    "typescript/no-floating-promises": "error",
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        "allowForKnownSafeCalls": [
+          {
+            "from": "package",
+            "name": "describe",
+            "package": "node:test"
+          },
+          {
+            "from": "package",
+            "name": "it",
+            "package": "node:test"
+          }
+        ]
+      }
+    ],
     "typescript/no-for-in-array": "error",
     "typescript/no-implied-eval": "error",
     "typescript/no-meaningless-void-operator": "error",
@@ -593,7 +609,10 @@
   "ignorePatterns": [
     ".agent/**",
     ".agents/**",
-    ".claude/**",
+    ".claude/*",
+    "!.claude/workflows/",
+    ".claude/workflows/*",
+    "!.claude/workflows/*/",
     ".codex/**",
     "dist/**",
     "coverage/**",
@@ -622,6 +641,12 @@
       "files": ["apps/desktop/e2e/fixtures.ts"],
       "rules": {
         "eslint/no-empty-pattern": "off"
+      }
+    },
+    {
+      "files": [".claude/workflows/**"],
+      "rules": {
+        "react-doctor/expo-no-non-inlined-env": "off"
       }
     }
   ]

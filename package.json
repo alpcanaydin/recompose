@@ -11,11 +11,12 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
-    "test:workflows": "node --test .claude/workflows/path-guard/*.test.mts",
+    "test:workflows": "node --test .claude/workflows/*/*.test.mts",
     "test:e2e": "pnpm --filter @recompose/desktop run test:e2e",
     "storybook": "pnpm --filter @recompose/desktop run storybook",
-    "typecheck": "turbo run typecheck && pnpm run typecheck:workflows",
+    "typecheck": "turbo run typecheck && pnpm run typecheck:workflows && pnpm run typecheck:root-configs",
     "typecheck:workflows": "pnpm --filter @recompose/desktop exec tsc -p ../../.claude/workflows/tsconfig.json",
+    "typecheck:root-configs": "pnpm --filter @recompose/desktop exec tsc -p ../../tsconfig.root-configs.json",
     "lint": "turbo run lint",
     "lint:root": "oxlint",
     "lint:fix": "oxlint --fix",
@@ -35,6 +36,7 @@
     "@commitlint/config-conventional": "21.2.0",
     "@feature-sliced/steiger-plugin": "0.7.0",
     "@fission-ai/openspec": "1.6.0",
+    "@nizos/probity": "1.10.0",
     "@playwright/mcp": "0.0.78",
     "@steiger/toolkit": "0.2.3",
     "@stylistic/eslint-plugin": "5.10.0",
@@ -58,6 +60,9 @@
       "version": "11.15.1",
       "onFail": "download"
     }
+  },
+  "engines": {
+    "node": "^22.18.0 || >=23.6.0"
   },
   "packageManager": "pnpm@11.15.1"
 }

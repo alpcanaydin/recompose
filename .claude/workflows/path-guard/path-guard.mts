@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+
+import { isProcessEntryPoint } from '../hooks/entry-point.mjs';
 
 type Verdict = {
   status: 'pass' | 'fail';
@@ -86,7 +87,13 @@ function readChangedPaths(baseSha: string, headSha: string): string[] {
 function readStatusContexts(repo: string, headSha: string): string[] {
   const output = execFileSync(
     'gh',
-    ['api', '--paginate', `repos/${repo}/commits/${headSha}/statuses`, '--jq', '.[] | select(.state == "success") | .context'],
+    [
+      'api',
+      '--paginate',
+      `repos/${repo}/commits/${headSha}/statuses`,
+      '--jq',
+      '.[] | select(.state == "success") | .context',
+    ],
     { encoding: 'utf8' },
   );
 
@@ -110,6 +117,6 @@ function main(): void {
   console.log(`path guard passed: ${verdict.reason}`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isProcessEntryPoint(import.meta.url)) {
   main();
 }
