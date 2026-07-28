@@ -29,7 +29,11 @@ export const MAIN_LOOP_NOTEBOOK_PATH = 'apps/desktop/src/main/index.ipynb';
 
 export const EDITED_CONTENT = 'export const start = (): void => undefined;\n';
 
+export const REPLACED_CONTENT = 'export const start = (): void => {};\n';
+
 export const EDITED_CELL_SOURCE = 'start()\n';
+
+export const EDITING_SUBAGENT_ID = 'b7c1d2e3f4a5';
 
 export const GATE_CONFIGURATION = 'export default { rules: [] };\n';
 
@@ -170,6 +174,39 @@ export function editPayloadFromWorkingDirectory(
   return JSON.stringify({
     session_id: 'session-0001',
     transcript_path: SESSION_TRANSCRIPT,
+    cwd: workingDirectory,
+    tool_name: 'Write',
+    tool_input: { file_path: filePath, content: EDITED_CONTENT },
+  });
+}
+
+export function replacementPayloadFromWorkingDirectory(
+  workingDirectory: string,
+  filePath: string,
+): string {
+  return JSON.stringify({
+    session_id: 'session-0001',
+    transcript_path: SESSION_TRANSCRIPT,
+    cwd: workingDirectory,
+    tool_name: 'Edit',
+    tool_input: {
+      file_path: filePath,
+      old_string: REPLACED_CONTENT,
+      new_string: EDITED_CONTENT,
+    },
+  });
+}
+
+export function subagentPayloadFromWorkingDirectory(
+  workingDirectory: string,
+  filePath: string,
+  sessionTranscript: string,
+): string {
+  return JSON.stringify({
+    session_id: 'session-0001',
+    transcript_path: sessionTranscript,
+    agent_id: EDITING_SUBAGENT_ID,
+    agent_type: 'tdd-implementer',
     cwd: workingDirectory,
     tool_name: 'Write',
     tool_input: { file_path: filePath, content: EDITED_CONTENT },
