@@ -502,7 +502,11 @@ Main derives the file browser, the login-item availability, the login-item value
 
 ### Designated mutant killers
 
-Each invariant below names the property test that has to kill the mutants in its logic.
+Each invariant below names the property test that carries it. A property test alone doesn't reliably kill the mutants in that logic, so each row also carries example tests over the boundary its generator misses.
+
+Measured on `packages/contracts/src/migration.ts` with the repository's own configuration: property tests do run against mutants, and Stryker attributes their coverage correctly. The run reported zero uncovered mutants and named a property among the tests it ran. What they can't do is reach a branch their generator never produces. A round-trip property over valid documents left `version < 1` mutated to `false` alive, because it never generates an invalid version. The seed also changes per run, so a property that catches a mutant once may miss it next time.
+
+The rule that follows: a property test pins an invariant across a range, and an example test pins the boundary. The mutation gate leans on the second.
 
 | Invariant                                          | Mutant killer                                                                                              |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
