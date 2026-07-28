@@ -5,7 +5,9 @@ Implementation wraps the `superpowers:subagent-driven-development` executor and 
 ## Open the phase
 
 1. **Sync.** Run the sync step from `SKILL.md`: fetch, rebase onto `main`, gate suite green, ledger hygiene. No cluster opens before it passes.
-2. **Compile the outer loop.** The approved scenarios compile through playwright-bdd into a failing outer loop. The outer loop must be red before the first cluster opens, so it can prove green later.
+2. **Compile the outer loop, locally.** Copy the approved scenarios into `apps/desktop/e2e/features/<capability>/`, run `bddgen`, and confirm it fails on missing step definitions. That failure is the outer loop, and it has to exist before the first cluster opens so a later green means something. Capture the failing output into the phase report, then **remove the copy without committing it**.
+
+   The red outer loop is local evidence, never a commit. `ci.yml` runs `test:e2e` on every pull request, and the repository forbids committing a failing state, so a feature file that lands without its step definitions turns the whole branch red for as long as the clusters take. The scenarios graduate for real inside the cluster that owns the end-to-end tree, together with the step definitions that answer them, so no commit is ever red. The two rules only look opposed: one asks the loop to fail before the work, the other asks the history never to record a failure. Proving it locally satisfies both.
 
 ## Cluster order
 
