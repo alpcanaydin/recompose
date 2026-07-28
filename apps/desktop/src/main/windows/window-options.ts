@@ -8,6 +8,8 @@ export function windowOptionsFor(
   return {
     width: 900,
     height: 670,
+    minWidth: 720,
+    minHeight: 500,
     show: false,
     autoHideMenuBar: true,
     ...(platform === 'darwin'

@@ -62,6 +62,16 @@ describe('window chrome contract across all platforms', () => {
   );
 
   test.prop([anyPlatform])(
+    'every platform gets a floor, below which the settings column tears',
+    (platform) => {
+      const options = windowOptionsFor(platform, somePreload, someIcon);
+
+      expect(options.minWidth).toBe(720);
+      expect(options.minHeight).toBe(500);
+    },
+  );
+
+  test.prop([anyPlatform])(
     'only macOS gets glass chrome and only Linux gets the icon',
     (platform) => {
       const options = windowOptionsFor(platform, somePreload, someIcon);
