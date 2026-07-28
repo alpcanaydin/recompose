@@ -63,7 +63,7 @@ Follow `.claude/workflows/review-pr.js` exactly for shape:
 
 The workflow takes `{ slug, tier }` and runs three phases:
 
-- **Discover.** Fold the arm table by tier: the `full` tier dispatches four arms, and the `standard` tier folds to two, exactly as `references/planning.md` states. Assert the folded table stays within six arms, and throw when it doesn't. Dispatch in parallel. Each arm writes its own file into `openspec/changes/<slug>/discovery/` and returns its findings through a schema. The code-map arm returns entries carrying a path, its cited symbols, its Feature-Sliced Design layer, and a note, and the workflow renders the markdown from them.
+- **Discover.** Fold the arm table by tier: the `full` tier dispatches four arms, and the `standard` tier folds to two, exactly as `references/planning.md` states. Assert the phase's planned dispatches stay within six, counting the arms plus the writer plus the validating seat, and throw when they don't. Dispatch in parallel. Each arm returns its findings through a schema, and one writer subagent puts every arm's text into `openspec/changes/<slug>/discovery/` after the fan-out, because neither arm subagent type holds a write tool. The writer reports the byte length per file and the workflow checks it against what it sent. The code-map arm returns entries carrying a path, its cited symbols, its Feature-Sliced Design layer, and a note, and the workflow renders the markdown from them.
 - **Validate.** One cheap subagent runs the validator script over the entries and returns its verdict through a schema.
 - **Recheck.** On a failing verdict, re-dispatch the `code-analyzer` arm once with the failing citations as input, then validate again. Throw on a second failure, naming every failing citation.
 

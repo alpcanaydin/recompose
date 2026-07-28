@@ -6,6 +6,7 @@ export const meta = {
 }
 
 const MAX_DISCOVERY_DISPATCHES = 6
+const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const WRITER_DISPATCH_COUNT = 1
 const VALIDATOR_DISPATCH_COUNT = 1
 
@@ -20,7 +21,7 @@ const codeMapEntrySchema = {
     path: { type: 'string', minLength: 1 },
     symbols: { type: 'array', items: { type: 'string', minLength: 1 } },
     layer: { type: 'string', minLength: 1 },
-    note: { type: 'string', minLength: 1 },
+    note: { type: 'string', minLength: 1, pattern: '^[^\\n\\r]+$' },
   },
 }
 const codeMapSchema = {
@@ -33,7 +34,7 @@ const citationFailureSchema = {
   properties: { path: { type: 'string' }, symbol: { type: 'string' }, reason: { type: 'string' } },
 }
 const passVerdictSchema = {
-  type: 'object', additionalProperties: false, required: ['status'],
+  type: 'object', additionalProperties: false, required: ['status', 'failures'],
   properties: { status: { type: 'string', enum: ['pass'] }, failures: { type: 'array', maxItems: 0 } },
 }
 const failVerdictSchema = {
@@ -87,9 +88,7 @@ const armTable = {
 }
 
 function parsedArgs(delivered) {
-  if (typeof delivered !== 'string') {
-    return delivered
-  }
+  if (typeof delivered !== 'string') return delivered
   try {
     return JSON.parse(delivered)
   } catch (error) {
@@ -103,10 +102,11 @@ function requireArgs(delivered) {
   if (missing.length > 0) {
     throw new Error(`feature-kickoff needs string args { slug, tier }; missing or empty: ${missing.join(', ')}`)
   }
+  if (!SAFE_SLUG.test(input.slug)) {
+    throw new Error(`feature-kickoff received a slug that is not one path segment: "${input.slug}"`)
+  }
   if (!Object.prototype.hasOwnProperty.call(armTable, input.tier)) {
-    throw new Error(
-      `feature-kickoff received an unsupported tier "${input.tier}"; expected one of: ${Object.keys(armTable).join(', ')}`,
-    )
+    throw new Error(`feature-kickoff received an unsupported tier "${input.tier}"; expected one of: ${Object.keys(armTable).join(', ')}`)
   }
   return { slug: input.slug, tier: input.tier }
 }
@@ -129,10 +129,9 @@ function renderCodeMapMarkdown(entries) {
 function armContent(arm, findings) {
   return arm.kind === 'code-map' ? renderCodeMapMarkdown(findings.entries) : findings.brief
 }
+
 function citationRepairNote(failures) {
-  if (!failures || failures.length === 0) {
-    return ''
-  }
+  if (!failures || failures.length === 0) return ''
   const named = failures
     .map((failure) => `${failure.path}${failure.symbol ? ` (symbol: ${failure.symbol})` : ''}: ${failure.reason}`)
     .join('\n')
