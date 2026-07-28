@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
+import { isProcessEntryPoint } from '../hooks/entry-point.mjs';
+
 type Verdict = {
   status: 'pass' | 'fail';
   offendingPaths: readonly string[];
@@ -115,6 +117,6 @@ function main(): void {
   console.log(`path guard passed: ${verdict.reason}`);
 }
 
-if (import.meta.main) {
+if (isProcessEntryPoint(import.meta.url)) {
   main();
 }

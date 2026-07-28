@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
+
+import { isProcessEntryPoint } from './entry-point.mjs';
 
 export const NODE_FLOOR = '^22.18.0 || >=23.6.0';
 
@@ -39,20 +40,6 @@ function main() {
   process.exit(run.status);
 }
 
-function isEntryPoint() {
-  const entry = process.argv[1];
-
-  if (entry === undefined) {
-    return false;
-  }
-
-  try {
-    return pathToFileURL(realpathSync(entry)).href === import.meta.url;
-  } catch {
-    return false;
-  }
-}
-
-if (isEntryPoint()) {
+if (isProcessEntryPoint(import.meta.url)) {
   main();
 }

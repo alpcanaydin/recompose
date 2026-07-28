@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { copyFileSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -19,6 +20,8 @@ const REPOSITORY_ROOT = join(HOOKS_DIRECTORY, '..', '..', '..');
 
 const LAUNCHER_SCRIPT_NAME = 'launch-gate.mjs';
 
+const LAUNCHER_MODULE_NAMES: readonly string[] = [LAUNCHER_SCRIPT_NAME, 'entry-point.mjs'];
+
 const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
 
 const TYPE_STRIPPING_FAILURE = 'throw new Error(\'Unknown file extension ".mts"\');\n';
@@ -30,7 +33,10 @@ const PERMITTING_RESOLVER = `process.stdout.write('${DENIAL_DECISION}');\n`;
 function launcherWithStandInResolver(resolverBody: string): string {
   const workspace = scratchWorkspace();
 
-  copyFileSync(join(HOOKS_DIRECTORY, LAUNCHER_SCRIPT_NAME), join(workspace, LAUNCHER_SCRIPT_NAME));
+  for (const moduleName of LAUNCHER_MODULE_NAMES) {
+    copyFileSync(join(HOOKS_DIRECTORY, moduleName), join(workspace, moduleName));
+  }
+
   writeFileSync(join(workspace, RESOLVER_SCRIPT_NAME), resolverBody, 'utf8');
 
   return workspace;
@@ -91,6 +97,20 @@ describe('the test-first gate launcher: a launcher reached through a symlinked p
 
     assert.equal(outcome.stdout, DENIAL_DECISION);
     assert.equal(outcome.status, 0);
+  });
+});
+
+describe('the test-first gate launcher: a node below the declared floor', () => {
+  it('denies the tool call rather than letting the edit land unjudged', () => {
+    const run = spawnSync(process.execPath, [join(HOOKS_DIRECTORY, LAUNCHER_SCRIPT_NAME)], {
+      encoding: 'utf8',
+      input: mainLoopPayload(),
+      env: { ...process.env, NODE_OPTIONS: '--no-experimental-strip-types' },
+    });
+
+    assert.equal(run.status, 2);
+    assert.match(run.stderr, /the test-first gate never ran/);
+    assert.ok(run.stderr.includes(NODE_FLOOR));
   });
 });
 

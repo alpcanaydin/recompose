@@ -35,6 +35,8 @@ export const DENIAL_DECISION = JSON.stringify({
   },
 });
 
+const TYPE_STRIPPING_IS_EXPECTED = '--disable-warning=ExperimentalWarning';
+
 const HOOKS_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 
 const HOOKS_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks');
@@ -43,6 +45,7 @@ const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
 
 const RESOLVER_MODULE_NAMES: readonly string[] = [
   RESOLVER_SCRIPT_NAME,
+  'entry-point.mjs',
   'hook-payload.mts',
   'configuration-scope.mts',
   'repository-scope.mts',
@@ -165,7 +168,7 @@ export function runHookScript(
   workingDirectory: string,
   payload: string,
 ): HookOutcome {
-  const run = spawnSync(process.execPath, [script], {
+  const run = spawnSync(process.execPath, [TYPE_STRIPPING_IS_EXPECTED, script], {
     cwd: workingDirectory,
     encoding: 'utf8',
     input: payload,

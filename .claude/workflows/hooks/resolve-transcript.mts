@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { configurationRoot } from './configuration-scope.mts';
+import { isProcessEntryPoint } from './entry-point.mjs';
 import { readEditedPath } from './hook-payload.mts';
 import { repositoryDirectories } from './repository-scope.mts';
 
@@ -193,6 +194,6 @@ function main(): void {
   process.exit(run.status);
 }
 
-if (import.meta.main) {
+if (isProcessEntryPoint(import.meta.url)) {
   main();
 }
