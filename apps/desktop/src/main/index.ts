@@ -14,11 +14,23 @@ import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
 import { createLoginItem, loginItemAvailabilityFor } from './system/login-item';
+import { hideMenuBarTray, isMenuBarTrayVisible, showMenuBarTray } from './tray/menu-bar-tray';
 import { resolveUserDataOverride } from './user-data-override';
-import { createMainWindow, HOME_ROUTE, openSettingsSurface } from './windows/main-window';
+import {
+  createMainWindow,
+  HOME_ROUTE,
+  openSettingsSurface,
+  showMainWindow,
+} from './windows/main-window';
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
 
-let menuBarVisible = false;
+const trayMenuHandlers = {
+  onOpenWindow: showMainWindow,
+  onOpenSettings: openSettingsSurface,
+  onQuit: () => {
+    app.quit();
+  },
+};
 
 function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
@@ -47,7 +59,7 @@ function assembleIpcHandlers(): IpcHandlers {
       loginItem: loginItemAvailabilityFor(process.platform, app.isPackaged),
       configFolder: userDataPath,
       readLoginItem: () => loginItem.isEnabled(),
-      isMenuBarVisible: () => menuBarVisible,
+      isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),
     }),
   };
@@ -90,7 +102,9 @@ void app.whenReady().then(() => {
 
   void initializeStorage(app.getPath('userData'), onStorageCorrupt)
     .then((state) => {
-      menuBarVisible = state.settings.showInMenuBar;
+      if (state.settings.showInMenuBar) {
+        showMenuBarTray(trayMenuHandlers);
+      }
     })
     .catch((error: unknown) => {
       console.error('storage initialization failed', error);
@@ -113,6 +127,10 @@ void app.whenReady().then(() => {
       createMainWindow(HOME_ROUTE);
     }
   });
+});
+
+app.on('before-quit', () => {
+  hideMenuBarTray();
 });
 
 app.on('window-all-closed', () => {

@@ -75,6 +75,27 @@ export function createMainWindow(route: string): void {
   void mainWindow.loadURL(rendererUrlFor(rendererBase(), route));
 }
 
+function reveal(window: BrowserWindow): void {
+  if (window.isMinimized()) {
+    window.restore();
+  }
+
+  window.show();
+  window.focus();
+}
+
+export function showMainWindow(): void {
+  const [openWindow] = BrowserWindow.getAllWindows();
+
+  if (openWindow === undefined) {
+    createMainWindow(HOME_ROUTE);
+
+    return;
+  }
+
+  reveal(openWindow);
+}
+
 export function openSettingsSurface(): void {
   const [openWindow] = BrowserWindow.getAllWindows();
 
@@ -84,12 +105,7 @@ export function openSettingsSurface(): void {
     return;
   }
 
-  if (openWindow.isMinimized()) {
-    openWindow.restore();
-  }
-
-  openWindow.show();
-  openWindow.focus();
+  reveal(openWindow);
 
   void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), SETTINGS_ROUTE));
 }
