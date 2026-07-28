@@ -242,19 +242,36 @@ async function runValidation(entries) {
   assertVerdictShape(verdict)
   return verdict
 }
+const VERDICT_SHAPES = {
+  pass: { failures: 'empty', reason: 'absent' },
+  fail: { failures: 'present', reason: 'absent' },
+  error: { failures: 'absent', reason: 'present' },
+}
+function verdictShapeFault(verdict) {
+  const shape = VERDICT_SHAPES[verdict.status]
+  const failures = verdict.failures
+  const reason = verdict.reason
+  if (shape.failures === 'empty' && (!Array.isArray(failures) || failures.length > 0)) {
+    return 'a passing verdict must carry an empty failure list'
+  }
+  if (shape.failures === 'present' && (!Array.isArray(failures) || failures.length === 0)) {
+    return 'a failing verdict must name at least one failing citation'
+  }
+  if (shape.failures === 'absent' && failures !== undefined) {
+    return 'an input fault must carry no failure list'
+  }
+  if (shape.reason === 'present' && (typeof reason !== 'string' || reason.length === 0)) {
+    return 'an input fault must carry a reason'
+  }
+  if (shape.reason === 'absent' && reason !== undefined) {
+    return `a ${verdict.status} verdict must carry no reason`
+  }
+  return null
+}
 function assertVerdictShape(verdict) {
-  if (verdict.status === 'fail' && (!verdict.failures || verdict.failures.length === 0)) {
-    throw new Error(
-      'feature-kickoff process assertion failed: a failing verdict named no failing citation',
-    )
-  }
-  if (verdict.status === 'pass' && verdict.failures && verdict.failures.length > 0) {
-    throw new Error(
-      `feature-kickoff process assertion failed: a passing verdict carried ${verdict.failures.length} failure(s)`,
-    )
-  }
-  if (verdict.status === 'error' && !verdict.reason) {
-    throw new Error('feature-kickoff process assertion failed: an input fault carried no reason')
+  const fault = verdictShapeFault(verdict)
+  if (fault) {
+    throw new Error(`feature-kickoff process assertion failed: ${fault}`)
   }
 }
 function assertNotInputFault(verdict) {
