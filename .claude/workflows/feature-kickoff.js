@@ -180,7 +180,13 @@ function assertDispatchCapRespected(arms) {
 }
 
 function expectedByteLength(content) {
-  return encodeURIComponent(content).replace(/%[0-9A-F]{2}/gi, ' ').length
+  try {
+    return encodeURIComponent(content).replace(/%[0-9A-F]{2}/gi, ' ').length
+  } catch (error) {
+    throw new Error(
+      `feature-kickoff cannot measure content that is not well-formed text, so its write cannot be verified: ${error.message}`,
+    )
+  }
 }
 function writerPrompt(files) {
   return [
