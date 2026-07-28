@@ -11,5 +11,7 @@ approvals:
   - scenarios fold by capability in both places, so a change's gherkin directory graduates into the end-to-end features directory as a copy rather than a second placement decision
   - the plaintext-fallback warning sits on the token requirement row and shows while the requirement is still off, because a warning that arrives after minting comes too late to change the decision
   - gate 2 approved the scenario set, which freezes here, and the solution design with its seven clusters and four Architecture Decision Record drafts
+  - the first replan merged contracts into the process boundary, because the total channel map makes them one compile unit and the design's own totality guard forbids a green contracts-only commit
+  - the same unit then absorbed the two system handlers and the assembly seam, for the same reason one step further out, while the tray, the menu, the window floor, and the apply seam stayed with their cluster
 branch: worktree-settings-screen
 ---
