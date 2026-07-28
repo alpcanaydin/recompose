@@ -69,7 +69,7 @@ _Recheck._ A failed verdict re-dispatches the `code-analyzer` arm once, with the
 
 Two rules decide a citation, in order:
 
-1. The cited path must resolve inside the repository root and exist there. A path that escapes the root fails as surely as one that's absent, because rule 1 is about what the repository holds.
+1. The cited path must resolve inside the repository root and exist there. A path given relative to the root and an absolute path landing inside it both satisfy this. A path escaping the root fails with a reason naming the escape, distinct from the reason for a path that's merely absent, because a reader told "not found" would hunt for a file that exists.
 2. Every symbol the entry cites must appear in that file's text as a standalone token.
 
 A missing path reports as one failure and skips its symbol checks. Every symbol under a missing path fails for the same reason, and one failure per symbol buries that cause.
@@ -80,10 +80,10 @@ The seam between the two artifacts is the entry list. The workflow owns the retr
 
 The code-map entry is the only structure crossing a boundary:
 
-- `path`: a repository-relative path, as a string.
-- `symbols`: the symbols the entry cites in that file, as a string array, possibly empty.
-- `layer`: the Feature-Sliced Design layer, or a marker for a path outside the renderer.
-- `note`: one line on what the entry contributes to the feature.
+- `path`: the cited path, as a non-empty string, either relative to the repository root or absolute inside it.
+- `symbols`: the symbols the entry cites in that file, as an array of non-empty strings, possibly empty.
+- `layer`: the Feature-Sliced Design layer, or a marker for a path outside the renderer, as a non-empty string.
+- `note`: one line on what the entry contributes to the feature, as a non-empty string.
 
 The verdict is the validator's output contract:
 
@@ -99,7 +99,7 @@ The entry point emits a third shape when it can't reach a verdict at all, carryi
 - **A failing verdict.** Recorded, fed back to one rerun, and thrown on the second failure with every failing citation named.
 - **An unreadable cited file.** Rejected, because a citation the validator can't verify is a citation it rejects. The reason names what actually happened, so a path that resolves to a directory doesn't report as missing. A reader told to fix a path that already exists can't act on it.
 - **A missing or wrong repository root.** Reported through the input-error channel, never as a verdict. A root that doesn't exist would otherwise fail every citation in a correct code map with a false reason, which is the most confident wrong answer this script can give.
-- **A malformed entry list.** Every entry must carry every field at its declared type, and a violation throws rather than degrading. A `symbols` value that isn't a list of non-empty strings is the one that matters most: coercing it to an empty list turns a code map full of invented symbols into a pass.
+- **A malformed entry list.** Every entry must carry every field as a non-empty value at its declared type, and a violation throws rather than degrading. An empty `symbols` array stays legal, because an entry may cite a path alone. A `symbols` value that isn't a list of non-empty strings is the one that matters most: coercing it to an empty list turns a code map full of invented symbols into a pass.
 - **Unparsable input.** Reported on stdout as a distinct outcome with its own exit code, so the caller separates a validator that couldn't read its input from a code map that failed. Under one exit code the workflow would rerun `code-analyzer` for a fault the reader didn't cause, then throw with no failing citation to name.
 
 ## File map
@@ -107,7 +107,7 @@ The entry point emits a third shape when it can't reach a verdict at all, carryi
 - `.claude/workflows/feature-kickoff.js`: the saved workflow that dispatches the discovery arms, enforces the cap, and drives validation (create).
 - `.claude/workflows/citation-validator/citation-validator.mts`: the pure verdict function and its entry point, which resolves cited paths against an explicit repository root rather than the working directory (create).
 - `.claude/workflows/citation-validator/citation-validator.test.mts`: the colocated unit spec (create).
-- `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts`: the colocated integration spec, split out because the pair exceeds the repository's 300-line file rule (create).
+- `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts`: the colocated integration spec, separated from the unit spec by layer (create). The repository's 300-line file rule caps any one spec, so a further split follows the seams the `describe` blocks already name rather than a fixed file count. The hooks tree sets that precedent with five specs over one gate.
 - `.claude/skills/feature-cycle/references/planning.md`: step 2 gains the concrete mechanism (modify).
 - `.claude/skills/feature-cycle/SKILL.md`: the rollout note moves the citation validator out of the deferred list (modify).
 - `docs/adr/0041-discovery-workflow-and-citation-validator.md`: the process record (create).
@@ -176,13 +176,13 @@ The cap governs dispatch, and the dispatching machinery is the workflow. A throw
 
 ## Test matrix
 
-| Layer          | What this layer proves (or why none)                                                                                                                                                                                                                                                                                            | Check command             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| Unit           | The verdict function: a missing path fails and names itself, a missing symbol fails and names itself, a path with every symbol present passes, a missing path reports once rather than once per symbol, an unreadable file fails for the reason that stopped the read, and a path escaping the repository root fails as absent. | `pnpm run test:workflows` |
-| Integration    | The entry point end to end: the script runs against a scratch repository from an unrelated working directory, separates an input fault from a failing verdict by exit code, and prints JSON on standard output in every case.                                                                                                   | `pnpm run test:workflows` |
-| End-to-end     | None. The artifacts are development-pipeline machinery outside the desktop application, so no Playwright scenario reaches them.                                                                                                                                                                                                 | none                      |
-| Property       | None. The verdict function has no algebraic invariant worth generating over: it's a membership check against the filesystem, and the example cases cover its branches exhaustively.                                                                                                                                             | none                      |
-| Mutation scope | None. The Stryker gate scopes to node-side application logic under `apps/` and `packages/`, and this change adds nothing there. The unit and integration specs are the compensating cover, matching the path guard's recorded exception.                                                                                        | `pnpm run test:mutation`  |
+| Layer          | What this layer proves (or why none)                                                                                                                                                                                                                                                                                                                                             | Check command             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Unit           | The verdict function: a missing path fails and names itself, a missing symbol fails and names itself, a path with every symbol present passes, a missing path reports once rather than once per symbol, and an unreadable file fails for the reason that stopped the read.                                                                                                       | `pnpm run test:workflows` |
+| Integration    | The entry point end to end: the script runs against a scratch repository from an unrelated working directory, rejects a path escaping the root with a reason naming the escape, separates an input fault from a failing verdict by exit code, and prints JSON on standard output in every case. Containment lives in the reader the entry point supplies, so this layer owns it. | `pnpm run test:workflows` |
+| End-to-end     | None. The artifacts are development-pipeline machinery outside the desktop application, so no Playwright scenario reaches them.                                                                                                                                                                                                                                                  | none                      |
+| Property       | None. The verdict function has no algebraic invariant worth generating over: it's a membership check against the filesystem, and the example cases cover its branches exhaustively.                                                                                                                                                                                              | none                      |
+| Mutation scope | None. The Stryker gate scopes to node-side application logic under `apps/` and `packages/`, and this change adds nothing there. The unit and integration specs are the compensating cover, matching the path guard's recorded exception.                                                                                                                                         | `pnpm run test:mutation`  |
 
 The saved workflow itself carries no spec. No test can import it, because it uses top-level `await` and a top-level `return`, and its hooks exist only inside the workflow harness. `review-pr.js` set that precedent. The design keeps the workflow thin for that reason, so every decision worth testing sits in the validator.
 
@@ -199,6 +199,7 @@ The saved workflow itself carries no spec. No test can import it, because it use
 - [Risk] The cap assertion ships untested, because no test imports the workflow → Mitigation: the arm table is a literal constant and the assertion is one line over it, so a reader verifies it by reading. ADR-0041 records the untested seam.
 - [Risk] A reader cites a real path with a symbol spelled as it appears in a comment or a string rather than a declaration, and the check passes → Mitigation: recorded as a known limit. The check catches invention, which is the failure it exists for.
 - [Risk] Structured entries constrain how expressive a code map can be → Mitigation: the `note` field carries prose per entry, so expressiveness stays attached to a checked path.
+- [Risk] Containment is lexical rather than resolved through the filesystem, so a symlink inside the root that points outside stays readable → Mitigation: deliberate. This repository's package manager links workspace packages, so resolving symlinks would reject legitimate citations of `packages/contracts` through `node_modules`. Recorded as a known limit.
 - [Risk] The validating subagent misreports the script's output → Mitigation: it returns the verdict through a schema, and the workflow reads the failure list rather than a summary sentence.
 
 ## Migration and rollout

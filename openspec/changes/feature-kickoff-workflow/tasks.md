@@ -8,7 +8,7 @@
 
 - Create: `.claude/workflows/citation-validator/citation-validator.mts`
 - Create: `.claude/workflows/citation-validator/citation-validator.test.mts`
-- Create: `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts`
+- Create: `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts` (a further split follows the `describe` seams if the 300-line rule binds)
 
 **Interfaces:**
 
@@ -23,7 +23,7 @@ Cover the branches from the design's test matrix:
 
 - A missing path fails and names itself.
 - A missing symbol fails and names itself.
-- A path escaping the repository root fails as absent.
+- A path escaping the repository root fails with a reason naming the escape, distinct from the missing-path reason.
 - An entry whose path and every symbol resolve passes.
 - A missing path reports once rather than once per symbol.
 - An unreadable file fails for the reason that stopped the read.
