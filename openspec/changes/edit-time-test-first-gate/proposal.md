@@ -6,7 +6,7 @@ The pipeline states test-first discipline in prose and checks it after the fact.
 
 Getting there took two tool reversals and one measurement, and the record carries both. The tool the rollout note named steers new projects elsewhere and keeps test state in one shared directory, which parallel worktree clusters would corrupt. Its successor carries no shared state. A live probe then showed a subagent's hook payload hands over the parent session's transcript. The gate would judge an implementer against a record holding none of that implementer's work. The payload does carry the subagent's identity, and the per-subagent record sits at a path derived from it, so a small resolver closes the gap.
 
-Two defects in the surrounding machinery block this work and land with it. The formatter hook fails any script edit under `.claude`, which is where this change writes. The review marker binds to one commit, so every push after a fix pays for a full whole-branch review again.
+Two defects in the surrounding machinery block this work and land with it. The formatter hook fails a matched script edit under `.claude`, which is where this change writes. The review marker binds to one commit, so every push after a fix pays for a full whole-branch review again.
 
 ## What changes
 
@@ -25,7 +25,7 @@ None.
 
 ### Modified capabilities
 
-- `development-process`: an edit-time gate blocks implementation edits that no failing test precedes, each subagent gets judged against its own record, every gate stays inside its declared scope, and the heavy review pass runs against the increment after the first pass.
+- `development-process`: an edit-time gate blocks implementation edits that no failing test precedes, a subagent gets judged against its own record whenever that record exists, every gate stays inside its declared scope, and the heavy review pass runs against the increment after the first pass.
 
 ## Impact
 
