@@ -46,3 +46,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0038](0038-feature-cycle-process.md)                          | The Feature Cycle as an Executable Process                                          | Accepted | 2026-07-26 |
 | [0039](0039-review-pass-marker-and-path-guard.md)              | The Review Marker and the Blast-Radius Path Guard                                   | Accepted | 2026-07-27 |
 | [0040](0040-edit-time-test-first-gate.md)                      | The Edit-Time Test-First Gate                                                       | Accepted | 2026-07-27 |
+| [0041](0041-discovery-workflow-and-citation-validator.md)      | The Discovery Workflow and the Citation Validator                                   | Accepted | 2026-07-28 |
