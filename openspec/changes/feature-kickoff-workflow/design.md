@@ -107,7 +107,8 @@ The entry point emits a third shape when it can't reach a verdict at all, carryi
 - `.claude/workflows/feature-kickoff.js`: the saved workflow that dispatches the discovery arms, enforces the cap, and drives validation (create).
 - `.claude/workflows/citation-validator/citation-validator.mts`: the pure verdict function and its entry point, which resolves cited paths against an explicit repository root rather than the working directory (create).
 - `.claude/workflows/citation-validator/citation-validator.test.mts`: the colocated unit spec (create).
-- `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts`: the colocated integration spec, separated from the unit spec by layer (create). The repository's 300-line file rule caps any one spec, so a further split follows the seams the `describe` blocks already name rather than a fixed file count. The hooks tree sets that precedent with five specs over one gate.
+- `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts`: the colocated integration spec covering the verdict cases (create).
+- `.claude/workflows/citation-validator/citation-validator.entrypoint-input.test.mts`: the colocated integration spec covering the input contract (create). The repository's 300-line file rule caps any one spec, so a further split follows the seams the `describe` blocks already name rather than a fixed file count. The hooks tree sets that precedent with five specs over one gate.
 - `.claude/skills/feature-cycle/references/planning.md`: step 2 gains the concrete mechanism (modify).
 - `.claude/skills/feature-cycle/SKILL.md`: the rollout note moves the citation validator out of the deferred list (modify).
 - `docs/adr/0041-discovery-workflow-and-citation-validator.md`: the process record (create).
