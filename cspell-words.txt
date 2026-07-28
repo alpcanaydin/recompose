@@ -21,6 +21,7 @@ cliproxyapi
 Codechecks
 codegen
 coderabbit
+componentwise
 cooldown
 covguard
 cyclonedx

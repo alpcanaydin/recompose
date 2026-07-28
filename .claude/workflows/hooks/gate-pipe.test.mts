@@ -151,6 +151,17 @@ describe('the test-first gate pipe: a subagent call whose own record is missing'
   });
 });
 
+describe('the test-first gate pipe: a payload naming the file the tool call would edit', () => {
+  it('hands the gate that path exactly as the payload named it', () => {
+    const workspace = checkoutWithStandInGate('cat stdin.json');
+    const payload = mainLoopPayload();
+
+    const outcome = runResolverIn(workspace, payload);
+
+    assert.deepEqual(JSON.parse(outcome.stdout), JSON.parse(payload));
+  });
+});
+
 describe('the test-first gate pipe: a payload naming no subagent', () => {
   it('leaves standard error clean', () => {
     const outcome = runResolverIn(checkoutWithStandInGate('exit 0'), mainLoopPayload());

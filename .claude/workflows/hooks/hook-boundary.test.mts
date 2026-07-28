@@ -106,11 +106,16 @@ function buildSiblingWorktree(): void {
   writeFileSync(SIBLING_EDITED_FILE, LINT_ERROR_SINGLE_QUOTED_SOURCE, 'utf8');
 }
 
+function plantAlias(target: string, alias: string): void {
+  rmSync(alias, { force: true });
+  symlinkSync(target, alias);
+}
+
 function buildAliasesAcrossTheBoundary(): void {
   writeFileSync(INWARD_ALIAS_TARGET, LINT_ERROR_SOURCE, 'utf8');
-  symlinkSync(INWARD_ALIAS_TARGET, INWARD_ALIAS);
+  plantAlias(INWARD_ALIAS_TARGET, INWARD_ALIAS);
   writeFileSync(OUTWARD_ALIAS_TARGET, LINT_ERROR_SOURCE, 'utf8');
-  symlinkSync(OUTWARD_ALIAS_TARGET, OUTWARD_ALIAS);
+  plantAlias(OUTWARD_ALIAS_TARGET, OUTWARD_ALIAS);
 }
 
 before(() => {

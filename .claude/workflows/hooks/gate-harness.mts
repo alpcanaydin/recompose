@@ -27,8 +27,6 @@ export const GATE_CONFIGURATION_NAME = 'probity.config.ts';
 
 export const GATE_ARGUMENT_ECHO = 'for argument in "$@"; do echo "$argument"; done';
 
-export const GATE_RULE_REASON = 'no failing test asked for this behavior';
-
 export const DENIAL_DECISION = JSON.stringify({
   hookSpecificOutput: {
     hookEventName: 'PreToolUse',
@@ -40,24 +38,6 @@ export const DENIAL_DECISION = JSON.stringify({
 const TYPE_STRIPPING_IS_EXPECTED = '--disable-warning=ExperimentalWarning';
 
 const HOOKS_DIRECTORY = dirname(fileURLToPath(import.meta.url));
-
-const REPOSITORY_ROOT = join(HOOKS_DIRECTORY, '..', '..', '..');
-
-const GUARDED_CONTENT = 'this line adds behavior';
-
-const ARMED_GATE_CONFIGURATION = `import { defineConfig, forbidContentPattern } from '@nizos/probity';
-
-export default defineConfig({
-  rules: [
-    {
-      files: ['apps/*/src/**'],
-      rules: [
-        forbidContentPattern({ match: '${GUARDED_CONTENT}', reason: '${GATE_RULE_REASON}' }),
-      ],
-    },
-  ],
-});
-`;
 
 const HOOKS_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks');
 
@@ -126,15 +106,6 @@ export function checkoutWithStandInGate(gateBody: string): string {
   return checkout;
 }
 
-export function checkoutWithArmedGate(): string {
-  const checkout = checkoutWithResolver();
-
-  symlinkSync(join(REPOSITORY_ROOT, 'node_modules'), join(checkout, 'node_modules'), 'dir');
-  writeFileSync(join(checkout, GATE_CONFIGURATION_NAME), ARMED_GATE_CONFIGURATION, 'utf8');
-
-  return checkout;
-}
-
 export function aliasedCheckout(checkout: string): string {
   const alias = join(scratchWorkspace(), 'aliased-checkout');
 
@@ -181,30 +152,6 @@ export function editPayload(filePath: string): string {
     transcript_path: SESSION_TRANSCRIPT,
     tool_name: 'Write',
     tool_input: { file_path: filePath },
-  });
-}
-
-export function guardedWritePayload(workingDirectory: string, filePath: string): string {
-  return JSON.stringify({
-    session_id: 'session-0001',
-    transcript_path: SESSION_TRANSCRIPT,
-    cwd: workingDirectory,
-    tool_name: 'Write',
-    tool_input: { file_path: filePath, content: GUARDED_CONTENT },
-  });
-}
-
-export function guardedNotebookPayload(workingDirectory: string, notebookPath: string): string {
-  return JSON.stringify({
-    session_id: 'session-0001',
-    transcript_path: SESSION_TRANSCRIPT,
-    cwd: workingDirectory,
-    tool_name: 'NotebookEdit',
-    tool_input: {
-      notebook_path: notebookPath,
-      new_source: GUARDED_CONTENT,
-      edit_mode: 'replace',
-    },
   });
 }
 

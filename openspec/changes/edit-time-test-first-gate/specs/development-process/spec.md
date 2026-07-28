@@ -8,7 +8,7 @@ The behavioral contract of the recompose feature pipeline: how a feature idea be
 
 ### Requirement: Edit-time test-first gate
 
-The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it, for a file that resolves inside the session's own checkout. The gate MUST decide that membership on the resolved path, so an aliased name for a checkout file stays in scope. A file outside that checkout is out of scope: the gate MUST read only its own checkout's configuration and MUST never load configuration from the edited file's location. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays a probabilistic tier above the deterministic gates and never replaces them.
+The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it, for a file inside the session's own checkout. The gate decides that membership by matching the path the payload names against globs anchored at its own configuration. That match is a string comparison rather than a filesystem one. A symlink anywhere in the path can therefore put an in-checkout edit outside the globs and leave it unjudged. The gate MUST hand its vendor the payload's action paths unchanged, because rewriting them moves the miss onto other path shapes rather than closing it. A file outside that checkout is out of scope: the gate MUST read only its own checkout's configuration and MUST never load configuration from the edited file's location. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays an advisory tier above the deterministic gates and never replaces them, so a scoping gap degrades the advisory tier and never opens the merge.
 
 #### Scenario: an implementation edit runs ahead of its test
 
@@ -21,14 +21,20 @@ The pipeline MUST block an implementation edit that no failing test precedes. Th
 - Then it reads that subagent's own record
 - And a record the harness stops providing falls back to the record the payload names
 
-#### Scenario: an edit names a checkout file through an aliased path
+#### Scenario: the gate forwards the path the payload named
 
-- When a subagent edits a file whose path reaches the session's own checkout through a symlink
-- Then the gate judges it under that checkout's configuration rather than letting it pass unjudged
+- When the gate hands a tool call to its vendor for judging
+- Then it forwards the payload's action path exactly as the payload named it
+
+#### Scenario: a symlink puts an in-checkout edit outside the gate's globs
+
+- When a subagent edits a checkout file whose path runs through a symlink
+- Then the glob match can miss and the edit lands unjudged
+- And patch coverage, the diff-scoped mutation run, the adversarial review, and the path guard still hold the merge
 
 #### Scenario: an edit lands outside the session's checkout
 
-- When a subagent edits a file that resolves outside the session's own checkout
+- When a subagent edits a file outside the session's own checkout
 - Then the gate reads its own checkout's configuration and loads none from the edited file's location
 - And the edit isn't gated, so gating that worktree means running a session rooted in it
 
