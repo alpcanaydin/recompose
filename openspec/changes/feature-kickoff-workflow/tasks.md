@@ -8,11 +8,12 @@
 
 - Create: `.claude/workflows/citation-validator/citation-validator.mts`
 - Create: `.claude/workflows/citation-validator/citation-validator.test.mts`
+- Create: `.claude/workflows/citation-validator/citation-validator.entrypoint.test.mts`
 
 **Interfaces:**
 
 - Consumes: the code-map entry list, and `isProcessEntryPoint` from `.claude/workflows/hooks/entry-point.mjs`.
-- Produces: `validate(entries, readFile)` with the `CodeMapEntry`, `Verdict`, and `CitationFailure` types, plus the JSON verdict Task 2 reads.
+- Produces: `validate(entries, readFile)` with the `CodeMapEntry`, `Verdict`, and `CitationFailure` types, plus the entry point's process contract Task 2 reads: the repository root as the first argument, the entry list on standard input, JSON on standard output, and exit codes zero, one, and two.
 
 - [ ] **Step 1: Write the failing spec and capture its red run**
 
@@ -22,16 +23,17 @@ Cover the branches from the design's test matrix:
 
 - A missing path fails and names itself.
 - A missing symbol fails and names itself.
+- A path escaping the repository root fails as absent.
 - An entry whose path and every symbol resolve passes.
 - A missing path reports once rather than once per symbol.
-- An unreadable file fails as a missing path.
-- The entry point, in the path guard's style: the script runs against a scratch directory, exits non-zero on a failing citation, and prints the verdict as JSON.
+- An unreadable file fails for the reason that stopped the read.
+- The entry point, in the path guard's style: the script runs against a scratch repository from an unrelated working directory, separates an input fault from a failing verdict by exit code, and prints JSON on standard output in every case.
 
 The spec fails because the module doesn't exist. Capture that failing run into the task report as the red evidence.
 
 - [ ] **Step 2: Implement the validator and land one green commit**
 
-Keep the whole validator self-contained in `.claude/workflows/citation-validator/citation-validator.mts`. Export the pure verdict function, then wire a thin entry point behind `isProcessEntryPoint` that supplies `node:fs` and prints the verdict. Match a symbol on a word boundary, and resolve no declarations. Don't extend the Stryker mutation scope and don't move the function into a domain package, matching the path guard's recorded exception. The spec and its implementation land together as one green commit.
+Keep the whole validator self-contained in `.claude/workflows/citation-validator/citation-validator.mts`. Export the pure verdict function, then wire a thin entry point behind `isProcessEntryPoint` that supplies `node:fs` and prints the verdict. Match a symbol as a standalone token under the amended decision 4, and resolve no declarations. Don't extend the Stryker mutation scope and don't move the function into a domain package, matching the path guard's recorded exception. The spec and its implementation land together as one green commit.
 
 ```bash
 git add .claude/workflows/citation-validator/
