@@ -51,7 +51,16 @@ export function migrateDocument(
     }
 
     migrated = step.migrate(migrated);
-    version = readSchemaVersion(migrated);
+
+    const nextVersion = readSchemaVersion(migrated);
+
+    if (nextVersion <= version) {
+      throw new Error(
+        `migration from schemaVersion ${version} did not advance the document, which came back at schemaVersion ${nextVersion}`,
+      );
+    }
+
+    version = nextVersion;
   }
 
   return migrated;

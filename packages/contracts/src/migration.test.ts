@@ -26,6 +26,20 @@ const addCreatedFlag: Migration = {
   migrate: (doc) => ({ ...doc, created: true, schemaVersion: 3 }),
 };
 
+const stallAtVersionOne: Migration = {
+  from: 1,
+  migrate: (doc) => ({ ...doc, schemaVersion: 1 }),
+};
+
+const rewindToVersionOne: Migration = {
+  from: 2,
+  migrate: (doc) => ({ ...doc, schemaVersion: 1 }),
+};
+
+function stepProducing(from: number, producedVersion: number): Migration {
+  return { from, migrate: (doc) => ({ ...doc, schemaVersion: producedVersion }) };
+}
+
 describe('document migration', () => {
   test('a current-version document passes through untouched', () => {
     const doc = { schemaVersion: 3, name: 'x', created: true };
@@ -75,6 +89,42 @@ describe('document migration', () => {
       }
 
       expect(result.schemaVersion).toBe(3);
+    },
+  );
+});
+
+describe('migration step progress', () => {
+  test('a step that leaves the version where it found it is refused', () => {
+    expect(() =>
+      migrateDocument({ schemaVersion: 1, title: 'stuck' }, [stallAtVersionOne], 3),
+    ).toThrow(
+      'migration from schemaVersion 1 did not advance the document, which came back at schemaVersion 1',
+    );
+  });
+
+  test('a step that lowers the version is refused', () => {
+    expect(() => migrateDocument({ schemaVersion: 2 }, [rewindToVersionOne], 3)).toThrow(
+      'migration from schemaVersion 2 did not advance the document, which came back at schemaVersion 1',
+    );
+  });
+
+  const anyVersion = fc.integer({ min: 1, max: 6 });
+
+  test.prop([anyVersion, anyVersion])(
+    'a step carries the chain forward only when it raises the version',
+    (fromVersion, producedVersion) => {
+      const migrate = () =>
+        migrateDocument(
+          { schemaVersion: fromVersion },
+          [stepProducing(fromVersion, producedVersion)],
+          fromVersion + 1,
+        );
+
+      if (producedVersion > fromVersion) {
+        expect(migrate()).toEqual({ schemaVersion: producedVersion });
+      } else {
+        expect(migrate).toThrow(/did not advance the document/);
+      }
     },
   );
 });
