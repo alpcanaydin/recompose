@@ -7,21 +7,24 @@ import { createLoginItem, loginItemAvailabilityFor } from './login-item';
 
 const packagedExecutable = '/Applications/recompose.app/Contents/MacOS/recompose';
 
+function entryFor(target: { path: string; args: string[] }): string {
+  return [target.path, ...target.args].join(' ');
+}
+
 function fakeOperatingSystem(): LoginItemPort & { registrations: number } {
-  let registered: { path: string; args: string[] } | null = null;
+  const startupEntries = new Set<string>();
 
   return {
     get registrations() {
-      return registered === null ? 0 : 1;
+      return startupEntries.size;
     },
-    getLoginItemSettings: (options) => ({
-      openAtLogin:
-        registered !== null &&
-        registered.path === options.path &&
-        registered.args.join(' ') === options.args.join(' '),
-    }),
+    getLoginItemSettings: (options) => ({ openAtLogin: startupEntries.has(entryFor(options)) }),
     setLoginItemSettings: (settings) => {
-      registered = settings.openAtLogin ? { path: settings.path, args: settings.args } : null;
+      if (settings.openAtLogin) {
+        startupEntries.add(entryFor(settings));
+      } else {
+        startupEntries.delete(entryFor(settings));
+      }
     },
   };
 }

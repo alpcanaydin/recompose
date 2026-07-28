@@ -1,10 +1,29 @@
 import { fc, test as propertyTest } from '@fast-check/vitest';
 import { describe, expect, test } from 'vitest';
 
-import { rendererUrlFor } from './renderer-url';
+import { rendererBaseFor, rendererUrlFor } from './renderer-url';
 
 const packagedBase = 'app://renderer/index.html';
 const devBase = 'http://localhost:5173';
+
+describe('the document a window loads its routes from', () => {
+  test('a development run takes the renderer the development server holds', () => {
+    expect(rendererBaseFor(true, devBase)).toBe(devBase);
+  });
+
+  test('a packaged run takes the renderer the app scheme serves', () => {
+    expect(rendererBaseFor(false, undefined)).toBe(packagedBase);
+  });
+
+  test('a packaged run ignores a development server address left in the environment', () => {
+    expect(rendererBaseFor(false, devBase)).toBe(packagedBase);
+  });
+
+  test('a development run with no server address falls back to the served renderer', () => {
+    expect(rendererBaseFor(true, undefined)).toBe(packagedBase);
+    expect(rendererBaseFor(true, '')).toBe(packagedBase);
+  });
+});
 
 describe('the address a window opens a route at', () => {
   test('the packaged renderer reaches a route through the fragment', () => {

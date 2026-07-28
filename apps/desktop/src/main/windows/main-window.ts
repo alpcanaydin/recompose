@@ -9,7 +9,7 @@ import {
   isAllowedNavigation,
   type NavigationPolicy,
 } from './navigation-policy';
-import { rendererUrlFor } from './renderer-url';
+import { rendererBaseFor, rendererUrlFor } from './renderer-url';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
@@ -19,11 +19,9 @@ export const HOME_ROUTE = '/';
 const SETTINGS_ROUTE = '/settings';
 
 function rendererBase(): string {
-  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
+  const { ELECTRON_RENDERER_URL: devServerUrl } = process.env;
 
-  return is.dev && rendererUrl !== undefined && rendererUrl !== ''
-    ? rendererUrl
-    : 'app://renderer/index.html';
+  return rendererBaseFor(is.dev, devServerUrl);
 }
 
 function targetForLog(url: string): string {

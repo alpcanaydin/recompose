@@ -157,7 +157,12 @@ async function startRecompose(): Promise<void> {
   });
 }
 
-void app.whenReady().then(startRecompose);
+void app
+  .whenReady()
+  .then(startRecompose)
+  .catch((error: unknown) => {
+    console.error('recompose failed to start', error);
+  });
 
 app.on('before-quit', () => {
   hideMenuBarTray();

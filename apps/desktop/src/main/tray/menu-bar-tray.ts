@@ -5,26 +5,28 @@ import { Menu, nativeImage, Tray } from 'electron';
 import trayColoured from '../../../resources/tray.png?asset';
 import trayTemplate from '../../../resources/trayTemplate.png?asset';
 import trayTemplateRetina from '../../../resources/trayTemplate@2x.png?asset';
-import { trayIconSourceFor } from './tray-icon';
+import { trayIconFor } from './tray-icon';
 import { buildTrayMenuTemplate, type TrayMenuHandlers } from './tray-menu-template';
 
-const isMac = process.platform === 'darwin';
-
-// A collected Tray drops its icon out of the menu bar with no error, so the reference stays here.
 let menuBarTray: Tray | null = null;
 
 function trayIcon(): NativeImage {
-  const icon = nativeImage.createFromPath(
-    trayIconSourceFor(process.platform, { template: trayTemplate, coloured: trayColoured }),
-  );
+  const chosen = trayIconFor(process.platform, {
+    template: trayTemplate,
+    templateRetina: trayTemplateRetina,
+    coloured: trayColoured,
+  });
 
-  if (isMac) {
+  const icon = nativeImage.createFromPath(chosen.source);
+
+  if (chosen.retinaSource !== null) {
     icon.addRepresentation({
       scaleFactor: 2,
-      dataURL: nativeImage.createFromPath(trayTemplateRetina).toDataURL(),
+      dataURL: nativeImage.createFromPath(chosen.retinaSource).toDataURL(),
     });
-    icon.setTemplateImage(true);
   }
+
+  icon.setTemplateImage(chosen.template);
 
   return icon;
 }
