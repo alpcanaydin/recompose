@@ -52,7 +52,7 @@ Record the transition in `manifest.md` only at this gate.
 
 Both consume the approved design document and run in parallel on the `full` tier.
 
-- **Gherkin.** A Fable 5 writer produces the scenarios through the `gherkin-best-practices` skill, with the collected acceptance references as input. OpenSpec stores the result under `gherkin/`; it does not generate the scenarios itself, because generated scenarios sit below the project's bar. Approved scenarios later graduate into `apps/desktop/e2e/features/`.
+- **Gherkin.** A Fable 5 writer produces the scenarios through the `gherkin-best-practices` skill, with the collected acceptance references as input. OpenSpec stores the result under `gherkin/<capability>/`; it does not generate the scenarios itself, because generated scenarios sit below the project's bar. The capability folder carries the same name as the change's spec delta directory, so `specs/settings/` pairs with `gherkin/settings/`. Approved scenarios graduate into `apps/desktop/e2e/features/<capability>/`, which makes graduation a directory copy rather than a second placement decision. Both globs already accept the nesting: the schema generates `gherkin/**/*.feature`, and the Playwright config reads `features/**/*.feature`.
 - **Solution design.** A Fable 5 writer instantiates the seventeen-section solution-design template that `openspec new change` scaffolds for the `design` artifact (`openspec/schemas/recompose/templates/design.md`). It fills the five-layer test matrix (unit, integration, end-to-end, property, and mutation scope) and drafts an ADR. It consumes the discovery outputs: the code map, the research findings, and the rider hits.
 
 The template split, restated at dispatch:

@@ -38,6 +38,14 @@ Every scenario passes all six checks:
 - `Scenario Outline` earns its place only when the same rule holds across a table of real value combinations. Never use it to disguise unrelated cases as one rule.
 - Tags classify, never configure: use them for suite selection (`@smoke`) and quarantine (`@quarantine`), not to smuggle parameters into steps.
 
+## File and folder placement
+
+- **One folder per capability, named after the spec it proves.** `openspec/specs/settings/` pairs with `gherkin/settings/` and with `apps/desktop/e2e/features/settings/`. The folder name is never invented; it comes from the capability.
+- **The filename names the behavior area and never repeats the folder.** `settings/screen.feature`, not `settings/settings-screen.feature`. The path already said settings once.
+- **One file per behavior area.** Not one file per requirement, which scatters a single rule, and not one file per capability, which grows past reading. A file you scroll to find a scenario in is two files.
+- **Scenarios start in the change directory and graduate unchanged.** They're written to `openspec/changes/<slug>/gherkin/<capability>/` and land at `apps/desktop/e2e/features/<capability>/`. Graduation copies a directory. It never renames, re-sorts, or re-decides placement, because the placement decision was made once, at writing time.
+- **The nesting needs no configuration.** The change schema generates `gherkin/**/*.feature` and the Playwright config reads `features/**/*.feature`, so a new capability folder is picked up on sight.
+
 ## Review test
 
 Read the finished scenario as someone who has never seen the implementation. If any step needs the code to make sense, rewrite that step in domain language before committing.
