@@ -9,9 +9,22 @@ import {
   isAllowedNavigation,
   type NavigationPolicy,
 } from './navigation-policy';
+import { rendererUrlFor } from './renderer-url';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
+
+export const HOME_ROUTE = '/';
+
+const SETTINGS_ROUTE = '/settings';
+
+function rendererBase(): string {
+  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
+
+  return is.dev && rendererUrl !== undefined && rendererUrl !== ''
+    ? rendererUrl
+    : 'app://renderer/index.html';
+}
 
 function targetForLog(url: string): string {
   return URL.canParse(url) ? new URL(url).origin : 'a malformed target';
@@ -25,7 +38,7 @@ function applyGlassBackdrop(window: BrowserWindow): void {
   });
 }
 
-export function createMainWindow(): void {
+export function createMainWindow(route: string): void {
   const mainWindow = new BrowserWindow(
     windowOptionsFor(process.platform, join(__dirname, '../preload/index.js'), icon),
   );
@@ -59,11 +72,24 @@ export function createMainWindow(): void {
     return { action: 'deny' };
   });
 
-  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
+  void mainWindow.loadURL(rendererUrlFor(rendererBase(), route));
+}
 
-  if (is.dev && rendererUrl !== undefined && rendererUrl !== '') {
-    void mainWindow.loadURL(rendererUrl);
-  } else {
-    void mainWindow.loadURL('app://renderer/index.html');
+export function openSettingsSurface(): void {
+  const [openWindow] = BrowserWindow.getAllWindows();
+
+  if (openWindow === undefined) {
+    createMainWindow(SETTINGS_ROUTE);
+
+    return;
   }
+
+  if (openWindow.isMinimized()) {
+    openWindow.restore();
+  }
+
+  openWindow.show();
+  openWindow.focus();
+
+  void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), SETTINGS_ROUTE));
 }

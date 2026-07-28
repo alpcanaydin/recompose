@@ -7,6 +7,7 @@ import type { IpcHandlers } from './ipc/dispatch';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
 import { createSystemIpcHandlers } from './ipc/system-ipc';
+import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { initializeStorage } from './storage/initialize-storage';
@@ -14,7 +15,7 @@ import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
 import { createLoginItem, loginItemAvailabilityFor } from './system/login-item';
 import { resolveUserDataOverride } from './user-data-override';
-import { createMainWindow } from './windows/main-window';
+import { createMainWindow, HOME_ROUTE, openSettingsSurface } from './windows/main-window';
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
 
 let menuBarVisible = false;
@@ -103,11 +104,13 @@ void app.whenReady().then(() => {
 
   registerPermissionHandlers();
 
-  createMainWindow();
+  installAppMenu(openSettingsSurface);
+
+  createMainWindow(HOME_ROUTE);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+      createMainWindow(HOME_ROUTE);
     }
   });
 });
