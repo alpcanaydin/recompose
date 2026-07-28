@@ -25,7 +25,11 @@ const SESSION_WORKING_DIRECTORY = '/example-project';
 
 export const MAIN_LOOP_PATH = 'apps/desktop/src/main/index.ts';
 
-const EDITED_CONTENT = 'export const start = (): void => undefined;\n';
+export const MAIN_LOOP_NOTEBOOK_PATH = 'apps/desktop/src/main/index.ipynb';
+
+export const EDITED_CONTENT = 'export const start = (): void => undefined;\n';
+
+export const EDITED_CELL_SOURCE = 'start()\n';
 
 export const GATE_CONFIGURATION = 'export default { rules: [] };\n';
 
@@ -152,6 +156,13 @@ export function plantedRepository(root: string): string {
   return root;
 }
 
+export function plantEditTarget(checkout: string, path: string): void {
+  const target = join(checkout, path);
+
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, '', 'utf8');
+}
+
 export function editPayloadFromWorkingDirectory(
   workingDirectory: string,
   filePath: string,
@@ -162,6 +173,19 @@ export function editPayloadFromWorkingDirectory(
     cwd: workingDirectory,
     tool_name: 'Write',
     tool_input: { file_path: filePath, content: EDITED_CONTENT },
+  });
+}
+
+export function notebookPayloadFromWorkingDirectory(
+  workingDirectory: string,
+  notebookPath: string,
+): string {
+  return JSON.stringify({
+    session_id: 'session-0001',
+    transcript_path: SESSION_TRANSCRIPT,
+    cwd: workingDirectory,
+    tool_name: 'NotebookEdit',
+    tool_input: { notebook_path: notebookPath, new_source: EDITED_CELL_SOURCE },
   });
 }
 

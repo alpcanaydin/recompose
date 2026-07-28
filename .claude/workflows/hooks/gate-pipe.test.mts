@@ -8,9 +8,7 @@ import {
   checkoutWithResolver,
   checkoutWithStandInGate,
   DENIAL_DECISION,
-  editPayloadFromWorkingDirectory,
   GATE_CONFIGURATION,
-  MAIN_LOOP_PATH,
   mainLoopPayload,
   runResolverIn,
   runResolverOutside,
@@ -150,29 +148,6 @@ describe('the test-first gate pipe: a subagent call whose own record is missing'
       tool_name: 'Write',
     });
     assert.equal(outcome.status, 0);
-  });
-});
-
-describe('the test-first gate pipe: a payload naming the file the tool call would edit', () => {
-  it('hands the gate the path the payload reached through a symbolic link', () => {
-    const alias = aliasedCheckout(checkoutWithStandInGate('cat stdin.json'));
-    const payload = editPayloadFromWorkingDirectory(alias, join(alias, MAIN_LOOP_PATH));
-
-    const outcome = runResolverIn(alias, payload);
-
-    assert.deepEqual(JSON.parse(outcome.stdout), JSON.parse(payload));
-  });
-
-  it('hands the gate the path the payload left relative to its working directory', () => {
-    const checkout = checkoutWithStandInGate('cat stdin.json');
-    const payload = editPayloadFromWorkingDirectory(
-      join(checkout, 'apps', 'desktop'),
-      join('src', 'main', 'index.ts'),
-    );
-
-    const outcome = runResolverIn(checkout, payload);
-
-    assert.deepEqual(JSON.parse(outcome.stdout), JSON.parse(payload));
   });
 });
 
