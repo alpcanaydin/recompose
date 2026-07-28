@@ -65,12 +65,12 @@ _Validate._ The code map returns as data rather than prose: a list of entries, e
 
 _Recheck._ A failed verdict re-dispatches the `code-analyzer` arm once, with the failing citations as input, then validates again. A second failure throws, and the arms' files already sit on disk, so the throw discards nothing.
 
-**The citation validator** lands at `.claude/workflows/citation-validator/citation-validator.mts` beside the path guard, in the same shape. A pure exported function takes the citation list and a file reader, and returns a verdict naming every failing citation. The entry point supplies `node:fs` and prints the verdict as JSON.
+**The citation validator** lands at `.claude/workflows/citation-validator/citation-validator.mts` beside the path guard, in the same shape. A pure exported function takes the citation list and a file reader, and returns a verdict naming every failing citation. The entry point supplies `node:fs`, resolves cited paths against a repository root it takes as an argument, and prints the verdict as JSON.
 
 Two rules decide a citation, in order:
 
 1. The cited path must exist in the repository.
-2. Every symbol the entry cites must appear in that file's text, matched on a word boundary.
+2. Every symbol the entry cites must appear in that file's text as a standalone token.
 
 A missing path reports as one failure and skips its symbol checks. Every symbol under a missing path fails for the same reason, and one failure per symbol buries that cause.
 
@@ -95,12 +95,14 @@ The verdict is the validator's output contract:
 - **Missing or malformed arguments.** The workflow throws before dispatching anything, naming the missing keys, matching `review-pr`.
 - **An arm that dies.** The dispatch hook returns `null` on a terminal failure. A dead `code-analyzer` throws, because the validation phase then has nothing to check. A dead `researcher` logs and continues, because its brief feeds a human step rather than a machine gate.
 - **A failing verdict.** Recorded, fed back to one rerun, and thrown on the second failure with every failing citation named.
-- **An unreadable cited file.** Treated as a missing path. A citation the validator can't verify is a citation it rejects.
+- **An unreadable cited file.** Rejected, because a citation the validator can't verify is a citation it rejects. The reason names what actually happened, so a path that resolves to a directory doesn't report as missing. A reader told to fix a path that already exists can't act on it.
+- **A malformed entry list.** Every entry must carry every field at its declared type, and a violation throws rather than degrading. A `symbols` value that isn't a list of non-empty strings is the one that matters most: coercing it to an empty list turns a code map full of invented symbols into a pass.
+- **Unparsable input.** Reported on stdout as a distinct outcome with its own exit code, so the caller separates a validator that couldn't read its input from a code map that failed. Under one exit code the workflow would rerun `code-analyzer` for a fault the reader didn't cause, then throw with no failing citation to name.
 
 ## File map
 
 - `.claude/workflows/feature-kickoff.js`: the saved workflow that dispatches the discovery arms, enforces the cap, and drives validation (create).
-- `.claude/workflows/citation-validator/citation-validator.mts`: the pure verdict function and its entry point (create).
+- `.claude/workflows/citation-validator/citation-validator.mts`: the pure verdict function and its entry point, which resolves cited paths against an explicit repository root rather than the working directory (create).
 - `.claude/workflows/citation-validator/citation-validator.test.mts`: the colocated behavior spec (create).
 - `.claude/skills/feature-cycle/references/planning.md`: step 2 gains the concrete mechanism (modify).
 - `.claude/skills/feature-cycle/SKILL.md`: the rollout note moves the citation validator out of the deferred list (modify).
@@ -139,11 +141,13 @@ Whether a path exists is a fact about the repository, not a judgement, so a dete
 
 **Alternatives considered:** a reviewer subagent auditing the map, rejected because it costs a model call to answer a question `existsSync` answers, and it can be wrong.
 
-### 4. A symbol check matches text on a word boundary
+### 4. A symbol check matches a standalone token, with conditional boundaries
 
 The check proves the file mentions the symbol. Resolving declarations would need a TypeScript program per cited file, and citations span markdown, YAML, and shell as well.
 
-**Alternatives considered:** an abstract-syntax-tree lookup, rejected on cost and on coverage across non-TypeScript files. The looser check still catches the failure that matters, a symbol invented wholesale.
+A boundary anchor applies only where the symbol's own edge character is a word character. A plain `\b` at both ends never matches a symbol that starts or ends with punctuation, which false-fails the citations this decision exists to support: `@recompose/contracts`, `--fail-on-warnings`, `pre-commit`. A false failure is worse than a missed one here. The workflow's single rerun can't repair a citation that was already correct, so discovery would throw on a clean code map.
+
+**Alternatives considered:** an abstract-syntax-tree lookup, rejected on cost and on coverage across non-TypeScript files. A plain `\b` at both ends, rejected because it false-fails scoped package names and flags. The looser check still catches the failure that matters, a symbol invented wholesale.
 
 ### 5. A rejected map reruns once, then throws
 
