@@ -40,32 +40,43 @@ describe('the settings shortcut on the application menu', () => {
   });
 });
 
+function shapeOf(items: AppMenuItem[]): (string | undefined)[] {
+  return items.map((item) => item.role ?? item.type ?? item.label);
+}
+
 describe('what a custom application menu must not drop', () => {
-  test('macOS keeps editing, so copy and paste survive replacing the default menu', () => {
-    const roles = everyItem(buildAppMenuTemplate('darwin', () => undefined)).map(
-      (item) => item.role,
-    );
-
-    expect(roles).toContain('editMenu');
-  });
-
-  test('Windows and Linux keep editing for the same reason', () => {
-    const roles = everyItem(buildAppMenuTemplate('win32', () => undefined)).map(
-      (item) => item.role,
-    );
-
-    expect(roles).toContain('editMenu');
-  });
-
-  test('every platform keeps a way to quit', () => {
+  test('every platform keeps editing, viewing, and windowing beside its own first menu', () => {
     const platforms: NodeJS.Platform[] = ['darwin', 'win32', 'linux'];
 
     for (const platform of platforms) {
-      const roles = everyItem(buildAppMenuTemplate(platform, () => undefined)).map(
-        (item) => item.role,
-      );
+      const [, ...rest] = buildAppMenuTemplate(platform, () => undefined);
 
-      expect(roles).toContain('quit');
+      expect(shapeOf(rest)).toEqual(['editMenu', 'viewMenu', 'windowMenu']);
     }
+  });
+
+  test('macOS keeps the whole application menu around the settings item', () => {
+    const [applicationMenu] = buildAppMenuTemplate('darwin', () => undefined);
+
+    expect(applicationMenu?.label).toBe('recompose');
+    expect(shapeOf(applicationMenu?.submenu ?? [])).toEqual([
+      'about',
+      'separator',
+      'Settings…',
+      'separator',
+      'services',
+      'separator',
+      'hide',
+      'hideOthers',
+      'unhide',
+      'separator',
+      'quit',
+    ]);
+  });
+
+  test('Windows and Linux keep the settings item and the way out under File', () => {
+    const [fileMenu] = buildAppMenuTemplate('linux', () => undefined);
+
+    expect(shapeOf(fileMenu?.submenu ?? [])).toEqual(['Settings…', 'separator', 'quit']);
   });
 });

@@ -46,6 +46,17 @@ describe('window chrome per platform', () => {
   });
 });
 
+describe('what every window promises before it shows', () => {
+  test('it stays hidden until the renderer paints, and reaches the preload sandboxed', () => {
+    const options = windowOptionsFor('darwin', somePreload, someIcon);
+
+    expect(options.show).toBe(false);
+    expect(options.autoHideMenuBar).toBe(true);
+    expect(options.webPreferences?.preload).toBe(somePreload);
+    expect(options.webPreferences?.sandbox).toBe(true);
+  });
+});
+
 describe('window chrome contract across all platforms', () => {
   test.prop([anyPlatform])(
     'every platform gets the same hidden-until-ready frame wired to the preload',
