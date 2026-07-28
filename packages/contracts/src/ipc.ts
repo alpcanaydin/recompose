@@ -6,7 +6,14 @@ import { nonBlankString } from './non-blank';
 import { settingsSchema } from './settings';
 
 export const ipcErrorSchema = z.strictObject({
-  code: z.enum(['vault-unavailable', 'vault-newer-schema', 'validation-failed', 'storage-failed']),
+  code: z.enum([
+    'vault-unavailable',
+    'vault-newer-schema',
+    'validation-failed',
+    'storage-failed',
+    'folder-open-failed',
+    'token-missing',
+  ]),
   message: z.string().min(1),
 });
 
@@ -26,6 +33,23 @@ export const connectAccountRequestSchema = z.strictObject({
   secret: nonBlankString,
 });
 
+export const systemStateSchema = z.strictObject({
+  fileBrowser: z.enum(['finder', 'explorer', 'file-manager']),
+  loginItem: z.enum(['available', 'unpackaged', 'unsupported']),
+  loginItemEnabled: z.boolean(),
+  menuBarVisible: z.boolean(),
+  configFolder: nonBlankString,
+});
+
+export type SystemState = z.infer<typeof systemStateSchema>;
+
+export const gatewayTokenStatusSchema = z.strictObject({
+  masked: z.string().min(1).nullable(),
+  storage: z.enum(['available', 'plaintext-fallback', 'unavailable']),
+});
+
+export type GatewayTokenStatus = z.infer<typeof gatewayTokenStatusSchema>;
+
 export const ipcChannels = {
   'gateways:list': { request: z.void(), response: ipcResult(z.array(gatewayConfigSchema)) },
   'gateways:save': {
@@ -43,6 +67,11 @@ export const ipcChannels = {
     request: z.strictObject({ id: nonBlankString }),
     response: ipcResult(accountsDocumentSchema),
   },
+  'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
+  'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },
+  'gateway-token:status': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
+  'gateway-token:mint': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
+  'gateway-token:copy': { request: z.void(), response: ipcResult(z.void()) },
 } as const;
 
 export type IpcChannel = keyof typeof ipcChannels;

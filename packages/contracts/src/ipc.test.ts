@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'vitest';
 
 import { GATEWAY_CONFIG_VERSION } from './gateway-config';
-import { ipcChannels, ipcErrorSchema, type IpcChannel } from './ipc';
+import {
+  gatewayTokenStatusSchema,
+  ipcChannels,
+  ipcErrorSchema,
+  systemStateSchema,
+  type IpcChannel,
+} from './ipc';
 
 const channelNames: IpcChannel[] = [
   'gateways:list',
@@ -11,10 +17,15 @@ const channelNames: IpcChannel[] = [
   'accounts:list',
   'accounts:connect',
   'accounts:remove',
+  'system:get',
+  'system:open-config-folder',
+  'gateway-token:status',
+  'gateway-token:mint',
+  'gateway-token:copy',
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the seven specified channels exist', () => {
+  test('exactly the twelve specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 
@@ -98,6 +109,89 @@ describe('accounts:connect channel', () => {
   });
 });
 
+describe('the system state crossing the bridge', () => {
+  const observedSystemState = {
+    fileBrowser: 'finder',
+    loginItem: 'available',
+    loginItemEnabled: true,
+    menuBarVisible: false,
+    configFolder: '/Users/someone/Library/Application Support/recompose',
+  };
+
+  test('a full reading round-trips', () => {
+    expect(
+      ipcChannels['system:get'].response.parse({ ok: true, value: observedSystemState }),
+    ).toEqual({ ok: true, value: observedSystemState });
+  });
+
+  test('the file browser and the login-item availability are closed sets', () => {
+    expect(() =>
+      systemStateSchema.parse({ ...observedSystemState, fileBrowser: 'nautilus' }),
+    ).toThrow();
+    expect(() => systemStateSchema.parse({ ...observedSystemState, loginItem: 'maybe' })).toThrow();
+  });
+
+  test('a blank config folder is rejected', () => {
+    expect(() =>
+      systemStateSchema.parse({ ...observedSystemState, configFolder: '   ' }),
+    ).toThrow();
+  });
+
+  test('the platform never rides along', () => {
+    expect(() => systemStateSchema.parse({ ...observedSystemState, platform: 'darwin' })).toThrow();
+  });
+});
+
+describe('the gateway token status crossing the bridge', () => {
+  const maskedToken = 'rc-local-********tail';
+
+  test('a stored token arrives masked', () => {
+    const status = { masked: maskedToken, storage: 'available' };
+
+    expect(ipcChannels['gateway-token:status'].response.parse({ ok: true, value: status })).toEqual(
+      {
+        ok: true,
+        value: status,
+      },
+    );
+  });
+
+  test('an empty vault arrives as no mask at all', () => {
+    const status = { masked: null, storage: 'plaintext-fallback' };
+
+    expect(gatewayTokenStatusSchema.parse(status)).toEqual(status);
+  });
+
+  test('a blank mask is rejected, because absence is spelled null', () => {
+    expect(() => gatewayTokenStatusSchema.parse({ masked: '', storage: 'available' })).toThrow();
+  });
+
+  test('the plaintext cannot ride beside the mask', () => {
+    expect(() =>
+      gatewayTokenStatusSchema.parse({
+        masked: maskedToken,
+        storage: 'available',
+        token: 'rc-local-the-whole-thing',
+      }),
+    ).toThrow();
+  });
+
+  test('the secret-storage state is a closed set', () => {
+    expect(() => gatewayTokenStatusSchema.parse({ masked: null, storage: 'encrypted' })).toThrow();
+  });
+});
+
+describe('the channels that answer with nothing', () => {
+  test('opening the config folder and copying the token both carry no value back', () => {
+    for (const name of ['system:open-config-folder', 'gateway-token:copy'] as const) {
+      expect(ipcChannels[name].response.parse({ ok: true, value: undefined })).toEqual({
+        ok: true,
+        value: undefined,
+      });
+    }
+  });
+});
+
 describe('ipc error codes', () => {
   test('error codes are the closed set', () => {
     for (const code of [
@@ -105,6 +199,8 @@ describe('ipc error codes', () => {
       'vault-newer-schema',
       'validation-failed',
       'storage-failed',
+      'folder-open-failed',
+      'token-missing',
     ]) {
       expect(() => ipcErrorSchema.parse({ code, message: 'x' })).not.toThrow();
     }

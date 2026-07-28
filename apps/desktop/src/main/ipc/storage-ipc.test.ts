@@ -1,4 +1,9 @@
-import { GATEWAY_CONFIG_VERSION, type GatewayConfig } from '@recompose/contracts';
+import {
+  defaultSettings,
+  GATEWAY_CONFIG_VERSION,
+  type GatewayConfig,
+  type Settings,
+} from '@recompose/contracts';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -25,6 +30,7 @@ async function freshContext(
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
+    writeClipboard: () => undefined,
     ...overrides,
   };
 }
@@ -50,6 +56,8 @@ const gateway: GatewayConfig = {
   layout: { nodes: {} },
 };
 
+const changedSettings: Settings = { ...defaultSettings(), theme: 'dark', enginePort: 9000 };
+
 const connectRequest = {
   provider: 'anthropic',
   kind: 'api-key' as const,
@@ -74,11 +82,7 @@ describe('storage ipc handlers: settings', () => {
     const handlers = createStorageIpcHandlers(await freshContext());
 
     const first = await handlers['settings:get'](undefined);
-    const written = await handlers['settings:save']({
-      schemaVersion: 1,
-      theme: 'dark',
-      enginePort: 9000,
-    });
+    const written = await handlers['settings:save'](changedSettings);
     const second = await handlers['settings:get'](undefined);
 
     expect(first).toMatchObject({ ok: true, value: { theme: 'system', enginePort: 8397 } });
@@ -233,11 +237,7 @@ describe('storage ipc handlers: storage failures', () => {
 
     const handlers = createStorageIpcHandlers(await freshContext({ userDataPath: blockingPath }));
 
-    const result = await handlers['settings:save']({
-      schemaVersion: 1,
-      theme: 'dark',
-      enginePort: 9000,
-    });
+    const result = await handlers['settings:save'](changedSettings);
 
     expect(result).toMatchObject({ ok: false, error: { code: 'storage-failed' } });
   });

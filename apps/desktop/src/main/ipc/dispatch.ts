@@ -19,6 +19,11 @@ export const ipcChannelNames: readonly IpcChannel[] = [
   'accounts:list',
   'accounts:connect',
   'accounts:remove',
+  'system:get',
+  'system:open-config-folder',
+  'gateway-token:status',
+  'gateway-token:mint',
+  'gateway-token:copy',
 ];
 
 async function callHandler<Channel extends IpcChannel>(

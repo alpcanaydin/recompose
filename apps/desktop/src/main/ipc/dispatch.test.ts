@@ -1,13 +1,29 @@
 import { fc, test } from '@fast-check/vitest';
-import { ipcChannels, type AccountsDocument, type IpcChannel } from '@recompose/contracts';
+import {
+  defaultSettings,
+  ipcChannels,
+  type AccountsDocument,
+  type GatewayTokenStatus,
+  type IpcChannel,
+  type Settings,
+  type SystemState,
+} from '@recompose/contracts';
 import { describe, expect } from 'vitest';
 
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
 
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
-const settings = { schemaVersion: 1, theme: 'dark', enginePort: 9000 } as const;
+const settings: Settings = { ...defaultSettings(), theme: 'dark', enginePort: 9000 };
 const emptyAccounts: AccountsDocument = { schemaVersion: 1, accounts: [] };
+const systemState: SystemState = {
+  fileBrowser: 'finder',
+  loginItem: 'available',
+  loginItemEnabled: false,
+  menuBarVisible: false,
+  configFolder: '/tmp/recompose',
+};
+const tokenStatus: GatewayTokenStatus = { masked: 'rc-local-••••••••tail', storage: 'available' };
 
 const trustedSender: TrustedSender = {
   frameUrl: 'app://renderer/index.html',
@@ -25,6 +41,11 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'accounts:list': reject,
     'accounts:connect': reject,
     'accounts:remove': reject,
+    'system:get': reject,
+    'system:open-config-folder': reject,
+    'gateway-token:status': reject,
+    'gateway-token:mint': reject,
+    'gateway-token:copy': reject,
   };
 
   return { ...base, ...overrides };
@@ -39,6 +60,11 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'accounts:list': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'accounts:connect': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
+    'system:get': async () => Promise.resolve({ ok: true, value: systemState }),
+    'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
+    'gateway-token:status': async () => Promise.resolve({ ok: true, value: tokenStatus }),
+    'gateway-token:mint': async () => Promise.resolve({ ok: true, value: tokenStatus }),
+    'gateway-token:copy': async () => Promise.resolve({ ok: true, value: undefined }),
   };
 }
 
@@ -47,6 +73,11 @@ const voidRequestChannel = fc.constantFrom<IpcChannel>(
   'gateways:list',
   'settings:get',
   'accounts:list',
+  'system:get',
+  'system:open-config-folder',
+  'gateway-token:status',
+  'gateway-token:mint',
+  'gateway-token:copy',
 );
 const nonUndefinedJunk = fc.anything().filter((value) => value !== undefined);
 

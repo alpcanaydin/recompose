@@ -1,19 +1,50 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { app, BrowserWindow, safeStorage, session } from 'electron';
+import { app, BrowserWindow, clipboard, safeStorage, session, shell } from 'electron';
 import { join } from 'path';
+
+import type { IpcHandlers } from './ipc/dispatch';
 
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
+import { createSystemIpcHandlers } from './ipc/system-ipc';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
+import { fileBrowserFor } from './system/file-browser';
+import { loginItemAvailabilityFor } from './system/login-item';
 import { resolveUserDataOverride } from './user-data-override';
 import { createMainWindow } from './windows/main-window';
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
 
+let menuBarVisible = false;
+
 function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
+}
+
+function assembleIpcHandlers(): IpcHandlers {
+  const userDataPath = app.getPath('userData');
+
+  return {
+    ...createStorageIpcHandlers({
+      userDataPath,
+      getCodec: () => createSafeStorageCodec(),
+      isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
+      onCorrupt: onStorageCorrupt,
+      writeClipboard: (text) => {
+        clipboard.writeText(text);
+      },
+    }),
+    ...createSystemIpcHandlers({
+      fileBrowser: fileBrowserFor(process.platform),
+      loginItem: loginItemAvailabilityFor(process.platform, app.isPackaged),
+      configFolder: userDataPath,
+      readLoginItem: () => app.getLoginItemSettings().openAtLogin,
+      isMenuBarVisible: () => menuBarVisible,
+      openFolder: async (path) => shell.openPath(path),
+    }),
+  };
 }
 
 function registerPermissionHandlers(): void {
@@ -49,18 +80,15 @@ registerAppScheme();
 void app.whenReady().then(() => {
   serveRenderer(join(__dirname, '../renderer'));
 
-  registerIpcHandlers(
-    createStorageIpcHandlers({
-      userDataPath: app.getPath('userData'),
-      getCodec: () => createSafeStorageCodec(),
-      isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
-      onCorrupt: onStorageCorrupt,
-    }),
-  );
+  registerIpcHandlers(assembleIpcHandlers());
 
-  void initializeStorage(app.getPath('userData'), onStorageCorrupt).catch((error: unknown) => {
-    console.error('storage initialization failed', error);
-  });
+  void initializeStorage(app.getPath('userData'), onStorageCorrupt)
+    .then((state) => {
+      menuBarVisible = state.settings.showInMenuBar;
+    })
+    .catch((error: unknown) => {
+      console.error('storage initialization failed', error);
+    });
 
   electronApp.setAppUserModelId('sh.recompose.app');
 
