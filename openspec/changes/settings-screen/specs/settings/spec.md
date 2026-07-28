@@ -22,6 +22,22 @@ The app MUST present every stored setting on a single screen inside the main win
 - Then the app keeps the stored port
 - And the field states the range it accepts
 
+### Requirement: The settings shortcut
+
+The app MUST answer the settings shortcut even when no window stands open, because the tray keeps the app alive after the last window closes. The shortcut MUST reach the settings surface inside the main window rather than opening a second window.
+
+#### Scenario: a person presses the shortcut while the window stands open
+
+- When a person presses the settings shortcut
+- Then the settings surface takes over the content area
+- And the sidebar selection moves to Settings
+- And focus lands on the first control
+
+#### Scenario: a person presses the shortcut with no window open
+
+- When the tray shows, no window stands open, and a person presses the settings shortcut
+- Then the app opens a window on the settings surface
+
 ### Requirement: Launch at login
 
 The app MUST offer a launch-at-login switch backed by the operating system login item rather than by a stored flag alone. The switch MUST report what the operating system holds, so a change made outside the app doesn't leave the screen lying.
@@ -77,12 +93,22 @@ The app MUST hold the gateway token in the vault rather than in the settings doc
 
 ### Requirement: Config folder access
 
-The app MUST name the folder that holds its data and MUST open that folder in the operating system file browser on request.
+The app MUST name the folder that holds its data and MUST open that folder in the operating system file browser on request. The action label MUST name the file browser the running platform ships, because a label naming another platform's browser misleads the reader.
 
 #### Scenario: a person reveals the config folder
 
 - When a person asks to reveal the folder
 - Then the operating system file browser opens at that folder
+
+#### Scenario: the label matches the platform
+
+- When the settings screen renders the config folder row
+- Then the action names the file browser the running platform ships
+
+#### Scenario: the folder refuses to open
+
+- When the operating system reports a failure opening the folder
+- Then the row states that the folder didn't open
 
 ### Requirement: Controls that wait on machinery
 
@@ -92,4 +118,10 @@ The app MUST NOT offer a working control for a setting nothing reads. A setting 
 
 - When a person reaches the bind address, gateway autostart, or log retention row
 - Then the control renders as unavailable and names the engine as what it waits for
+- And the settings document holds no field for it
+
+#### Scenario: a person meets a setting that waits on the canvas
+
+- When a person reaches the reduced wire motion row
+- Then the control renders as unavailable and names the canvas as what it waits for
 - And the settings document holds no field for it
