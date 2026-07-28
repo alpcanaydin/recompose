@@ -218,6 +218,6 @@ git commit -m "docs: adr for the edit-time test gate"
 
 Run a `rules-reviewer` pass over the branch diff and fix its findings in the worktree. Then run `pnpm run lint:openspec`, `pnpm run lint:prose`, `pnpm run lint:spell`, `pnpm run typecheck`, `pnpm run test`, and `pnpm run test:workflows`. All exit 0.
 
-- [ ] **Step 2: Push, review, then open**
+- [x] **Step 2: Push, review, then open**
 
 Push the branch. Run `/review-pr` on the pushed head with `sha`, `repo`, and `baseSha`. This change touches the settings file, the package manifests, and the workflow tree, so the path guard demands the review status. Fix any surviving finding, push again, and re-review with the previous reviewed head as `baseSha`. Prepare the `gh pr create` command for the maintainer with a body naming the change directory, the modified capability, and the record.
