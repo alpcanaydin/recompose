@@ -1,6 +1,6 @@
 ---
 name: gate-scope-anchored-to-session-root
-description: Probity anchors files globs to the directory of the config it loads; six scope answers so far (payload walk, git bound, own-checkout pin, resolved payload, back to the pin) each traded one silent permit for another; round 8 pinned round 7's three misses, and the fence still welcomes rewriting guarded on tool_name Edit or on agent_id presence
+description: Probity anchors files globs to the directory of the config it loads; six scope answers so far (payload walk, git bound, own-checkout pin, resolved payload, back to the pin) each traded one silent permit for another; the fence now closes rewriting guarded on tool_name Edit, on agent_id presence, and on both agent_id and an absolute path, each at 1 red, and its Edit fixture plants the text the vendor's schema needs
 metadata:
   type: project
 ---

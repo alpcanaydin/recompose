@@ -151,10 +151,11 @@ describe('the test-first gate action path: a replacement edit reached through a 
   });
 });
 
-describe('the test-first gate action path: an edit a subagent leaves relative to its working directory', () => {
-  it('hands the gate that relative path beside the record of the subagent that made it', () => {
+describe('the test-first gate action path: an edit a subagent names in full', () => {
+  it('hands the gate that path rather than the one it resolves to, beside the subagent record', () => {
     const checkout = checkoutWithStandInGate('cat stdin.json');
-    const workingDirectory = join(checkout, WORKING_DIRECTORY_IN_CHECKOUT);
+    const alias = aliasedCheckout(checkout);
+    const editedFile = join(alias, MAIN_LOOP_PATH);
     const sessionTranscript = join(checkout, SESSION_TRANSCRIPT_IN_CHECKOUT);
     const subagentRecord = join(checkout, SUBAGENT_RECORD_IN_CHECKOUT);
 
@@ -164,12 +165,8 @@ describe('the test-first gate action path: an edit a subagent leaves relative to
     plantEditTarget(checkout, MAIN_LOOP_PATH);
 
     const outcome = runResolverIn(
-      checkout,
-      subagentPayloadFromWorkingDirectory(
-        workingDirectory,
-        PATH_BELOW_THAT_WORKING_DIRECTORY,
-        sessionTranscript,
-      ),
+      alias,
+      subagentPayloadFromWorkingDirectory(alias, editedFile, sessionTranscript),
     );
 
     assert.deepEqual(JSON.parse(outcome.stdout), {
@@ -177,19 +174,19 @@ describe('the test-first gate action path: an edit a subagent leaves relative to
       transcript_path: subagentRecord,
       agent_id: EDITING_SUBAGENT_ID,
       agent_type: 'tdd-implementer',
-      cwd: workingDirectory,
+      cwd: alias,
       tool_name: 'Write',
-      tool_input: { file_path: PATH_BELOW_THAT_WORKING_DIRECTORY, content: EDITED_CONTENT },
+      tool_input: { file_path: editedFile, content: EDITED_CONTENT },
     });
   });
 });
 
 describe('the test-first gate action path: the target the cases above plant', () => {
-  it('stands empty in the checkout, so every one of them edits a file that already exists', () => {
+  it('carries the text a replacement payload names, so the vendor accepts that edit', () => {
     const checkout = scratchWorkspace();
 
     plantEditTarget(checkout, MAIN_LOOP_PATH);
 
-    assert.equal(readFileSync(join(checkout, MAIN_LOOP_PATH), 'utf8'), '');
+    assert.equal(readFileSync(join(checkout, MAIN_LOOP_PATH), 'utf8'), REPLACED_CONTENT);
   });
 });

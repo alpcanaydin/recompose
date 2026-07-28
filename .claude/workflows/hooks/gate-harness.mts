@@ -164,7 +164,7 @@ export function plantEditTarget(checkout: string, path: string): void {
   const target = join(checkout, path);
 
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, '', 'utf8');
+  writeFileSync(target, REPLACED_CONTENT, 'utf8');
 }
 
 export function editPayloadFromWorkingDirectory(
