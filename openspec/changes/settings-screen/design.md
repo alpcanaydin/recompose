@@ -342,7 +342,7 @@ Two failures never reach an error code, because the observed truth already repor
 
 ### Tests, config, and records
 
-- `apps/desktop/e2e/features/settings.feature`: the acceptance scenarios (create)
+- `apps/desktop/e2e/features/settings/`: the nine approved scenario files, copied from `openspec/changes/settings-screen/gherkin/settings/` without renaming (create)
 - `apps/desktop/e2e/steps/settings.steps.ts`: their step definitions (create)
 - `apps/desktop/e2e/steps/app.steps.ts`: a step that reaches the settings screen (modify)
 - `apps/desktop/e2e/fixtures.ts`: teardown that restores the login item it changed (modify)
