@@ -27,6 +27,7 @@ async function freshContext(
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
+    applySettings: () => undefined,
     ...overrides,
   };
 }

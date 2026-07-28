@@ -1,4 +1,4 @@
-import type { AccountsDocument, IpcRequest } from '@recompose/contracts';
+import type { AccountsDocument, IpcRequest, Settings } from '@recompose/contracts';
 
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -24,6 +24,7 @@ export type StorageIpcContext = {
   isEncryptionAvailable: () => boolean;
   onCorrupt: (quarantinedPath: string) => void;
   writeClipboard: (text: string) => void;
+  applySettings: (settings: Settings) => void;
 };
 
 type StoragePaths = {
@@ -87,7 +88,11 @@ async function saveSettings(
   try {
     await saveSettingsFile(paths.settingsFile, settings);
 
-    return { ok: true as const, value: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
+    const stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
+
+    ctx.applySettings(stored);
+
+    return { ok: true as const, value: stored };
   } catch (error) {
     return storageFailure(error);
   }

@@ -9,9 +9,20 @@ import {
   isAllowedNavigation,
   type NavigationPolicy,
 } from './navigation-policy';
+import { rendererBaseFor, rendererUrlFor } from './renderer-url';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
+
+export const HOME_ROUTE = '/';
+
+const SETTINGS_ROUTE = '/settings';
+
+function rendererBase(): string {
+  const { ELECTRON_RENDERER_URL: devServerUrl } = process.env;
+
+  return rendererBaseFor(is.dev, devServerUrl);
+}
 
 function targetForLog(url: string): string {
   return URL.canParse(url) ? new URL(url).origin : 'a malformed target';
@@ -25,7 +36,7 @@ function applyGlassBackdrop(window: BrowserWindow): void {
   });
 }
 
-export function createMainWindow(): void {
+export function createMainWindow(route: string): void {
   const mainWindow = new BrowserWindow(
     windowOptionsFor(process.platform, join(__dirname, '../preload/index.js'), icon),
   );
@@ -59,11 +70,40 @@ export function createMainWindow(): void {
     return { action: 'deny' };
   });
 
-  const { ELECTRON_RENDERER_URL: rendererUrl } = process.env;
+  void mainWindow.loadURL(rendererUrlFor(rendererBase(), route));
+}
 
-  if (is.dev && rendererUrl !== undefined && rendererUrl !== '') {
-    void mainWindow.loadURL(rendererUrl);
-  } else {
-    void mainWindow.loadURL('app://renderer/index.html');
+function reveal(window: BrowserWindow): void {
+  if (window.isMinimized()) {
+    window.restore();
   }
+
+  window.show();
+  window.focus();
+}
+
+export function showMainWindow(): void {
+  const [openWindow] = BrowserWindow.getAllWindows();
+
+  if (openWindow === undefined) {
+    createMainWindow(HOME_ROUTE);
+
+    return;
+  }
+
+  reveal(openWindow);
+}
+
+export function openSettingsSurface(): void {
+  const [openWindow] = BrowserWindow.getAllWindows();
+
+  if (openWindow === undefined) {
+    createMainWindow(SETTINGS_ROUTE);
+
+    return;
+  }
+
+  reveal(openWindow);
+
+  void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), SETTINGS_ROUTE));
 }
