@@ -15,7 +15,7 @@
 - Consumes: the code-map entry list, and `isProcessEntryPoint` from `.claude/workflows/hooks/entry-point.mjs`.
 - Produces: `validate(entries, readFile)` with the `CodeMapEntry`, `Verdict`, and `CitationFailure` types, plus the entry point's process contract Task 2 reads: the repository root as the first argument, the entry list on standard input, JSON on standard output, and exit codes zero, one, and two.
 
-- [ ] **Step 1: Write the failing spec and capture its red run**
+- [x] **Step 1: Write the failing spec and capture its red run**
 
 Colocate the spec next to the script, run it through `node:test` under `pnpm run test:workflows`, and follow `path-guard.test.mts` for shape. The spec drives the pure verdict function. It takes the entry list and a file reader, then returns pass or fail with every failing citation named.
 
@@ -31,7 +31,7 @@ Cover the branches from the design's test matrix:
 
 The spec fails because the module doesn't exist. Capture that failing run into the task report as the red evidence.
 
-- [ ] **Step 2: Implement the validator and land one green commit**
+- [x] **Step 2: Implement the validator and land one green commit**
 
 Keep the whole validator self-contained in `.claude/workflows/citation-validator/citation-validator.mts`. Export the pure verdict function, then wire a thin entry point behind `isProcessEntryPoint` that supplies `node:fs` and prints the verdict. Match a symbol as a standalone token under the amended decision 4, and resolve no declarations. Don't extend the Stryker mutation scope and don't move the function into a domain package, matching the path guard's recorded exception. The spec and its implementation land together as one green commit.
 
@@ -51,7 +51,7 @@ git commit -m "feat: citation validator for code maps"
 - Consumes: the `researcher` and `code-analyzer` subagent types, the workflow harness hooks, and the validator's JSON verdict from Task 1.
 - Produces: the discovery directory contract that Task 3 documents.
 
-- [ ] **Step 1: Write the workflow**
+- [x] **Step 1: Write the workflow**
 
 Follow `.claude/workflows/review-pr.js` exactly for shape:
 
@@ -69,7 +69,7 @@ The workflow takes `{ slug, tier }` and runs three phases:
 
 A dead `code-analyzer` throws, because validation then has nothing to check. A dead `researcher` logs and continues. Return the discovery directory, the arm labels with their files, the validated entries, and whether a recheck ran.
 
-- [ ] **Step 2: Verify the gates and commit**
+- [x] **Step 2: Verify the gates and commit**
 
 Run: `pnpm run typecheck && pnpm run test:workflows`
 Expected: both exit 0. The `.claude/workflows/` tree is already exempt from Vale and cspell, so no prose run applies.
@@ -90,15 +90,15 @@ git commit -m "feat: feature-kickoff discovery workflow"
 
 - Consumes: the workflow name, its arguments, and the discovery directory from Task 2.
 
-- [ ] **Step 1: Make the discovery step concrete**
+- [x] **Step 1: Make the discovery step concrete**
 
 In `references/planning.md` step 2, replace the improvised-dispatch language with the mechanism. Name the `feature-kickoff` saved workflow, its `{ slug, tier }` arguments, the cap assertion that throws, the validator's path, the single rerun on rejection, and `openspec/changes/<slug>/discovery/` as where the arms' files land. Keep the arm table and the standard-tier fold, because the workflow implements them rather than replacing them. State that the design-reference arm and the brainstorm stay in the session.
 
-- [ ] **Step 2: Update the rollout note**
+- [x] **Step 2: Update the rollout note**
 
 In `SKILL.md`, drop the citation validator from the deferred list and add it to the sentence naming what exists, with its path. Leave the environment setup script, the finding-by-commit verifiers, and the rider ledger deferred.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `pnpm exec openspec validate --all --strict --no-interactive`
 Expected: exit 0. The skills tree stays prose-exempt, so no Vale or cspell run applies.
@@ -119,7 +119,7 @@ git commit -m "docs: concrete discovery dispatch in the skill"
 
 - Consumes: every decision from [design.md](design.md) in this change.
 
-- [ ] **Step 1: Write the record through the new-adr skill**
+- [x] **Step 1: Write the record through the new-adr skill**
 
 Cover all six decisions:
 
@@ -132,11 +132,11 @@ Cover all six decisions:
 
 Record the two limits plainly. The saved workflow ships with no spec, because no test can import it, and the symbol check proves a mention rather than a declaration. Record the mutation-scope exception and its compensating unit and integration cover. Write only what the code does, because a wrong sentence in a record misdirects the next implementer.
 
-- [ ] **Step 2: Update the index**
+- [x] **Step 2: Update the index**
 
 Add the row to `docs/adr/README.md` in the existing format.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `mise exec -- vale docs/adr/0041-discovery-workflow-and-citation-validator.md && pnpm exec cspell --no-progress docs/adr/`
 Expected: 0 errors from both.
@@ -150,15 +150,15 @@ git commit -m "docs: adr for the discovery workflow"
 
 **Files:** none (process step).
 
-- [ ] **Step 1: Final validation sweep**
+- [x] **Step 1: Final validation sweep**
 
 Run: `pnpm exec openspec validate --all --strict --no-interactive && pnpm run lint:prose && pnpm run lint:spell && pnpm run typecheck && pnpm run test:workflows`
 Expected: all exit 0.
 
-- [ ] **Step 2: Push and review**
+- [x] **Step 2: Push and review**
 
 Push the branch, then run the heavy adversarial review over the pushed head before opening the pull request.
 
-- [ ] **Step 3: Open the pull request**
+- [x] **Step 3: Open the pull request**
 
 Body names the change directory, the modified capability, and the Architecture Decision Record (ADR) 0041.
