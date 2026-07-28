@@ -47,6 +47,22 @@ export const Password = meta.story({
   },
 });
 
+/** A field whose machinery the app lacks: reachable and explained, never editable. */
+export const Inert = meta.story({
+  args: { label: 'Bind address', value: '127.0.0.1', inert: true },
+  render: ControlledTextField,
+  play: async ({ canvas, userEvent }) => {
+    const control = canvas.getByRole('textbox', { name: 'Bind address' });
+
+    await expect(control).toHaveAttribute('aria-disabled', 'true');
+    await expect(control).not.toHaveAttribute('disabled');
+
+    await userEvent.type(control, 'x');
+
+    await expect(control).toHaveValue('127.0.0.1');
+  },
+});
+
 /** The same input under the dark scheme. */
 export const DarkScheme = meta.story({
   args: { value: 'anthropic' },

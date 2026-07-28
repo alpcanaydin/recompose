@@ -3,7 +3,13 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { FieldGroup, FieldRow, Switch } from './index';
+import { FieldGroup, FieldRow, NumericField, SegmentedControl, Switch, TextField } from './index';
+
+const retentionOptions = [
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '90', label: '90 days' },
+];
 
 const meta = preview.meta({
   component: FieldGroup,
@@ -53,4 +59,66 @@ export const Basic = meta.story({
 export const DarkScheme = meta.story({
   args: { children: <GeneralRows /> },
   globals: { theme: 'dark' },
+});
+
+function ServerRows() {
+  const [port, setPort] = useState(8397);
+
+  return (
+    <>
+      <FieldRow
+        control={
+          <NumericField
+            description="Accepts 1024 to 65535."
+            label="Port"
+            max={65535}
+            min={1024}
+            onCommitValue={setPort}
+            value={port}
+          />
+        }
+        label="Port"
+      />
+      <FieldRow
+        control={
+          <TextField inert label="Bind address" onChangeValue={() => {}} value="127.0.0.1" />
+        }
+        inert
+        label="Bind address"
+        reason="Waiting on the engine."
+      />
+      <FieldRow
+        control={
+          <SegmentedControl
+            inert
+            label="Log retention"
+            onChangeValue={() => {}}
+            options={retentionOptions}
+            value="30"
+          />
+        }
+        inert
+        label="Log retention"
+        reason="Waiting on the engine."
+      />
+    </>
+  );
+}
+
+/**
+ * Every control the kit ships, stacked the way a settings section stacks them.
+ *
+ * @summary The merge gate for the inert pattern: waiting rows stay reachable and name their reason.
+ */
+export const WithEveryControl = meta.story({
+  args: { heading: 'Server', children: <ServerRows /> },
+  play: async ({ canvas }) => {
+    const bindAddress = canvas.getByRole('textbox', { name: 'Bind address' });
+    const retention = canvas.getByRole('radiogroup', { name: 'Log retention' });
+
+    await expect(bindAddress).toHaveAccessibleDescription('Waiting on the engine.');
+    await expect(bindAddress).toHaveAttribute('aria-disabled', 'true');
+    await expect(retention).toHaveAttribute('aria-disabled', 'true');
+    await expect(canvas.getByRole('textbox', { name: 'Port' })).toHaveValue('8397');
+  },
 });

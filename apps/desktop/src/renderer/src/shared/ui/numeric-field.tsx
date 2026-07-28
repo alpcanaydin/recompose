@@ -63,7 +63,7 @@ export function NumericField({
   };
 
   return (
-    <>
+    <div className="flex flex-col items-end gap-0.5">
       <Field.Control
         aria-describedby={descriptionId}
         aria-label={label}
@@ -88,6 +88,6 @@ export function NumericField({
       <p className="text-caption text-ink" id={descriptionId}>
         {description}
       </p>
-    </>
+    </div>
   );
 }
