@@ -9,7 +9,7 @@ The gap already reaches shipped code. The `feature-kickoff` workflow dispatches 
 ## What changes
 
 - The ledger becomes issues on the repository under one label. The tracker already carries this project's open work, so the ledger needs no new store, and a session files a discovery with one command.
-- The `feature-kickoff` workflow's ledger arm queries the tracker rather than the source tree, on both tiers.
+- The `feature-kickoff` workflow's ledger arm queries the tracker rather than the source tree. That arm belongs to the `full` tier alone, because the `standard` tier's single research subagent carries no command access, and the planning reference states that loss.
 - The planning and verification references gain the mechanism, and the skill's rollout note drops the ledger from its deferred list.
 
 ## Capabilities

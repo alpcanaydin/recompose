@@ -31,8 +31,8 @@ The `standard` tier folds its lines of enquiry into two arms. The folded arm ask
 
 - [x] **Step 4: Verify and commit**
 
-Run: `pnpm run typecheck && pnpm run test:workflows`
-Expected: both exit 0, with the workflow suite still at 98 passing.
+Run: `pnpm run typecheck && pnpm run test:workflows && pnpm exec openspec validate --all --strict --no-interactive`
+Expected: all exit 0, with the workflow suite still at 98 passing.
 
 ## Task 2: The references and the rollout note
 

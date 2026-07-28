@@ -46,21 +46,22 @@ The gap reaches shipped code. The `feature-kickoff` workflow dispatches an arm f
 
 ## Design
 
-The ledger becomes issues on the repository under a single `rider` label. A title names the defect, and a body names where it surfaced and why it fell outside the change in hand. Nothing more needs pinning down. The tracker already gives search, cross-links from a pull request, and a one-command filing.
+The ledger becomes issues on the repository under a single `rider` label. A title names the defect, and a body names where it surfaced and why it fell outside the change in hand. Those two fields are the contract, because a reader judges relevance from the body rather than from the label. Nothing beyond them needs pinning down: the tracker already gives search, cross-links from a pull request, and a one-command filing.
 
 The two tiers need different fixes, because their subagents differ in what they can reach. `code-analyzer` carries a command tool, and `researcher` carries none.
 
-On the `full` tier the arm keeps `code-analyzer`, which could always have queried the tracker. Its focus text gains the label and the command, so the subagent has nothing to interpret. The subagent type was never the fault.
+On the `full` tier the arm keeps `code-analyzer`, which could always have queried the tracker. Its focus text gains the label and the command, so the subagent has nothing to interpret. The command asks for the issue number, the title, and the body. It also raises the result limit past the default of thirty, which would otherwise hide older entries as the ledger grows. The subagent type was never the fault.
 
 On the `standard` tier the fold gives one `researcher` the research, the acceptance criteria, and the ledger lookup. That subagent has no command access, so the ledger clause leaves its focus text and the tier stops looking at the ledger. The planning reference states that loss and its reason, because an undocumented capability loss is the failure this project keeps paying for. Both tiers keep their arm counts, so the cap arithmetic doesn't change.
 
 ## Data model and contracts
 
-None beyond the label. A ledger entry is an issue, and the label is the only contract.
+A ledger entry is an open issue carrying the `rider` label. Its title names the defect. Its body names where the discovery surfaced and why it fell outside the change in hand. The reading arm requests the issue number, the title, and the body, because a title alone seldom says whether an entry touches the feature in hand.
 
 ## Error handling
 
-- **The tracker is unreachable, or the label has no issues.** The arm reports that it found no prior findings. An empty ledger is a normal state, not a failure.
+- **The label has no issues.** The arm reports that it found no prior findings. An empty ledger is a normal state rather than a failure.
+- **The tracker is unreachable.** The arm reports the lookup as failed, and never as an empty ledger. An outage that reads as "nothing found" would let a reader conclude no prior finding exists, which is the false-reason failure this project keeps paying for.
 - **A dead ledger arm.** The workflow already logs and continues for any arm other than the code map. That's the right behavior here, because a missing brief costs context rather than correctness.
 
 ## File map
