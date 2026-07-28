@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 import { isProcessEntryPoint } from '../hooks/entry-point.mjs';
 
@@ -25,6 +25,8 @@ const FAILING_VERDICT_STATUS = 1;
 
 const INPUT_ERROR_STATUS = 2;
 
+class PathEscapesRepositoryError extends Error {}
+
 function escapeForRegExp(symbol: string): string {
   return symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -46,7 +48,7 @@ function symbolPattern(symbol: string): string {
 }
 
 function citesSymbol(text: string, symbol: string): boolean {
-  return new RegExp(symbolPattern(symbol)).test(text);
+  return symbol.length > 0 && new RegExp(symbolPattern(symbol)).test(text);
 }
 
 function missingSymbols(text: string, symbols: readonly string[]): readonly string[] {
@@ -55,6 +57,12 @@ function missingSymbols(text: string, symbols: readonly string[]): readonly stri
 
 function describeFailure(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+function describeReadFailure(path: string, cause: unknown): string {
+  return cause instanceof PathEscapesRepositoryError
+    ? `path escapes the repository root: ${path}`
+    : `path exists but could not be read: ${path}: ${describeFailure(cause)}`;
 }
 
 function failuresForEntry(
@@ -66,12 +74,7 @@ function failuresForEntry(
   try {
     text = readFile(entry.path);
   } catch (cause) {
-    return [
-      {
-        path: entry.path,
-        reason: `path exists but could not be read: ${entry.path}: ${describeFailure(cause)}`,
-      },
-    ];
+    return [{ path: entry.path, reason: describeReadFailure(entry.path, cause) }];
   }
 
   if (text === null) {
@@ -94,8 +97,20 @@ export function validate(
   return failures.length === 0 ? { status: 'pass', failures: [] } : { status: 'fail', failures };
 }
 
+function resolveWithinRepository(repositoryRoot: string, path: string): string {
+  const resolvedRoot = resolve(repositoryRoot);
+  const resolvedPath = resolve(resolvedRoot, path);
+  const relativePath = relative(resolvedRoot, resolvedPath);
+
+  if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
+    throw new PathEscapesRepositoryError(path);
+  }
+
+  return resolvedPath;
+}
+
 function readRepositoryFile(repositoryRoot: string, path: string): string | null {
-  const resolvedPath = join(repositoryRoot, path);
+  const resolvedPath = resolveWithinRepository(repositoryRoot, path);
 
   return existsSync(resolvedPath) ? readFileSync(resolvedPath, 'utf8') : null;
 }
@@ -105,6 +120,10 @@ function requireRepositoryRoot(): string {
 
   if (repositoryRoot === undefined || repositoryRoot.length === 0) {
     throw new Error('citation-validator requires a repository root argument');
+  }
+
+  if (!existsSync(repositoryRoot)) {
+    throw new Error(`citation-validator repository root does not exist: ${repositoryRoot}`);
   }
 
   return repositoryRoot;
@@ -117,8 +136,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function requireField(record: Record<string, unknown>, entryIndex: number, field: string): string {
   const value = record[field];
 
-  if (typeof value !== 'string') {
-    throw new Error(`entry ${entryIndex}: "${field}" must be a string`);
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`entry ${entryIndex}: "${field}" must be a non-empty string`);
   }
 
   return value;
@@ -169,10 +188,11 @@ function printInputError(reason: string): void {
 }
 
 function main(): void {
-  const repositoryRoot = requireRepositoryRoot();
+  let repositoryRoot: string;
   let entries: readonly CodeMapEntry[];
 
   try {
+    repositoryRoot = requireRepositoryRoot();
     entries = readCodeMapEntries(readFileSync(0, 'utf8'));
   } catch (cause) {
     printInputError(describeFailure(cause));

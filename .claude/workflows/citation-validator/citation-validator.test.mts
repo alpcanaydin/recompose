@@ -138,7 +138,7 @@ describe('citation validator: a missing path with several cited symbols', () => 
 });
 
 describe('citation validator: a read that fails after the path is found', () => {
-  it('fails with a reason naming the read failure, not a missing path', () => {
+  it('fails with a reason naming the path and the cause, not a missing path', () => {
     const verdict = validate([entry({ path: 'src/widget-slice' })], () => {
       throw new Error('EISDIR: illegal operation on a directory');
     });
@@ -151,5 +151,21 @@ describe('citation validator: a read that fails after the path is found', () => 
     assert.ok(failure);
     assert.equal(failure.path, 'src/widget-slice');
     assert.doesNotMatch(failure.reason, /not found/);
+    assert.match(failure.reason, /src\/widget-slice/);
+    assert.match(failure.reason, /EISDIR/);
+  });
+});
+
+describe('citation validator: an empty-string symbol', () => {
+  it('never matches, regardless of the file text', () => {
+    const verdict = validate([entry({ path: 'src/widget.ts', symbols: [''] })], () => 'anything');
+
+    assert.equal(verdict.status, 'fail');
+    assert.equal(verdict.failures.length, 1);
+
+    const [failure] = verdict.failures;
+
+    assert.ok(failure);
+    assert.equal(failure.symbol, '');
   });
 });
