@@ -58,3 +58,20 @@ Feature: The gateway token
     Then the requirement returns to off
     And the row states that the token cannot be stored without a credential store
     And no token is minted
+
+  Scenario: A credential store that cannot encrypt warns before the first token
+    Given the operating system credential store keeps secrets in plain text
+    Then the token requirement reads off
+    And no token stands on the screen
+    And the token requirement row states that no system keyring is available and recompose stores the token in plain text
+
+  Scenario: The plain text warning stays once a token exists
+    Given the operating system credential store keeps secrets in plain text
+    When the maintainer turns the token requirement on
+    Then the token row shows its mask
+    And the token requirement row still states that recompose stores the token in plain text
+
+  Scenario: An encrypting credential store shows no plain text warning
+    Given the operating system credential store encrypts secrets
+    When the maintainer turns the token requirement on
+    Then no plain text warning stands on the screen
