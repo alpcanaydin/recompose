@@ -1,8 +1,10 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { app, BrowserWindow, clipboard, safeStorage, session, shell } from 'electron';
+import { defaultSettings, type Settings } from '@recompose/contracts';
+import { app, BrowserWindow, clipboard, nativeTheme, safeStorage, session, shell } from 'electron';
 import { join } from 'path';
 
 import type { IpcHandlers } from './ipc/dispatch';
+import type { SettingsEffects } from './settings/apply-settings';
 
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
@@ -10,6 +12,7 @@ import { createSystemIpcHandlers } from './ipc/system-ipc';
 import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
+import { applySettings } from './settings/apply-settings';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
@@ -33,17 +36,36 @@ const trayMenuHandlers = {
   },
 };
 
+const loginItemAvailability = loginItemAvailabilityFor(process.platform, app.isPackaged);
+
+const loginItem = createLoginItem(app, loginItemAvailability, process.execPath);
+
+const settingsEffects: SettingsEffects = {
+  setThemeSource: (theme) => {
+    nativeTheme.themeSource = theme;
+  },
+  setMenuBarVisible: (visible) => {
+    if (visible) {
+      showMenuBarTray(trayMenuHandlers);
+    } else {
+      hideMenuBarTray();
+    }
+  },
+  setLoginItem: (enabled) => {
+    loginItem.setEnabled(enabled);
+  },
+};
+
+function applyStoredSettings(settings: Settings): void {
+  applySettings(settingsEffects, settings);
+}
+
 function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
 
 function assembleIpcHandlers(): IpcHandlers {
   const userDataPath = app.getPath('userData');
-  const loginItem = createLoginItem(
-    app,
-    loginItemAvailabilityFor(process.platform, app.isPackaged),
-    process.execPath,
-  );
 
   return {
     ...createStorageIpcHandlers({
@@ -54,16 +76,29 @@ function assembleIpcHandlers(): IpcHandlers {
       writeClipboard: (text) => {
         clipboard.writeText(text);
       },
+      applySettings: applyStoredSettings,
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
-      loginItem: loginItemAvailabilityFor(process.platform, app.isPackaged),
+      loginItem: loginItemAvailability,
       configFolder: userDataPath,
       readLoginItem: () => loginItem.isEnabled(),
       isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),
     }),
   };
+}
+
+async function storedSettings(): Promise<Settings> {
+  try {
+    const state = await initializeStorage(app.getPath('userData'), onStorageCorrupt);
+
+    return state.settings;
+  } catch (error) {
+    console.error('storage initialization failed', error);
+
+    return defaultSettings();
+  }
 }
 
 function registerPermissionHandlers(): void {
@@ -96,20 +131,10 @@ if (passwordStoreOverride !== null) {
 
 registerAppScheme();
 
-void app.whenReady().then(() => {
+async function startRecompose(): Promise<void> {
   serveRenderer(join(__dirname, '../renderer'));
 
   registerIpcHandlers(assembleIpcHandlers());
-
-  void initializeStorage(app.getPath('userData'), onStorageCorrupt)
-    .then((state) => {
-      if (state.settings.showInMenuBar) {
-        showMenuBarTray(trayMenuHandlers);
-      }
-    })
-    .catch((error: unknown) => {
-      console.error('storage initialization failed', error);
-    });
 
   electronApp.setAppUserModelId('sh.recompose.app');
 
@@ -121,6 +146,8 @@ void app.whenReady().then(() => {
 
   installAppMenu(openSettingsSurface);
 
+  applyStoredSettings(await storedSettings());
+
   createMainWindow(HOME_ROUTE);
 
   app.on('activate', () => {
@@ -128,7 +155,9 @@ void app.whenReady().then(() => {
       createMainWindow(HOME_ROUTE);
     }
   });
-});
+}
+
+void app.whenReady().then(startRecompose);
 
 app.on('before-quit', () => {
   hideMenuBarTray();

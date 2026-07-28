@@ -31,6 +31,7 @@ async function freshContext(
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
+    applySettings: () => undefined,
     ...overrides,
   };
 }
@@ -87,6 +88,42 @@ describe('storage ipc handlers: settings', () => {
 
     expect(first).toMatchObject({ ok: true, value: { theme: 'system', enginePort: 8397 } });
     expect(written).toEqual(second);
+  });
+
+  test('a stored document reaches the seam that applies it outside the window', async () => {
+    const applied: Settings[] = [];
+    const handlers = createStorageIpcHandlers(
+      await freshContext({
+        applySettings: (settings) => {
+          applied.push(settings);
+        },
+      }),
+    );
+
+    await handlers['settings:save'](changedSettings);
+
+    expect(applied).toEqual([changedSettings]);
+  });
+
+  test('a document that never reached the disk applies nothing', async () => {
+    const blockingDir = await mkdtemp(join(tmpdir(), 'recompose-ipc-unapplied-'));
+    const blockingPath = join(blockingDir, 'not-a-directory');
+
+    await writeFile(blockingPath, '', 'utf8');
+
+    const applied: Settings[] = [];
+    const handlers = createStorageIpcHandlers(
+      await freshContext({
+        userDataPath: blockingPath,
+        applySettings: (settings) => {
+          applied.push(settings);
+        },
+      }),
+    );
+
+    await handlers['settings:save'](changedSettings);
+
+    expect(applied).toEqual([]);
   });
 });
 
