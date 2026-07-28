@@ -12,6 +12,7 @@
   --color-surface-content: light-dark(var(--gray-50), var(--gray-950));
   --color-surface-card: light-dark(var(--white), var(--gray-900));
   --color-surface-raised: light-dark(var(--white), var(--gray-850));
+  --color-surface-inert: light-dark(var(--gray-100), var(--gray-850));
 
   --color-ink: light-dark(var(--black-a88), var(--white-a90));
   --color-ink-secondary: light-dark(var(--black-a52), var(--white-a55));
