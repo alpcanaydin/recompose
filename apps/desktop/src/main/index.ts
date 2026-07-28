@@ -12,7 +12,7 @@ import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
-import { loginItemAvailabilityFor } from './system/login-item';
+import { createLoginItem, loginItemAvailabilityFor } from './system/login-item';
 import { resolveUserDataOverride } from './user-data-override';
 import { createMainWindow } from './windows/main-window';
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
@@ -25,6 +25,11 @@ function onStorageCorrupt(quarantinedPath: string): void {
 
 function assembleIpcHandlers(): IpcHandlers {
   const userDataPath = app.getPath('userData');
+  const loginItem = createLoginItem(
+    app,
+    loginItemAvailabilityFor(process.platform, app.isPackaged),
+    process.execPath,
+  );
 
   return {
     ...createStorageIpcHandlers({
@@ -40,7 +45,7 @@ function assembleIpcHandlers(): IpcHandlers {
       fileBrowser: fileBrowserFor(process.platform),
       loginItem: loginItemAvailabilityFor(process.platform, app.isPackaged),
       configFolder: userDataPath,
-      readLoginItem: () => app.getLoginItemSettings().openAtLogin,
+      readLoginItem: () => loginItem.isEnabled(),
       isMenuBarVisible: () => menuBarVisible,
       openFolder: async (path) => shell.openPath(path),
     }),
