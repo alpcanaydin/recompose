@@ -16,7 +16,7 @@ The `feature-kickoff` saved workflow, at `.claude/workflows/feature-kickoff.js`,
 | codebase readers         | `code-analyzer`             | always        | a code map of paths, symbols, and FSD layers      |
 | Mobbin references        | the session                 | `isUI` only   | screens and flows for the design-system reference |
 | acceptance references    | `researcher`                | always        | criteria from vendor docs, issue trackers, and community complaints |
-| rider-ledger lookup      | `code-analyzer`             | always        | prior out-of-scope riders that touch this feature |
+| rider-ledger lookup      | `code-analyzer`             | always        | prior out-of-scope riders read from the issue tracker, cited by issue number |
 
 Acceptance references come from vendor docs, issue trackers, and community complaints, because broken expectations reveal the hidden criteria the happy-path docs omit. Machine-written output lands in `discovery/`, which the prose gates exempt.
 
@@ -26,7 +26,7 @@ The Mobbin arm runs in the orchestrating session, not in a subagent, so the work
 
 The brainstorm in step 3 stays in the session too: the workflow stops at the brainstorm.
 
-**Standard tier:** the five arms fold without dropping any. A single `researcher` covers technical research, acceptance references, and the rider-ledger lookup. `code-analyzer` maps the code. The session runs the Mobbin pass when the feature touches UI.
+**Standard tier:** technical research and acceptance references fold into a single `researcher` brief. `code-analyzer` maps the code. The session runs the Mobbin pass when the feature touches UI. The rider-ledger lookup runs on the `full` tier only: `researcher`'s tool pins (`WebSearch`, `WebFetch`, `Read`) carry no command access, so a `standard`-tier feature closes without a tracker check for prior out-of-scope findings.
 
 ## Step 3: Brainstorm
 

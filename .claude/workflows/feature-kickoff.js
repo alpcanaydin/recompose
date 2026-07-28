@@ -77,8 +77,8 @@ const armTable = {
     armDef(
       'rider-ledger',
       'brief',
-      undefined,
-      'prior out-of-scope riders that touch this feature, drawn from the open issues on this repository carrying the rider label, named by issue number',
+      'code-analyzer',
+      'prior out-of-scope riders that touch this feature, filed as open issues carrying the rider label, read by running gh issue list --repo recomposesh/recompose --label rider --state open, not by searching the repository, named by issue number',
     ),
   ],
   standard: [
@@ -86,7 +86,7 @@ const armTable = {
       'research',
       'brief',
       'researcher',
-      'a single cited brief covering technical research, acceptance criteria from vendor docs and issue trackers, and prior out-of-scope riders for this feature',
+      'a single cited brief covering technical research and acceptance criteria from vendor docs and issue trackers',
     ),
     armDef('code-map', 'code-map', 'code-analyzer', CODE_MAP_FOCUS),
   ],
