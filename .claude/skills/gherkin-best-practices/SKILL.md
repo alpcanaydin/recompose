@@ -45,6 +45,8 @@ Every scenario passes all six checks:
 - **One file per behavior area.** Not one file per requirement, which scatters a single rule, and not one file per capability, which grows past reading. A file you scroll to find a scenario in is two files.
 - **Scenarios start in the change directory and graduate unchanged.** They're written to `openspec/changes/<slug>/gherkin/<capability>/` and land at `apps/desktop/e2e/features/<capability>/`. Graduation copies a directory. It never renames, re-sorts, or re-decides placement, because the placement decision was made once, at writing time.
 - **The nesting needs no configuration.** The change schema generates `gherkin/**/*.feature` and the Playwright config reads `features/**/*.feature`, so a new capability folder is picked up on sight.
+- **One feature file pairs with one step file,** named `steps/<capability>-<area>.steps.ts` against `features/<capability>/<area>.feature`. Playwright resolves steps through `steps/**/*.ts`, so the split costs nothing and buys two things: the pair is disjoint from every other pair, which lets the automation fan out in parallel, and a reader finds the steps answering a scenario by transposing its path.
+- **A feature file never lands without the steps that answer it.** One undefined step fails generation for the whole tree, so the pair belongs in one commit. That holds for the graduation too: copy the feature and write its steps together, rather than staging every feature first.
 
 ## Review test
 

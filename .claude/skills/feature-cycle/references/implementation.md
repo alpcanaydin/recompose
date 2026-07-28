@@ -35,7 +35,13 @@ Test layers are explicit tasks, not implicit hopes.
 
 - **Unit and integration** tests stay inside their TDD clusters, driven by the red-green-refactor loop.
 - **Property tests** open one task per invariant, gated on the behavior it exercises landing first.
-- **End-to-end step definitions** open one task per scenario, gated on the screen or behavior it exercises landing first.
+- **End-to-end step definitions** fan out by feature file, gated on the screen or behavior they exercise landing first.
+
+  The shared end-to-end surface lands alone and first: the fixture, the navigation steps, and the visual baselines. It carries no feature file, so nothing goes red. Then one unit per feature file runs in parallel, each owning exactly one `.feature` and one `steps/<capability>-<area>.steps.ts`, which makes their file sets disjoint by construction.
+
+  **Each unit graduates its own feature file together with its step definitions, in one commit.** `bddgen` fails the whole tree on a single undefined step, so a feature file that lands without its steps turns the branch red for as long as the fan-out runs. That constraint is also what stops the graduation from being one big-bang step at the end.
+
+  Writing every step definition in one late cluster is the failure mode this replaces. It serializes the largest remaining chunk of work, and it discovers an unautomatable scenario at the worst possible moment, after the set has frozen.
 - **Storybook stories** are the definition of done for renderer clusters, not an afterthought.
 
 **End-to-end dispatch rule.** When a task touches end-to-end tests, step definitions, or `.feature` files, dispatch it with the `playwright-best-practices` and `gherkin-best-practices` skills invoked before any writing. This is task-type-conditional loading, applied at dispatch to the tasks that need it, not a permanent preload. The `tdd-implementer` definition already carries the matching instruction.
