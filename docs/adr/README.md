@@ -47,3 +47,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0039](0039-review-pass-marker-and-path-guard.md)              | The Review Marker and the Blast-Radius Path Guard                                   | Accepted | 2026-07-27 |
 | [0040](0040-edit-time-test-first-gate.md)                      | The Edit-Time Test-First Gate                                                       | Accepted | 2026-07-27 |
 | [0041](0041-discovery-workflow-and-citation-validator.md)      | The Discovery Workflow and the Citation Validator                                   | Accepted | 2026-07-28 |
+| [0042](0042-no-worktree-setup-script.md)                       | Worktree Seeding Stays with the Toolchain                                           | Accepted | 2026-07-28 |
