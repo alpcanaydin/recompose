@@ -3,9 +3,9 @@ import type { SubmitEvent } from 'react';
 
 import { useState } from 'react';
 
+import { TextField } from '../../../shared/ui/text-field';
 import { useConnectAccount } from '../api/accounts';
 import { AccountKindField } from './account-kind-field';
-import { TextField } from './text-field';
 
 const emptyDraft: IpcRequest<'accounts:connect'> = {
   provider: '',
