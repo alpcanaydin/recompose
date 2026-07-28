@@ -45,7 +45,7 @@ A finding closes only when its own verifier confirms the fix on the new commit, 
 - Each round starts with the sync step: rebase onto `main`, rerun the local gate suite.
 - Fixes apply serially within a round.
 - A behavior-level finding routes back through a spec amendment with a fresh approval, never a quiet in-place patch.
-- An out-of-scope discovery lands in the rider ledger, which is the outlet that keeps the fix cycle scoped.
+- An out-of-scope discovery lands in the rider ledger, which is the outlet that keeps the fix cycle scoped. The ledger is the repository's issue tracker: a discovery becomes an open issue carrying the `rider` label, with a title naming the defect and a body naming where it surfaced and why it fell outside the change in hand. The `full` tier's discovery phase reads that ledger through its `rider-ledger` arm. Nothing gates the filing, because a gate over it would reward noticing nothing.
 - Three rounds cap the cycle. Survivors go to human triage.
 
 ## Merge

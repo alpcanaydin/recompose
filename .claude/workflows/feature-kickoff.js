@@ -74,14 +74,19 @@ const armTable = {
       'acceptance criteria drawn from vendor docs, issue trackers, and community complaints, because broken expectations reveal the criteria happy-path docs omit',
     ),
     armDef('code-map', 'code-map', 'code-analyzer', CODE_MAP_FOCUS),
-    armDef('rider-ledger', 'brief', 'code-analyzer', 'prior out-of-scope riders that touch this feature'),
+    armDef(
+      'rider-ledger',
+      'brief',
+      'code-analyzer',
+      'prior out-of-scope riders that touch this feature, filed as open issues carrying the rider label, read by running gh issue list --repo recomposesh/recompose --label rider --state open --limit 200 --json number,title,body, not by searching the repository, judged against the feature by body text and named by issue number, and reported as a lookup failure rather than an empty ledger when the command fails',
+    ),
   ],
   standard: [
     armDef(
       'research',
       'brief',
       'researcher',
-      'a single cited brief covering technical research, acceptance criteria from vendor docs and issue trackers, and prior out-of-scope riders for this feature',
+      'a single cited brief covering technical research and acceptance criteria from vendor docs and issue trackers',
     ),
     armDef('code-map', 'code-map', 'code-analyzer', CODE_MAP_FOCUS),
   ],
