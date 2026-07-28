@@ -13,7 +13,7 @@
 
 The verification phase reference says an out-of-scope discovery lands in a ledger that keeps a fix round scoped. No ledger exists. A session that notices something beyond the change in hand either widens the change or drops the finding, and neither leaves a record.
 
-The gap reaches shipped code. The `feature-kickoff` workflow dispatches an arm for prior out-of-scope findings that touch the feature. That arm reads nothing, because nobody ever built the ledger it names. It also runs on `code-analyzer`, whose job is mapping the source tree.
+The gap reaches shipped code. The `feature-kickoff` workflow dispatches an arm for prior out-of-scope findings that touch the feature. That arm reads nothing, because nobody ever built the ledger it names, and its prompt never says where a ledger would live. Given only the phrase, the subagent searches the source tree.
 
 ## Discovery inputs consumed
 
@@ -27,7 +27,7 @@ The gap reaches shipped code. The `feature-kickoff` workflow dispatches an arm f
 **Goals:**
 
 - An out-of-scope discovery has an outlet a later feature's discovery phase can read.
-- The discovery workflow's ledger arm reads the ledger rather than the source tree, on both tiers.
+- The discovery workflow's ledger arm reads the ledger rather than the source tree.
 - The references describe what the code does.
 
 **Non-goals:**
@@ -48,9 +48,11 @@ The gap reaches shipped code. The `feature-kickoff` workflow dispatches an arm f
 
 The ledger becomes issues on the repository under a single `rider` label. A title names the defect, and a body names where it surfaced and why it fell outside the change in hand. Nothing more needs pinning down. The tracker already gives search, cross-links from a pull request, and a one-command filing.
 
-The `rider-ledger` arm in `feature-kickoff` drops its `code-analyzer` type and runs on the default subagent, whose command access reaches the tracker. Its focus text names the label and asks for the prior findings that touch the feature, with issue numbers.
+The two tiers need different fixes, because their subagents differ in what they can reach. `code-analyzer` carries a command tool, and `researcher` carries none.
 
-The `standard` tier folds five lines of enquiry into two arms, and its folded arm asks for prior out-of-scope findings while running on `researcher`, a type with no tracker access. That's the same defect in the tier that runs more often, so it moves too. The fold stays at two arms either way, so the cap arithmetic doesn't change.
+On the `full` tier the arm keeps `code-analyzer`, which could always have queried the tracker. Its focus text gains the label and the command, so the subagent has nothing to interpret. The subagent type was never the fault.
+
+On the `standard` tier the fold gives one `researcher` the research, the acceptance criteria, and the ledger lookup. That subagent has no command access, so the ledger clause leaves its focus text and the tier stops looking at the ledger. The planning reference states that loss and its reason, because an undocumented capability loss is the failure this project keeps paying for. Both tiers keep their arm counts, so the cap arithmetic doesn't change.
 
 ## Data model and contracts
 
@@ -63,7 +65,7 @@ None beyond the label. A ledger entry is an issue, and the label is the only con
 
 ## File map
 
-- `.claude/workflows/feature-kickoff.js`: both tiers' ledger lookups query the tracker (modify).
+- `.claude/workflows/feature-kickoff.js`: the full tier's ledger arm names the label and the command, and the standard tier's folded arm drops the ledger clause (modify).
 - `.claude/skills/feature-cycle/references/planning.md`: the arm table and the standard-tier paragraph match the code (modify).
 - `.claude/skills/feature-cycle/references/verification.md`: the ledger sentence gains the mechanism (modify).
 - `.claude/skills/feature-cycle/SKILL.md`: the rollout note drops the ledger from its deferred list (modify).
@@ -113,9 +115,9 @@ The workflow suite still runs, because the change must not break the 98 cases al
 
 ## Risks
 
-- [Risk] This checkout documents no tool grants for the default subagent, so the arm may lack tracker access at run time → Mitigation: the arm reports that it found nothing and the run continues, and the first pipeline run settles it.
+- [Risk] The standard tier no longer consults the ledger, so that tier can rediscover a prior finding → Mitigation: the planning reference states the loss and its reason, and a tier upgrade restores the lookup.
 - [Risk] The ledger fills with entries nobody reads → Mitigation: the discovery arm reads it on every feature, which is the only consumer this design needs.
-- [Risk] Dropping the `researcher` pin from the standard tier's folded arm loses that persona's discipline → Mitigation: recorded in the task report as a trade, with the focus text carrying the discipline the pin used to.
+- [Risk] A later contributor reads the full tier's arm and assumes any subagent can reach the tracker → Mitigation: the focus text names the command, so the requirement is visible at the point of use.
 
 ## Migration and rollout
 
@@ -131,7 +133,8 @@ A run of `feature-kickoff` on a slug returns a ledger brief naming issue numbers
 
 A fresh-context reviewer diffs the result against these criteria:
 
-- Neither tier's ledger lookup runs on a subagent without tracker access.
+- The full tier's ledger arm keeps `code-analyzer` and names both the label and the command.
+- The standard tier's folded arm keeps `researcher` and no longer claims a ledger lookup.
 - The arm count and the cap arithmetic stay as they were.
 - `planning.md`'s arm table and its standard-tier paragraph match the code.
 - `verification.md` names the label and says nothing gates the filing.
