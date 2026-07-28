@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 
 import { isProcessEntryPoint } from '../hooks/entry-point.mjs';
@@ -115,6 +115,10 @@ function readRepositoryFile(repositoryRoot: string, path: string): string | null
   return existsSync(resolvedPath) ? readFileSync(resolvedPath, 'utf8') : null;
 }
 
+function isDirectory(path: string): boolean {
+  return existsSync(path) && statSync(path).isDirectory();
+}
+
 function requireRepositoryRoot(): string {
   const repositoryRoot = process.argv[2];
 
@@ -122,8 +126,8 @@ function requireRepositoryRoot(): string {
     throw new Error('citation-validator requires a repository root argument');
   }
 
-  if (!existsSync(repositoryRoot)) {
-    throw new Error(`citation-validator repository root does not exist: ${repositoryRoot}`);
+  if (!isDirectory(repositoryRoot)) {
+    throw new Error(`citation-validator repository root is not a directory: ${repositoryRoot}`);
   }
 
   return repositoryRoot;

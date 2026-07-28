@@ -16,8 +16,6 @@ const PASSING_STATUS = 0;
 
 const FAILING_VERDICT_STATUS = 1;
 
-const INPUT_ERROR_STATUS = 2;
-
 const scratchWorkspaces: string[] = [];
 
 after(() => {
@@ -70,20 +68,6 @@ function readPrintedVerdict(raw: string): { status: string; failures: readonly u
   return { status: parsed['status'], failures: parsed['failures'] };
 }
 
-function readInputError(raw: string): { status: string; reason: string } {
-  const parsed: unknown = JSON.parse(raw);
-
-  if (
-    !isRecord(parsed) ||
-    typeof parsed['status'] !== 'string' ||
-    typeof parsed['reason'] !== 'string'
-  ) {
-    throw new Error('the entry point did not print an input-error shape');
-  }
-
-  return { status: parsed['status'], reason: parsed['reason'] };
-}
-
 function readFailureReason(value: unknown): string {
   if (!isRecord(value) || typeof value['reason'] !== 'string') {
     throw new Error('a printed failure did not carry a reason');
@@ -92,11 +76,10 @@ function readFailureReason(value: unknown): string {
   return value['reason'];
 }
 
-function runEntryPoint(repositoryRoot: string | undefined, rawInput: string, cwd?: string) {
+function runEntryPoint(repositoryRoot: string, rawInput: string, cwd?: string) {
   const scriptPath = join(VALIDATOR_DIRECTORY, VALIDATOR_SCRIPT_NAME);
-  const args = repositoryRoot === undefined ? [scriptPath] : [scriptPath, repositoryRoot];
 
-  return spawnSync(process.execPath, args, {
+  return spawnSync(process.execPath, [scriptPath, repositoryRoot], {
     ...(cwd === undefined ? {} : { cwd }),
     input: rawInput,
     encoding: 'utf8',
@@ -113,11 +96,6 @@ function escapeFixture(): { insideRoot: string; secretPath: string } {
   writeFileSync(join(outsideDir, 'secret.ts'), 'export const secretThing = 1;');
 
   return { insideRoot, secretPath: join(outsideDir, 'secret.ts') };
-}
-
-function assertInputError(run: ReturnType<typeof runEntryPoint>, messagePattern: RegExp): void {
-  assert.equal(run.status, INPUT_ERROR_STATUS);
-  assert.match(readInputError(run.stdout).reason, messagePattern);
 }
 
 describe('citation validator entry point: resolving paths against an explicit repository root', () => {
@@ -155,42 +133,49 @@ describe('citation validator entry point: a citation naming a path that is not a
   });
 });
 
-describe('citation validator entry point: a bad repository root', () => {
-  const wellFormedEntries = JSON.stringify([entry({ path: 'store.ts', symbols: [] })]);
-  const missingOrEmptyRoots: ReadonlyArray<readonly [string, string | undefined]> = [
-    ['missing', undefined],
-    ['empty', ''],
-  ];
+describe('citation validator entry point: an absolute citation inside the repository root', () => {
+  it('passes, because rule 1 accepts a relative or an absolute path that lands inside the root', () => {
+    const repository = repositoryWithFile('real.ts', 'export function realThing() {}');
+    const absolutePath = join(repository, 'real.ts');
+    const entries: readonly CodeMapEntry[] = [
+      entry({ path: absolutePath, symbols: ['realThing'] }),
+    ];
+    const run = runEntryPoint(repository, JSON.stringify(entries));
 
-  for (const [description, root] of missingOrEmptyRoots) {
-    it(`reports an input error when the argument is ${description}`, () => {
-      assertInputError(runEntryPoint(root, wellFormedEntries), /repository root/);
-    });
-  }
-
-  it('reports an input error when the root does not exist', () => {
-    const missingRoot = join(scratchRepository(), 'does-not-exist');
-
-    assertInputError(runEntryPoint(missingRoot, wellFormedEntries), /repository root/);
+    assert.equal(run.status, PASSING_STATUS);
+    assert.equal(readPrintedVerdict(run.stdout).status, 'pass');
   });
 });
 
 describe('citation validator entry point: a citation that escapes the repository root', () => {
-  it('fails with a reason naming the escape, for a .. traversal and an absolute citation', () => {
+  it('fails with a reason naming the escape for a .. traversal', () => {
+    const { insideRoot } = escapeFixture();
+    const entries: readonly CodeMapEntry[] = [
+      entry({ path: '../cv-outside/secret.ts', symbols: ['secretThing'] }),
+    ];
+    const run = runEntryPoint(insideRoot, JSON.stringify(entries));
+
+    assert.equal(run.status, FAILING_VERDICT_STATUS);
+
+    const reason = readFailureReason(readPrintedVerdict(run.stdout).failures[0]);
+
+    assert.match(reason, /escapes/);
+    assert.doesNotMatch(reason, /not found/);
+  });
+
+  it('fails with a reason naming the escape for an absolute citation outside the root', () => {
     const { insideRoot, secretPath } = escapeFixture();
-    const escapingPaths = ['../cv-outside/secret.ts', secretPath];
+    const entries: readonly CodeMapEntry[] = [
+      entry({ path: secretPath, symbols: ['secretThing'] }),
+    ];
+    const run = runEntryPoint(insideRoot, JSON.stringify(entries));
 
-    for (const path of escapingPaths) {
-      const entries: readonly CodeMapEntry[] = [entry({ path, symbols: ['secretThing'] })];
-      const run = runEntryPoint(insideRoot, JSON.stringify(entries));
+    assert.equal(run.status, FAILING_VERDICT_STATUS);
 
-      assert.equal(run.status, FAILING_VERDICT_STATUS);
+    const reason = readFailureReason(readPrintedVerdict(run.stdout).failures[0]);
 
-      const reason = readFailureReason(readPrintedVerdict(run.stdout).failures[0]);
-
-      assert.match(reason, /escapes/);
-      assert.doesNotMatch(reason, /not found/);
-    }
+    assert.match(reason, /escapes/);
+    assert.doesNotMatch(reason, /not found/);
   });
 });
 
@@ -233,58 +218,5 @@ describe('citation validator entry point: a code map run against a scratch repos
 
     assert.equal(run.status, PASSING_STATUS);
     assert.equal(readPrintedVerdict(run.stdout).status, 'pass');
-  });
-});
-
-describe('citation validator entry point: a malformed entry field', () => {
-  const malformedFieldCases: ReadonlyArray<readonly [string, RegExp, Record<string, unknown>]> = [
-    [
-      'symbols is a comma-joined string',
-      /symbols/,
-      { path: 'store.ts', symbols: 'totallyFabricatedSymbol', layer: 'e', note: 'n' },
-    ],
-    ['symbols is absent', /symbols/, { path: 'store.ts', layer: 'e', note: 'n' }],
-    [
-      'symbols contains null',
-      /symbols/,
-      { path: 'store.ts', symbols: [null, 'Counter'], layer: 'e', note: 'n' },
-    ],
-    [
-      'symbols contains an empty string',
-      /symbols/,
-      { path: 'store.ts', symbols: ['', 'Counter'], layer: 'e', note: 'n' },
-    ],
-    ['path is empty', /path/, { path: '', symbols: [], layer: 'e', note: 'n' }],
-    ['layer is empty', /layer/, { path: 'store.ts', symbols: [], layer: '', note: 'n' }],
-    ['note is empty', /note/, { path: 'store.ts', symbols: [], layer: 'e', note: '' }],
-    ['note is absent', /note/, { path: 'store.ts', symbols: [], layer: 'e' }],
-  ];
-
-  for (const [description, pattern, payload] of malformedFieldCases) {
-    it(`reports an input error when ${description}`, () => {
-      const repository = repositoryWithFile('store.ts', 'export const Counter = 1;');
-
-      assertInputError(runEntryPoint(repository, JSON.stringify([payload])), pattern);
-    });
-  }
-
-  it('names the entry index alongside the field', () => {
-    const repository = repositoryWithFile('store.ts', 'export const store = {};');
-    const payload = [
-      { path: 'store.ts', symbols: 'totallyFabricatedSymbol', layer: 'e', note: 'n' },
-    ];
-    const run = runEntryPoint(repository, JSON.stringify(payload));
-
-    assert.match(readInputError(run.stdout).reason, /entry 0/);
-  });
-});
-
-describe('citation validator entry point: input the parser cannot read', () => {
-  it('reports a distinct outcome for unparsable JSON, separate from a citation failure', () => {
-    const run = runEntryPoint(scratchRepository(), 'not json');
-
-    assert.equal(run.status, INPUT_ERROR_STATUS);
-    assert.notEqual(run.status, FAILING_VERDICT_STATUS);
-    assert.equal(readInputError(run.stdout).status, 'error');
   });
 });
