@@ -59,7 +59,7 @@ The change ships two artifacts that meet at one seam.
 
 **The `feature-kickoff` saved workflow** lands at `.claude/workflows/feature-kickoff.js` and runs by name with `{ slug, tier }`. It runs three phases.
 
-_Discover._ An arm table, a literal constant, folds by tier. The `full` tier dispatches four arms: technical research and acceptance references through `researcher`, the code map and the rider-ledger lookup through `code-analyzer`. The `standard` tier folds to two, matching the reference: one `researcher` covers research, acceptance references, and the rider ledger, and one `code-analyzer` maps the code. Before the dispatch, an assertion throws when the folded table exceeds six arms. Each arm writes its own file into `openspec/changes/<slug>/discovery/` and returns its findings through a schema, so no barrier stands between an arm and its artifact.
+_Discover._ An arm table, a literal constant, folds by tier. The `full` tier dispatches four arms: technical research and acceptance references through `researcher`, the code map and the rider-ledger lookup through `code-analyzer`. The `standard` tier folds to two, matching the reference: one `researcher` covers research, acceptance references, and the rider ledger, and one `code-analyzer` maps the code. Before the dispatch, an assertion throws when the phase's planned subagent count exceeds six. It counts dispatches rather than table rows, because the phase spends subagents beyond the arms themselves. Neither `researcher` nor `code-analyzer` holds a write tool, so one writer subagent puts every arm's findings into `openspec/changes/<slug>/discovery/` after the fan-out. The full tier therefore spends six: four arms, the writer, and the validator. The writer reports the byte length it wrote, and the workflow compares that against what it sent, because a subagent asked to reproduce text can truncate it.
 
 _Validate._ The code map returns as data rather than prose: a list of entries, each carrying a path, the symbols cited in it, its Feature-Sliced Design layer, and a note. The workflow renders the markdown from those entries, which makes every claim in the map a citation by construction. A single cheap subagent runs the validator script over the entries and returns its verdict through a schema. That subagent is a shell for a command, not a judge, because the decision lives in the script.
 
@@ -95,12 +95,13 @@ The entry point emits a third shape when it can't reach a verdict at all, carryi
 ## Error handling
 
 - **Missing or malformed arguments.** The workflow throws before dispatching anything, naming the missing keys, matching `review-pr`.
-- **An arm that dies.** The dispatch hook returns `null` on a terminal failure. A dead `code-analyzer` throws, because the validation phase then has nothing to check. A dead `researcher` logs and continues, because its brief feeds a human step rather than a machine gate.
+- **An arm that dies.** The dispatch hook returns `null` on a terminal failure. A dead code-map arm throws, because the validation phase then has nothing to check, and an empty code map counts as dead for the same reason. Every other arm logs and continues, because a brief feeds a human step rather than a machine gate. The rule keys on what the arm produces, not on which subagent type ran it, since one `code-analyzer` arm produces a brief.
 - **A failing verdict.** Recorded, fed back to one rerun, and thrown on the second failure with every failing citation named.
 - **An unreadable cited file.** Rejected, because a citation the validator can't verify is a citation it rejects. The reason names what actually happened, so a path that resolves to a directory doesn't report as missing. A reader told to fix a path that already exists can't act on it.
 - **A missing or wrong repository root.** Reported through the input-error channel, never as a verdict. A root that doesn't exist would otherwise fail every citation in a correct code map with a false reason, which is the most confident wrong answer this script can give.
 - **A malformed entry list.** Every entry must carry every field as a non-empty value at its declared type, and a violation throws rather than degrading. An empty `symbols` array stays legal, because an entry may cite a path alone. A `symbols` value that isn't a list of non-empty strings is the one that matters most: coercing it to an empty list turns a code map full of invented symbols into a pass.
 - **Unparsable input.** Reported on stdout as a distinct outcome with its own exit code, so the caller separates a validator that couldn't read its input from a code map that failed. Under one exit code the workflow would rerun `code-analyzer` for a fault the reader didn't cause, then throw with no failing citation to name.
+- **A verdict missing its payload.** The workflow's schema requires a failure list on a failing verdict and a reason on an input fault, because reading either one unguarded turns a reported failure into a crash inside the phase seam.
 
 ## File map
 
@@ -123,7 +124,7 @@ The entry point emits a third shape when it can't reach a verdict at all, carryi
   - `export type Verdict = { status: 'pass' | 'fail'; failures: readonly CitationFailure[] }`
   - `export type CitationFailure = { path: string; symbol?: string; reason: string }`
   - The workflow's return value: the discovery directory, the arm labels with their written files, the validated entries, and whether a recheck ran.
-  - The entry point's process contract: the repository root as the first argument, the entry list on standard input, the verdict or the error shape on standard output, and three exit codes. Zero means pass, one means a failing verdict, and two means the script never reached a verdict.
+  - The entry point's process contract, which the caller resolves rather than inheriting from the working directory: the repository root as the first argument, the entry list on standard input, the verdict or the error shape on standard output, and three exit codes. Zero means pass, one means a failing verdict, and two means the script never reached a verdict.
 
 ## Decisions
 
@@ -201,7 +202,8 @@ The saved workflow itself carries no spec. No test can import it, because it use
 - [Risk] A reader cites a real path with a symbol spelled as it appears in a comment or a string rather than a declaration, and the check passes → Mitigation: recorded as a known limit. The check catches invention, which is the failure it exists for.
 - [Risk] Structured entries constrain how expressive a code map can be → Mitigation: the `note` field carries prose per entry, so expressiveness stays attached to a checked path.
 - [Risk] Containment is lexical rather than resolved through the filesystem, so a symlink inside the root that points outside stays readable → Mitigation: deliberate. This repository's package manager links workspace packages, so resolving symlinks would reject legitimate citations of `packages/contracts` through `node_modules`. Recorded as a known limit.
-- [Risk] The validating subagent misreports the script's output → Mitigation: it returns the verdict through a schema, and the workflow reads the failure list rather than a summary sentence.
+- [Risk] The validating subagent misreports the script's output → Mitigation: it returns the verdict through a schema that requires the failure list on a failing verdict, and the workflow reads that list rather than a summary sentence.
+- [Risk] The workflow's own dispatch counting drifts from the cap the skill states → Mitigation: the assertion counts the phase's planned subagents, and the design states the arithmetic, so a later contributor adding a dispatch sees the number move.
 
 ## Migration and rollout
 
