@@ -16,15 +16,38 @@ The pipeline MUST classify every feature request as trivial, standard, or full b
 - Then the pipeline waits for the maintainer's confirmation or override before discovery starts
 - And the confirmed tier lands in the change manifest
 
+### Requirement: Citation validation
+
+A code map MUST cite only paths that resolve inside the repository and symbols that appear in the file each one names. A deterministic check decides this without a model call, because a fabricated reference is a fact about the repository rather than a judgement. A standalone token in the file's text satisfies the symbol rule, so the check proves a mention rather than a declaration or an export. A rejected code map returns to its reader once, with the failures as input.
+
+#### Scenario: a code map cites a path the repository lacks
+
+- When a code map names a path that doesn't exist
+- Then the validator rejects the code map and names every failing citation
+- And the reader runs once more with those failures as input
+
+#### Scenario: a code map cites a symbol the named file lacks
+
+- When a code map names a symbol its own cited file doesn't hold
+- Then the validator rejects the code map and names that citation
+
 ### Requirement: Discovery before design
 
-The pipeline MUST run discovery before the brainstorm on the full tier: technical research, codebase readers, design references, acceptance references, and a rider-ledger lookup, capped at six subagents. A citation validator rejects any code-map path or symbol that the repository lacks.
+The pipeline MUST run discovery before the brainstorm on the full tier, across five lines of enquiry: technical research, codebase readers, design references, acceptance references, and a rider-ledger lookup. Four of them dispatch subagents, because the design-reference line runs in the orchestrating session where its tools live. A citation validator rejects any code-map path or symbol that the repository lacks.
+
+The fan-out MUST stay within six subagents, and the machinery that dispatches it MUST enforce that number rather than the operator running it. The six covers the fan-out: the four dispatched arms, the subagent that writes their output, and the one that runs the validator. A rerun after a rejected code map repairs the fan-out rather than extending it, so its dispatches sit outside the cap. The arms' output MUST land in the change directory, so a later phase reads it from disk.
 
 #### Scenario: a code map cites a missing file
 
 - When a codebase reader cites a path missing from the repository
 - Then the citation validator rejects the code map
 - And the reader runs once more with the validator errors as input
+
+#### Scenario: discovery finishes and the phase hands over
+
+- When every dispatched arm has returned and the code map passes validation
+- Then the findings sit in the change directory
+- And the pipeline stops for the brainstorm, which the maintainer runs
 
 ### Requirement: Human approval gates
 
