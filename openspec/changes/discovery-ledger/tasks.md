@@ -23,13 +23,13 @@ gh label create rider --repo recomposesh/recompose --color D4C5F9 --description 
 
 - [x] **Step 2: Redirect the full tier's ledger arm**
 
-The `rider-ledger` arm ran on `code-analyzer`, so it searched the source tree for something that lives on the tracker. It drops that subagent type and runs on the default subagent, whose command access reaches the tracker. Its focus text names the label and asks for the prior findings that touch the feature, with issue numbers.
+The `rider-ledger` arm searched the source tree for something that lives on the tracker. Its focus text never said where a ledger would be. `code-analyzer` already carries a command tool, so the arm keeps that type and its focus text now names the label and the command to run.
 
-- [ ] **Step 3: Redirect the standard tier's folded arm**
+- [x] **Step 3: Redirect the standard tier's folded arm**
 
-The `standard` tier folds its lines of enquiry into two arms, and the folded arm asks for prior out-of-scope findings while running on `researcher`, a type with no tracker access. Close the same defect there. The fold stays at two arms, so the cap arithmetic doesn't change. If the fix changes what `planning.md` says about the fold, correct that reference in the same commit.
+The `standard` tier folds its lines of enquiry into two arms. The folded arm asked for prior out-of-scope findings while running on `researcher`, whose tool pins carry no command access. That arm keeps `researcher` and drops the ledger clause, so the `standard` tier stops consulting the ledger. `planning.md`'s standard-tier paragraph states that loss and its reason.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run: `pnpm run typecheck && pnpm run test:workflows`
 Expected: both exit 0, with the workflow suite still at 98 passing.
@@ -46,19 +46,19 @@ Expected: both exit 0, with the workflow suite still at 98 passing.
 
 - Consumes: the label and the arm shape from Task 1.
 
-- [ ] **Step 1: Correct the arm table**
+- [x] **Step 1: Correct the arm table**
 
 In `planning.md` step 2, the arm table's ledger row names `code-analyzer`. Task 1 changed that on both tiers. Correct the row, the standard-tier paragraph, and any surrounding prose the change made false.
 
-- [ ] **Step 2: Give the ledger its mechanism**
+- [x] **Step 2: Give the ledger its mechanism**
 
 In `verification.md`, the fix-cycle section says an out-of-scope discovery lands in the rider ledger. Replace that with the mechanism: issues carrying the `rider` label, what an entry names, that the discovery phase reads it, and that nothing gates the filing, with the reason.
 
-- [ ] **Step 3: Update the rollout note**
+- [x] **Step 3: Update the rollout note**
 
 In `SKILL.md`, the rollout note defers the finding-by-commit verifiers and the rider ledger. The ledger now exists, so it moves to the sentence naming what exists. The verifier stays deferred, and the note says it waits until a feature has run through the pipeline.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run: `pnpm exec openspec validate --all --strict --no-interactive`
 Expected: exit 0.
