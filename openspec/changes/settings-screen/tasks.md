@@ -69,6 +69,7 @@ What this leaves for later clusters: the system cluster keeps everything except 
 - [ ] **Step 3: The token row.** It appears only while the requirement is on, confirms regeneration inline, and warns before minting when the credential store can't encrypt.
 - [ ] **Step 4: The sidebar gains a System group** holding Settings.
 - [ ] **Step 5: Page specs against the fake bridge,** asserting persistence as observable state, the rollback on a failed write, and that the full token never reaches the document.
+- [ ] **Step 6: Stories for the page and both bespoke rows,** with the settings parameter flowing through the bridge decorator. The accessibility addon runs at error level in the browser project, so a story that fails axe fails the suite. The token row earns its own story, because its states carry the most risk: the requirement off, a masked token, the confirmation open, and the plain text warning.
 
 ## The bootstrap cluster
 
