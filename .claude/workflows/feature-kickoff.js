@@ -180,7 +180,7 @@ function assertDispatchCapRespected(arms) {
 }
 
 function expectedByteLength(content) {
-  return new TextEncoder().encode(content).length
+  return encodeURIComponent(content).replace(/%[0-9A-F]{2}/gi, ' ').length
 }
 function writerPrompt(files) {
   return [
