@@ -23,6 +23,7 @@ import {
   showMainWindow,
 } from './windows/main-window';
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
+import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 
 const trayMenuHandlers = {
   onOpenWindow: showMainWindow,
@@ -134,7 +135,7 @@ app.on('before-quit', () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (shouldQuitOnLastWindowClose(process.platform, isMenuBarTrayVisible())) {
     app.quit();
   }
 });
