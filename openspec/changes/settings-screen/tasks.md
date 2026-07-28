@@ -82,14 +82,41 @@ What this leaves for later clusters: the system cluster keeps everything except 
 - [ ] **Step 3: The quit rule and the teardown.** The tray dies on the way out, so no ghost icon survives.
 - [ ] **Step 4: Coverage excludes for the thin Electron shells,** and the mutation scope for the new node-side logic.
 
-## The acceptance and records cluster
+## The acceptance foundation
 
-**Files:** everything under `apps/desktop/e2e/`, the four new files under `docs/adr/`, and the index.
+**Files:** `apps/desktop/e2e/fixtures.ts`, `apps/desktop/e2e/steps/app.steps.ts`, `apps/desktop/e2e/visual.spec.ts`, and its snapshot directory.
 
-**Blockers:** inspects the running app clusters E and F produce.
+**Blockers:** inspects the running app the page and bootstrap clusters produce.
 
-- [ ] **Step 1: The scenarios graduate.** Copy `gherkin/settings/` into `e2e/features/settings/` without renaming, together with the step definitions that answer them, so no commit lands red.
-- [ ] **Step 2: The step definitions,** one task per scenario, driving by role rather than by selector.
-- [ ] **Step 3: The fixture restores what it changed,** so an acceptance run never leaves a login item behind.
-- [ ] **Step 4: Visual baselines on all three platforms.** The home and providers baselines move too, because the sidebar gains a group and the text field changes its markup.
-- [ ] **Step 5: Four Architecture Decision Records:** the shared kit's base, the launch-at-login stance, the config folder call, and the token design.
+This lands alone and first inside the end-to-end tree, because every unit in the fan-out below uses its navigation step and its fixture. It carries no feature file, so nothing goes red.
+
+- [ ] **Step 1: A navigation step reaches the settings screen,** as the sibling of the two that already exist.
+- [ ] **Step 2: The fixture restores what it changed,** so an acceptance run never leaves a login item behind on a runner or a developer machine.
+- [ ] **Step 3: Visual baselines on all three platforms.** The home and providers baselines move too, because the sidebar gains a group and the text field changes its markup.
+
+## The step-definition fan-out
+
+Nine units run in parallel once the foundation lands. Each owns exactly one feature file and one step file, so no two touch the same path.
+
+**Every unit graduates its own feature file together with its step definitions, in one commit.** A feature file that lands without its steps makes `bddgen` fail on the whole tree. Splitting the copy from the automation would therefore turn the branch red for as long as the fan-out runs. Copy from `openspec/changes/settings-screen/gherkin/settings/` without renaming.
+
+| Feature file                         | Step file                                   |
+| ------------------------------------ | ------------------------------------------- |
+| `settings/screen.feature`            | `steps/settings-screen.steps.ts`            |
+| `settings/theme.feature`             | `steps/settings-theme.steps.ts`             |
+| `settings/gateway-port.feature`      | `steps/settings-gateway-port.steps.ts`      |
+| `settings/gateway-token.feature`     | `steps/settings-gateway-token.steps.ts`     |
+| `settings/launch-at-login.feature`   | `steps/settings-launch-at-login.steps.ts`   |
+| `settings/menu-bar-presence.feature` | `steps/settings-menu-bar-presence.steps.ts` |
+| `settings/config-folder.feature`     | `steps/settings-config-folder.steps.ts`     |
+| `settings/waiting-controls.feature`  | `steps/settings-waiting-controls.steps.ts`  |
+| `settings/shortcut.feature`          | `steps/settings-shortcut.steps.ts`          |
+
+- [ ] **Every unit drives by role rather than by selector,** and asserts what a person can observe. A scenario the app can't answer as written goes back through a spec amendment, never a quiet rewrite, because the set froze at gate 2.
+- [ ] **A unit that finds its scenario belongs in a main-process spec says so** rather than forcing it through the app. The scenario writer already moved several for that reason.
+
+## The records task
+
+**Files:** the four new files under `docs/adr/` and the index.
+
+- [ ] **Four Architecture Decision Records:** the shared kit's base, the launch-at-login stance, the config folder call, and the token design.
