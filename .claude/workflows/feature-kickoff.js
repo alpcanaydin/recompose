@@ -33,22 +33,14 @@ const citationFailureSchema = {
   type: 'object', additionalProperties: false, required: ['path', 'reason'],
   properties: { path: { type: 'string' }, symbol: { type: 'string' }, reason: { type: 'string' } },
 }
-const passVerdictSchema = {
-  type: 'object', additionalProperties: false, required: ['status', 'failures'],
-  properties: { status: { type: 'string', enum: ['pass'] }, failures: { type: 'array', maxItems: 0 } },
-}
-const failVerdictSchema = {
-  type: 'object', additionalProperties: false, required: ['status', 'failures'],
+const citationVerdictSchema = {
+  type: 'object', additionalProperties: false, required: ['status'],
   properties: {
-    status: { type: 'string', enum: ['fail'] },
-    failures: { type: 'array', items: citationFailureSchema, minItems: 1 },
+    status: { type: 'string', enum: ['pass', 'fail', 'error'] },
+    failures: { type: 'array', items: citationFailureSchema },
+    reason: { type: 'string' },
   },
 }
-const errorVerdictSchema = {
-  type: 'object', additionalProperties: false, required: ['status', 'reason'],
-  properties: { status: { type: 'string', enum: ['error'] }, reason: { type: 'string', minLength: 1 } },
-}
-const citationVerdictSchema = { oneOf: [passVerdictSchema, failVerdictSchema, errorVerdictSchema] }
 
 const writerFileOutcomeSchema = {
   type: 'object', additionalProperties: false, required: ['path', 'bytesWritten'],
@@ -132,7 +124,8 @@ function renderCodeMapMarkdown(entries) {
 }
 
 function armContent(arm, findings) {
-  return arm.kind === 'code-map' ? renderCodeMapMarkdown(findings.entries) : findings.brief
+  const body = arm.kind === 'code-map' ? renderCodeMapMarkdown(findings.entries) : findings.brief
+  return body.endsWith('\n') ? body : `${body}\n`
 }
 
 function citationRepairNote(failures) {
@@ -152,7 +145,9 @@ function armQueryPrompt(arm, input, failures) {
     arm.kind === 'code-map'
       ? `Produce ${arm.focus}. Cite every path and symbol you reference, and give one line on what each entry contributes.`
       : `Produce ${arm.focus}. Back every claim with a source or a repository reference.`
-  return [header, ask].join('\n') + citationRepairNote(failures)
+  const pathRule =
+    'Write every repository path relative to the repository root, never as an absolute path. An absolute path carries the checkout location into a committed artifact and points nowhere on another machine.'
+  return [header, ask, pathRule].join('\n') + citationRepairNote(failures)
 }
 function resolveArmQuery(arm, findings) {
   if (arm.kind === 'code-map') {
@@ -191,15 +186,19 @@ function expectedByteLength(content) {
 function writerPrompt(files) {
   return [
     'Write each of the following files exactly as given, creating any missing directories.',
-    'Report the UTF-8 byte length you wrote for every path, even one that already matched.',
+    'Every path below is relative to the repository root. Write it there, and report it back in the same relative form.',
+    'Report the UTF-8 byte length you wrote for every path, even one that already matched. Write the content byte for byte, adding nothing, not even a trailing newline.',
     ...files.map((file) => `--- ${file.path} ---\n${file.content}`),
   ].join('\n')
 }
+function reportedBytesFor(reportedFiles, path) {
+  const match = reportedFiles.find((file) => file.path === path || file.path.endsWith(`/${path}`))
+  return match ? match.bytesWritten : undefined
+}
 function assertWriteIntegrity(files, reportedFiles) {
-  const reportedByPath = new Map(reportedFiles.map((file) => [file.path, file.bytesWritten]))
   files.forEach((file) => {
     const expected = expectedByteLength(file.content)
-    const actual = reportedByPath.get(file.path)
+    const actual = reportedBytesFor(reportedFiles, file.path)
     if (actual !== expected) {
       throw new Error(
         `feature-kickoff process assertion failed: ${file.path} reported ${actual ?? 'no'} byte(s) written, expected ${expected}`,
@@ -240,7 +239,40 @@ async function runValidation(entries) {
   if (!verdict) {
     throw new Error('feature-kickoff process assertion failed: the citation-validator subagent died')
   }
+  assertVerdictShape(verdict)
   return verdict
+}
+const VERDICT_SHAPES = {
+  pass: { failures: 'empty', reason: 'absent' },
+  fail: { failures: 'present', reason: 'absent' },
+  error: { failures: 'absent', reason: 'present' },
+}
+function verdictShapeFault(verdict) {
+  const shape = VERDICT_SHAPES[verdict.status]
+  const failures = verdict.failures
+  const reason = verdict.reason
+  if (shape.failures === 'empty' && (!Array.isArray(failures) || failures.length > 0)) {
+    return 'a passing verdict must carry an empty failure list'
+  }
+  if (shape.failures === 'present' && (!Array.isArray(failures) || failures.length === 0)) {
+    return 'a failing verdict must name at least one failing citation'
+  }
+  if (shape.failures === 'absent' && failures !== undefined) {
+    return 'an input fault must carry no failure list'
+  }
+  if (shape.reason === 'present' && (typeof reason !== 'string' || reason.length === 0)) {
+    return 'an input fault must carry a reason'
+  }
+  if (shape.reason === 'absent' && reason !== undefined) {
+    return `a ${verdict.status} verdict must carry no reason`
+  }
+  return null
+}
+function assertVerdictShape(verdict) {
+  const fault = verdictShapeFault(verdict)
+  if (fault) {
+    throw new Error(`feature-kickoff process assertion failed: ${fault}`)
+  }
 }
 function assertNotInputFault(verdict) {
   if (verdict.status === 'error') {
