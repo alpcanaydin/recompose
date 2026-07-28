@@ -8,7 +8,7 @@ A Haiku classifier fills `isUI` and the affected subsystems, then recommends a t
 
 ## Step 2: Discover
 
-Dispatch the discovery arms in parallel, capped at six subagents. A zero-token citation validator runs on the code map afterward and rejects any path or symbol that the repository lacks, so no invented reference reaches the design. On rejection, the reader runs once more with the validator errors as input.
+The `feature-kickoff` saved workflow, at `.claude/workflows/feature-kickoff.js`, runs by name and takes the change slug and the confirmed tier as `{ slug, tier }`. It dispatches the discovery arms in parallel, and an assertion throws before dispatch if the folded arm table exceeds six subagents: that assertion is the machine enforcement, so the operator no longer counts. Each arm writes its own file into `openspec/changes/<slug>/discovery/`.
 
 | Arm                      | Subagent                    | Runs when     | Produces                                          |
 | ------------------------ | --------------------------- | ------------- | ------------------------------------------------- |
@@ -20,7 +20,11 @@ Dispatch the discovery arms in parallel, capped at six subagents. A zero-token c
 
 Acceptance references come from vendor docs, issue trackers, and community complaints, because broken expectations reveal the hidden criteria the happy-path docs omit. Machine-written output lands in `discovery/`, which the prose gates exempt.
 
-The Mobbin arm runs in the orchestrating session, not in a subagent. The Mobbin Model Context Protocol tools live in the session, and `researcher`'s tool pins (`WebSearch`, `WebFetch`, `Read`) exclude them. Session-run work does not consume a slot in the six-subagent cap.
+The workflow validates the code map with the zero-token citation validator at `.claude/workflows/citation-validator/citation-validator.mts`. It rejects a cited path that does not resolve inside the repository or does not exist, and a cited symbol its own file does not hold. On rejection, the `code-analyzer` arm reruns once with the failing citations as input; a second failing verdict stops the workflow.
+
+The Mobbin arm runs in the orchestrating session, not in a subagent, so the workflow does not carry it. The Mobbin Model Context Protocol tools live in the session, and `researcher`'s tool pins (`WebSearch`, `WebFetch`, `Read`) exclude them. Session-run work does not consume a slot in the six-subagent cap.
+
+The brainstorm in step 3 stays in the session too: the workflow stops at the brainstorm.
 
 **Standard tier:** the five arms fold without dropping any. A single `researcher` covers technical research, acceptance references, and the rider-ledger lookup. `code-analyzer` maps the code. The session runs the Mobbin pass when the feature touches UI.
 
