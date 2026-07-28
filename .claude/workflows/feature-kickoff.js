@@ -74,7 +74,12 @@ const armTable = {
       'acceptance criteria drawn from vendor docs, issue trackers, and community complaints, because broken expectations reveal the criteria happy-path docs omit',
     ),
     armDef('code-map', 'code-map', 'code-analyzer', CODE_MAP_FOCUS),
-    armDef('rider-ledger', 'brief', 'code-analyzer', 'prior out-of-scope riders that touch this feature'),
+    armDef(
+      'rider-ledger',
+      'brief',
+      undefined,
+      'prior out-of-scope riders that touch this feature, drawn from the open issues on this repository carrying the rider label, named by issue number',
+    ),
   ],
   standard: [
     armDef(
