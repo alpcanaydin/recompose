@@ -21,6 +21,12 @@ export type HookOutcome = {
 
 export const SESSION_TRANSCRIPT = '/claude-projects/example-project/session-0001.jsonl';
 
+const SESSION_WORKING_DIRECTORY = '/example-project';
+
+export const MAIN_LOOP_PATH = 'apps/desktop/src/main/index.ts';
+
+const EDITED_CONTENT = 'export const start = (): void => undefined;\n';
+
 export const GATE_CONFIGURATION = 'export default { rules: [] };\n';
 
 export const GATE_CONFIGURATION_NAME = 'probity.config.ts';
@@ -146,17 +152,25 @@ export function plantedRepository(root: string): string {
   return root;
 }
 
-export function editPayload(filePath: string): string {
+export function editPayloadFromWorkingDirectory(
+  workingDirectory: string,
+  filePath: string,
+): string {
   return JSON.stringify({
     session_id: 'session-0001',
     transcript_path: SESSION_TRANSCRIPT,
+    cwd: workingDirectory,
     tool_name: 'Write',
-    tool_input: { file_path: filePath },
+    tool_input: { file_path: filePath, content: EDITED_CONTENT },
   });
 }
 
+export function editPayload(filePath: string): string {
+  return editPayloadFromWorkingDirectory(SESSION_WORKING_DIRECTORY, filePath);
+}
+
 export function mainLoopPayload(): string {
-  return editPayload('apps/desktop/src/main/index.ts');
+  return editPayload(MAIN_LOOP_PATH);
 }
 
 export function runHookScript(
