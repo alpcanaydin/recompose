@@ -20,7 +20,7 @@ The `feature-kickoff` saved workflow, at `.claude/workflows/feature-kickoff.js`,
 
 Acceptance references come from vendor docs, issue trackers, and community complaints, because broken expectations reveal the hidden criteria the happy-path docs omit. Machine-written output lands in `discovery/`, which the prose gates exempt.
 
-The workflow validates the code map with the zero-token citation validator at `.claude/workflows/citation-validator/citation-validator.mts`. It rejects a cited path that does not resolve inside the repository or does not exist, and a cited symbol its own file does not hold. On rejection, the `code-analyzer` arm reruns once with the failing citations as input; a second failing verdict stops the workflow.
+The workflow validates the code map with the zero-token citation validator at `.claude/workflows/citation-validator/citation-validator.mts`. It rejects a cited path that does not resolve inside the repository or does not exist, and a cited symbol its own file does not hold. On rejection, the `code-analyzer` arm reruns once with the failing citations as input. A second failing verdict throws, naming every failing citation.
 
 The Mobbin arm runs in the orchestrating session, not in a subagent, so the workflow does not carry it. The Mobbin Model Context Protocol tools live in the session, and `researcher`'s tool pins (`WebSearch`, `WebFetch`, `Read`) exclude them. Session-run work does not consume a slot in the six-subagent cap.
 
