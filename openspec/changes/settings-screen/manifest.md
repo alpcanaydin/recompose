@@ -7,5 +7,6 @@ approvals:
   - Base UI underpins the shared layer, because later screens keep adding presentational components that need one base
   - launchAtLogin stays a stored field, the launch-at-login row never renders on Linux, and the sidebar gains a System group
   - gate 1 approved the design document with the design critique folded in, covering the fluid column, the window floor, the settings shortcut with no window open, and the platform-named reveal label
+  - the Gherkin and solution-design seats ran on Opus 5 rather than the Fable 5 the model map pins, because the Fable monthly spend limit stopped both writers mid-run
 branch: worktree-settings-screen
 ---

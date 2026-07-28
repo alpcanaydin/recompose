@@ -36,7 +36,7 @@ artifacts:
     template: manifest.md
     requires: []
   - id: gherkin
-    generates: gherkin/*.feature
+    generates: gherkin/**/*.feature
     description: Gherkin scenario files written through the gherkin-best-practices skill
     template: gherkin.md
     requires:
