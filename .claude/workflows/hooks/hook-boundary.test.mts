@@ -1,21 +1,26 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { before, describe, it } from 'node:test';
 
 import {
-  LINT_ERROR_SOURCE,
+  commonGitDirectory,
   outcomeForPath,
   REPOSITORY_ROOT,
   scratchDirectory,
   unrelatedRepository,
-  worktreeInside,
   worktreeOfRepository,
 } from './format-harness.mts';
 
-const PERMISSIVE_LINTER_CONFIGURATION = '{ "plugins": [], "categories": {}, "rules": {} }\n';
+const BLOCKING_LINTER_CONFIGURATION = JSON.stringify({
+  plugins: ['typescript'],
+  categories: {},
+  rules: { 'typescript/no-explicit-any': 'error' },
+});
 
-const FORMATTER_CONFIGURATION = '{ "singleQuote": true }\n';
+const DOUBLE_QUOTING_FORMATTER_CONFIGURATION = '{ "singleQuote": false }\n';
+
+const LINT_ERROR_SINGLE_QUOTED_SOURCE = "export const boundaryFixtureValue: any = 'quoted';\n";
 
 const PLANTED_CHECKOUT = unrelatedRepository('hook-boundary-planted-');
 
@@ -25,34 +30,31 @@ const PLANTED_FORMATTER_MARKER = join(PLANTED_CHECKOUT, 'planted-oxfmt-ran');
 
 const PLANTED_EDITED_FILE = join(PLANTED_CHECKOUT, 'planted-fixture.ts');
 
-const OVERARCHING_DIRECTORY = scratchDirectory('hook-boundary-above-');
+const CLAIMING_DIRECTORY = scratchDirectory('hook-boundary-claiming-');
 
-const WORKTREE_BELOW_A_CONFIGURATION = worktreeInside(OVERARCHING_DIRECTORY);
+const CLAIMED_PLUGIN_NAME = 'planted-plugin.js';
 
-const DEEP_EDITED_FILE = join(WORKTREE_BELOW_A_CONFIGURATION, 'a', 'b', 'c', 'd', 'fixture.ts');
+const CLAIMED_PLUGIN_MARKER = join(CLAIMING_DIRECTORY, 'planted-plugin-ran');
 
-const UNINSTALLED_WORKTREE = worktreeOfRepository('hook-boundary-worktree-');
+const CLAIMED_EDITED_FILE = join(CLAIMING_DIRECTORY, 'claimed-fixture.ts');
 
-const WORKTREE_IGNORED_DIRECTORY = 'ignored-by-worktree';
+const CLAIMED_PLUGIN_SOURCE = `import { writeFileSync } from 'node:fs';
 
-const WORKTREE_LINTER_CONFIGURATION = JSON.stringify({
+writeFileSync(new URL('./planted-plugin-ran', import.meta.url), '', 'utf8');
+
+export default { meta: { name: 'planted' }, rules: {} };
+`;
+
+const CLAIMED_LINTER_CONFIGURATION = JSON.stringify({
   plugins: ['typescript'],
   categories: {},
   rules: { 'typescript/no-explicit-any': 'error' },
-  ignorePatterns: [`${WORKTREE_IGNORED_DIRECTORY}/**`],
+  jsPlugins: [{ name: 'planted', specifier: `./${CLAIMED_PLUGIN_NAME}` }],
 });
 
-const WORKTREE_CLEAN_FIXTURE = join(UNINSTALLED_WORKTREE, 'worktree-clean-fixture.ts');
+const SIBLING_WORKTREE = worktreeOfRepository('hook-boundary-worktree-');
 
-const WORKTREE_LINT_ERROR_FIXTURE = join(UNINSTALLED_WORKTREE, 'worktree-lint-error-fixture.ts');
-
-const WORKTREE_IGNORED_FIXTURE = join(
-  UNINSTALLED_WORKTREE,
-  WORKTREE_IGNORED_DIRECTORY,
-  'fixture.ts',
-);
-
-const CLEAN_SOURCE = 'export const worktreeFixtureValue = 1;\n';
+const SIBLING_EDITED_FILE = join(SIBLING_WORKTREE, 'sibling-fixture.ts');
 
 function plantBinary(checkout: string, binaryName: string, marker: string): void {
   const binDirectory = join(checkout, 'node_modules', '.bin');
@@ -64,88 +66,84 @@ function plantBinary(checkout: string, binaryName: string, marker: string): void
 }
 
 function buildPlantedCheckout(): void {
-  writeFileSync(join(PLANTED_CHECKOUT, '.oxlintrc.json'), PERMISSIVE_LINTER_CONFIGURATION, 'utf8');
-  writeFileSync(join(PLANTED_CHECKOUT, '.oxfmtrc.json'), FORMATTER_CONFIGURATION, 'utf8');
+  writeFileSync(join(PLANTED_CHECKOUT, '.oxlintrc.json'), BLOCKING_LINTER_CONFIGURATION, 'utf8');
   plantBinary(PLANTED_CHECKOUT, 'oxlint', PLANTED_LINTER_MARKER);
   plantBinary(PLANTED_CHECKOUT, 'oxfmt', PLANTED_FORMATTER_MARKER);
-  writeFileSync(PLANTED_EDITED_FILE, LINT_ERROR_SOURCE, 'utf8');
+  writeFileSync(PLANTED_EDITED_FILE, LINT_ERROR_SINGLE_QUOTED_SOURCE, 'utf8');
 }
 
-function buildWorktreeBelowAConfiguration(): void {
+function buildDirectoryClaimingThisRepository(): void {
+  writeFileSync(join(CLAIMING_DIRECTORY, '.git'), `gitdir: ${commonGitDirectory()}\n`, 'utf8');
+  writeFileSync(join(CLAIMING_DIRECTORY, '.oxlintrc.json'), CLAIMED_LINTER_CONFIGURATION, 'utf8');
   writeFileSync(
-    join(OVERARCHING_DIRECTORY, '.oxlintrc.json'),
-    PERMISSIVE_LINTER_CONFIGURATION,
+    join(CLAIMING_DIRECTORY, '.oxfmtrc.json'),
+    DOUBLE_QUOTING_FORMATTER_CONFIGURATION,
     'utf8',
   );
-  writeFileSync(join(OVERARCHING_DIRECTORY, '.oxfmtrc.json'), FORMATTER_CONFIGURATION, 'utf8');
-  mkdirSync(join(WORKTREE_BELOW_A_CONFIGURATION, 'a', 'b', 'c', 'd'), { recursive: true });
-  writeFileSync(DEEP_EDITED_FILE, LINT_ERROR_SOURCE, 'utf8');
+  writeFileSync(join(CLAIMING_DIRECTORY, CLAIMED_PLUGIN_NAME), CLAIMED_PLUGIN_SOURCE, 'utf8');
+  writeFileSync(CLAIMED_EDITED_FILE, LINT_ERROR_SINGLE_QUOTED_SOURCE, 'utf8');
 }
 
-function buildUninstalledWorktree(): void {
+function buildSiblingWorktree(): void {
+  writeFileSync(join(SIBLING_WORKTREE, '.oxlintrc.json'), BLOCKING_LINTER_CONFIGURATION, 'utf8');
   writeFileSync(
-    join(UNINSTALLED_WORKTREE, '.oxlintrc.json'),
-    WORKTREE_LINTER_CONFIGURATION,
+    join(SIBLING_WORKTREE, '.oxfmtrc.json'),
+    DOUBLE_QUOTING_FORMATTER_CONFIGURATION,
     'utf8',
   );
-  writeFileSync(join(UNINSTALLED_WORKTREE, '.oxfmtrc.json'), FORMATTER_CONFIGURATION, 'utf8');
-  writeFileSync(WORKTREE_CLEAN_FIXTURE, CLEAN_SOURCE, 'utf8');
-  writeFileSync(WORKTREE_LINT_ERROR_FIXTURE, LINT_ERROR_SOURCE, 'utf8');
-  mkdirSync(join(UNINSTALLED_WORKTREE, WORKTREE_IGNORED_DIRECTORY), { recursive: true });
-  writeFileSync(WORKTREE_IGNORED_FIXTURE, LINT_ERROR_SOURCE, 'utf8');
+  writeFileSync(SIBLING_EDITED_FILE, LINT_ERROR_SINGLE_QUOTED_SOURCE, 'utf8');
 }
 
 before(() => {
   buildPlantedCheckout();
-  buildWorktreeBelowAConfiguration();
-  buildUninstalledWorktree();
-});
-
-describe('post-edit format hook: an edit inside a worktree that has no dependencies installed', () => {
-  it('lets a clean source file stand rather than failing to start a linter', () => {
-    const outcome = outcomeForPath(WORKTREE_CLEAN_FIXTURE, REPOSITORY_ROOT);
-
-    assert.equal(outcome.status, 0);
-  });
-
-  it('honours the ignore list that worktree own linter configuration carries', () => {
-    assert.equal(outcomeForPath(WORKTREE_IGNORED_FIXTURE, REPOSITORY_ROOT).status, 0);
-  });
-
-  it('blocks a source file carrying a lint error and names the rule it broke', () => {
-    const outcome = outcomeForPath(WORKTREE_LINT_ERROR_FIXTURE, REPOSITORY_ROOT);
-
-    assert.equal(outcome.status, 2);
-    assert.match(outcome.stderr, /no-explicit-any/);
-  });
+  buildDirectoryClaimingThisRepository();
+  buildSiblingWorktree();
 });
 
 describe('post-edit format hook: an edit inside a repository that is not this one', () => {
-  it('never starts the planted linter', () => {
+  it('never starts the linter that repository carries', () => {
     outcomeForPath(PLANTED_EDITED_FILE, REPOSITORY_ROOT);
 
     assert.equal(existsSync(PLANTED_LINTER_MARKER), false);
   });
 
-  it('never starts the planted formatter', () => {
+  it('never starts the formatter that repository carries', () => {
     outcomeForPath(PLANTED_EDITED_FILE, REPOSITORY_ROOT);
 
     assert.equal(existsSync(PLANTED_FORMATTER_MARKER), false);
   });
 
-  it('judges the file under the repository own linter and blocks the edit', () => {
-    const outcome = outcomeForPath(PLANTED_EDITED_FILE, REPOSITORY_ROOT);
-
-    assert.equal(outcome.status, 2);
-    assert.match(outcome.stderr, /no-explicit-any/);
+  it('skips the file rather than judging it under this repository own linter', () => {
+    assert.equal(outcomeForPath(PLANTED_EDITED_FILE, REPOSITORY_ROOT).status, 0);
   });
 });
 
-describe('post-edit format hook: an edit inside a worktree the configuration sits above', () => {
-  it('stops climbing at the worktree root and keeps the repository own linter', () => {
-    const outcome = outcomeForPath(DEEP_EDITED_FILE, REPOSITORY_ROOT);
+describe('post-edit format hook: an edit inside a directory claiming this repository', () => {
+  it('never runs the plugin that directory own linter configuration names', () => {
+    outcomeForPath(CLAIMED_EDITED_FILE, REPOSITORY_ROOT);
 
-    assert.equal(outcome.status, 2);
-    assert.match(outcome.stderr, /no-explicit-any/);
+    assert.equal(existsSync(CLAIMED_PLUGIN_MARKER), false);
+  });
+
+  it('skips the file rather than judging it under that configuration', () => {
+    assert.equal(outcomeForPath(CLAIMED_EDITED_FILE, REPOSITORY_ROOT).status, 0);
+  });
+
+  it('never formats it under the formatter configuration that directory carries', () => {
+    outcomeForPath(CLAIMED_EDITED_FILE, REPOSITORY_ROOT);
+
+    assert.equal(readFileSync(CLAIMED_EDITED_FILE, 'utf8'), LINT_ERROR_SINGLE_QUOTED_SOURCE);
+  });
+});
+
+describe('post-edit format hook: an edit inside a checkout other than the one holding the hook', () => {
+  it('skips a file carrying a lint error rather than judging it', () => {
+    assert.equal(outcomeForPath(SIBLING_EDITED_FILE, REPOSITORY_ROOT).status, 0);
+  });
+
+  it('leaves that file exactly as the edit left it', () => {
+    outcomeForPath(SIBLING_EDITED_FILE, REPOSITORY_ROOT);
+
+    assert.equal(readFileSync(SIBLING_EDITED_FILE, 'utf8'), LINT_ERROR_SINGLE_QUOTED_SOURCE);
   });
 });

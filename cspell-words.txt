@@ -48,6 +48,7 @@ frontmatter
 frontmost
 fuite
 Gebert
+gitdir
 glassmorphism
 idempotently
 inspectable

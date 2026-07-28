@@ -3,10 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { configurationRoot } from './configuration-scope.mts';
 import { isProcessEntryPoint } from './entry-point.mjs';
-import { readEditedPath } from './hook-payload.mts';
-import { repositoryDirectories } from './repository-scope.mts';
 
 type SubagentAwarePayload = {
   readonly transcript_path: string;
@@ -20,18 +17,13 @@ type RecordSearch = {
   readonly listWorkflows: WorkflowListing;
 };
 
-type GateInvocation = {
-  readonly payload: string;
-  readonly configuration: string;
-};
-
 const CHECKOUT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 const GATE_COMMAND = join(CHECKOUT_ROOT, 'node_modules', '.bin', 'probity');
 
 const GATE_ARGUMENTS: readonly string[] = ['--agent', 'claude-code'];
 
-const GATE_CONFIGURATION_NAME = 'probity.config.ts';
+const GATE_CONFIGURATION = join(CHECKOUT_ROOT, 'probity.config.ts');
 
 const BLOCKING_EXIT_STATUS = 2;
 
@@ -69,22 +61,6 @@ export function resolveTranscriptPath(payload: SubagentAwarePayload, search: Rec
     subagentRecordCandidates(payload.transcript_path, agentId, search.listWorkflows).find(
       search.recordExists,
     ) ?? payload.transcript_path
-  );
-}
-
-export function gateConfigurationPath(
-  editedPath: string | undefined,
-  checkoutRoot: string,
-  configurationExists: (path: string) => boolean,
-  reachableDirectories: (start: string) => readonly string[],
-): string {
-  return join(
-    configurationRoot(editedPath, checkoutRoot, {
-      configurationName: GATE_CONFIGURATION_NAME,
-      configurationExists,
-      reachableDirectories,
-    }),
-    GATE_CONFIGURATION_NAME,
   );
 }
 
@@ -153,7 +129,7 @@ function announceMissingSubagentRecord(payload: SubagentAwarePayload, resolved: 
   );
 }
 
-function buildGateInvocation(): GateInvocation {
+function buildGatePayload(): string {
   try {
     const payload = readPayloadObject(readFileSync(0, 'utf8'));
     const subagentAwarePayload = readSubagentAwarePayload(payload);
@@ -161,25 +137,16 @@ function buildGateInvocation(): GateInvocation {
 
     announceMissingSubagentRecord(subagentAwarePayload, transcriptPath);
 
-    return {
-      payload: JSON.stringify({ ...payload, transcript_path: transcriptPath }),
-      configuration: gateConfigurationPath(
-        readEditedPath(payload),
-        CHECKOUT_ROOT,
-        existsSync,
-        (start) => repositoryDirectories(start, CHECKOUT_ROOT),
-      ),
-    };
+    return JSON.stringify({ ...payload, transcript_path: transcriptPath });
   } catch (cause) {
     return blockToolCall(`the PreToolUse payload was unusable: ${describeFailure(cause)}`);
   }
 }
 
 function main(): void {
-  const invocation = buildGateInvocation();
-  const run = spawnSync(GATE_COMMAND, [...GATE_ARGUMENTS, '--config', invocation.configuration], {
+  const run = spawnSync(GATE_COMMAND, [...GATE_ARGUMENTS, '--config', GATE_CONFIGURATION], {
     cwd: CHECKOUT_ROOT,
-    input: invocation.payload,
+    input: buildGatePayload(),
     stdio: ['pipe', 'inherit', 'inherit'],
   });
 

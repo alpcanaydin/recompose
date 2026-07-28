@@ -8,11 +8,11 @@ The behavioral contract of the recompose feature pipeline: how a feature idea be
 
 ### Requirement: Edit-time test-first gate
 
-The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays a probabilistic tier above the deterministic gates and never replaces them.
+The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it, for a file inside the session's own checkout. A file outside that checkout is out of scope: the gate MUST read only its own checkout's configuration and MUST never load configuration from the edited file's location. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays a probabilistic tier above the deterministic gates and never replaces them.
 
 #### Scenario: an implementation edit runs ahead of its test
 
-- When a subagent edits an in-scope source file and no failing test covers the change
+- When a subagent edits an in-scope source file inside the session's checkout and no failing test covers the change
 - Then the gate blocks the tool call and names the missing failing test
 
 #### Scenario: a subagent gets judged on its own record
@@ -20,6 +20,12 @@ The pipeline MUST block an implementation edit that no failing test precedes. Th
 - When the gate evaluates an edit a subagent made
 - Then it reads that subagent's own record
 - And a record the harness stops providing falls back to the record the payload names
+
+#### Scenario: an edit lands outside the session's checkout
+
+- When a subagent edits a file that resolves outside the session's own checkout
+- Then the gate reads its own checkout's configuration and loads none from the edited file's location
+- And the edit isn't gated, so gating that worktree means running a session rooted in it
 
 ### Requirement: Gate scope
 

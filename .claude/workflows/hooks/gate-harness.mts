@@ -43,13 +43,7 @@ const HOOKS_PATH_IN_CHECKOUT = join('.claude', 'workflows', 'hooks');
 
 const RESOLVER_SCRIPT_NAME = 'resolve-transcript.mts';
 
-const RESOLVER_MODULE_NAMES: readonly string[] = [
-  RESOLVER_SCRIPT_NAME,
-  'entry-point.mjs',
-  'hook-payload.mts',
-  'configuration-scope.mts',
-  'repository-scope.mts',
-];
+const RESOLVER_MODULE_NAMES: readonly string[] = [RESOLVER_SCRIPT_NAME, 'entry-point.mjs'];
 
 const RESOLVER_PATH_IN_CHECKOUT = join(HOOKS_PATH_IN_CHECKOUT, RESOLVER_SCRIPT_NAME);
 
@@ -120,7 +114,7 @@ export function aliasedCheckout(checkout: string): string {
   return alias;
 }
 
-export function worktreeOfCheckout(checkout: string, root: string): string {
+function worktreeOfCheckout(checkout: string, root: string): string {
   runGit(checkout, ['worktree', 'add', '--no-checkout', '--detach', root]);
 
   return root;
@@ -136,18 +130,20 @@ export function configuredWorktreeOfCheckout(checkout: string, root: string): st
   return root;
 }
 
+export function directoryClaimingCheckout(checkout: string, root: string): string {
+  mkdirSync(root, { recursive: true });
+  writeFileSync(join(root, '.git'), `gitdir: ${join(checkout, '.git')}\n`, 'utf8');
+  writeFileSync(join(root, GATE_CONFIGURATION_NAME), GATE_CONFIGURATION, 'utf8');
+
+  return root;
+}
+
 export function plantedRepository(root: string): string {
   mkdirSync(root, { recursive: true });
   runGit(root, ['init', '-q']);
   writeFileSync(join(root, GATE_CONFIGURATION_NAME), GATE_CONFIGURATION, 'utf8');
 
   return root;
-}
-
-export function plantConfigurationIn(directory: string): string {
-  writeFileSync(join(directory, GATE_CONFIGURATION_NAME), GATE_CONFIGURATION, 'utf8');
-
-  return directory;
 }
 
 export function editPayload(filePath: string): string {

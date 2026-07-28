@@ -54,7 +54,7 @@ export function worktreeOfRepository(prefix: string): string {
   return worktreeInside(scratchDirectory(prefix));
 }
 
-export function worktreeInside(parent: string): string {
+function worktreeInside(parent: string): string {
   const root = join(parent, 'worktree');
   const add = runGit(['worktree', 'add', '--no-checkout', '--detach', root]);
 
@@ -65,6 +65,19 @@ export function worktreeInside(parent: string): string {
   registeredWorktrees.push(root);
 
   return root;
+}
+
+export function commonGitDirectory(): string {
+  const run = spawnSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
+    cwd: REPOSITORY_ROOT,
+    encoding: 'utf8',
+  });
+
+  if (run.status !== 0) {
+    throw new Error(`the fixture could not read the common git directory: ${run.stderr}`);
+  }
+
+  return run.stdout.trim();
 }
 
 export function unrelatedRepository(prefix: string): string {
@@ -78,11 +91,11 @@ export function unrelatedRepository(prefix: string): string {
   return root;
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export function readProperty(value: unknown, property: string): unknown {
+function readProperty(value: unknown, property: string): unknown {
   return isRecord(value) ? value[property] : undefined;
 }
 
@@ -94,7 +107,7 @@ function readList(value: unknown): readonly unknown[] {
   return isList(value) ? value : [];
 }
 
-export function readStrings(value: unknown): readonly string[] {
+function readStrings(value: unknown): readonly string[] {
   return readList(value).filter((item): item is string => typeof item === 'string');
 }
 

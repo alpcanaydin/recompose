@@ -1,17 +1,13 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, extname, join } from 'node:path';
+import { readFileSync, realpathSync } from 'node:fs';
+import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { configurationRoot } from './configuration-scope.mts';
-import { readEditedPath } from './hook-payload.mts';
-import { repositoryDirectories } from './repository-scope.mts';
+const CHECKOUT_ROOT = realpathSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..'));
 
-const CHECKOUT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const LINTER_CONFIGURATION = join(CHECKOUT_ROOT, '.oxlintrc.json');
 
-const LINTER_CONFIGURATION_NAME = '.oxlintrc.json';
-
-const FORMATTER_CONFIGURATION_NAME = '.oxfmtrc.json';
+const FORMATTER_CONFIGURATION = join(CHECKOUT_ROOT, '.oxfmtrc.json');
 
 const LINTER_BINARY_NAME = 'oxlint';
 
@@ -47,6 +43,33 @@ function readPayloadObject(raw: string): object {
   }
 }
 
+function readToolInput(payload: object): object {
+  const toolInput = 'tool_input' in payload ? payload.tool_input : undefined;
+
+  return typeof toolInput === 'object' && toolInput !== null ? toolInput : {};
+}
+
+function readEditedPath(payload: object): string | undefined {
+  const toolInput = readToolInput(payload);
+  const editedPath = 'file_path' in toolInput ? toolInput.file_path : '';
+
+  return typeof editedPath === 'string' && editedPath.length > 0 ? editedPath : undefined;
+}
+
+function realPathOf(path: string): string | undefined {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
+  }
+}
+
+function pathInsideCheckout(editedPath: string): string | undefined {
+  const resolved = realPathOf(resolve(CHECKOUT_ROOT, editedPath));
+
+  return resolved?.startsWith(`${CHECKOUT_ROOT}${sep}`) === true ? resolved : undefined;
+}
+
 function runFromCheckout(
   binaryName: string,
   configurationPath: string,
@@ -76,14 +99,6 @@ function reportLintOutcome(lint: SpawnSyncReturns<string>, editedPath: string): 
   }
 }
 
-function governingRoot(editedPath: string): string {
-  return configurationRoot(editedPath, CHECKOUT_ROOT, {
-    configurationName: LINTER_CONFIGURATION_NAME,
-    configurationExists: existsSync,
-    reachableDirectories: (start) => repositoryDirectories(start, CHECKOUT_ROOT),
-  });
-}
-
 function main(): void {
   const editedPath = readEditedPath(readPayloadObject(readFileSync(0, 'utf8')));
 
@@ -91,12 +106,16 @@ function main(): void {
     return;
   }
 
-  const root = governingRoot(editedPath);
+  const ownedPath = pathInsideCheckout(editedPath);
 
-  runFromCheckout(FORMATTER_BINARY_NAME, join(root, FORMATTER_CONFIGURATION_NAME), editedPath);
+  if (ownedPath === undefined) {
+    return;
+  }
+
+  runFromCheckout(FORMATTER_BINARY_NAME, FORMATTER_CONFIGURATION, ownedPath);
   reportLintOutcome(
-    runFromCheckout(LINTER_BINARY_NAME, join(root, LINTER_CONFIGURATION_NAME), editedPath),
-    editedPath,
+    runFromCheckout(LINTER_BINARY_NAME, LINTER_CONFIGURATION, ownedPath),
+    ownedPath,
   );
 }
 
