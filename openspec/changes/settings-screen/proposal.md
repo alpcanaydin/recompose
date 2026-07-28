@@ -28,7 +28,7 @@ The brainstorm settled every decision below, and this document records them so l
 - **`launchAtLogin` is a stored schema field.** Displayed truth still comes from the operating system query. The flag records intent, and a later Linux implementation would write it.
 - **Absent and unavailable mean different things.** On Linux the launch-at-login row doesn't render at all, because the platform will never support it. In an unpackaged development build the row renders as unavailable and names the development build as the reason. Absent means never. Unavailable means not right now.
 - **The sidebar gains a System group.** Settings sits in it now, and Usage joins the group when it exists.
-- **The column flexes and the window gains a floor.** The column reads `w-full max-w-[560px]` and centres in the content area. `apps/desktop/src/main/windows/window-options.ts` gains a minimum size near 720 by 500, because the window carries none today and a fixed column tears below 850 pixels.
+- **The column flexes and the window gains a floor.** The column reads `w-full max-w-[560px]` and centers in the content area. `apps/desktop/src/main/windows/window-options.ts` gains a minimum size near 720 by 500, because the window carries none today and a fixed column tears below 850 pixels.
 - **Command-comma opens the window it needs.** With the tray showing and no window open, the shortcut creates the window, routes to the settings surface, moves the sidebar selection, and lands focus on the first control. A shortcut this ingrained reads as a hang when nothing answers it.
 - **The reveal label follows the platform.** macOS reads "Reveal in Finder," Windows reads "Show in Explorer," and Linux reads "Open folder." `shell.openPath` stays, because it's the only variant that surfaces its failure, and a Windows reader never meets a macOS word.
 - **`TextField` moves to the shared layer.** `apps/desktop/src/renderer/src/pages/providers/ui/text-field.tsx` carries no business logic and matches the user-interface kit shape, so it joins `shared/ui` and rebuilds on the same base as the new controls. Leaving it would seed two input languages on day one. `AccountKindField` stays in its page and recomposes on the shared primitives, because it holds account-kind knowledge rather than presentation. `EmptyState` stays, because it's page copy.
@@ -57,6 +57,18 @@ All three candidate approaches arrived at the same answers below.
 - **Handlers split by plumbing.** Token handlers join `apps/desktop/src/main/ipc/storage-ipc.ts`, because the vault plumbing already lives there. Login-item and config-folder handlers go to a new `apps/desktop/src/main/ipc/system-ipc.ts` with Electron injected.
 - **`shell.openPath` wins over `showItemInFolder`.** It matches the spec wording, and it's the only variant that surfaces its failure.
 - **An `applySettings` seam applies the document.** It runs on the storage context after every successful save and at boot, consuming the `initializeStorage` result that its caller discards today.
+
+## Layout contract
+
+The branch records no row height, no spacing, and no control size, so the build would improvise them. This section fixes them.
+
+- **Column and window.** The column reads `w-full max-w-[560px]` and centers in the content area. The window gains a minimum near 720 by 500.
+- **Row.** 44 pixels tall at rest. The label sits at the 13 pixel body size, and the description sits at 11 pixels in the tertiary ink token.
+- **Control.** 22 to 28 pixels tall, which matches macOS density. Base UI ships its primitives unstyled, so nothing lands correct by default.
+- **Rhythm.** 20 points between groups and 8 points within one. Hierarchy comes from space rather than from smaller type. The 9 pixel overline stays a section-heading voice and never carries a reason or a status.
+- **Telemetry keeps the full row anatomy.** A label, a static right-aligned value reading None, and a description stating that recompose never phones home. An empty control slot would read as a control that failed to load.
+- **The token row sits under its switch.** It animates height and opacity on entry and respects reduced motion. The confirmation swaps the action cluster for the consequence sentence, Cancel taking focus, and a red Regenerate, because red marks a destructive act.
+- **Live rows sort before waiting rows** inside a section where the logic allows: theme before reduced wire motion, config folder before log retention. Server keeps its port, bind address, and token order, because bind address and the token switch read as one local-network cluster.
 
 ## Design-system gap analysis
 
