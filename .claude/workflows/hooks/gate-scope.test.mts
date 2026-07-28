@@ -3,12 +3,17 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
+  aliasedCheckout,
+  checkoutWithArmedGate,
   checkoutWithStandInGate,
   configuredWorktreeOfCheckout,
   directoryClaimingCheckout,
   editPayload,
   GATE_ARGUMENT_ECHO,
   GATE_CONFIGURATION_NAME,
+  GATE_RULE_REASON,
+  guardedNotebookPayload,
+  guardedWritePayload,
   type HookOutcome,
   plantedRepository,
   runResolverIn,
@@ -16,6 +21,16 @@ import {
 } from './gate-harness.mts';
 
 const IN_SCOPE_SOURCE_PATH = join('apps', 'desktop', 'src', 'main', 'index.ts');
+
+const IN_SCOPE_NOTEBOOK_PATH = join('apps', 'desktop', 'src', 'main', 'exploration.ipynb');
+
+const GATE_DENIAL = {
+  hookSpecificOutput: {
+    hookEventName: 'PreToolUse',
+    permissionDecision: 'deny',
+    permissionDecisionReason: `Probity: ${GATE_RULE_REASON}`,
+  },
+};
 
 function editInside(root: string): string {
   return editPayload(join(root, IN_SCOPE_SOURCE_PATH));
@@ -72,6 +87,34 @@ describe('the test-first gate scope: an edit inside a repository that is not the
     const outcome = runResolverIn(checkout, editInside(planted));
 
     assert.equal(gateConfigurationArgument(outcome), ownConfigurationOf(checkout));
+  });
+});
+
+describe('the test-first gate scope: an in-checkout edit named through a symlinked prefix', () => {
+  it('denies it under the checkout own rule rather than letting it pass unjudged', () => {
+    const checkout = checkoutWithArmedGate();
+    const alias = aliasedCheckout(checkout);
+
+    const outcome = runResolverIn(
+      checkout,
+      guardedWritePayload(alias, join(alias, IN_SCOPE_SOURCE_PATH)),
+    );
+
+    assert.deepEqual(JSON.parse(outcome.stdout), GATE_DENIAL);
+  });
+});
+
+describe('the test-first gate scope: an in-checkout notebook named through a symlinked prefix', () => {
+  it('denies it under the checkout own rule rather than letting it pass unjudged', () => {
+    const checkout = checkoutWithArmedGate();
+    const alias = aliasedCheckout(checkout);
+
+    const outcome = runResolverIn(
+      checkout,
+      guardedNotebookPayload(alias, join(alias, IN_SCOPE_NOTEBOOK_PATH)),
+    );
+
+    assert.deepEqual(JSON.parse(outcome.stdout), GATE_DENIAL);
   });
 });
 

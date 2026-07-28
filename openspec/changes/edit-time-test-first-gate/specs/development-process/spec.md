@@ -8,7 +8,7 @@ The behavioral contract of the recompose feature pipeline: how a feature idea be
 
 ### Requirement: Edit-time test-first gate
 
-The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it, for a file inside the session's own checkout. A file outside that checkout is out of scope: the gate MUST read only its own checkout's configuration and MUST never load configuration from the edited file's location. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays a probabilistic tier above the deterministic gates and never replaces them.
+The pipeline MUST block an implementation edit that no failing test precedes. The gate runs at the tool boundary, so it covers the orchestrating session and every subagent under it, for a file that resolves inside the session's own checkout. The gate MUST decide that membership on the resolved path, so an aliased name for a checkout file stays in scope. A file outside that checkout is out of scope: the gate MUST read only its own checkout's configuration and MUST never load configuration from the edited file's location. The gate reads the recorded outcome of a test run, never a claim in a prompt. When a subagent acts, the gate MUST read that subagent's own record rather than the parent session's. One cluster's test run never answers for another's. The gate stays a probabilistic tier above the deterministic gates and never replaces them.
 
 #### Scenario: an implementation edit runs ahead of its test
 
@@ -20,6 +20,11 @@ The pipeline MUST block an implementation edit that no failing test precedes. Th
 - When the gate evaluates an edit a subagent made
 - Then it reads that subagent's own record
 - And a record the harness stops providing falls back to the record the payload names
+
+#### Scenario: an edit names a checkout file through an aliased path
+
+- When a subagent edits a file whose path reaches the session's own checkout through a symlink
+- Then the gate judges it under that checkout's configuration rather than letting it pass unjudged
 
 #### Scenario: an edit lands outside the session's checkout
 

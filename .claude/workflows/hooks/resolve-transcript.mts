@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isProcessEntryPoint } from './entry-point.mjs';
@@ -26,6 +26,8 @@ const GATE_ARGUMENTS: readonly string[] = ['--agent', 'claude-code'];
 const GATE_CONFIGURATION = join(CHECKOUT_ROOT, 'probity.config.ts');
 
 const BLOCKING_EXIT_STATUS = 2;
+
+const ACTION_PATH_PROPERTIES: readonly string[] = ['file_path', 'notebook_path'];
 
 function subagentsDirectory(transcriptPath: string): string {
   return `${transcriptPath.replace(/\.jsonl$/, '')}/subagents`;
@@ -82,14 +84,53 @@ function describeFailure(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function readPayloadObject(raw: string): object {
   const parsed: unknown = JSON.parse(raw);
 
-  if (typeof parsed !== 'object' || parsed === null) {
+  if (!isRecord(parsed)) {
     throw new Error('the payload is not a JSON object');
   }
 
   return parsed;
+}
+
+function physicalPath(path: string): string {
+  const parent = dirname(path);
+
+  if (parent === path) {
+    return path;
+  }
+
+  try {
+    return realpathSync(path);
+  } catch {
+    return join(physicalPath(parent), basename(path));
+  }
+}
+
+function physicalActionPaths(toolInput: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(toolInput).map(([property, value]) => [
+      property,
+      ACTION_PATH_PROPERTIES.includes(property) && typeof value === 'string'
+        ? physicalPath(resolve(CHECKOUT_ROOT, value))
+        : value,
+    ]),
+  );
+}
+
+function withPhysicalActionPaths(payload: object): object {
+  const toolInput = 'tool_input' in payload ? payload.tool_input : undefined;
+
+  if (!isRecord(toolInput)) {
+    return payload;
+  }
+
+  return { ...payload, tool_input: physicalActionPaths(toolInput) };
 }
 
 function readTranscriptPath(payload: object): string {
@@ -137,7 +178,10 @@ function buildGatePayload(): string {
 
     announceMissingSubagentRecord(subagentAwarePayload, transcriptPath);
 
-    return JSON.stringify({ ...payload, transcript_path: transcriptPath });
+    return JSON.stringify({
+      ...withPhysicalActionPaths(payload),
+      transcript_path: transcriptPath,
+    });
   } catch (cause) {
     return blockToolCall(`the PreToolUse payload was unusable: ${describeFailure(cause)}`);
   }

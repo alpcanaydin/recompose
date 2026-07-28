@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { before, describe, it } from 'node:test';
+import { after, before, describe, it } from 'node:test';
 
 import {
   commonGitDirectory,
+  LINT_ERROR_SOURCE,
   outcomeForPath,
   REPOSITORY_ROOT,
   scratchDirectory,
@@ -56,6 +57,17 @@ const SIBLING_WORKTREE = worktreeOfRepository('hook-boundary-worktree-');
 
 const SIBLING_EDITED_FILE = join(SIBLING_WORKTREE, 'sibling-fixture.ts');
 
+const INWARD_ALIAS = join(scratchDirectory('hook-boundary-inward-'), 'inward-alias-fixture.ts');
+
+const INWARD_ALIAS_TARGET = join(REPOSITORY_ROOT, 'hook-boundary-inward-fixture.ts');
+
+const OUTWARD_ALIAS = join(REPOSITORY_ROOT, 'hook-boundary-outward-fixture.ts');
+
+const OUTWARD_ALIAS_TARGET = join(
+  scratchDirectory('hook-boundary-outward-'),
+  'outward-target-fixture.ts',
+);
+
 function plantBinary(checkout: string, binaryName: string, marker: string): void {
   const binDirectory = join(checkout, 'node_modules', '.bin');
 
@@ -94,10 +106,23 @@ function buildSiblingWorktree(): void {
   writeFileSync(SIBLING_EDITED_FILE, LINT_ERROR_SINGLE_QUOTED_SOURCE, 'utf8');
 }
 
+function buildAliasesAcrossTheBoundary(): void {
+  writeFileSync(INWARD_ALIAS_TARGET, LINT_ERROR_SOURCE, 'utf8');
+  symlinkSync(INWARD_ALIAS_TARGET, INWARD_ALIAS);
+  writeFileSync(OUTWARD_ALIAS_TARGET, LINT_ERROR_SOURCE, 'utf8');
+  symlinkSync(OUTWARD_ALIAS_TARGET, OUTWARD_ALIAS);
+}
+
 before(() => {
   buildPlantedCheckout();
   buildDirectoryClaimingThisRepository();
   buildSiblingWorktree();
+  buildAliasesAcrossTheBoundary();
+});
+
+after(() => {
+  rmSync(INWARD_ALIAS_TARGET, { force: true });
+  rmSync(OUTWARD_ALIAS, { force: true });
 });
 
 describe('post-edit format hook: an edit inside a repository that is not this one', () => {
@@ -133,6 +158,21 @@ describe('post-edit format hook: an edit inside a directory claiming this reposi
     outcomeForPath(CLAIMED_EDITED_FILE, REPOSITORY_ROOT);
 
     assert.equal(readFileSync(CLAIMED_EDITED_FILE, 'utf8'), LINT_ERROR_SINGLE_QUOTED_SOURCE);
+  });
+});
+
+describe('post-edit format hook: an edited path outside the checkout that resolves inside it', () => {
+  it('judges it under this checkout own linter and blocks the lint error it carries', () => {
+    const outcome = outcomeForPath(INWARD_ALIAS, REPOSITORY_ROOT);
+
+    assert.equal(outcome.status, 2);
+    assert.match(outcome.stderr, /no-explicit-any/);
+  });
+});
+
+describe('post-edit format hook: an edited path inside the checkout that resolves outside it', () => {
+  it('skips the file rather than judging a path that leaves the checkout', () => {
+    assert.equal(outcomeForPath(OUTWARD_ALIAS, REPOSITORY_ROOT).status, 0);
   });
 });
 
