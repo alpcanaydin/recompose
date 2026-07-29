@@ -21,6 +21,10 @@ pre-commit:
     - name: dead
       priority: 1
       run: pnpm run lint:dead
+    - name: hig
+      priority: 1
+      glob: '*.{ts,tsx,css,html}'
+      run: pnpm run lint:hig
     - name: dup
       priority: 1
       run: pnpm run lint:dup

@@ -77,6 +77,7 @@
 - Tailwind builds the design system; its source of truth is the Claude Design project **"recompose-design-system."**
 - Use the `design-system-patterns` skill for design-system architecture (tokens, variants, component structure).
 - Use the `tailwind-design-system` skill for the Tailwind implementation.
+- For an Apple Human Interface Guidelines (HIG) question that needs judgement rather than a rule, query the `hig` MCP server or read the `macos-design-guidelines` skill, which carries the numbered rules this project cites in review.
 
 ## Frontend (renderer) skills
 

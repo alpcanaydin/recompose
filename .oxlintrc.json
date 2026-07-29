@@ -9,6 +9,10 @@
     {
       "name": "@stylistic",
       "specifier": "@stylistic/eslint-plugin"
+    },
+    {
+      "name": "tailwindcss",
+      "specifier": "oxlint-tailwindcss"
     }
   ],
   "categories": {},
@@ -570,7 +574,28 @@
     "typescript/promise-function-async": "error",
     "typescript/strict-boolean-expressions": "error",
     "typescript/strict-void-return": "error",
-    "typescript/prefer-readonly-parameter-types": "off"
+    "typescript/prefer-readonly-parameter-types": "off",
+    "tailwindcss/no-unknown-classes": "error",
+    "tailwindcss/no-duplicate-classes": "error",
+    "tailwindcss/no-conflicting-classes": "error",
+    "tailwindcss/no-deprecated-classes": "error",
+    "tailwindcss/no-unnecessary-whitespace": "error",
+    "tailwindcss/no-dark-without-light": "error",
+    "tailwindcss/no-contradicting-variants": "error",
+    "tailwindcss/enforce-sort-order": "error",
+    "tailwindcss/enforce-shorthand": "error",
+    "tailwindcss/enforce-canonical": "error",
+    "tailwindcss/no-arbitrary-value": "error",
+    "tailwindcss/no-hardcoded-colors": "error",
+    "tailwindcss/prefer-theme-tokens": "error",
+    "tailwindcss/no-unnecessary-arbitrary-value": "error",
+    "tailwindcss/enforce-consistent-variable-syntax": "error",
+    "tailwindcss/consistent-variant-order": "error",
+    "tailwindcss/enforce-consistent-important-position": "error",
+    "tailwindcss/enforce-consistent-line-wrapping": "error",
+    "tailwindcss/enforce-logical": "error",
+    "tailwindcss/enforce-negative-arbitrary-values": "error",
+    "tailwindcss/max-class-count": "error"
   },
   "options": {
     "typeAware": true,
@@ -600,6 +625,9 @@
     },
     "vitest": {
       "typecheck": true
+    },
+    "tailwindcss": {
+      "entryPoint": "apps/desktop/src/renderer/src/app/styles/main.css"
     }
   },
   "env": {
