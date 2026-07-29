@@ -21,6 +21,7 @@
   --color-line-subtle: light-dark(var(--black-a09), var(--white-a08));
   --color-line-faint: light-dark(var(--black-a06), var(--white-a06));
   --color-line-strong: light-dark(var(--black-a28), var(--white-a13));
+  --color-line-selected: light-dark(var(--black-a56), var(--white-a55));
 
   --color-accent: light-dark(var(--blue-600), var(--blue-500));
   --color-success: light-dark(var(--green-600), var(--green-500));

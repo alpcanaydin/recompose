@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
+import { inSettingsColumn } from '#.storybook/settings-column';
 
 import { FieldRow, Switch } from './index';
 
 const meta = preview.meta({
   component: FieldRow,
   args: { label: 'Launch at login', control: null },
+  decorators: [inSettingsColumn],
 });
 
 function LaunchSwitch({ inert = false }: { inert?: boolean }) {

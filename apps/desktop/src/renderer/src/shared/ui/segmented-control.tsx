@@ -49,7 +49,7 @@ export function SegmentedControl<Value extends string>({
     >
       {options.map((option) => (
         <Radio.Root
-          className="flex h-[18px] cursor-default items-center rounded-chip px-2 text-control text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent data-checked:bg-surface-raised data-checked:font-medium data-checked:shadow-sm"
+          className="flex h-[18px] cursor-default items-center rounded-chip px-2 text-control text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent data-checked:border data-checked:border-line-selected data-checked:bg-surface-raised data-checked:font-medium data-checked:shadow-sm"
           key={option.value}
           value={option.value}
         >

@@ -6,7 +6,8 @@
     "src/renderer/src/**/*.tsx",
     "src/preload/*.d.ts",
     ".storybook/preview.ts",
-    ".storybook/recompose-bridge.tsx"
+    ".storybook/recompose-bridge.tsx",
+    ".storybook/settings-column.tsx"
   ],
   "compilerOptions": {
     "composite": true,

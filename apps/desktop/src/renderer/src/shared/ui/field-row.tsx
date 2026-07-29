@@ -35,9 +35,11 @@ export function FieldRow({
   return (
     <Field.Root className="flex min-h-[44px] items-center justify-between gap-4 py-2">
       <div className="flex flex-col gap-0.5">
-        <Field.Label className="text-body text-ink">{label}</Field.Label>
+        <Field.Label className={inert ? 'text-body text-ink-secondary' : 'text-body text-ink'}>
+          {label}
+        </Field.Label>
         {notes.map((note) => (
-          <Field.Description className="text-caption text-ink" key={note}>
+          <Field.Description className="text-caption text-ink-secondary" key={note}>
             {note}
           </Field.Description>
         ))}

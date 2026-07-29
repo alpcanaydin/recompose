@@ -1,7 +1,7 @@
 import { Field } from '@base-ui/react/field';
 
 type TextFieldProps = {
-  /** Visible label naming the value. */
+  /** Accessible name of the field. Whatever shows it visibly must repeat this string. */
   label: string;
   /** Controlled input value. */
   value: string;
@@ -26,10 +26,10 @@ export function TextField({
   inert = false,
 }: TextFieldProps) {
   return (
-    <Field.Root className="flex flex-col gap-1">
-      <Field.Label className="text-body text-ink">{label}</Field.Label>
+    <Field.Root>
       <Field.Control
         aria-disabled={inert || undefined}
+        aria-label={label}
         className="h-[22px] rounded-control border border-line-strong bg-surface-card px-2 text-control text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent aria-disabled:cursor-not-allowed aria-disabled:border-line-faint aria-disabled:bg-surface-inert"
         onChange={(event) => {
           onChangeValue(event.currentTarget.value);

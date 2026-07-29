@@ -26,9 +26,21 @@ type NumericFieldProps = {
   max: number;
   /** Receives a whole number inside the range, and nothing else. */
   onCommitValue: (value: number) => void;
-  /** Sentence naming the accepted range, read out with the field. */
-  description: string;
+  /** Sentence naming the accepted range, for a field standing on its own. Inside a row, the row states it. */
+  description?: string;
 };
+
+function RangeNote({ id, note }: { id: string; note: string | undefined }) {
+  if (note === undefined) {
+    return null;
+  }
+
+  return (
+    <p className="text-caption text-ink-secondary" id={id}>
+      {note}
+    </p>
+  );
+}
 
 /**
  * Whole-number entry that holds a draft until the person means it.
@@ -65,7 +77,7 @@ export function NumericField({
   return (
     <div className="flex flex-col items-end gap-0.5">
       <Field.Control
-        aria-describedby={descriptionId}
+        aria-describedby={description === undefined ? undefined : descriptionId}
         aria-label={label}
         className="h-[22px] w-[76px] rounded-control border border-line-strong bg-surface-card px-2 text-right text-control text-ink tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
         inputMode="numeric"
@@ -85,9 +97,7 @@ export function NumericField({
         type="text"
         value={draft}
       />
-      <p className="text-caption text-ink" id={descriptionId}>
-        {description}
-      </p>
+      <RangeNote id={descriptionId} note={description} />
     </div>
   );
 }

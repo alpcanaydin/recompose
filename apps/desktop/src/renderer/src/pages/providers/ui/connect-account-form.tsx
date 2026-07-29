@@ -7,12 +7,24 @@ import { TextField } from '../../../shared/ui/text-field';
 import { useConnectAccount } from '../api/accounts';
 import { AccountKindField } from './account-kind-field';
 
-const emptyDraft: IpcRequest<'accounts:connect'> = {
+type Draft = IpcRequest<'accounts:connect'>;
+
+const emptyDraft: Draft = {
   provider: '',
   kind: 'api-key',
   label: '',
   secret: '',
 };
+
+const textEntries = [
+  { field: 'provider', label: 'Provider', type: 'text' },
+  { field: 'label', label: 'Label', type: 'text' },
+  { field: 'secret', label: 'Secret', type: 'password' },
+] as const satisfies readonly {
+  field: keyof Omit<Draft, 'kind'>;
+  label: string;
+  type: 'password' | 'text';
+}[];
 
 /** Form for connecting a new provider account. */
 export function ConnectAccountForm() {
@@ -30,34 +42,25 @@ export function ConnectAccountForm() {
 
   return (
     <>
-      <form onSubmit={handleSubmit}>
-        <TextField
-          label="Provider"
-          value={draft.provider}
-          onChangeValue={(provider) => {
-            setDraft({ ...draft, provider });
-          }}
-        />
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        {textEntries.map(({ field, label, type }) => (
+          <div className="flex flex-col gap-1" key={field}>
+            <span className="text-body text-ink">{label}</span>
+            <TextField
+              label={label}
+              onChangeValue={(next) => {
+                setDraft({ ...draft, [field]: next });
+              }}
+              type={type}
+              value={draft[field]}
+            />
+          </div>
+        ))}
         <AccountKindField
-          value={draft.kind}
           onChangeValue={(kind) => {
             setDraft({ ...draft, kind });
           }}
-        />
-        <TextField
-          label="Label"
-          value={draft.label}
-          onChangeValue={(label) => {
-            setDraft({ ...draft, label });
-          }}
-        />
-        <TextField
-          label="Secret"
-          type="password"
-          value={draft.secret}
-          onChangeValue={(secret) => {
-            setDraft({ ...draft, secret });
-          }}
+          value={draft.kind}
         />
         <button type="submit">Connect</button>
       </form>

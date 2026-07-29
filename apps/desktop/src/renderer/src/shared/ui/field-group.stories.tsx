@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
+import { inSettingsColumn } from '#.storybook/settings-column';
 
 import { FieldGroup, FieldRow, NumericField, SegmentedControl, Switch, TextField } from './index';
 
@@ -14,6 +15,7 @@ const retentionOptions = [
 const meta = preview.meta({
   component: FieldGroup,
   args: { heading: 'General', children: null },
+  decorators: [inSettingsColumn],
 });
 
 function GeneralRows() {
@@ -71,15 +73,9 @@ function ServerRows() {
     <>
       <FieldRow
         control={
-          <NumericField
-            description="Accepts 1024 to 65535."
-            label="Port"
-            max={65535}
-            min={1024}
-            onCommitValue={setPort}
-            value={port}
-          />
+          <NumericField label="Port" max={65535} min={1024} onCommitValue={setPort} value={port} />
         }
+        description="Accepts 1024 to 65535."
         label="Port"
       />
       <FieldRow
