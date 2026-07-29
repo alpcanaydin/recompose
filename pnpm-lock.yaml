@@ -243,6 +243,12 @@ importers:
       dependency-cruiser:
         specifier: 18.1.0
         version: 18.1.0
+      hig-doctor:
+        specifier: 2.0.0
+        version: 2.0.0
+      hig-mcp:
+        specifier: 0.2.0
+        version: 0.2.0
       jscpd:
         specifier: 5.0.12
         version: 5.0.12
@@ -261,6 +267,9 @@ importers:
       oxlint-plugin-react-doctor:
         specifier: 0.8.3
         version: 0.8.3
+      oxlint-tailwindcss:
+        specifier: 1.5.0
+        version: 1.5.0
       oxlint-tsgolint:
         specifier: 7.0.2001
         version: 7.0.2001
@@ -4873,6 +4882,16 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
+  hig-doctor@2.0.0:
+    resolution: {integrity: sha512-rxMLTXSwaSbmx2nBG68dEWkH8CMqgdW+QKL0dKI3UAB9/m7oaQvU+isaxKdI4FlUszhNPTLr3cw8gAvrA6vKPw==}
+    engines: {node: 24.x}
+    hasBin: true
+
+  hig-mcp@0.2.0:
+    resolution: {integrity: sha512-qfQP3sj/iWHi9z6kidCVHfhBMG2HJScnv4/qz/oqXuN0AkGN5d5FtkKOXV6wnL4rdl3H1pJnmMSvHetaiW3roQ==}
+    engines: {node: 24.x}
+    hasBin: true
+
   hono@4.12.32:
     resolution: {integrity: sha512-XcuyW9qE2kJn07PkecMOBd5Vq/hMy7mmGw+idz1yblbg9N17ijJODrvPkn7/dwL3Kulj8LcRJ69DLOWf91dRUg==}
     engines: {node: '>=16.9.0'}
@@ -5642,6 +5661,10 @@ packages:
   oxlint-plugin-react-doctor@0.8.3:
     resolution: {integrity: sha512-S1Gq1H9+BpziApWcZ/sWPNYYy1FMkFmtSEGiqIJ4/Aac76LfkeutPFtSRlkJF1JlcrbYFf7LXcfcxZCJgmVBBQ==}
     engines: {node: ^20.19.0 || >=22.13.0}
+
+  oxlint-tailwindcss@1.5.0:
+    resolution: {integrity: sha512-9stYREwBG8YP5zFoqGWmZlORVHkips9R65kFnoqbNPPlVUGtxsUyoKSZ2TDgZ3zq8KJXDlOQRTAmpSpdqLDMvg==}
+    engines: {node: '>=20'}
 
   oxlint-tsgolint@7.0.2001:
     resolution: {integrity: sha512-KjK/XLcXr1DSyonKhsuFqJRiuKqcyG9j3LJ8nkOsrLzGvodBPqzHOKauy10asLMDI0sUpvb+1sxlzff3udZvfg==}
@@ -10642,7 +10665,7 @@ snapshots:
       once: 1.4.0
       parseurl: 1.3.3
       proxy-addr: 2.0.7
-      qs: 6.15.1
+      qs: 6.15.3
       range-parser: 1.3.0
       router: 2.2.0(supports-color@7.2.0)
       send: 1.2.1(supports-color@7.2.0)
@@ -10938,6 +10961,14 @@ snapshots:
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
+
+  hig-doctor@2.0.0:
+    optionalDependencies:
+      typescript: 5.9.3
+
+  hig-mcp@0.2.0:
+    optionalDependencies:
+      typescript: 5.9.3
 
   hono@4.12.32: {}
 
@@ -11664,6 +11695,11 @@ snapshots:
       eslint-scope: 9.1.2
       eslint-visitor-keys: 5.0.1
       oxc-parser: 0.138.0
+
+  oxlint-tailwindcss@1.5.0:
+    dependencies:
+      '@tailwindcss/node': 4.3.3
+      tailwindcss: 4.3.3
 
   oxlint-tsgolint@7.0.2001:
     optionalDependencies:

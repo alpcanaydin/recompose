@@ -78,6 +78,7 @@ jobs:
       - run: pnpm run lint:boundaries
       - run: pnpm run lint:fsd
       - run: pnpm run lint:dead
+      - run: pnpm run lint:hig
       - run: pnpm run lint:openspec
       - run: pnpm run lint:dup
       - run: pnpm run lint:spell
