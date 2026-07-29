@@ -78,6 +78,8 @@ export const test = base.extend<ElectronFixtures>({
   page: async ({ electronApp }, use) => {
     const page = await electronApp.firstWindow();
 
+    await page.emulateMedia({ colorScheme: null });
+
     await page.waitForLoadState('domcontentloaded');
     await use(page);
   },

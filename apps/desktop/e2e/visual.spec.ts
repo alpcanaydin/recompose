@@ -1,8 +1,14 @@
-import type { Page } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect } from '@playwright/test';
 
 import { test } from './fixtures';
+
+async function pinLightScheme(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ nativeTheme }) => {
+    nativeTheme.themeSource = 'light';
+  });
+}
 
 async function settleFonts(page: Page): Promise<void> {
   await page.evaluate(async () => {
@@ -20,20 +26,29 @@ async function openSettings(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 }
 
-test('the home screen matches its baseline', async ({ page }) => {
+test('the home screen matches its baseline', async ({ electronApp, page }) => {
+  await pinLightScheme(electronApp);
   await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
   await settleFonts(page);
   await expect(page).toHaveScreenshot('home-empty.png');
 });
 
-test('the providers screen matches its baseline before any account exists', async ({ page }) => {
+test('the providers screen matches its baseline before any account exists', async ({
+  electronApp,
+  page,
+}) => {
+  await pinLightScheme(electronApp);
   await openProviders(page);
   await expect(page.getByRole('listitem')).toHaveCount(0);
   await settleFonts(page);
   await expect(page).toHaveScreenshot('providers-empty.png');
 });
 
-test('the providers screen matches its baseline with a connected account', async ({ page }) => {
+test('the providers screen matches its baseline with a connected account', async ({
+  electronApp,
+  page,
+}) => {
+  await pinLightScheme(electronApp);
   await openProviders(page);
   await page.getByRole('textbox', { name: 'Provider' }).fill('anthropic');
   await page.getByRole('combobox', { name: 'Kind' }).selectOption('api-key');
@@ -45,7 +60,8 @@ test('the providers screen matches its baseline with a connected account', async
   await expect(page).toHaveScreenshot('providers-connected.png');
 });
 
-test('the settings screen matches its baseline', async ({ page }) => {
+test('the settings screen matches its baseline', async ({ electronApp, page }) => {
+  await pinLightScheme(electronApp);
   await openSettings(page);
   await settleFonts(page);
   await expect(page).toHaveScreenshot('settings.png');
