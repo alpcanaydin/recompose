@@ -341,11 +341,19 @@ jobs:
       - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .status+" "+.filename' > files.txt
           labels=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '[.labels[].name] | join(" ")')
@@ -353,8 +361,6 @@ jobs:
           pr_type=$(printf '%s' "$PR_TITLE" | sed -E 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/')
           src_changed=$(awk '{print $2}' files.txt | grep -E '^(apps|packages)/[^/]+/src/.*\.(ts|tsx)$' | grep -vE '\.(test|test-d)\.(ts|tsx)$' | head -1 || true)
           tests_changed=$(awk '{print $2}' files.txt | grep -E '\.(test|test-d|stories)\.(ts|tsx)$' | head -1 || true)
-          new_ui_components=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^apps/desktop/src/renderer/src/.*/ui/[^/]+\.tsx$' | grep -vE '\.(test|stories)\.tsx$' || true)
-          all_files=$(grep -v '^removed ' files.txt | awk '{print $2}')
           fail=0
           case "$pr_type" in
             feat|fix|perf)
@@ -367,18 +373,11 @@ jobs:
                 fi
               fi ;;
           esac
-          missing_stories=""
-          for component in $new_ui_components; do
-            sibling="${component%.tsx}.stories.tsx"
-            if ! printf '%s\n' "$all_files" | grep -qxF "$sibling"; then
-              missing_stories="$missing_stories $component"
-            fi
-          done
-          if [ -n "$missing_stories" ]; then
+          if ! node .claude/workflows/check-stories/check-stories.mts "$BASE_SHA" > stories.txt 2>&1; then
             if printf '%s' "$labels" | grep -qw 'stories-exempt' && printf '%s' "$body" | grep -q 'Stories-exempt:'; then
               echo "::notice::stories-exempt accepted; the weekly exemption audit lists this PR"
             else
-              echo "::error::new renderer ui component(s) landed without a sibling story:${missing_stories}. Every ui component ships a *.stories.tsx sibling. Escape: add the stories-exempt label plus a 'Stories-exempt: <reason>' line in the PR body."
+              echo "::error::$(cat stories.txt)"
               fail=1
             fi
           fi

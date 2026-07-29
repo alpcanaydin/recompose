@@ -6,6 +6,8 @@
     "**/.features-gen/**",
     "**/reports/**",
     "**/test-results/**",
-    "**/playwright-report/**"
+    "**/playwright-report/**",
+    "**/storybook-static/**",
+    "**/.turbo/**"
   ]
 }

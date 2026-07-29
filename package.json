@@ -26,6 +26,7 @@
     "lint:prose": "mise exec -- vale .",
     "lint:openspec": "openspec validate --all --strict --no-interactive",
     "lint:spell": "cspell --no-progress \"**\"",
+    "lint:stories": "node .claude/workflows/check-stories/check-stories.mts",
     "lint:fsd": "steiger apps/desktop/src/renderer/src --fail-on-warnings",
     "lint:hig": "hig-doctor apps --config hig-doctor.config.json --fail-on moderate",
     "lint:licenses": "node .claude/workflows/check-licenses/check-licenses.mts",

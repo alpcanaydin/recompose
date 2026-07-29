@@ -9,7 +9,8 @@ description: Conventions for writing recompose Storybook stories. Use when creat
 
 - A story lives next to its component: `<component>.stories.tsx` inside the owning slice's `ui/` segment.
 - Import other slices only through their public `index.ts`. Steiger enforces this in stories too.
-- The pull-request meta-gate fails a new `ui/` component without a story. Escape: `stories-exempt` label plus a `Stories-exempt: <reason>` body line.
+- **A new `ui/` component and its story land in the same commit.** Writing the component without the story is the mistake this rule exists to stop, and it stays cheap only while both files are still open.
+- Two gates enforce it. `pnpm run lint:stories` runs on `pre-push` and names each component missing its sibling, so the branch never reaches a pull request with the gap. The pull-request meta-gate runs the same script against the pull request's base. Escape: `stories-exempt` label plus a `Stories-exempt: <reason>` body line, and the escape only exists on the pull request.
 
 ## Format
 

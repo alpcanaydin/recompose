@@ -50,6 +50,11 @@ pre-commit:
       priority: 3
       run: pnpm run typecheck
 
+pre-push:
+  jobs:
+    - name: stories
+      run: pnpm run lint:stories
+
 commit-msg:
   jobs:
     - name: commitlint
