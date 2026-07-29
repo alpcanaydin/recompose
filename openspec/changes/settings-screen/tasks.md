@@ -92,7 +92,7 @@ This lands alone and first inside the end-to-end tree, because every unit in the
 
 - [x] **Step 1: A navigation step reaches the settings screen,** as the sibling of the two that already exist.
 - [x] **Step 2: The fixture restores what it changed,** so an acceptance run never leaves a login item behind on a runner or a developer machine.
-- [ ] **Step 3: Visual baselines on all three platforms.** The home and providers baselines move too, because the sidebar gains a group and the text field changes its markup.
+- [x] **Step 3: Visual baselines on all three platforms.** The home and providers baselines move too, because the sidebar gains a group and the text field changes its markup.
 
 ## The step-definition fan-out
 
