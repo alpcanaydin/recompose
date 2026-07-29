@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -72,7 +72,9 @@ export const ArrowKeysSelect = meta.story({
     system.focus();
     await userEvent.keyboard('{ArrowRight}');
 
-    await expect(light).toHaveFocus();
+    await waitFor(async () => {
+      await expect(light).toHaveFocus();
+    });
     await expect(light).toHaveAttribute('aria-checked', 'true');
     await expect(await canvas.findByText('stored: light')).toBeInTheDocument();
   },

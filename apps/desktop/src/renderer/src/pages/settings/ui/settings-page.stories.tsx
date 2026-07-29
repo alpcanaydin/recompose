@@ -55,7 +55,11 @@ export const WithTokenRequired = meta.story({
 export const OpenedByShortcut = meta.story({
   args: { focus: 'first-control' },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('switch', { name: 'Launch at login' })).toHaveFocus();
+    const placed = await canvas.findByRole('switch', { name: 'Launch at login' });
+
+    await waitFor(async () => {
+      await expect(placed).toHaveFocus();
+    });
   },
 });
 

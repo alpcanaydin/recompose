@@ -1,4 +1,4 @@
-import { expect, fn } from 'storybook/test';
+import { expect, fn, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { inSettingsColumn } from '#.storybook/settings-column';
@@ -14,7 +14,11 @@ const meta = preview.meta({
 /** The safe choice takes focus as the confirmation opens, so a stray Return cancels. */
 export const Open = meta.story({
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('button', { name: 'Cancel' })).toHaveFocus();
+    const placed = await canvas.findByRole('button', { name: 'Cancel' });
+
+    await waitFor(async () => {
+      await expect(placed).toHaveFocus();
+    });
     await expect(await canvas.findByRole('button', { name: 'Regenerate' })).toBeVisible();
   },
 });

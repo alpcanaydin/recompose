@@ -1,6 +1,6 @@
 import type { GatewayTokenStatus } from '@recompose/contracts';
 
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { inFieldGroup, inSettingsColumn } from '#.storybook/settings-column';
@@ -58,7 +58,11 @@ export const ConfirmingRegeneration = meta.story({
     await userEvent.click(await canvas.findByRole('button', { name: 'Regenerate' }));
 
     await expect(await canvas.findByRole('alert')).toHaveTextContent(/stop connecting/i);
-    await expect(await canvas.findByRole('button', { name: 'Cancel' })).toHaveFocus();
+    const safeChoice = await canvas.findByRole('button', { name: 'Cancel' });
+
+    await waitFor(async () => {
+      await expect(safeChoice).toHaveFocus();
+    });
 
     await userEvent.keyboard('{Escape}');
 
@@ -83,6 +87,10 @@ export const DarkScheme = meta.story({
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Regenerate' }));
 
-    await expect(await canvas.findByRole('button', { name: 'Cancel' })).toHaveFocus();
+    const safeChoice = await canvas.findByRole('button', { name: 'Cancel' });
+
+    await waitFor(async () => {
+      await expect(safeChoice).toHaveFocus();
+    });
   },
 });
