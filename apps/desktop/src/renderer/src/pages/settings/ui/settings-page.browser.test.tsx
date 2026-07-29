@@ -94,7 +94,7 @@ test('the telemetry row states a value rather than offering a control', async ()
 test('switching the theme to dark stores the new document', async () => {
   const screen = await renderSettings();
 
-  await screen.getByRole('radiogroup', { name: 'Theme' }).getByText('Dark').click();
+  await screen.getByRole('radio', { name: 'Dark' }).click();
 
   await expect.poll(async () => (await storedSettings()).theme).toBe('dark');
 });
@@ -110,19 +110,19 @@ test('a rejected write returns the theme to the stored value and states what wen
     },
   });
 
-  const theme = screen.getByRole('radiogroup', { name: 'Theme' });
-
-  await theme.getByText('Dark').click();
+  await screen.getByRole('radio', { name: 'Dark' }).click();
 
   await expect.element(screen.getByRole('alert')).toBeVisible();
-  await expect.element(theme.getByText('System')).toHaveAttribute('aria-checked', 'true');
+  await expect
+    .element(screen.getByRole('radio', { name: 'System' }))
+    .toHaveAttribute('aria-checked', 'true');
   expect((await storedSettings()).theme).toBe('system');
 });
 
 test('two changes in quick succession both survive', async () => {
   const screen = await renderSettings();
 
-  await screen.getByRole('radiogroup', { name: 'Theme' }).getByText('Dark').click();
+  await screen.getByRole('radio', { name: 'Dark' }).click();
   await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
   await screen.getByRole('heading', { name: 'Settings' }).click();
 
@@ -138,7 +138,7 @@ test('two changes in quick succession both survive', async () => {
 test('a change leaves the maintainer on the control they used', async () => {
   const screen = await renderSettings();
 
-  await screen.getByRole('radiogroup', { name: 'Theme' }).getByText('Dark').click();
+  await screen.getByRole('radio', { name: 'Dark' }).click();
 
   await expect.poll(async () => (await storedSettings()).theme).toBe('dark');
   expect(document.activeElement?.textContent).toBe('Dark');

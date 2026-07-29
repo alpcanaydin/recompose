@@ -1,5 +1,6 @@
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup } from '@base-ui/react/radio-group';
+import { useId } from 'react';
 
 type SegmentedControlOption<Value extends string> = {
   /** Value committed when this segment wins. */
@@ -33,6 +34,8 @@ export function SegmentedControl<Value extends string>({
   onChangeValue,
   inert = false,
 }: SegmentedControlProps<Value>) {
+  const segmentId = useId();
+
   return (
     <RadioGroup
       aria-disabled={inert || undefined}
@@ -49,11 +52,12 @@ export function SegmentedControl<Value extends string>({
     >
       {options.map((option) => (
         <Radio.Root
+          aria-labelledby={`${segmentId}-${option.value}`}
           className="flex h-chip cursor-default items-center rounded-chip px-2 text-control text-ink focus-ring data-checked:chip-selected"
           key={option.value}
           value={option.value}
         >
-          {option.label}
+          <span id={`${segmentId}-${option.value}`}>{option.label}</span>
         </Radio.Root>
       ))}
     </RadioGroup>

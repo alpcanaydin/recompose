@@ -94,7 +94,7 @@
   height: var(--spacing-control);
   width: var(--spacing-track);
   flex-shrink: 0;
-  border: 1px solid var(--color-line-subtle);
+  border: 1px solid var(--color-line-selected);
   border-radius: var(--radius-pill);
   background-color: var(--color-line-strong);
   padding: var(--spacing-hairline);

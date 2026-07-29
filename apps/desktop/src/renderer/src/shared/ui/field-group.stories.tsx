@@ -119,5 +119,6 @@ export const WithEveryControl = meta.story({
     await expect(bindAddress).toHaveAttribute('aria-disabled', 'true');
     await expect(retention).toHaveAttribute('aria-disabled', 'true');
     await expect(canvas.getByRole('textbox', { name: 'Port' })).toHaveValue('8397');
+    await expect(canvas.getByRole('radio', { name: '30 days' })).toBeInTheDocument();
   },
 });

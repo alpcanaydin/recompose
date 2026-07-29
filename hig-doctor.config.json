@@ -1,0 +1,3 @@
+{
+  "ignore": ["**/out/**", "**/dist/**", "**/coverage/**", "**/.features-gen/**"]
+}
