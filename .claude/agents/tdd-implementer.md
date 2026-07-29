@@ -6,6 +6,8 @@ skills:
   - vitest
   - javascript-testing-patterns
   - feature-sliced-design
+  - playwright-best-practices
+  - gherkin-best-practices
 isolation: worktree
 ---
 
