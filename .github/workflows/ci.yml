@@ -348,12 +348,19 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
+      - name: Check every new component for its story, with no token in reach
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set +e
+          node .claude/workflows/check-stories/check-stories.mts "$BASE_SHA" > stories.txt 2>&1
+          echo "$?" > stories.exit
+          cat stories.txt
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .status+" "+.filename' > files.txt
           labels=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '[.labels[].name] | join(" ")')
@@ -373,13 +380,17 @@ jobs:
                 fi
               fi ;;
           esac
-          if ! node .claude/workflows/check-stories/check-stories.mts "$BASE_SHA" > stories.txt 2>&1; then
+          stories_exit=$(cat stories.exit)
+          if [ "$stories_exit" = "3" ]; then
             if printf '%s' "$labels" | grep -qw 'stories-exempt' && printf '%s' "$body" | grep -q 'Stories-exempt:'; then
               echo "::notice::stories-exempt accepted; the weekly exemption audit lists this PR"
             else
               echo "::error::$(cat stories.txt)"
               fail=1
             fi
+          elif [ "$stories_exit" != "0" ]; then
+            echo "::error::the stories checker itself failed with exit $stories_exit, which no exemption covers: $(cat stories.txt)"
+            fail=1
           fi
           adr_trigger=$(awk '{print $2}' files.txt | grep -E '^(\.github/workflows/|turbo\.json$|tsconfig[^/]*\.json$|\.oxlintrc\.json$|lefthook\.yml$|\.dependency-cruiser\.cjs$|knip\.json$|codecov\.yml$|\.vale\.ini$|\.jscpd\.json$|mise\.toml$|pnpm-workspace\.yaml$|steiger\.config)' | head -1 || true)
           new_pkg=$(grep '^added ' files.txt | awk '{print $2}' | grep -E '^(apps|packages)/[^/]+/package\.json$' | head -1 || true)

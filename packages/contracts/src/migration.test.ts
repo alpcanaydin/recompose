@@ -111,20 +111,35 @@ describe('migration step progress', () => {
   const anyVersion = fc.integer({ min: 1, max: 6 });
 
   test.prop([anyVersion, anyVersion])(
-    'a step carries the chain forward only when it raises the version',
+    'a step carries the chain forward only when it raises the version without passing the target',
     (fromVersion, producedVersion) => {
+      const target = fromVersion + 1;
       const migrate = () =>
         migrateDocument(
           { schemaVersion: fromVersion },
           [stepProducing(fromVersion, producedVersion)],
-          fromVersion + 1,
+          target,
         );
 
-      if (producedVersion > fromVersion) {
-        expect(migrate()).toEqual({ schemaVersion: producedVersion });
-      } else {
+      if (producedVersion <= fromVersion) {
         expect(migrate).toThrow(/did not advance the document/);
+
+        return;
       }
+
+      if (producedVersion > target) {
+        expect(migrate).toThrow(/overshot the supported schemaVersion/);
+
+        return;
+      }
+
+      expect(migrate()).toEqual({ schemaVersion: producedVersion });
     },
   );
+
+  test('a step that jumps past the supported version is refused', () => {
+    expect(() => migrateDocument({ schemaVersion: 1 }, [stepProducing(1, 5)], 2)).toThrow(
+      'migration from schemaVersion 1 overshot the supported schemaVersion 2, landing at 5',
+    );
+  });
 });

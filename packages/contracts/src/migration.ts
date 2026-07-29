@@ -25,6 +25,22 @@ function readSchemaVersion(doc: unknown): number {
   return version;
 }
 
+function versionAfter(version: number, nextVersion: number, currentVersion: number): number {
+  if (nextVersion <= version) {
+    throw new Error(
+      `migration from schemaVersion ${version} did not advance the document, which came back at schemaVersion ${nextVersion}`,
+    );
+  }
+
+  if (nextVersion > currentVersion) {
+    throw new Error(
+      `migration from schemaVersion ${version} overshot the supported schemaVersion ${currentVersion}, landing at ${nextVersion}`,
+    );
+  }
+
+  return nextVersion;
+}
+
 export function migrateDocument(
   doc: unknown,
   migrations: readonly Migration[],
@@ -52,15 +68,7 @@ export function migrateDocument(
 
     migrated = step.migrate(migrated);
 
-    const nextVersion = readSchemaVersion(migrated);
-
-    if (nextVersion <= version) {
-      throw new Error(
-        `migration from schemaVersion ${version} did not advance the document, which came back at schemaVersion ${nextVersion}`,
-      );
-    }
-
-    version = nextVersion;
+    version = versionAfter(version, readSchemaVersion(migrated), currentVersion);
   }
 
   return migrated;

@@ -28,6 +28,7 @@ export const UnpackagedBuild = meta.story({
       'aria-disabled',
       'true',
     );
+    await expect(await canvas.findByText(/development build/iu)).toBeVisible();
   },
 });
 

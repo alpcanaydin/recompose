@@ -18,6 +18,7 @@ export const Basic = meta.story({
       'aria-disabled',
       'true',
     );
+    await expect(await canvas.findByText('Waiting on the canvas.')).toBeVisible();
   },
 });
 

@@ -30,5 +30,6 @@
     ".git",
     "cspell-words.txt"
   ],
-  "useGitignore": true
+  "useGitignore": true,
+  "words": ["elif"]
 }

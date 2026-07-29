@@ -24,6 +24,8 @@ function storylessComponents(base: string): readonly string[] {
   return addedFilesSince(base).filter(lacksStory);
 }
 
+const missingStories = 3;
+
 const base = process.argv[2] ?? 'origin/main';
 const storyless = storylessComponents(base);
 
@@ -35,7 +37,7 @@ if (storyless.length > 0) {
         '\n',
       )}\n\nWrite the story, or take the pull-request escape: the stories-exempt label plus a 'Stories-exempt: <reason>' line in the body.`,
   );
-  process.exit(1);
+  process.exit(missingStories);
 }
 
 console.log(`every renderer ui component added since ${base} ships a stories sibling`);
