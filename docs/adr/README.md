@@ -49,3 +49,7 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0041](0041-discovery-workflow-and-citation-validator.md)      | The Discovery Workflow and the Citation Validator                                   | Accepted | 2026-07-28 |
 | [0042](0042-no-worktree-setup-script.md)                       | Worktree Seeding Stays with the Toolchain                                           | Accepted | 2026-07-28 |
 | [0043](0043-hig-audit-and-tailwind-rules.md)                   | Three Layers for Apple Interface Conformance                                        | Accepted | 2026-07-29 |
+| [0044](0044-base-ui-shared-component-base.md)                  | Base UI as the Base of the Shared Kit                                               | Accepted | 2026-07-29 |
+| [0045](0045-launch-at-login-absent-on-linux.md)                | Launch at Login Never Renders on Linux                                              | Accepted | 2026-07-29 |
+| [0046](0046-open-config-folder-over-reveal.md)                 | The Config Folder Opens Through shell.openPath                                      | Accepted | 2026-07-29 |
+| [0047](0047-gateway-token-vault-and-clipboard.md)              | The Gateway Token Lives in the Vault and Copies Through Main                        | Accepted | 2026-07-29 |
