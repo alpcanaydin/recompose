@@ -3,6 +3,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { FieldGroup, FieldRow, SegmentedControl } from '../../../shared/ui';
 import { systemQueryOptions, useOpenConfigFolder } from '../api/system';
 import { logRetentionChoices } from '../lib/choices';
+import { homeRelative } from '../lib/home-relative';
 import { revealLabelFor } from '../lib/row-state';
 import { RowAction } from './row-action';
 
@@ -23,7 +24,7 @@ export function DataSection() {
             {revealLabelFor(system.fileBrowser)}
           </RowAction>
         }
-        description={system.configFolder}
+        description={homeRelative(system.configFolder)}
         label="Config folder"
         {...(openConfigFolder.isError ? { status: 'The folder did not open.' } : {})}
       />

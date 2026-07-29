@@ -44,10 +44,10 @@ async function renderSettings(parameters: BridgeParameters = {}) {
   );
 }
 
-test('the config folder row names the folder that holds the settings document', async () => {
+test('the config folder row names the folder without the account name in it', async () => {
   const screen = await renderSettings();
 
-  await expect.element(screen.getByText(configFolder)).toBeVisible();
+  await expect.element(screen.getByText('~/Library/Application Support/recompose')).toBeVisible();
 });
 
 test('the reveal action names Finder where the platform ships Finder', async () => {
