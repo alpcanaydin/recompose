@@ -40,6 +40,8 @@ On the `standard` tier the solution-design template keeps every always-on sectio
 
 ## Change hygiene
 
+The job opens in a worktree at `.claude/worktrees/<slug>`, on the branch that `manifest.md` records. That path isn't a preference. `EnterWorktree` refuses to switch into a worktree outside `.claude/worktrees/`, so a worktree beside the repository strands every subagent that needs to reach it, and it reads as a second project to anyone browsing.
+
 Scaffold with `openspec new change <slug>`. The recompose schema seeds the proposal, specs, design, tasks, discovery, manifest, and gherkin slots.
 
 Never commit an empty scaffold. The first commit creates the change and carries a real spec delta in the same commit, so history never records a hollow directory that a later commit backfills.

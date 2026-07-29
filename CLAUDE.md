@@ -10,6 +10,7 @@
 
 - `main` stays protected. Never commit to it, locally or remotely.
 - Every job (feature, fix, docs, config, skills) gets its own worktree and branch, and lands through a PR. One job = one branch.
+- **Worktrees live at `.claude/worktrees/<name>`, never beside the repository.** A sibling directory reads as a second project to anyone browsing, and `EnterWorktree` refuses to switch into a path outside that directory, which strands a subagent that needs to reach it. The repository's own tooling already assumes the convention: `.vale.ini` and `cspell.json` both exclude `.claude/worktrees`.
 
 ## CodeRabbit reviews
 

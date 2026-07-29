@@ -13,7 +13,7 @@ Implementation wraps the `superpowers:subagent-driven-development` executor and 
 
 - **Contracts cluster first, alone.** The shared contract files are single collision points, so `cluster 0` lands the contracts and merges by itself before any parallel work starts.
 - **Disjoint ownership only.** Two clusters run in parallel only when their file ownership does not overlap. Overlapping ownership serializes.
-- **Staggered worktrees.** Each parallel cluster runs in its own worktree, created with a stagger to dodge the documented `git worktree add` race. A fresh worktree needs no seeding step: the first `pnpm` command installs what the tree lacks, and the pre-commit prose job syncs its own styles when they are missing. Both were measured on a bare worktree, where the gate suite ran and blocked a bad commit without any manual setup.
+- **Staggered worktrees.** Each parallel cluster runs in its own worktree under `.claude/worktrees/`, created with a stagger to dodge the documented `git worktree add` race. Never place one beside the repository: `EnterWorktree` refuses to switch into a path outside that directory, so a subagent that needs to reach it can't. A fresh worktree needs no seeding step: the first `pnpm` command installs what the tree lacks, and the pre-commit prose job syncs its own styles when they are missing. Both were measured on a bare worktree, where the gate suite ran and blocked a bad commit without any manual setup.
 
 Every cluster runs a `tdd-implementer` subagent, one per cluster, one worktree each.
 
