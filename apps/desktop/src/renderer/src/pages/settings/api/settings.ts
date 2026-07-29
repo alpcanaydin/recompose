@@ -3,7 +3,6 @@ import type { Settings } from '@recompose/contracts';
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { unwrapIpcResult } from '../../../shared/api';
-import { gatewayTokenQueryOptions } from './gateway-token';
 import { systemQueryOptions } from './system';
 
 type SettingsPatch = Partial<Omit<Settings, 'schemaVersion'>>;
@@ -46,7 +45,6 @@ export function useSettingsWriter(): SettingsWriter {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: settingsQueryOptions.queryKey }),
         queryClient.invalidateQueries({ queryKey: systemQueryOptions.queryKey }),
-        queryClient.invalidateQueries({ queryKey: gatewayTokenQueryOptions.queryKey }),
       ]);
     },
   });

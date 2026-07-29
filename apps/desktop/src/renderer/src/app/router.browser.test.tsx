@@ -146,8 +146,8 @@ test('the /settings route loader warms the settings, system, and token caches be
     fileBrowser: 'finder',
   });
   expect(queryClient.getQueryData(gatewayTokenQueryOptions.queryKey)).toEqual({
-    masked: null,
-    storage: 'available',
+    ok: true,
+    value: { masked: null, storage: 'available' },
   });
 });
 

@@ -161,3 +161,22 @@ test('a copy the vault refuses states why, rather than reading as copied', async
 
   await expect.element(screen.getByText('The value could not be copied.')).toBeVisible();
 });
+
+test('a credential store that cannot be read leaves the rest of the screen reachable', async () => {
+  const screen = await renderSettings({
+    overrides: {
+      'gateway-token:status': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'the vault could not be decrypted' },
+        }),
+    },
+  });
+
+  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect.element(screen.getByRole('radio', { name: 'Dark' })).toBeVisible();
+  await expect.element(screen.getByText(/credential store could not be read/u)).toBeVisible();
+  await expect
+    .element(screen.getByRole('switch', { name: 'Require API token' }))
+    .toHaveAttribute('aria-disabled', 'true');
+});

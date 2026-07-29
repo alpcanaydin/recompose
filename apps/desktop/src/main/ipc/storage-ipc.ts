@@ -16,6 +16,7 @@ import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { loadSettingsFile, saveSettingsFile } from '../storage/settings-store';
 import { deleteSecret, getSecret, saveVaultFile, setSecret } from '../storage/vault';
+import { inVaultOrder } from '../storage/vault-order';
 import { ipcFailure, openVault, storageFailure } from './storage-envelope';
 
 export type StorageIpcContext = {
@@ -85,17 +86,19 @@ async function saveSettings(
   paths: StoragePaths,
   settings: IpcRequest<'settings:save'>,
 ) {
+  let stored;
+
   try {
     await saveSettingsFile(paths.settingsFile, settings);
 
-    const stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
-
-    ctx.applySettings(stored);
-
-    return { ok: true as const, value: stored };
+    stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
   } catch (error) {
     return storageFailure(error);
   }
+
+  ctx.applySettings(stored);
+
+  return { ok: true as const, value: stored };
 }
 
 async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
@@ -284,10 +287,13 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHand
     'settings:get': async () => getSettings(ctx, paths),
     'settings:save': async (settings) => saveSettings(ctx, paths, settings),
     'accounts:list': async () => listAccounts(ctx, paths),
-    'accounts:connect': async (request) => connectAccount(ctx, paths, request),
-    'accounts:remove': async (request) => removeAccount(ctx, paths, request),
+    'accounts:connect': async (request) =>
+      inVaultOrder(async () => connectAccount(ctx, paths, request)),
+    'accounts:remove': async (request) =>
+      inVaultOrder(async () => removeAccount(ctx, paths, request)),
     'gateway-token:status': async () => getGatewayTokenStatus(ctx, paths),
-    'gateway-token:mint': async () => mintGatewayTokenIntoVault(ctx, paths),
+    'gateway-token:mint': async () =>
+      inVaultOrder(async () => mintGatewayTokenIntoVault(ctx, paths)),
     'gateway-token:copy': async () => copyGatewayTokenToClipboard(ctx, paths),
   };
 }

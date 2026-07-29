@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { SettingsEffects } from './apply-settings';
 
-import { applySettings } from './apply-settings';
+import { applyBootSettings, applyChosenSettings } from './apply-settings';
 
 type Applied = {
   themeSource: Settings['theme'] | null;
@@ -43,7 +43,7 @@ describe('what a settings document changes outside the window', () => {
   test('the theme the document names is the theme the operating system paints', () => {
     const { effects, applied } = recordingEffects();
 
-    applySettings(effects, { ...defaultSettings(), theme: 'dark' });
+    applyChosenSettings(effects, { ...defaultSettings(), theme: 'dark' });
 
     expect(applied.themeSource).toBe('dark');
   });
@@ -51,7 +51,7 @@ describe('what a settings document changes outside the window', () => {
   test('the menu bar carries an icon while the document asks for one', () => {
     const { effects, applied } = recordingEffects();
 
-    applySettings(effects, { ...defaultSettings(), showInMenuBar: true });
+    applyChosenSettings(effects, { ...defaultSettings(), showInMenuBar: true });
 
     expect(applied.menuBarVisible).toBe(true);
   });
@@ -59,7 +59,7 @@ describe('what a settings document changes outside the window', () => {
   test('the operating system launches recompose while the document asks for it', () => {
     const { effects, applied } = recordingEffects();
 
-    applySettings(effects, { ...defaultSettings(), launchAtLogin: true });
+    applyChosenSettings(effects, { ...defaultSettings(), launchAtLogin: true });
 
     expect(applied.loginItem).toBe(true);
   });
@@ -67,7 +67,7 @@ describe('what a settings document changes outside the window', () => {
   test('a document that asks for nothing turns all three back off', () => {
     const { effects, applied } = recordingEffects();
 
-    applySettings(effects, {
+    applyChosenSettings(effects, {
       ...defaultSettings(),
       theme: 'light',
       showInMenuBar: false,
@@ -77,15 +77,41 @@ describe('what a settings document changes outside the window', () => {
     expect(applied).toEqual({ themeSource: 'light', menuBarVisible: false, loginItem: false });
   });
 
-  propertyTest.prop([anySettings])('every document reaches all three effects', (fields) => {
+  propertyTest.prop([anySettings])('every chosen document reaches all three effects', (fields) => {
     const { effects, applied } = recordingEffects();
 
-    applySettings(effects, { ...defaultSettings(), ...fields });
+    applyChosenSettings(effects, { ...defaultSettings(), ...fields });
 
     expect(applied).toEqual({
       themeSource: fields.theme,
       menuBarVisible: fields.showInMenuBar,
       loginItem: fields.launchAtLogin,
     });
+  });
+});
+
+describe('what a stored document changes when the app merely starts', () => {
+  test('boot never writes the login item, because the operating system owns it', () => {
+    const { effects, applied } = recordingEffects();
+
+    applyBootSettings(effects, { ...defaultSettings(), launchAtLogin: true });
+
+    expect(applied.loginItem).toBeNull();
+  });
+
+  test('boot still paints the theme and places the tray', () => {
+    const { effects, applied } = recordingEffects();
+
+    applyBootSettings(effects, { ...defaultSettings(), theme: 'dark', showInMenuBar: true });
+
+    expect(applied).toEqual({ themeSource: 'dark', menuBarVisible: true, loginItem: null });
+  });
+
+  propertyTest.prop([anySettings])('no stored document ever reaches the login item', (fields) => {
+    const { effects, applied } = recordingEffects();
+
+    applyBootSettings(effects, { ...defaultSettings(), ...fields });
+
+    expect(applied.loginItem).toBeNull();
   });
 });

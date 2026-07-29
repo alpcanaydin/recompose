@@ -12,7 +12,7 @@ import { createSystemIpcHandlers } from './ipc/system-ipc';
 import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
-import { applySettings } from './settings/apply-settings';
+import { applyBootSettings, applyChosenSettings } from './settings/apply-settings';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
@@ -36,6 +36,10 @@ const trayMenuHandlers = {
   },
 };
 
+if (process.platform === 'linux') {
+  safeStorage.setUsePlainTextEncryption(true);
+}
+
 const loginItemAvailability = loginItemAvailabilityFor(process.platform, app.isPackaged);
 
 const loginItem = createLoginItem(app, loginItemAvailability, process.execPath);
@@ -56,8 +60,20 @@ const settingsEffects: SettingsEffects = {
   },
 };
 
-function applyStoredSettings(settings: Settings): void {
-  applySettings(settingsEffects, settings);
+function applyChosenSettingsNow(settings: Settings): void {
+  try {
+    applyChosenSettings(settingsEffects, settings);
+  } catch (error) {
+    console.error('recompose stored the settings but could not apply them', error);
+  }
+}
+
+function applySettingsAtBoot(settings: Settings): void {
+  try {
+    applyBootSettings(settingsEffects, settings);
+  } catch (error) {
+    console.error('recompose could not apply its stored settings at boot', error);
+  }
 }
 
 function onStorageCorrupt(quarantinedPath: string): void {
@@ -76,7 +92,7 @@ function assembleIpcHandlers(): IpcHandlers {
       writeClipboard: (text) => {
         clipboard.writeText(text);
       },
-      applySettings: applyStoredSettings,
+      applySettings: applyChosenSettingsNow,
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
@@ -146,7 +162,7 @@ async function startRecompose(): Promise<void> {
 
   installAppMenu(openSettingsSurface);
 
-  applyStoredSettings(await storedSettings());
+  applySettingsAtBoot(await storedSettings());
 
   createMainWindow(HOME_ROUTE);
 

@@ -32,11 +32,11 @@ function trayIcon(): NativeImage {
 }
 
 export function isMenuBarTrayVisible(): boolean {
-  return menuBarTray !== null;
+  return menuBarTray !== null && !menuBarTray.isDestroyed();
 }
 
 export function showMenuBarTray(handlers: TrayMenuHandlers): void {
-  if (menuBarTray !== null) {
+  if (isMenuBarTrayVisible()) {
     return;
   }
 
@@ -50,5 +50,4 @@ export function showMenuBarTray(handlers: TrayMenuHandlers): void {
 
 export function hideMenuBarTray(): void {
   menuBarTray?.destroy();
-  menuBarTray = null;
 }

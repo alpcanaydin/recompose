@@ -4,7 +4,7 @@ import { unwrapIpcResult } from '../../../shared/api';
 
 export const gatewayTokenQueryOptions = queryOptions({
   queryKey: ['gateway-token'],
-  queryFn: async () => unwrapIpcResult(await window.recompose['gateway-token:status']()),
+  queryFn: async () => window.recompose['gateway-token:status'](),
 });
 
 export function useMintGatewayToken() {

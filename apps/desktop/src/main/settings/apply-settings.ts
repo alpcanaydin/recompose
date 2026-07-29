@@ -6,8 +6,16 @@ export type SettingsEffects = {
   setLoginItem: (enabled: boolean) => void;
 };
 
-export function applySettings(effects: SettingsEffects, settings: Settings): void {
+function applyPresentation(effects: SettingsEffects, settings: Settings): void {
   effects.setThemeSource(settings.theme);
   effects.setMenuBarVisible(settings.showInMenuBar);
+}
+
+export function applyChosenSettings(effects: SettingsEffects, settings: Settings): void {
+  applyPresentation(effects, settings);
   effects.setLoginItem(settings.launchAtLogin);
+}
+
+export function applyBootSettings(effects: SettingsEffects, settings: Settings): void {
+  applyPresentation(effects, settings);
 }

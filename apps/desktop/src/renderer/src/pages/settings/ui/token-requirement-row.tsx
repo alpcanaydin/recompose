@@ -5,43 +5,52 @@ import { FieldRow, Switch } from '../../../shared/ui';
 import { gatewayTokenQueryOptions, useMintGatewayToken } from '../api/gateway-token';
 import { settingsQueryOptions, useSettingsWriter } from '../api/settings';
 import { saveStatusFor } from '../lib/save-failure';
-import { tokenRequirementNote } from '../lib/token-note';
-import { couldNotMint } from '../lib/token-status';
+import {
+  tokenOrNothing,
+  tokenRequirementDecision,
+  tokenRequirementReason,
+} from '../lib/token-note';
 
 /** The switch that demands a token, and the warning about the store holding it. */
 export function TokenRequirementRow() {
   const { data: settings } = useSuspenseQuery(settingsQueryOptions);
-  const { data: token } = useSuspenseQuery(gatewayTokenQueryOptions);
+  const { data: answered } = useSuspenseQuery(gatewayTokenQueryOptions);
   const { save, unsavedFields } = useSettingsWriter();
   const mint = useMintGatewayToken();
   const [refused, setRefused] = useState(false);
 
-  const require = (required: boolean) => {
-    if (required && token.storage === 'unavailable') {
-      setRefused(true);
+  const token = tokenOrNothing(answered);
 
+  const demand = (required: boolean) => {
+    const decision = tokenRequirementDecision(token, required);
+
+    setRefused(decision === 'refuse');
+
+    if (decision === 'refuse') {
       return;
     }
 
-    setRefused(false);
     save({ requireGatewayToken: required });
 
-    if (required && token.masked === null) {
+    if (decision === 'save-and-mint') {
       mint.mutate();
     }
   };
 
-  const mintRefused = settings.requireGatewayToken && mint.isError;
-  const note =
-    tokenRequirementNote(token.storage, refused) ?? (mintRefused ? couldNotMint : undefined);
+  const note = tokenRequirementReason({
+    token,
+    refused,
+    mintRefused: settings.requireGatewayToken && mint.isError,
+  });
 
   return (
     <FieldRow
       control={
         <Switch
           checked={settings.requireGatewayToken}
+          inert={token === null}
           label="Require API token"
-          onChangeChecked={require}
+          onChangeChecked={demand}
         />
       }
       description="Turns away gateway requests that carry no token."

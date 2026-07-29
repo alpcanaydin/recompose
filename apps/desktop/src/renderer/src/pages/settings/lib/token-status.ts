@@ -4,6 +4,7 @@ const copied = 'Copied.';
 const couldNotCopy = 'The value could not be copied.';
 
 export const couldNotMint = 'The value could not be minted.';
+export const couldNotRead = 'The credential store could not be read, so the token is out of reach.';
 
 type TokenRowActivity = {
   confirming: boolean;

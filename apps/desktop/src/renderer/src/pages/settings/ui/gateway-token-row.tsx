@@ -7,11 +7,23 @@ import {
   useCopyGatewayToken,
   useMintGatewayToken,
 } from '../api/gateway-token';
-import { tokenRowStatus } from '../lib/token-status';
+import { couldNotRead, tokenRowStatus } from '../lib/token-status';
 import { TokenActions } from './token-actions';
 import { TokenConfirmation } from './token-confirmation';
 
 const nothingMintedYet = 'Nothing has been minted yet.';
+
+function UnreadableTokenRow({ reason }: { reason: string }) {
+  return (
+    <FieldRow
+      control={<span />}
+      description={couldNotRead}
+      inert
+      label="API token"
+      status={reason}
+    />
+  );
+}
 
 type TokenControlProps = {
   masked: string | null;
@@ -62,10 +74,16 @@ function TokenControl({
 
 /** The masked gateway credential, its copy action, and the confirmation guarding a new one. */
 export function GatewayTokenRow() {
-  const { data: gateway } = useSuspenseQuery(gatewayTokenQueryOptions);
+  const { data: answered } = useSuspenseQuery(gatewayTokenQueryOptions);
   const copy = useCopyGatewayToken();
   const mint = useMintGatewayToken();
   const [confirming, setConfirming] = useState(false);
+
+  if (!answered.ok) {
+    return <UnreadableTokenRow reason={answered.error.message} />;
+  }
+
+  const gateway = answered.value;
 
   const stopConfirming = () => {
     setConfirming(false);
