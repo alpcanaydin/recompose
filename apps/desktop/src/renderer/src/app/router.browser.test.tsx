@@ -110,6 +110,24 @@ test('clicking the settings link navigates to the settings screen', async () => 
   await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
 });
 
+test('arriving at settings through the shortcut lands focus on the first control', async () => {
+  const screen = await renderAt('/settings?focus=first-control');
+
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
+});
+
+test('arriving at settings through the sidebar leaves focus where the person put it', async () => {
+  const screen = await renderAt('/');
+
+  const settings = screen.getByRole('link', { name: 'Settings' });
+
+  await settings.click();
+
+  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
+  await expect.element(settings).toHaveFocus();
+});
+
 test('the /settings route loader warms the settings, system, and token caches before any component renders', async () => {
   installFakeBridge();
 

@@ -7,7 +7,13 @@ import {
   systemQueryOptions,
 } from '../../pages/settings';
 
+type SettingsSearch = {
+  focus?: 'first-control';
+};
+
 export const Route = createFileRoute('/settings')({
+  validateSearch: (search: Record<string, unknown>): SettingsSearch =>
+    search['focus'] === 'first-control' ? { focus: 'first-control' } : {},
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(settingsQueryOptions),
@@ -15,5 +21,11 @@ export const Route = createFileRoute('/settings')({
       context.queryClient.ensureQueryData(gatewayTokenQueryOptions),
     ]);
   },
-  component: SettingsPage,
+  component: SettingsRoute,
 });
+
+function SettingsRoute() {
+  const { focus } = Route.useSearch();
+
+  return <SettingsPage focus={focus} />;
+}

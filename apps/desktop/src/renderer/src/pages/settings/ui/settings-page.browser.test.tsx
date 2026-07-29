@@ -1,7 +1,7 @@
-import type { Settings } from '@recompose/contracts';
+import type { Settings, SystemState } from '@recompose/contracts';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
@@ -11,7 +11,7 @@ import { unwrapIpcResult } from '../../../shared/api';
 import { installFakeBridge } from '../../../shared/testing';
 import { SettingsPage } from './settings-page';
 
-async function renderSettings(parameters: BridgeParameters = {}) {
+async function mount(page: ReactNode, parameters: BridgeParameters) {
   installFakeBridge(parameters);
 
   const queryClient = new QueryClient({
@@ -20,11 +20,31 @@ async function renderSettings(parameters: BridgeParameters = {}) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={null}>
-        <SettingsPage />
-      </Suspense>
+      <Suspense fallback={null}>{page}</Suspense>
     </QueryClientProvider>,
   );
+}
+
+async function renderSettings(parameters: BridgeParameters = {}) {
+  return mount(<SettingsPage />, parameters);
+}
+
+async function renderSettingsFromShortcut(parameters: BridgeParameters = {}) {
+  return mount(<SettingsPage focus="first-control" />, parameters);
+}
+
+function runningOn(loginItem: SystemState['loginItem']): BridgeParameters {
+  const observed: SystemState = {
+    fileBrowser: 'finder',
+    loginItem,
+    loginItemEnabled: false,
+    menuBarVisible: false,
+    configFolder: '/Users/someone/Library/Application Support/recompose',
+  };
+
+  return {
+    overrides: { 'system:get': async () => Promise.resolve({ ok: true, value: observed }) },
+  };
 }
 
 async function storedSettings(): Promise<Settings> {
@@ -142,6 +162,32 @@ test('a change leaves the maintainer on the control they used', async () => {
 
   await expect.poll(async () => (await storedSettings()).theme).toBe('dark');
   expect(document.activeElement?.textContent).toBe('Dark');
+});
+
+test('the shortcut lands on the launch switch where the operating system keeps login items', async () => {
+  const screen = await renderSettingsFromShortcut(runningOn('available'));
+
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
+});
+
+test('the shortcut skips the launch switch a development build cannot move', async () => {
+  const screen = await renderSettingsFromShortcut(runningOn('unpackaged'));
+
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
+  await expect.element(screen.getByRole('switch', { name: 'Show in menu bar' })).toHaveFocus();
+});
+
+test('the shortcut lands on the menu bar switch where no login item exists', async () => {
+  const screen = await renderSettingsFromShortcut(runningOn('unsupported'));
+
+  await expect.element(screen.getByRole('switch', { name: 'Show in menu bar' })).toHaveFocus();
+});
+
+test('a settings arrival without the shortcut disturbs nobody', async () => {
+  const screen = await renderSettings(runningOn('available'));
+
+  await expect.element(screen.getByRole('group', { name: 'General' })).toBeVisible();
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
 });
 
 test('the screen offers no save, apply, or cancel action', async () => {
