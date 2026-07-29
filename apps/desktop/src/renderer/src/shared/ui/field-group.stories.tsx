@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { inSettingsColumn } from '#.storybook/settings-column';
 
 import { FieldGroup, FieldRow, NumericField, SegmentedControl, Switch, TextField } from './index';
+
+const schemeSettles = 4000;
 
 const retentionOptions = [
   { value: '7', label: '7 days' },
@@ -66,7 +68,12 @@ export const DarkScheme = meta.story({
   args: { children: <GeneralRows /> },
   globals: { theme: 'dark' },
   play: async () => {
-    await expect(getComputedStyle(document.body).colorScheme).toBe('dark');
+    await waitFor(
+      async () => {
+        await expect(getComputedStyle(document.body).colorScheme).toBe('dark');
+      },
+      { timeout: schemeSettles },
+    );
   },
 });
 

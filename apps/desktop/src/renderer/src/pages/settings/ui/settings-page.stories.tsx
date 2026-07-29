@@ -1,7 +1,9 @@
 import { defaultSettings } from '@recompose/contracts';
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
+
+const schemeSettles = 4000;
 
 import { SettingsPage } from './settings-page';
 
@@ -61,6 +63,11 @@ export const OpenedByShortcut = meta.story({
 export const DarkScheme = meta.story({
   globals: { theme: 'dark' },
   play: async () => {
-    await expect(getComputedStyle(document.body).colorScheme).toBe('dark');
+    await waitFor(
+      async () => {
+        await expect(getComputedStyle(document.body).colorScheme).toBe('dark');
+      },
+      { timeout: schemeSettles },
+    );
   },
 });
