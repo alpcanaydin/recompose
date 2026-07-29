@@ -6,6 +6,11 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
 import { accountsQueryOptions } from '../pages/providers';
+import {
+  gatewayTokenQueryOptions,
+  settingsQueryOptions,
+  systemQueryOptions,
+} from '../pages/settings';
 import { installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
@@ -86,6 +91,46 @@ test('the /providers route loader warms the query cache before any component ren
   await router.load();
 
   expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
+});
+
+test('the sidebar carries a System group holding Settings', async () => {
+  const screen = await renderAt('/');
+
+  const system = screen.getByRole('group', { name: 'System' });
+
+  await expect.element(system).toBeVisible();
+  await expect.element(system.getByRole('link', { name: 'Settings' })).toBeVisible();
+});
+
+test('clicking the settings link navigates to the settings screen', async () => {
+  const screen = await renderAt('/');
+
+  await screen.getByRole('link', { name: 'Settings' }).click();
+
+  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+});
+
+test('the /settings route loader warms the settings, system, and token caches before any component renders', async () => {
+  installFakeBridge();
+
+  const queryClient = createQueryClient();
+  const router = createAppRouter({
+    queryClient,
+    history: createMemoryHistory({ initialEntries: ['/settings'] }),
+  });
+
+  await router.load();
+
+  expect(queryClient.getQueryData(settingsQueryOptions.queryKey)).toMatchObject({
+    theme: 'system',
+  });
+  expect(queryClient.getQueryData(systemQueryOptions.queryKey)).toMatchObject({
+    fileBrowser: 'finder',
+  });
+  expect(queryClient.getQueryData(gatewayTokenQueryOptions.queryKey)).toEqual({
+    masked: null,
+    storage: 'available',
+  });
 });
 
 test('a valid gateway slug shows the canvas placeholder for that gateway', async () => {
