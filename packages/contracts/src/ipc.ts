@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { accountKindSchema, accountsDocumentSchema } from './accounts';
 import { gatewayConfigSchema } from './gateway-config';
 import { nonBlankString } from './non-blank';
-import { settingsSchema } from './settings';
+import { settingsPatchSchema, settingsSchema } from './settings';
 
 export const ipcErrorSchema = z.strictObject({
   code: z.enum([
@@ -57,7 +57,7 @@ export const ipcChannels = {
     response: ipcResult(z.array(gatewayConfigSchema)),
   },
   'settings:get': { request: z.void(), response: ipcResult(settingsSchema) },
-  'settings:save': { request: settingsSchema, response: ipcResult(settingsSchema) },
+  'settings:save': { request: settingsPatchSchema, response: ipcResult(settingsSchema) },
   'accounts:list': { request: z.void(), response: ipcResult(accountsDocumentSchema) },
   'accounts:connect': {
     request: connectAccountRequestSchema,

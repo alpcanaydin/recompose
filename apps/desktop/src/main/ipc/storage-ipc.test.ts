@@ -28,6 +28,7 @@ async function freshContext(
 
   return {
     userDataPath,
+    homeFolder: '/Users/ada',
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
@@ -117,6 +118,7 @@ describe('storage ipc handlers: settings', () => {
     const handlers = createStorageIpcHandlers(
       await freshContext({
         userDataPath: blockingPath,
+        homeFolder: '/Users/ada',
         applySettings: (settings) => {
           applied.push(settings);
         },

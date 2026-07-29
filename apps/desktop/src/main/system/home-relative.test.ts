@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { homeRelative } from './home-relative';
+import { homeRelative, withoutHome } from './home-relative';
 
 describe('a folder on its way to the screen', () => {
   test('the home directory the process actually has becomes the shorthand', () => {
@@ -30,5 +30,24 @@ describe('a folder on its way to the screen', () => {
 
   test('a folder outside the home directory stays whole', () => {
     expect(homeRelative('/opt/recompose', '/Users/ada')).toBe('/opt/recompose');
+  });
+});
+
+describe('a failure message on its way to the screen', () => {
+  test('the account name goes wherever the message carries the path', () => {
+    expect(
+      withoutHome(
+        "EACCES: permission denied, open '/Users/ada/Library/Application Support/recompose/settings.json'",
+        '/Users/ada',
+      ),
+    ).toBe(
+      "EACCES: permission denied, open '~/Library/Application Support/recompose/settings.json'",
+    );
+  });
+
+  test('a message naming no path is left as it stands', () => {
+    expect(withoutHome('the vault could not be decrypted', '/Users/ada')).toBe(
+      'the vault could not be decrypted',
+    );
   });
 });

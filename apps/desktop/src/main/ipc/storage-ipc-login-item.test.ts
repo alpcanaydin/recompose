@@ -14,12 +14,17 @@ async function osBackedContext(osHolds: boolean) {
   let operatingSystem = osHolds;
   const ctx: StorageIpcContext = {
     userDataPath: await mkdtemp(join(tmpdir(), 'recompose-login-')),
-    getCodec: () => ({ encrypt: (p) => p, decrypt: (p) => p, isPlaintextFallback: false }),
+    homeFolder: '/Users/ada',
+    getCodec: () => ({
+      encrypt: (plain) => plain,
+      decrypt: (blob) => blob,
+      isPlaintextFallback: false,
+    }),
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
     readLoginItem: () => operatingSystem,
-    applySettings: (settings, previous) => {
+    applySettings: (settings, askedLoginItem) => {
       applyChosenSettings(
         {
           setThemeSource: () => undefined,
@@ -30,7 +35,7 @@ async function osBackedContext(osHolds: boolean) {
           },
         },
         settings,
-        previous,
+        askedLoginItem,
       );
     },
   };
@@ -38,21 +43,13 @@ async function osBackedContext(osHolds: boolean) {
   return { ctx, writes, operatingSystem: () => operatingSystem };
 }
 
-describe('the launch at login switch, once the operating system disagrees with the stored value', () => {
-  test('turning it on reaches the operating system even though the stored value already said on', async () => {
+describe('the launch at login switch and the operating system that owns the flag', () => {
+  test('a save that names the switch writes what it asks for', async () => {
     const { ctx, writes, operatingSystem } = await osBackedContext(false);
-    const handlers = createStorageIpcHandlers(ctx);
 
-    await handlers['settings:save']({ ...defaultSettings(), launchAtLogin: true });
-    writes.length = 0;
+    await createStorageIpcHandlers(ctx)['settings:save']({ launchAtLogin: true });
 
-    const asShown = await handlers['settings:get'](undefined);
-
-    expect(asShown).toMatchObject({ value: { launchAtLogin: true } });
-
-    await handlers['settings:save']({ ...defaultSettings(), launchAtLogin: true });
-
-    expect(writes).toEqual([]);
+    expect(writes).toEqual([true]);
     expect(operatingSystem()).toBe(true);
   });
 
@@ -60,7 +57,7 @@ describe('the launch at login switch, once the operating system disagrees with t
     const { ctx, writes, operatingSystem } = await osBackedContext(false);
     const handlers = createStorageIpcHandlers(ctx);
 
-    await handlers['settings:save']({ ...defaultSettings(), launchAtLogin: true });
+    await handlers['settings:save']({ launchAtLogin: true });
 
     const removedOutside = await osBackedContext(false);
     const afterRemoval = createStorageIpcHandlers({
@@ -72,7 +69,7 @@ describe('the launch at login switch, once the operating system disagrees with t
       value: { launchAtLogin: false },
     });
 
-    await afterRemoval['settings:save']({ ...defaultSettings(), launchAtLogin: true });
+    await afterRemoval['settings:save']({ launchAtLogin: true });
 
     expect(removedOutside.writes).toEqual([true]);
     expect(removedOutside.operatingSystem()).toBe(true);
@@ -80,12 +77,46 @@ describe('the launch at login switch, once the operating system disagrees with t
     expect(operatingSystem()).toBe(true);
   });
 
-  test('a save that changes only the theme leaves the login item where the operating system holds it', async () => {
+  test('a save that never names the switch leaves a removal made outside the app standing', async () => {
     const { ctx, writes } = await osBackedContext(false);
     const handlers = createStorageIpcHandlers(ctx);
 
-    await handlers['settings:save']({ ...defaultSettings(), theme: 'dark' });
+    await handlers['settings:save']({ launchAtLogin: true });
+
+    const removedOutside = await osBackedContext(false);
+    const afterRemoval = createStorageIpcHandlers({
+      ...removedOutside.ctx,
+      userDataPath: ctx.userDataPath,
+    });
+
+    await afterRemoval['settings:save']({ theme: 'dark' });
+
+    expect(removedOutside.writes).toEqual([]);
+    expect(removedOutside.operatingSystem()).toBe(false);
+    expect(writes).toEqual([true]);
+  });
+});
+
+describe('a save that names only part of the document', () => {
+  test('every field it leaves out keeps what the document already held', async () => {
+    const { ctx } = await osBackedContext(false);
+    const handlers = createStorageIpcHandlers(ctx);
+
+    await handlers['settings:save']({ enginePort: 9100, theme: 'dark' });
+    await handlers['settings:save']({ showInMenuBar: true });
+
+    expect(await handlers['settings:get'](undefined)).toMatchObject({
+      value: { enginePort: 9100, theme: 'dark', showInMenuBar: true },
+    });
+  });
+
+  test('a save that names nothing changes nothing at all', async () => {
+    const { ctx, writes } = await osBackedContext(false);
+    const handlers = createStorageIpcHandlers(ctx);
+
+    const answered = await handlers['settings:save']({});
 
     expect(writes).toEqual([]);
+    expect(answered).toMatchObject({ value: defaultSettings() });
   });
 });

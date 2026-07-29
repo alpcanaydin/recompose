@@ -24,3 +24,13 @@ export function homeRelative(folder: string, home: string): string {
 
   return `~${rest}`;
 }
+
+/**
+ * A sentence with the home directory written as the shorthand wherever it appears.
+ *
+ * @summary Node names the file it could not touch inside the message, so shortening the front of a
+ * path is not enough: the home directory has to go wherever the text carries it.
+ */
+export function withoutHome(sentence: string, home: string): string {
+  return sentence.split(withoutTrailingSeparator(home)).join('~');
+}

@@ -24,6 +24,7 @@ async function freshContext(
 
   return {
     userDataPath,
+    homeFolder: '/Users/ada',
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,

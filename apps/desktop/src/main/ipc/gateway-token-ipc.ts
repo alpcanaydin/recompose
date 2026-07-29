@@ -11,7 +11,7 @@ import { openVaultForWrite } from './storage-context';
 import { ipcFailure, openVault, storageFailure } from './storage-envelope';
 
 async function readGatewayToken(ctx: StorageIpcContext, paths: StoragePaths) {
-  const opened = await openVault(paths.vaultFile, ctx.onCorrupt);
+  const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 
   if (!opened.ok) {
     return opened;
@@ -20,7 +20,7 @@ async function readGatewayToken(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, token: getSecret(opened.vault, ctx.getCodec(), GATEWAY_TOKEN_REF) };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -66,7 +66,7 @@ export async function mintGatewayTokenIntoVault(ctx: StorageIpcContext, paths: S
       },
     };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 

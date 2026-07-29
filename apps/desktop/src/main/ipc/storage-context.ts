@@ -7,6 +7,8 @@ import type { SecretCodec } from '../storage/safe-storage-codec';
 import { ipcFailure, openVault } from './storage-envelope';
 
 export type StorageIpcContext = {
+  /** The home directory this process runs under, so no account name reaches the screen. */
+  homeFolder: string;
   /** What the operating system currently holds for the login item. */
   readLoginItem: () => boolean;
   userDataPath: string;
@@ -14,7 +16,7 @@ export type StorageIpcContext = {
   isEncryptionAvailable: () => boolean;
   onCorrupt: (quarantinedPath: string) => void;
   writeClipboard: (text: string) => void;
-  applySettings: (settings: Settings, previous: Settings) => void;
+  applySettings: (settings: Settings, askedLoginItem: boolean | undefined) => void;
 };
 
 export type StoragePaths = {
@@ -38,5 +40,5 @@ export async function openVaultForWrite(ctx: StorageIpcContext, paths: StoragePa
     return ipcFailure('vault-unavailable', 'OS secret encryption is unavailable');
   }
 
-  return openVault(paths.vaultFile, ctx.onCorrupt);
+  return openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 }

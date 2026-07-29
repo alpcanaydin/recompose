@@ -1,6 +1,6 @@
 import type { AccountsDocument, RecomposeIpc, Settings, SystemState } from '@recompose/contracts';
 
-import { defaultSettings } from '@recompose/contracts';
+import { withSettingsPatch, defaultSettings } from '@recompose/contracts';
 
 const emptyDocument: AccountsDocument = { schemaVersion: 1, accounts: [] };
 
@@ -31,8 +31,8 @@ function settingsHandlers(seed: Settings): SettingsHandlers {
 
   return {
     'settings:get': async () => Promise.resolve({ ok: true, value: stored }),
-    'settings:save': async (settings) => {
-      stored = settings;
+    'settings:save': async (patch) => {
+      stored = withSettingsPatch(stored, patch);
 
       return Promise.resolve({ ok: true, value: stored });
     },

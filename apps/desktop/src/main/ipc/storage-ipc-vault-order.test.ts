@@ -34,6 +34,7 @@ function plainCodec() {
 function context(): StorageIpcContext {
   return {
     userDataPath,
+    homeFolder: '/Users/ada',
     getCodec: plainCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,

@@ -1,5 +1,6 @@
-import type { AccountsDocument, IpcRequest, Settings } from '@recompose/contracts';
+import type { AccountsDocument, IpcRequest, SettingsPatch } from '@recompose/contracts';
 
+import { withSettingsPatch } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
@@ -33,7 +34,7 @@ async function listGateways(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -47,7 +48,7 @@ async function saveGateway(
 
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -57,32 +58,32 @@ async function getSettings(ctx: StorageIpcContext, paths: StoragePaths) {
 
     return { ok: true as const, value: { ...stored, launchAtLogin: ctx.readLoginItem() } };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
-async function writeSettings(ctx: StorageIpcContext, paths: StoragePaths, settings: Settings) {
+async function writeSettings(ctx: StorageIpcContext, paths: StoragePaths, patch: SettingsPatch) {
   const previous = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
 
-  await saveSettingsFile(paths.settingsFile, settings);
+  await saveSettingsFile(paths.settingsFile, withSettingsPatch(previous, patch));
 
-  return { previous, stored: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
+  return { stored: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
 }
 
 async function saveSettings(
   ctx: StorageIpcContext,
   paths: StoragePaths,
-  settings: IpcRequest<'settings:save'>,
+  patch: IpcRequest<'settings:save'>,
 ) {
   let written;
 
   try {
-    written = await writeSettings(ctx, paths, settings);
+    written = await writeSettings(ctx, paths, patch);
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 
-  ctx.applySettings(written.stored, { ...written.previous, launchAtLogin: ctx.readLoginItem() });
+  ctx.applySettings(written.stored, patch.launchAtLogin);
 
   return { ok: true as const, value: { ...written.stored, launchAtLogin: ctx.readLoginItem() } };
 }
@@ -91,7 +92,7 @@ async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, value: await readAccounts(ctx, paths) };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -128,7 +129,7 @@ async function connectAccount(
 
     return { ok: true as const, value: updated };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -145,7 +146,7 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    const opened = await openVault(paths.vaultFile, ctx.onCorrupt);
+    const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 
     if (!opened.ok) {
       return opened;
@@ -162,7 +163,7 @@ async function removeAccount(
 
     return { ok: true as const, value: updated };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 

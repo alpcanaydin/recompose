@@ -6,6 +6,7 @@ import {
   type GatewayTokenStatus,
   type IpcChannel,
   type Settings,
+  type SettingsPatch,
   type SystemState,
 } from '@recompose/contracts';
 import { describe, expect } from 'vitest';
@@ -99,19 +100,39 @@ describe('ipc dispatch', () => {
   });
 
   test('a valid payload reaches the handler and its result passes through', async () => {
+    const seen: SettingsPatch[] = [];
     const handlers = handlersWith({
-      'settings:save': async (request) => Promise.resolve({ ok: true, value: request }),
+      'settings:save': async (request) => {
+        seen.push(request);
+
+        return Promise.resolve({ ok: true, value: settings });
+      },
     });
 
     const result = await dispatchIpc(
       handlers,
+      'settings:save',
+      { theme: 'dark' },
+      trustedSender,
+      allowedOrigins,
+    );
+
+    expect(seen).toEqual([{ theme: 'dark' }]);
+    expect(result).toEqual({ ok: true, value: settings });
+  });
+});
+
+describe('ipc dispatch: the settings patch', () => {
+  test('a save carrying the schema version is rejected, because a patch never names it', async () => {
+    const result = await dispatchIpc(
+      handlersWith({}),
       'settings:save',
       settings,
       trustedSender,
       allowedOrigins,
     );
 
-    expect(result).toEqual({ ok: true, value: settings });
+    expect(result).toMatchObject({ ok: false, error: { code: 'validation-failed' } });
   });
 
   test('a handler result that violates the response contract is rejected loudly', async () => {
@@ -131,10 +152,10 @@ describe('ipc dispatch: sender trust rejects', () => {
   test('an untrusted sender is rejected before the handler ever runs', async () => {
     const calls: string[] = [];
     const handlers = handlersWith({
-      'settings:save': async (request) => {
+      'settings:save': async () => {
         calls.push('settings:save');
 
-        return Promise.resolve({ ok: true, value: request });
+        return Promise.resolve({ ok: true, value: settings });
       },
     });
     const foreignSender: TrustedSender = {

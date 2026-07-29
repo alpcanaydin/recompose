@@ -60,9 +60,9 @@ const settingsEffects: SettingsEffects = {
   },
 };
 
-function applyChosenSettingsNow(settings: Settings, previous: Settings): void {
+function applyChosenSettingsNow(settings: Settings, askedLoginItem: boolean | undefined): void {
   try {
-    applyChosenSettings(settingsEffects, settings, previous);
+    applyChosenSettings(settingsEffects, settings, askedLoginItem);
   } catch (error) {
     console.error('recompose stored the settings but could not apply them', error);
   }
@@ -92,6 +92,7 @@ function assembleIpcHandlers(): IpcHandlers {
       writeClipboard: (text) => {
         clipboard.writeText(text);
       },
+      homeFolder: app.getPath('home'),
       readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,
     }),

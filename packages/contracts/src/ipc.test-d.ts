@@ -11,6 +11,7 @@ import type {
   Migration,
   RecomposeIpc,
   Settings,
+  SettingsPatch,
   SystemState,
 } from './index';
 
@@ -23,8 +24,18 @@ describe('ipc request contracts', () => {
 
   test('write channels take exactly their domain payload', () => {
     expectTypeOf<IpcRequest<'gateways:save'>>().toEqualTypeOf<GatewayConfig>();
-    expectTypeOf<IpcRequest<'settings:save'>>().toEqualTypeOf<Settings>();
+    expectTypeOf<IpcRequest<'settings:save'>>().toEqualTypeOf<SettingsPatch>();
     expectTypeOf<IpcRequest<'accounts:remove'>>().toEqualTypeOf<{ id: string }>();
+  });
+
+  test('saving settings names only the fields it changes, never the whole document', () => {
+    expectTypeOf<IpcRequest<'settings:save'>>().not.toHaveProperty('schemaVersion');
+    expectTypeOf<IpcRequest<'settings:save'>['launchAtLogin']>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<IpcResponse<'settings:save'>>().toExtend<
+      { ok: true; value: Settings } | { ok: false; error: IpcError }
+    >();
   });
 
   test('connecting an account is the only channel that carries a secret inbound', () => {
