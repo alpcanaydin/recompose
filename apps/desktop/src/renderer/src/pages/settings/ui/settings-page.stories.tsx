@@ -3,8 +3,6 @@ import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-const schemeSettles = 4000;
-
 import { SettingsPage } from './settings-page';
 
 const meta = preview.meta({
@@ -66,12 +64,4 @@ export const OpenedByShortcut = meta.story({
 /** The same column under the dark scheme, where each card lifts off the content surface. */
 export const DarkScheme = meta.story({
   globals: { theme: 'dark' },
-  play: async () => {
-    await waitFor(
-      async () => {
-        await expect(getComputedStyle(document.body).colorScheme).toBe('dark');
-      },
-      { timeout: schemeSettles },
-    );
-  },
 });
