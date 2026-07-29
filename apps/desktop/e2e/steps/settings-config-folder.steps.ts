@@ -4,6 +4,7 @@ import type { SystemState } from '@recompose/contracts';
 import { expect } from '@playwright/test';
 
 import { fileBrowserFor } from '../../src/main/system/file-browser';
+import { loginItemAvailabilityFor } from '../../src/main/system/login-item';
 import { Given, Then, When } from '../fixtures';
 
 const nodePlatforms: Record<string, NodeJS.Platform> = {
@@ -64,9 +65,13 @@ Given('the app runs on {word}', async ({ electronApp, page }, platform: string) 
     throw new Error(`the app could not report its system: ${observed.error.message}`);
   }
 
+  const named = nodePlatformFor(platform);
+  const packaged = await electronApp.evaluate(({ app }) => app.isPackaged);
+
   const reported: SystemState = {
     ...observed.value,
-    fileBrowser: fileBrowserFor(nodePlatformFor(platform)),
+    fileBrowser: fileBrowserFor(named),
+    loginItem: loginItemAvailabilityFor(named, packaged),
   };
 
   await electronApp.evaluate(({ ipcMain }, state) => {
@@ -75,7 +80,7 @@ Given('the app runs on {word}', async ({ electronApp, page }, platform: string) 
   }, reported);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
 });
 
 Given('the operating system refuses to open the config folder', async ({ electronApp }) => {

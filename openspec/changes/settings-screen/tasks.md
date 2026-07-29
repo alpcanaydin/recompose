@@ -123,6 +123,14 @@ Electron offers no read path either. `Tray` exposes `setContextMenu`, `popUpCont
 
 The scenario therefore leaves the gherkin set, which brings the set level with the spec. Its claim keeps the two homes the design gave it. Four tests in `apps/desktop/src/main/tray/tray-menu-template.test.ts` pin the Quit item, its handler, and its place after the separator. Manual verification step 7 walks the rest.
 
+### Amendment: the login-item reporting scenario moves to the renderer layer
+
+`launch-at-login.feature` froze with a third scenario, `The switch reports the operating system, not the stored flag`. Its Given asks the operating system to list recompose, and `setLoginItemSettings` writes one machine-global entry that every parallel worker shares. On macOS the `path` and `args` options belong to Windows, so each worker addresses the same binary. The unit measured the damage. The scenario failed two runs in three under the default three workers. A worker launching inside the on window captures the listing, then writes it back after the scenario clears it. The teardown that exists to leave no login item behind is what strands one.
+
+The renderer already answers the scenario, and under the same sentence. `general-section.browser.test.tsx` reports `loginItemEnabled` as true against a stored flag of false, then asserts the switch reads on. That layer holds a real seam, so it discriminates the two sources without touching the machine. The scenario therefore leaves the gherkin set rather than earning a test-only override inside the main process.
+
+The unit also corrected the brief. `getLoginItemSettings` doesn't throw on Linux in the pinned Electron 43.2.0, because `browser_linux.cc` supplies a stub that reports the item as off and `setLoginItemSettings` does nothing at all. The `@platform darwin,win32` tag is documentation, not a runtime guard, so the unconditional read in `observeSystem` is safe on that runner.
+
 ## The records task
 
 **Files:** the four new files under `docs/adr/` and the index.

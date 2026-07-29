@@ -50,25 +50,10 @@ async function operatingSystemListsRecompose(app: ElectronApplication): Promise<
   );
 }
 
-Given('the app runs on Linux', () => {
-  test.skip(process.platform !== 'linux', 'the absent row is a state only Linux reaches');
-});
-
 Given('the app runs unpackaged from a development build', async ({ page }) => {
   test.skip(!operatingSystemCarriesLoginItems(), 'Linux carries no launch-at-login row to render');
 
   expect(await reportedAvailability(page)).toBe('unpackaged');
-});
-
-Given('the operating system reports recompose as a login item', () => {
-  test.fixme(
-    true,
-    'listing recompose at login is machine-global state that every acceptance fixture reads on launch and writes back on teardown, so a parallel worker restores the listing this scenario created',
-  );
-});
-
-Given('the stored launch-at-login flag reads off', async ({ page }) => {
-  expect(await storedLaunchAtLogin(page)).toBe(false);
 });
 
 When('the app opens the settings screen', async ({ page }) => {
@@ -100,8 +85,4 @@ Then('the row names the development build as the reason', async ({ page }) => {
   await expect(launchAtLoginSwitch(page)).toHaveAccessibleDescription(
     containing(developmentBuildReason),
   );
-});
-
-Then('the switch reads on', async ({ page }) => {
-  await expect(launchAtLoginSwitch(page)).toBeChecked();
 });
