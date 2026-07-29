@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { createBdd } from 'playwright-bdd';
 
 import { Given, inheritedEnv, test, Then, When } from '../fixtures';
+import { processIdOf, processIdsBeforeThemeSwitch } from './app.steps';
 
 const { After } = createBdd(test);
 
@@ -18,8 +19,6 @@ type RestartedApp = { app: ElectronApplication; page: Page; visibleBeforeContent
 
 const restartedApps = new WeakMap<Page, RestartedApp>();
 
-const processIdsBeforeSwitch = new WeakMap<Page, number>();
-
 async function paintedScheme(page: Page): Promise<PaintedScheme> {
   return page.evaluate(() =>
     matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
@@ -31,16 +30,6 @@ async function themeReading(app: ElectronApplication): Promise<ThemeReading> {
     source: nativeTheme.themeSource,
     usesDarkColors: nativeTheme.shouldUseDarkColors,
   }));
-}
-
-function processIdOf(app: ElectronApplication): number {
-  const { pid } = app.process();
-
-  if (pid === undefined) {
-    throw new Error('the running app reported no process id');
-  }
-
-  return pid;
 }
 
 function restartedAppFor(page: Page): RestartedApp {
@@ -91,16 +80,10 @@ async function expectDarkThroughout(app: ElectronApplication, page: Page): Promi
   await expect.poll(async () => paintedScheme(page)).toBe('dark');
 }
 
-When('the maintainer switches the theme to dark', async ({ electronApp, page }) => {
-  processIdsBeforeSwitch.set(page, processIdOf(electronApp));
-
-  await chooseDarkTheme(page);
-});
-
 Then('the app repaints in dark without a restart', async ({ electronApp, page }) => {
   await expectDarkThroughout(electronApp, page);
 
-  expect(processIdOf(electronApp)).toBe(processIdsBeforeSwitch.get(page));
+  expect(processIdOf(electronApp)).toBe(processIdsBeforeThemeSwitch.get(page));
 });
 
 Given('the maintainer switched the theme to dark', async ({ electronApp, page }) => {
