@@ -63,8 +63,8 @@ describe('window chrome contract across all platforms', () => {
     (platform) => {
       const options = windowOptionsFor(platform, somePreload, someIcon);
 
-      expect(options.width).toBe(900);
-      expect(options.height).toBe(670);
+      expect(options.width).toBe(1120);
+      expect(options.height).toBe(780);
       expect(options.show).toBe(false);
       expect(options.autoHideMenuBar).toBe(true);
       expect(options.webPreferences?.preload).toBe(somePreload);
