@@ -13,16 +13,8 @@ import { TokenConfirmation } from './token-confirmation';
 
 const nothingMintedYet = 'Nothing has been minted yet.';
 
-function UnreadableTokenRow({ reason }: { reason: string }) {
-  return (
-    <FieldRow
-      control={<span />}
-      description={couldNotRead}
-      inert
-      label="API token"
-      status={reason}
-    />
-  );
+function UnreadableTokenRow() {
+  return <FieldRow control={<span />} description={couldNotRead} inert label="API token" />;
 }
 
 type TokenControlProps = {
@@ -80,7 +72,7 @@ export function GatewayTokenRow() {
   const [confirming, setConfirming] = useState(false);
 
   if (!answered.ok) {
-    return <UnreadableTokenRow reason={answered.error.message} />;
+    return <UnreadableTokenRow />;
   }
 
   const gateway = answered.value;

@@ -92,6 +92,14 @@ export function showMainWindow(): void {
   reveal(openWindow);
 }
 
+let shortcutPresses = 0;
+
+function pressCount(): number {
+  shortcutPresses += 1;
+
+  return shortcutPresses;
+}
+
 export function openSettingsSurface(): void {
   const [openWindow] = BrowserWindow.getAllWindows();
 
@@ -103,5 +111,7 @@ export function openSettingsSurface(): void {
 
   reveal(openWindow);
 
-  void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), SETTINGS_SHORTCUT_ROUTE));
+  void openWindow.webContents.loadURL(
+    rendererUrlFor(rendererBase(), `${SETTINGS_SHORTCUT_ROUTE}&at=${String(pressCount())}`),
+  );
 }

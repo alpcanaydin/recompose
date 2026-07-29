@@ -43,7 +43,7 @@ describe('what a settings document changes outside the window', () => {
   test('the theme the document names is the theme the operating system paints', () => {
     const { effects, applied } = recordingEffects();
 
-    applyChosenSettings(effects, { ...defaultSettings(), theme: 'dark' });
+    applyChosenSettings(effects, { ...defaultSettings(), theme: 'dark' }, defaultSettings());
 
     expect(applied.themeSource).toBe('dark');
   });
@@ -51,7 +51,7 @@ describe('what a settings document changes outside the window', () => {
   test('the menu bar carries an icon while the document asks for one', () => {
     const { effects, applied } = recordingEffects();
 
-    applyChosenSettings(effects, { ...defaultSettings(), showInMenuBar: true });
+    applyChosenSettings(effects, { ...defaultSettings(), showInMenuBar: true }, defaultSettings());
 
     expect(applied.menuBarVisible).toBe(true);
   });
@@ -59,7 +59,7 @@ describe('what a settings document changes outside the window', () => {
   test('the operating system launches recompose while the document asks for it', () => {
     const { effects, applied } = recordingEffects();
 
-    applyChosenSettings(effects, { ...defaultSettings(), launchAtLogin: true });
+    applyChosenSettings(effects, { ...defaultSettings(), launchAtLogin: true }, defaultSettings());
 
     expect(applied.loginItem).toBe(true);
   });
@@ -67,12 +67,11 @@ describe('what a settings document changes outside the window', () => {
   test('a document that asks for nothing turns all three back off', () => {
     const { effects, applied } = recordingEffects();
 
-    applyChosenSettings(effects, {
-      ...defaultSettings(),
-      theme: 'light',
-      showInMenuBar: false,
-      launchAtLogin: false,
-    });
+    applyChosenSettings(
+      effects,
+      { ...defaultSettings(), theme: 'light', showInMenuBar: false, launchAtLogin: false },
+      { ...defaultSettings(), launchAtLogin: true },
+    );
 
     expect(applied).toEqual({ themeSource: 'light', menuBarVisible: false, loginItem: false });
   });
@@ -80,7 +79,11 @@ describe('what a settings document changes outside the window', () => {
   propertyTest.prop([anySettings])('every chosen document reaches all three effects', (fields) => {
     const { effects, applied } = recordingEffects();
 
-    applyChosenSettings(effects, { ...defaultSettings(), ...fields });
+    applyChosenSettings(
+      effects,
+      { ...defaultSettings(), ...fields },
+      { ...defaultSettings(), launchAtLogin: !fields.launchAtLogin },
+    );
 
     expect(applied).toEqual({
       themeSource: fields.theme,
@@ -113,5 +116,26 @@ describe('what a stored document changes when the app merely starts', () => {
     applyBootSettings(effects, { ...defaultSettings(), ...fields });
 
     expect(applied.loginItem).toBeNull();
+  });
+});
+
+describe('the login item a save does not touch', () => {
+  test('an unrelated change leaves the operating system holding what it holds', () => {
+    const { effects, applied } = recordingEffects();
+    const stored: Settings = { ...defaultSettings(), launchAtLogin: true };
+
+    applyChosenSettings(effects, { ...stored, theme: 'dark' }, stored);
+
+    expect(applied.themeSource).toBe('dark');
+    expect(applied.loginItem).toBeNull();
+  });
+
+  test('turning it off writes the removal', () => {
+    const { effects, applied } = recordingEffects();
+    const stored: Settings = { ...defaultSettings(), launchAtLogin: true };
+
+    applyChosenSettings(effects, { ...stored, launchAtLogin: false }, stored);
+
+    expect(applied.loginItem).toBe(false);
   });
 });

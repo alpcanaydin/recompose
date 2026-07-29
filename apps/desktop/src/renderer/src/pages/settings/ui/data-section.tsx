@@ -26,7 +26,7 @@ export function DataSection() {
         }
         description={homeRelative(system.configFolder)}
         label="Config folder"
-        {...(openConfigFolder.isError ? { status: 'The folder did not open.' } : {})}
+        {...(openConfigFolder.isError ? { status: openConfigFolder.error.message } : {})}
       />
       <FieldRow
         control={

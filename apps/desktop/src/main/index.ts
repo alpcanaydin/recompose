@@ -60,9 +60,9 @@ const settingsEffects: SettingsEffects = {
   },
 };
 
-function applyChosenSettingsNow(settings: Settings): void {
+function applyChosenSettingsNow(settings: Settings, previous: Settings): void {
   try {
-    applyChosenSettings(settingsEffects, settings);
+    applyChosenSettings(settingsEffects, settings, previous);
   } catch (error) {
     console.error('recompose stored the settings but could not apply them', error);
   }

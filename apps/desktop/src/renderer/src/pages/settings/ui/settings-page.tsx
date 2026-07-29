@@ -10,10 +10,12 @@ import { ServerSection } from './server-section';
 type SettingsPageProps = {
   /** Set by the settings shortcut, whose keyboard route has to land somewhere. */
   focus?: 'first-control' | undefined;
+  /** Stamp of the press that asked for focus, so a second press is a fresh request. */
+  at?: string | undefined;
 };
 
 /** Every stored setting on one scrollable column, applied the moment it changes. */
-export function SettingsPage({ focus }: SettingsPageProps) {
+export function SettingsPage({ focus, at }: SettingsPageProps) {
   const surface = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function SettingsPage({ focus }: SettingsPageProps) {
     }
 
     placeFocus(firstLiveControl(surface.current));
-  }, [focus]);
+  }, [focus, at]);
 
   return (
     <div className="mx-auto flex w-full max-w-column flex-col gap-5" ref={surface}>

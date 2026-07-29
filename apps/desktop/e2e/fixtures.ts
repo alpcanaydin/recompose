@@ -1,7 +1,7 @@
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { _electron as electron } from '@playwright/test';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createBdd, test as base } from 'playwright-bdd';
@@ -67,12 +67,17 @@ export const test = base.extend<ElectronFixtures>({
     });
 
     const priorLoginItem = await readLoginItem(app);
+    const priorClipboard = await app.evaluate(({ clipboard }) => clipboard.readText());
 
     try {
       await use(app);
     } finally {
       await restoreLoginItem(app, priorLoginItem);
+      await app.evaluate(({ clipboard }, text) => {
+        clipboard.writeText(text);
+      }, priorClipboard);
       await app.close();
+      await rm(userDataDir, { force: true, recursive: true });
     }
   },
   page: async ({ electronApp }, use) => {

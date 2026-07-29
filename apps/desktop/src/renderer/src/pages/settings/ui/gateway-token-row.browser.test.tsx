@@ -194,10 +194,10 @@ test('a store that goes unreadable while the requirement stands says so in the t
     },
   });
 
-  await expect.element(screen.getByText('the vault could not be decrypted')).toBeVisible();
   await expect
     .element(screen.getByText(/credential store could not be read/u).first())
     .toBeVisible();
+  expect(screen.getByText(/vault\.bin|could not be decrypted/u).elements()).toHaveLength(0);
 });
 
 test('minting the first token from the row asks for no confirmation', async () => {

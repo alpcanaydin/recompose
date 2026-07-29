@@ -5,10 +5,11 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import type { SecretCodec } from '../storage/safe-storage-codec';
+import type { StorageIpcContext } from './storage-context';
 
 import { GATEWAY_TOKEN_REF, maskGatewayToken } from '../settings/gateway-token';
 import { getSecret, loadVaultFile } from '../storage/vault';
-import { createStorageIpcHandlers, type StorageIpcContext } from './storage-ipc';
+import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
   encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),

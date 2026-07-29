@@ -76,7 +76,7 @@ export const Copied = meta.story({
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Copy' }));
 
-    await expect(await canvas.findByRole('alert')).toHaveTextContent('Copied.');
+    await expect(await canvas.findByRole('note')).toHaveTextContent('Copied.');
   },
 });
 

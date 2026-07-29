@@ -69,7 +69,7 @@ export function NumericField({
 
     setDraft(String(committable ?? value));
 
-    if (committable !== null) {
+    if (committable !== null && committable !== value) {
       onCommitValue(committable);
     }
   };

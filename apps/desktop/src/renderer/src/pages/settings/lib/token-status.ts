@@ -13,7 +13,10 @@ type TokenRowActivity = {
   mintFailed: boolean;
 };
 
-export function tokenRowStatus(activity: TokenRowActivity): { status?: string } {
+export function tokenRowStatus(activity: TokenRowActivity): {
+  status?: string;
+  statusTone?: 'alert' | 'note';
+} {
   if (activity.confirming) {
     return { status: consequence };
   }
@@ -26,5 +29,5 @@ export function tokenRowStatus(activity: TokenRowActivity): { status?: string } 
     return { status: couldNotCopy };
   }
 
-  return activity.copied ? { status: copied } : {};
+  return activity.copied ? { status: copied, statusTone: 'note' } : {};
 }

@@ -176,3 +176,29 @@ test('every build defaults to hash-based history, so one url shape reaches the w
     window.location.hash = '';
   }
 });
+
+test('pressing the shortcut again brings focus back to the first control', async () => {
+  installFakeBridge();
+
+  const queryClient = createQueryClient();
+  const history = createMemoryHistory({ initialEntries: ['/settings?focus=first-control&at=1'] });
+  const router = createAppRouter({ queryClient, history });
+
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+
+  const launch = screen.getByRole('switch', { name: 'Launch at login' });
+
+  await expect.element(launch).toHaveFocus();
+
+  screen.getByRole('link', { name: 'Providers' }).element().focus();
+
+  await expect.element(launch).not.toHaveFocus();
+
+  history.push('/settings?focus=first-control&at=2');
+
+  await expect.element(launch).toHaveFocus();
+});

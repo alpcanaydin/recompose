@@ -8,12 +8,13 @@ import { describe, expect, vi } from 'vitest';
 import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { IpcHandlers } from './dispatch';
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
+import type { StorageIpcContext } from './storage-context';
 import type { StorageIpcHandlers } from './storage-ipc';
 
 import { GATEWAY_TOKEN_REF } from '../settings/gateway-token';
 import { getSecret, loadVaultFile } from '../storage/vault';
 import { dispatchIpc } from './dispatch';
-import { createStorageIpcHandlers, type StorageIpcContext } from './storage-ipc';
+import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
   encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),

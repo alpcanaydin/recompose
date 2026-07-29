@@ -7,6 +7,8 @@ import { fileBrowserFor } from '../../src/main/system/file-browser';
 import { loginItemAvailabilityFor } from '../../src/main/system/login-item';
 import { Given, Then, When } from '../fixtures';
 
+const folderRefusal = 'the folder is no longer there';
+
 const nodePlatforms: Record<string, NodeJS.Platform> = {
   macOS: 'darwin',
   Windows: 'win32',
@@ -92,9 +94,9 @@ Given('the app runs on {word}', async ({ electronApp, page }, platform: string) 
 });
 
 Given('the operating system refuses to open the config folder', async ({ electronApp }) => {
-  await electronApp.evaluate(() => {
-    process.env['RECOMPOSE_E2E_FOLDER_REFUSAL'] = 'the folder is no longer there';
-  });
+  await electronApp.evaluate((_, refusal) => {
+    process.env['RECOMPOSE_E2E_FOLDER_REFUSAL'] = refusal;
+  }, folderRefusal);
 });
 
 When('the maintainer reveals the config folder', async ({ electronApp, page }) => {
@@ -124,5 +126,8 @@ Then('the operating system opens the folder that holds recompose data', async ({
 });
 
 Then('the row states that the folder did not open', async ({ page }) => {
-  await expect(dataSection(page).getByRole('alert')).toHaveText('The folder did not open.');
+  const stated = dataSection(page).getByRole('alert');
+
+  await expect(stated).toContainText('could not open the config folder');
+  await expect(stated).toContainText(folderRefusal);
 });

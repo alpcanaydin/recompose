@@ -1,48 +1,26 @@
 import type { AccountsDocument, IpcRequest, Settings } from '@recompose/contracts';
 
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
 
-import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { IpcHandlers } from './dispatch';
 
-import {
-  GATEWAY_TOKEN_REF,
-  gatewayTokenStorageState,
-  maskGatewayToken,
-  mintGatewayToken,
-} from '../settings/gateway-token';
 import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { loadSettingsFile, saveSettingsFile } from '../storage/settings-store';
-import { deleteSecret, getSecret, saveVaultFile, setSecret } from '../storage/vault';
+import { deleteSecret, saveVaultFile, setSecret } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
-import { ipcFailure, openVault, storageFailure } from './storage-envelope';
-
-export type StorageIpcContext = {
-  userDataPath: string;
-  getCodec: () => SecretCodec;
-  isEncryptionAvailable: () => boolean;
-  onCorrupt: (quarantinedPath: string) => void;
-  writeClipboard: (text: string) => void;
-  applySettings: (settings: Settings) => void;
-};
-
-type StoragePaths = {
-  gatewaysDir: string;
-  settingsFile: string;
-  accountsFile: string;
-  vaultFile: string;
-};
-
-function storagePathsFor(userDataPath: string): StoragePaths {
-  return {
-    gatewaysDir: join(userDataPath, 'gateways'),
-    settingsFile: join(userDataPath, 'settings.json'),
-    accountsFile: join(userDataPath, 'accounts.json'),
-    vaultFile: join(userDataPath, 'vault.bin'),
-  };
-}
+import {
+  copyGatewayTokenToClipboard,
+  getGatewayTokenStatus,
+  mintGatewayTokenIntoVault,
+} from './gateway-token-ipc';
+import {
+  openVaultForWrite,
+  storagePathsFor,
+  type StorageIpcContext,
+  type StoragePaths,
+} from './storage-context';
+import { openVault, storageFailure } from './storage-envelope';
 
 async function readAccounts(
   ctx: StorageIpcContext,
@@ -81,24 +59,30 @@ async function getSettings(ctx: StorageIpcContext, paths: StoragePaths) {
   }
 }
 
+async function writeSettings(ctx: StorageIpcContext, paths: StoragePaths, settings: Settings) {
+  const previous = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
+
+  await saveSettingsFile(paths.settingsFile, settings);
+
+  return { previous, stored: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
+}
+
 async function saveSettings(
   ctx: StorageIpcContext,
   paths: StoragePaths,
   settings: IpcRequest<'settings:save'>,
 ) {
-  let stored;
+  let written;
 
   try {
-    await saveSettingsFile(paths.settingsFile, settings);
-
-    stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
+    written = await writeSettings(ctx, paths, settings);
   } catch (error) {
     return storageFailure(error);
   }
 
-  ctx.applySettings(stored);
+  ctx.applySettings(written.stored, written.previous);
 
-  return { ok: true as const, value: stored };
+  return { ok: true as const, value: written.stored };
 }
 
 async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
@@ -107,14 +91,6 @@ async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
   } catch (error) {
     return storageFailure(error);
   }
-}
-
-async function openVaultForWrite(ctx: StorageIpcContext, paths: StoragePaths) {
-  if (!ctx.isEncryptionAvailable()) {
-    return ipcFailure('vault-unavailable', 'OS secret encryption is unavailable');
-  }
-
-  return openVault(paths.vaultFile, ctx.onCorrupt);
 }
 
 async function connectAccount(
@@ -186,82 +162,6 @@ async function removeAccount(
   } catch (error) {
     return storageFailure(error);
   }
-}
-
-async function readGatewayToken(ctx: StorageIpcContext, paths: StoragePaths) {
-  const opened = await openVault(paths.vaultFile, ctx.onCorrupt);
-
-  if (!opened.ok) {
-    return opened;
-  }
-
-  try {
-    return { ok: true as const, token: getSecret(opened.vault, ctx.getCodec(), GATEWAY_TOKEN_REF) };
-  } catch (error) {
-    return storageFailure(error);
-  }
-}
-
-async function getGatewayTokenStatus(ctx: StorageIpcContext, paths: StoragePaths) {
-  const storage = gatewayTokenStorageState(
-    ctx.isEncryptionAvailable(),
-    ctx.getCodec().isPlaintextFallback,
-  );
-
-  if (storage === 'unavailable') {
-    return { ok: true as const, value: { masked: null, storage } };
-  }
-
-  const read = await readGatewayToken(ctx, paths);
-
-  if (!read.ok) {
-    return read;
-  }
-
-  const masked = read.token === undefined ? null : maskGatewayToken(read.token);
-
-  return { ok: true as const, value: { masked, storage } };
-}
-
-async function mintGatewayTokenIntoVault(ctx: StorageIpcContext, paths: StoragePaths) {
-  const opened = await openVaultForWrite(ctx, paths);
-
-  if (!opened.ok) {
-    return opened;
-  }
-
-  try {
-    const token = mintGatewayToken();
-    const codec = ctx.getCodec();
-
-    await saveVaultFile(paths.vaultFile, setSecret(opened.vault, codec, GATEWAY_TOKEN_REF, token));
-
-    return {
-      ok: true as const,
-      value: {
-        masked: maskGatewayToken(token),
-        storage: gatewayTokenStorageState(true, codec.isPlaintextFallback),
-      },
-    };
-  } catch (error) {
-    return storageFailure(error);
-  }
-}
-
-async function copyGatewayTokenToClipboard(ctx: StorageIpcContext, paths: StoragePaths) {
-  const read = await readGatewayToken(ctx, paths);
-
-  if (!read.ok) {
-    return read;
-  }
-
-  if (read.token === undefined) {
-    return ipcFailure('token-missing', 'the vault holds no gateway token to copy');
-  }
-
-  ctx.writeClipboard(read.token);
-
-  return { ok: true as const, value: undefined };
 }
 
 export type StorageIpcHandlers = Pick<

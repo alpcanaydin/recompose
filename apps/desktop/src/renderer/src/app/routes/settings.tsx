@@ -9,11 +9,21 @@ import {
 
 type SettingsSearch = {
   focus?: 'first-control';
+  at?: string;
 };
 
+function focusRequest(search: Record<string, unknown>): SettingsSearch {
+  if (search['focus'] !== 'first-control') {
+    return {};
+  }
+
+  const at = search['at'];
+
+  return typeof at === 'string' ? { focus: 'first-control', at } : { focus: 'first-control' };
+}
+
 export const Route = createFileRoute('/settings')({
-  validateSearch: (search: Record<string, unknown>): SettingsSearch =>
-    search['focus'] === 'first-control' ? { focus: 'first-control' } : {},
+  validateSearch: focusRequest,
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(settingsQueryOptions),
@@ -25,7 +35,7 @@ export const Route = createFileRoute('/settings')({
 });
 
 function SettingsRoute() {
-  const { focus } = Route.useSearch();
+  const { focus, at } = Route.useSearch();
 
-  return <SettingsPage focus={focus} />;
+  return <SettingsPage at={at} focus={focus} />;
 }
