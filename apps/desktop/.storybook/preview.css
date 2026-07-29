@@ -7,3 +7,8 @@ html.scheme-dark,
 html.scheme-dark body {
   color-scheme: dark;
 }
+
+html.scheme-light body,
+html.scheme-dark body {
+  background: var(--color-surface-content);
+}
