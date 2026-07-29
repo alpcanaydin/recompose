@@ -115,6 +115,14 @@ Nine units run in parallel once the foundation lands. Each owns exactly one feat
 - [ ] **Every unit drives by role rather than by selector,** and asserts what a person can observe. A scenario the app can't answer as written goes back through a spec amendment, never a quiet rewrite, because the set froze at gate 2.
 - [ ] **A unit that finds its scenario belongs in a main-process spec says so** rather than forcing it through the app. The scenario writer already moved several for that reason.
 
+### Amendment: the tray Quit scenario leaves the automated set
+
+`menu-bar-presence.feature` froze with a fourth scenario, `The tray always offers a way to quit`, that no other frozen artifact asks for. `specs/settings/spec.md` carries exactly two tray scenarios, and the automated set already answers both. The design assigns the Quit claim twice, and to neither the end-to-end layer. The risk table hands it to the template spec. End-to-end verification step 7 walks it by hand. The test matrix names what end-to-end proves about the tray, and Quit isn't in it.
+
+Electron offers no read path either. `Tray` exposes `setContextMenu`, `popUpContextMenu`, and `closeContextMenu`, and no getter, so the menu stays write-only. A live instance holds no own properties. `electron.Tray` is a non-configurable getter, so a test can't wrap it. That left two ways to automate the scenario. A spy on `setContextMenu` asserts an interaction inside the app rather than a state at a process boundary. A stub without assertions asserts nothing at all. The unit proved as much, because the stub stayed green under every mutation that reddened its siblings.
+
+The scenario therefore leaves the gherkin set, which brings the set level with the spec. Its claim keeps the two homes the design gave it. Four tests in `apps/desktop/src/main/tray/tray-menu-template.test.ts` pin the Quit item, its handler, and its place after the separator. Manual verification step 7 walks the rest.
+
 ## The records task
 
 **Files:** the four new files under `docs/adr/` and the index.
