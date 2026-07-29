@@ -64,12 +64,12 @@ What this leaves for later clusters: the system cluster keeps everything except 
 
 **Blockers:** reads the controls cluster D produces.
 
-- [ ] **Step 1: The query and the mutation.** One document query, warmed by the route loader. One whole-document mutation, scoped so concurrent writes serialize, computing its patch from the cache at execution time.
-- [ ] **Step 2: The four sections.** Live rows sort before waiting rows where the logic allows.
-- [ ] **Step 3: The token row.** It appears only while the requirement is on, confirms regeneration inline, and warns before minting when the credential store can't encrypt.
-- [ ] **Step 4: The sidebar gains a System group** holding Settings.
-- [ ] **Step 5: Page specs against the fake bridge,** asserting persistence as observable state, the rollback on a failed write, and that the full token never reaches the document.
-- [ ] **Step 6: Stories for the page and both bespoke rows,** with the settings parameter flowing through the bridge decorator. The accessibility addon runs at error level in the browser project, so a story that fails axe fails the suite. The token row earns its own story, because its states carry the most risk: the requirement off, a masked token, the confirmation open, and the plain text warning.
+- [x] **Step 1: The query and the mutation.** One document query, warmed by the route loader. One whole-document mutation, scoped so concurrent writes serialize, computing its patch from the cache at execution time.
+- [x] **Step 2: The four sections.** Live rows sort before waiting rows where the logic allows.
+- [x] **Step 3: The token row.** It appears only while the requirement is on, confirms regeneration inline, and warns before minting when the credential store can't encrypt.
+- [x] **Step 4: The sidebar gains a System group** holding Settings.
+- [x] **Step 5: Page specs against the fake bridge,** asserting persistence as observable state, the rollback on a failed write, and that the full token never reaches the document.
+- [x] **Step 6: Stories for the page and both bespoke rows,** with the settings parameter flowing through the bridge decorator. The accessibility addon runs at error level in the browser project, so a story that fails axe fails the suite. The token row earns its own story, because its states carry the most risk: the requirement off, a masked token, the confirmation open, and the plain text warning.
 
 ## The bootstrap cluster
 
@@ -90,8 +90,8 @@ What this leaves for later clusters: the system cluster keeps everything except 
 
 This lands alone and first inside the end-to-end tree, because every unit in the fan-out below uses its navigation step and its fixture. It carries no feature file, so nothing goes red.
 
-- [ ] **Step 1: A navigation step reaches the settings screen,** as the sibling of the two that already exist.
-- [ ] **Step 2: The fixture restores what it changed,** so an acceptance run never leaves a login item behind on a runner or a developer machine.
+- [x] **Step 1: A navigation step reaches the settings screen,** as the sibling of the two that already exist.
+- [x] **Step 2: The fixture restores what it changed,** so an acceptance run never leaves a login item behind on a runner or a developer machine.
 - [ ] **Step 3: Visual baselines on all three platforms.** The home and providers baselines move too, because the sidebar gains a group and the text field changes its markup.
 
 ## The step-definition fan-out
@@ -112,8 +112,8 @@ Nine units run in parallel once the foundation lands. Each owns exactly one feat
 | `settings/waiting-controls.feature`  | `steps/settings-waiting-controls.steps.ts`  |
 | `settings/shortcut.feature`          | `steps/settings-shortcut.steps.ts`          |
 
-- [ ] **Every unit drives by role rather than by selector,** and asserts what a person can observe. A scenario the app can't answer as written goes back through a spec amendment, never a quiet rewrite, because the set froze at gate 2.
-- [ ] **A unit that finds its scenario belongs in a main-process spec says so** rather than forcing it through the app. The scenario writer already moved several for that reason.
+- [x] **Every unit drives by role rather than by selector,** and asserts what a person can observe. A scenario the app can't answer as written goes back through a spec amendment, never a quiet rewrite, because the set froze at gate 2.
+- [x] **A unit that finds its scenario belongs in a main-process spec says so** rather than forcing it through the app. The scenario writer already moved several for that reason.
 
 ### Amendment: the tray Quit scenario leaves the automated set
 
@@ -135,4 +135,4 @@ The unit also corrected the brief. `getLoginItemSettings` doesn't throw on Linux
 
 **Files:** the four new files under `docs/adr/` and the index.
 
-- [ ] **Four Architecture Decision Records:** the shared kit's base, the launch-at-login stance, the config folder call, and the token design.
+- [x] **Four Architecture Decision Records:** the shared kit's base, the launch-at-login stance, the config folder call, and the token design.
