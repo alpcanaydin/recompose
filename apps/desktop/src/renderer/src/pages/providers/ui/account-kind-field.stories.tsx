@@ -19,7 +19,7 @@ const meta = preview.meta({
 export const Basic = meta.story({
   args: { value: 'api-key', onChangeValue: () => {} },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('combobox', { name: 'Kind' })).toHaveValue('api-key');
+    await expect(await canvas.findByRole('combobox', { name: 'Kind' })).toHaveValue('api-key');
   },
   render: function Render(args) {
     const [{ value }, updateArgs] = useArgs<ComponentProps<typeof AccountKindField>>();

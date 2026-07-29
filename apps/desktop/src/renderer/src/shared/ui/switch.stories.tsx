@@ -22,7 +22,7 @@ export const Off = meta.story({
   args: { label: 'Show in menu bar', checked: false, onChangeChecked: () => {} },
   render: ControlledSwitch,
   play: async ({ canvas, userEvent }) => {
-    const control = canvas.getByRole('switch', { name: 'Show in menu bar' });
+    const control = await canvas.findByRole('switch', { name: 'Show in menu bar' });
 
     await expect(control).toHaveAttribute('aria-checked', 'false');
 
@@ -38,7 +38,7 @@ export const On = meta.story({
   args: { label: 'Show in menu bar', checked: true, onChangeChecked: () => {} },
   render: ControlledSwitch,
   play: async ({ canvas }) => {
-    const control = canvas.getByRole('switch', { name: 'Show in menu bar' });
+    const control = await canvas.findByRole('switch', { name: 'Show in menu bar' });
 
     await expect(control).toHaveAttribute('aria-checked', 'true');
   },
@@ -49,7 +49,7 @@ export const Inert = meta.story({
   args: { label: 'Gateway autostart', checked: false, inert: true, onChangeChecked: () => {} },
   render: ControlledSwitch,
   play: async ({ canvas, userEvent }) => {
-    const control = canvas.getByRole('switch', { name: 'Gateway autostart' });
+    const control = await canvas.findByRole('switch', { name: 'Gateway autostart' });
 
     await expect(control).toHaveAttribute('aria-disabled', 'true');
     await expect(control).not.toHaveAttribute('disabled');

@@ -12,8 +12,8 @@ const meta = preview.meta({
 /** The settings column as it opens on a fresh install, every section in reading order. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-    await expect(canvas.getByRole('group', { name: 'Appearance' })).toBeInTheDocument();
+    await expect(await canvas.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    await expect(await canvas.findByRole('group', { name: 'Appearance' })).toBeInTheDocument();
   },
 });
 
@@ -36,8 +36,8 @@ export const WithTokenRequired = meta.story({
     },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText('rc-local-••••••••9a3d')).toBeInTheDocument();
-    await expect(canvas.getByRole('switch', { name: 'Require API token' })).toHaveAttribute(
+    await expect(await canvas.findByText('rc-local-••••••••9a3d')).toBeInTheDocument();
+    await expect(await canvas.findByRole('switch', { name: 'Require API token' })).toHaveAttribute(
       'aria-checked',
       'true',
     );
@@ -53,7 +53,7 @@ export const WithTokenRequired = meta.story({
 export const OpenedByShortcut = meta.story({
   args: { focus: 'first-control' },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
+    await expect(await canvas.findByRole('switch', { name: 'Launch at login' })).toHaveFocus();
   },
 });
 

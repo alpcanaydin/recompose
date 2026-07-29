@@ -16,7 +16,7 @@ const meta = preview.meta({
 /** The button a row carries beside its label, for an act that changes nothing on its own. */
 export const Plain = meta.story({
   play: async ({ args, canvas, userEvent }) => {
-    const button = canvas.getByRole('button', { name: 'Reveal in Finder' });
+    const button = await canvas.findByRole('button', { name: 'Reveal in Finder' });
 
     await userEvent.click(button);
 
@@ -28,7 +28,7 @@ export const Plain = meta.story({
 export const Destructive = meta.story({
   args: { children: 'Regenerate', tone: 'destructive' },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('button', { name: 'Regenerate' })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Regenerate' })).toBeVisible();
   },
 });
 

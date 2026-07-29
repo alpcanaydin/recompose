@@ -13,8 +13,8 @@ const meta = preview.meta({
 /** Theme choice beside the wire motion the canvas has yet to answer for. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
-    await expect(canvas.getByRole('switch', { name: 'Reduce wire motion' })).toHaveAttribute(
+    await expect(await canvas.findByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+    await expect(await canvas.findByRole('switch', { name: 'Reduce wire motion' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
@@ -24,9 +24,9 @@ export const Basic = meta.story({
 /** Choosing a theme moves the selection to the segment the person picked. */
 export const ChoosingDark = meta.story({
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('radio', { name: 'Dark' }));
+    await userEvent.click(await canvas.findByRole('radio', { name: 'Dark' }));
 
-    await expect(canvas.getByRole('radio', { name: 'Dark' })).toHaveAttribute(
+    await expect(await canvas.findByRole('radio', { name: 'Dark' })).toHaveAttribute(
       'aria-checked',
       'true',
     );

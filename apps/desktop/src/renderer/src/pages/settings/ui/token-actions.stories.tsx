@@ -14,9 +14,11 @@ const meta = preview.meta({
 /** Before a value exists there is one act, and it names what it will make. */
 export const NothingMinted = meta.story({
   play: async ({ args, canvas, userEvent }) => {
+    const generate = await canvas.findByRole('button', { name: 'Generate' });
+
     await expect(canvas.queryByRole('button', { name: 'Copy' })).toBeNull();
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Generate' }));
+    await userEvent.click(generate);
 
     await expect(args.onMint).toHaveBeenCalled();
   },
@@ -26,10 +28,10 @@ export const NothingMinted = meta.story({
 export const Minted = meta.story({
   args: { masked: 'rc-local-••••••••9a3d' },
   play: async ({ args, canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Copy' }));
+    await userEvent.click(await canvas.findByRole('button', { name: 'Copy' }));
 
     await expect(args.onCopy).toHaveBeenCalled();
-    await expect(canvas.getByRole('button', { name: 'Regenerate' })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Regenerate' })).toBeVisible();
   },
 });
 

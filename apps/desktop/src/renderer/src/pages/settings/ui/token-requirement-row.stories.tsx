@@ -27,7 +27,7 @@ const meta = preview.meta({
 export const RequirementOff = meta.story({
   parameters: storing('available'),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('switch', { name: 'Require API token' })).toHaveAttribute(
+    await expect(await canvas.findByRole('switch', { name: 'Require API token' })).toHaveAttribute(
       'aria-checked',
       'false',
     );
@@ -43,7 +43,7 @@ export const RequirementOff = meta.story({
 export const PlainTextWarning = meta.story({
   parameters: storing('plaintext-fallback'),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('alert')).toHaveTextContent(/plain text/i);
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(/plain text/i);
   },
 });
 
@@ -51,10 +51,10 @@ export const PlainTextWarning = meta.story({
 export const StoreUnavailable = meta.story({
   parameters: storing('unavailable'),
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('switch', { name: 'Require API token' }));
+    await userEvent.click(await canvas.findByRole('switch', { name: 'Require API token' }));
 
-    await expect(canvas.getByRole('alert')).toHaveTextContent(/credential store/i);
-    await expect(canvas.getByRole('switch', { name: 'Require API token' })).toHaveAttribute(
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(/credential store/i);
+    await expect(await canvas.findByRole('switch', { name: 'Require API token' })).toHaveAttribute(
       'aria-checked',
       'false',
     );
@@ -66,6 +66,6 @@ export const DarkScheme = meta.story({
   globals: { theme: 'dark' },
   parameters: storing('plaintext-fallback'),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('alert')).toHaveTextContent(/plain text/i);
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(/plain text/i);
   },
 });

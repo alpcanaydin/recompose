@@ -15,8 +15,8 @@ const meta = preview.meta({
 /** The config folder written the way a person reads it, with no account name in it. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByText('~/Library/Application Support/recompose')).toBeVisible();
-    await expect(canvas.getByRole('button', { name: 'Reveal in Finder' })).toBeVisible();
+    await expect(await canvas.findByText('~/Library/Application Support/recompose')).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Reveal in Finder' })).toBeVisible();
   },
 });
 
@@ -27,7 +27,7 @@ export const OnWindows = meta.story({
     configFolder: String.raw`C:\Users\someone\AppData\Roaming\recompose`,
   }),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('button', { name: 'Show in Explorer' })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Show in Explorer' })).toBeVisible();
   },
 });
 
@@ -38,7 +38,7 @@ export const OnLinux = meta.story({
     configFolder: '/home/someone/.config/recompose',
   }),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('button', { name: 'Open folder' })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Open folder' })).toBeVisible();
   },
 });
 

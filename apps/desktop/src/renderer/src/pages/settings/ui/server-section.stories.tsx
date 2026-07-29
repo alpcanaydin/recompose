@@ -13,8 +13,8 @@ const meta = preview.meta({
 /** The port a person can set, beside the two rows still waiting on the engine. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('textbox', { name: 'Port' })).toHaveValue('8397');
-    await expect(canvas.getByRole('textbox', { name: 'Bind address' })).toHaveAttribute(
+    await expect(await canvas.findByRole('textbox', { name: 'Port' })).toHaveValue('8397');
+    await expect(await canvas.findByRole('textbox', { name: 'Bind address' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
@@ -35,9 +35,9 @@ export const TokenRequired = meta.story({
     },
   },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('switch', { name: 'Require API token' }));
+    await userEvent.click(await canvas.findByRole('switch', { name: 'Require API token' }));
 
-    await expect(canvas.getByText(/^rc-local-/u)).toBeVisible();
+    await expect(await canvas.findByText(/^rc-local-/u)).toBeVisible();
   },
 });
 

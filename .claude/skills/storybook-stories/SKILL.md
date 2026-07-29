@@ -9,6 +9,8 @@ description: Conventions for writing recompose Storybook stories. Use when creat
 
 - A story lives next to its component: `<component>.stories.tsx` inside the owning slice's `ui/` segment.
 - Import other slices only through their public `index.ts`. Steiger enforces this in stories too.
+- **A play function queries with `findBy`, never `getBy`, whenever the component reads a suspended query.** `getBy` is synchronous, so it throws the moment the story mounts, while the boundary is still pending and the canvas holds no roles at all. The vitest project hides this, because its render flushes React's act queue; Chromatic does not, and reported it as `Unable to find an accessible element` with `There are no accessible roles` against a screenshot that plainly showed the control. Measured: the first role appears about 340 milliseconds in, well inside `findBy`'s one second.
+- **An assertion that something is absent needs a settle point before it.** `queryBy(...)).toBeNull()` passes on an empty canvas, so it proves nothing until an `await canvas.findBy...` for something present has run first.
 - **A new `ui/` component and its story land in the same commit.** Writing the component without the story is the mistake this rule exists to stop, and it stays cheap only while both files are still open.
 - Two gates enforce it. `pnpm run lint:stories` runs on `pre-push` and names each component missing its sibling, so the branch never reaches a pull request with the gap. The pull-request meta-gate runs the same script against the pull request's base. Escape: `stories-exempt` label plus a `Stories-exempt: <reason>` body line, and the escape only exists on the pull request.
 

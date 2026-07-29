@@ -15,8 +15,8 @@ const meta = preview.meta({
 /** A packaged build on a platform that carries login items: every row live. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('switch', { name: 'Launch at login' })).toBeVisible();
-    await expect(canvas.getByRole('switch', { name: 'Show in menu bar' })).toBeVisible();
+    await expect(await canvas.findByRole('switch', { name: 'Launch at login' })).toBeVisible();
+    await expect(await canvas.findByRole('switch', { name: 'Show in menu bar' })).toBeVisible();
   },
 });
 
@@ -24,7 +24,7 @@ export const Basic = meta.story({
 export const UnpackagedBuild = meta.story({
   parameters: reportingSystem({ loginItem: 'unpackaged' }),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('switch', { name: 'Launch at login' })).toHaveAttribute(
+    await expect(await canvas.findByRole('switch', { name: 'Launch at login' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
@@ -35,8 +35,9 @@ export const UnpackagedBuild = meta.story({
 export const NoLoginItem = meta.story({
   parameters: reportingSystem({ loginItem: 'unsupported' }),
   play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('switch', { name: 'Show in menu bar' })).toBeVisible();
+
     await expect(canvas.queryByRole('switch', { name: 'Launch at login' })).toBeNull();
-    await expect(canvas.getByRole('switch', { name: 'Show in menu bar' })).toBeVisible();
   },
 });
 

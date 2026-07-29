@@ -44,9 +44,9 @@ function ControlledThemeChoice({ inert = false }: { inert?: boolean }) {
 export const Basic = meta.story({
   render: () => <ControlledThemeChoice />,
   play: async ({ canvas, userEvent }) => {
-    const group = canvas.getByRole('radiogroup', { name: 'Appearance' });
-    const system = canvas.getByRole('radio', { name: 'System' });
-    const light = canvas.getByRole('radio', { name: 'Light' });
+    const group = await canvas.findByRole('radiogroup', { name: 'Appearance' });
+    const system = await canvas.findByRole('radio', { name: 'System' });
+    const light = await canvas.findByRole('radio', { name: 'Light' });
 
     await expect(group).toBeInTheDocument();
     await expect(system).toHaveAttribute('aria-checked', 'true');
@@ -55,7 +55,7 @@ export const Basic = meta.story({
     await userEvent.click(light);
 
     await expect(light).toHaveAttribute('aria-checked', 'true');
-    await expect(canvas.getByText('stored: light')).toBeInTheDocument();
+    await expect(await canvas.findByText('stored: light')).toBeInTheDocument();
   },
 });
 
@@ -63,8 +63,8 @@ export const Basic = meta.story({
 export const ArrowKeysSelect = meta.story({
   render: () => <ControlledThemeChoice />,
   play: async ({ canvas, userEvent }) => {
-    const system = canvas.getByRole('radio', { name: 'System' });
-    const light = canvas.getByRole('radio', { name: 'Light' });
+    const system = await canvas.findByRole('radio', { name: 'System' });
+    const light = await canvas.findByRole('radio', { name: 'Light' });
 
     await expect(system).toHaveAttribute('tabindex', '0');
     await expect(light).toHaveAttribute('tabindex', '-1');
@@ -74,7 +74,7 @@ export const ArrowKeysSelect = meta.story({
 
     await expect(light).toHaveFocus();
     await expect(light).toHaveAttribute('aria-checked', 'true');
-    await expect(canvas.getByText('stored: light')).toBeInTheDocument();
+    await expect(await canvas.findByText('stored: light')).toBeInTheDocument();
   },
 });
 
@@ -82,15 +82,15 @@ export const ArrowKeysSelect = meta.story({
 export const Inert = meta.story({
   render: () => <ControlledThemeChoice inert />,
   play: async ({ canvas, userEvent }) => {
-    const group = canvas.getByRole('radiogroup', { name: 'Appearance' });
-    const light = canvas.getByRole('radio', { name: 'Light' });
+    const group = await canvas.findByRole('radiogroup', { name: 'Appearance' });
+    const light = await canvas.findByRole('radio', { name: 'Light' });
 
     await expect(group).toHaveAttribute('aria-disabled', 'true');
     await expect(light).not.toHaveAttribute('disabled');
 
     await userEvent.click(light);
 
-    await expect(canvas.getByText('stored: system')).toBeInTheDocument();
+    await expect(await canvas.findByText('stored: system')).toBeInTheDocument();
   },
 });
 

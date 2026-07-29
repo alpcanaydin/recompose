@@ -14,11 +14,31 @@ const meta = preview.meta({
 
 const acceptedRange = 'Accepts 1024 through 65535.';
 
+type PortDraft = {
+  canvas: { findByRole: (role: string, options: { name: string }) => Promise<HTMLElement> };
+  userEvent: {
+    clear: (target: HTMLElement) => Promise<void>;
+    type: (target: HTMLElement, text: string) => Promise<void>;
+  };
+};
+
+async function draftInPortField(
+  { canvas, userEvent }: PortDraft,
+  entry: string,
+): Promise<HTMLElement> {
+  const port = await canvas.findByRole('textbox', { name: 'Port' });
+
+  await userEvent.clear(port);
+  await userEvent.type(port, entry);
+
+  return port;
+}
+
 /** The stored port at rest, with the accepted range stated where it cannot drift from the schema. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('textbox', { name: 'Port' })).toHaveValue('8397');
-    await expect(canvas.getByText(acceptedRange)).toBeInTheDocument();
+    await expect(await canvas.findByRole('textbox', { name: 'Port' })).toHaveValue('8397');
+    await expect(await canvas.findByText(acceptedRange)).toBeInTheDocument();
   },
 });
 
@@ -29,10 +49,8 @@ export const Basic = meta.story({
  */
 export const CommitsOnEnter = meta.story({
   play: async ({ canvas, userEvent }) => {
-    const port = canvas.getByRole('textbox', { name: 'Port' });
+    const port = await draftInPortField({ canvas, userEvent }, '9000{Enter}');
 
-    await userEvent.clear(port);
-    await userEvent.type(port, '9000{Enter}');
     await expect(port).toHaveValue('9000');
   },
 });
@@ -40,10 +58,8 @@ export const CommitsOnEnter = meta.story({
 /** Escape abandons the draft and puts the stored port back in the field. */
 export const EscapeReverts = meta.story({
   play: async ({ canvas, userEvent }) => {
-    const port = canvas.getByRole('textbox', { name: 'Port' });
+    const port = await draftInPortField({ canvas, userEvent }, '9000{Escape}');
 
-    await userEvent.clear(port);
-    await userEvent.type(port, '9000{Escape}');
     await expect(port).toHaveValue('8397');
   },
 });
@@ -51,12 +67,10 @@ export const EscapeReverts = meta.story({
 /** A port outside the range never commits, and the field keeps stating what it accepts. */
 export const OutOfRangeReverts = meta.story({
   play: async ({ canvas, userEvent }) => {
-    const port = canvas.getByRole('textbox', { name: 'Port' });
+    const port = await draftInPortField({ canvas, userEvent }, '80{Enter}');
 
-    await userEvent.clear(port);
-    await userEvent.type(port, '80{Enter}');
     await expect(port).toHaveValue('8397');
-    await expect(canvas.getByText(acceptedRange)).toBeInTheDocument();
+    await expect(await canvas.findByText(acceptedRange)).toBeInTheDocument();
   },
 });
 

@@ -27,7 +27,7 @@ export const Basic = meta.story({
     control: <LaunchSwitch />,
   },
   play: async ({ canvas }) => {
-    const control = canvas.getByRole('switch', { name: 'Launch at login' });
+    const control = await canvas.findByRole('switch', { name: 'Launch at login' });
 
     await expect(control).toHaveAccessibleDescription('Starts recompose when you sign in.');
   },
@@ -40,7 +40,7 @@ export const WithStatus = meta.story({
     control: <LaunchSwitch />,
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('alert')).toHaveTextContent("That change didn't save.");
+    await expect(await canvas.findByRole('alert')).toHaveTextContent("That change didn't save.");
   },
 });
 
@@ -57,7 +57,7 @@ export const Inert = meta.story({
     control: <Switch checked={false} inert label="Gateway autostart" onChangeChecked={() => {}} />,
   },
   play: async ({ canvas, userEvent }) => {
-    const control = canvas.getByRole('switch', { name: 'Gateway autostart' });
+    const control = await canvas.findByRole('switch', { name: 'Gateway autostart' });
 
     await expect(control).toHaveAccessibleDescription('Waiting on the engine.');
 

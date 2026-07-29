@@ -30,7 +30,9 @@ const meta = preview.meta({
 export const NothingMinted = meta.story({
   parameters: holding(null),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('button', { name: 'Generate' })).toBeInTheDocument();
+    await expect(await canvas.findByRole('button', { name: 'Generate' })).toBeInTheDocument();
+    await canvas.findByRole('button', { name: 'Generate' });
+
     await expect(canvas.queryByRole('button', { name: 'Copy' })).toBeNull();
   },
 });
@@ -39,9 +41,9 @@ export const NothingMinted = meta.story({
 export const Masked = meta.story({
   parameters: holding('rc-local-••••••••9a3d'),
   play: async ({ canvas }) => {
-    await expect(canvas.getByText('rc-local-••••••••9a3d')).toBeInTheDocument();
-    await expect(canvas.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
-    await expect(canvas.getByRole('button', { name: 'Regenerate' })).toBeInTheDocument();
+    await expect(await canvas.findByText('rc-local-••••••••9a3d')).toBeInTheDocument();
+    await expect(await canvas.findByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    await expect(await canvas.findByRole('button', { name: 'Regenerate' })).toBeInTheDocument();
   },
 });
 
@@ -53,14 +55,14 @@ export const Masked = meta.story({
 export const ConfirmingRegeneration = meta.story({
   parameters: holding('rc-local-••••••••9a3d'),
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Regenerate' }));
+    await userEvent.click(await canvas.findByRole('button', { name: 'Regenerate' }));
 
-    await expect(canvas.getByRole('alert')).toHaveTextContent(/stop connecting/i);
-    await expect(canvas.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(/stop connecting/i);
+    await expect(await canvas.findByRole('button', { name: 'Cancel' })).toHaveFocus();
 
     await userEvent.keyboard('{Escape}');
 
-    await expect(canvas.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    await expect(await canvas.findByRole('button', { name: 'Copy' })).toBeInTheDocument();
   },
 });
 
@@ -68,9 +70,9 @@ export const ConfirmingRegeneration = meta.story({
 export const Copied = meta.story({
   parameters: holding('rc-local-••••••••9a3d'),
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Copy' }));
+    await userEvent.click(await canvas.findByRole('button', { name: 'Copy' }));
 
-    await expect(canvas.getByRole('alert')).toHaveTextContent('Copied.');
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Copied.');
   },
 });
 
@@ -79,8 +81,8 @@ export const DarkScheme = meta.story({
   globals: { theme: 'dark' },
   parameters: holding('rc-local-••••••••9a3d'),
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Regenerate' }));
+    await userEvent.click(await canvas.findByRole('button', { name: 'Regenerate' }));
 
-    await expect(canvas.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await expect(await canvas.findByRole('button', { name: 'Cancel' })).toHaveFocus();
   },
 });

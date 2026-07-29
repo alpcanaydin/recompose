@@ -50,10 +50,14 @@ function GeneralRows() {
 export const Basic = meta.story({
   args: { children: <GeneralRows /> },
   play: async ({ canvas }) => {
-    const group = canvas.getByRole('group', { name: 'General' });
+    const group = await canvas.findByRole('group', { name: 'General' });
 
-    await expect(group).toContainElement(canvas.getByRole('switch', { name: 'Launch at login' }));
-    await expect(group).toContainElement(canvas.getByRole('switch', { name: 'Gateway autostart' }));
+    await expect(group).toContainElement(
+      await canvas.findByRole('switch', { name: 'Launch at login' }),
+    );
+    await expect(group).toContainElement(
+      await canvas.findByRole('switch', { name: 'Gateway autostart' }),
+    );
   },
 });
 
@@ -112,13 +116,13 @@ function ServerRows() {
 export const WithEveryControl = meta.story({
   args: { heading: 'Server', children: <ServerRows /> },
   play: async ({ canvas }) => {
-    const bindAddress = canvas.getByRole('textbox', { name: 'Bind address' });
-    const retention = canvas.getByRole('radiogroup', { name: 'Log retention' });
+    const bindAddress = await canvas.findByRole('textbox', { name: 'Bind address' });
+    const retention = await canvas.findByRole('radiogroup', { name: 'Log retention' });
 
     await expect(bindAddress).toHaveAccessibleDescription('Waiting on the engine.');
     await expect(bindAddress).toHaveAttribute('aria-disabled', 'true');
     await expect(retention).toHaveAttribute('aria-disabled', 'true');
-    await expect(canvas.getByRole('textbox', { name: 'Port' })).toHaveValue('8397');
-    await expect(canvas.getByRole('radio', { name: '30 days' })).toBeInTheDocument();
+    await expect(await canvas.findByRole('textbox', { name: 'Port' })).toHaveValue('8397');
+    await expect(await canvas.findByRole('radio', { name: '30 days' })).toBeInTheDocument();
   },
 });

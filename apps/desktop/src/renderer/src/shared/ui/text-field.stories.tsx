@@ -22,7 +22,7 @@ function ControlledTextField(args: ComponentProps<typeof TextField>) {
 export const Empty = meta.story({
   render: ControlledTextField,
   play: async ({ canvas, userEvent }) => {
-    const control = canvas.getByRole('textbox', { name: 'Provider' });
+    const control = await canvas.findByRole('textbox', { name: 'Provider' });
 
     await userEvent.type(control, 'anthropic');
 
@@ -41,7 +41,7 @@ export const Password = meta.story({
   args: { label: 'Secret', type: 'password', value: 'not-a-real-secret' },
   render: ControlledTextField,
   play: async ({ canvas }) => {
-    const control = canvas.getByLabelText('Secret');
+    const control = await canvas.findByLabelText('Secret');
 
     await expect(control).toHaveAttribute('type', 'password');
   },
@@ -52,7 +52,7 @@ export const Inert = meta.story({
   args: { label: 'Bind address', value: '127.0.0.1', inert: true },
   render: ControlledTextField,
   play: async ({ canvas, userEvent }) => {
-    const control = canvas.getByRole('textbox', { name: 'Bind address' });
+    const control = await canvas.findByRole('textbox', { name: 'Bind address' });
 
     await expect(control).toHaveAttribute('aria-disabled', 'true');
     await expect(control).not.toHaveAttribute('disabled');

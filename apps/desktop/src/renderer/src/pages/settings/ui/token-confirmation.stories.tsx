@@ -14,15 +14,15 @@ const meta = preview.meta({
 /** The safe choice takes focus as the confirmation opens, so a stray Return cancels. */
 export const Open = meta.story({
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('button', { name: 'Cancel' })).toHaveFocus();
-    await expect(canvas.getByRole('button', { name: 'Regenerate' })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await expect(await canvas.findByRole('button', { name: 'Regenerate' })).toBeVisible();
   },
 });
 
 /** Confirming is a deliberate second act, never the one focus lands on. */
 export const Confirming = meta.story({
   play: async ({ args, canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Regenerate' }));
+    await userEvent.click(await canvas.findByRole('button', { name: 'Regenerate' }));
 
     await expect(args.onConfirm).toHaveBeenCalled();
     await expect(args.onCancel).not.toHaveBeenCalled();
