@@ -4,13 +4,35 @@ import { expect } from '@playwright/test';
 
 import { test } from './fixtures';
 
+const captureWidth = 1024;
+const captureHeight = 680;
+
 async function pinLightScheme(app: ElectronApplication): Promise<void> {
   await app.evaluate(({ nativeTheme }) => {
     nativeTheme.themeSource = 'light';
   });
 }
 
-async function settleFonts(page: Page): Promise<void> {
+async function pinContentSize(app: ElectronApplication, page: Page): Promise<void> {
+  await app.evaluate(
+    ({ BrowserWindow }, size) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.setContentSize(size.width, size.height);
+      }
+    },
+    { width: captureWidth, height: captureHeight },
+  );
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => `${String(window.innerWidth)}x${String(window.innerHeight)}`),
+    )
+    .toBe(`${String(captureWidth)}x${String(captureHeight)}`);
+}
+
+async function settleFonts(app: ElectronApplication, page: Page): Promise<void> {
+  await pinContentSize(app, page);
+
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
@@ -29,7 +51,7 @@ async function openSettings(page: Page): Promise<void> {
 test('the home screen matches its baseline', async ({ electronApp, page }) => {
   await pinLightScheme(electronApp);
   await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
-  await settleFonts(page);
+  await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('home-empty.png');
 });
 
@@ -40,7 +62,7 @@ test('the providers screen matches its baseline before any account exists', asyn
   await pinLightScheme(electronApp);
   await openProviders(page);
   await expect(page.getByRole('listitem')).toHaveCount(0);
-  await settleFonts(page);
+  await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-empty.png');
 });
 
@@ -56,13 +78,13 @@ test('the providers screen matches its baseline with a connected account', async
   await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Claude Max' })).toBeVisible();
-  await settleFonts(page);
+  await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-connected.png');
 });
 
 test('the settings screen matches its baseline', async ({ electronApp, page }) => {
   await pinLightScheme(electronApp);
   await openSettings(page);
-  await settleFonts(page);
+  await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('settings.png');
 });
