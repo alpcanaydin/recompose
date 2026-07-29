@@ -1,5 +1,6 @@
 import type { Settings } from '@recompose/contracts';
 
+import { defaultSettings } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
@@ -179,4 +180,33 @@ test('a credential store that cannot be read leaves the rest of the screen reach
   await expect
     .element(screen.getByRole('switch', { name: 'Require API token' }))
     .toHaveAttribute('aria-disabled', 'true');
+});
+
+test('a store that goes unreadable while the requirement stands says so in the token row', async () => {
+  const screen = await renderSettings({
+    settings: { ...defaultSettings(), requireGatewayToken: true },
+    overrides: {
+      'gateway-token:status': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'the vault could not be decrypted' },
+        }),
+    },
+  });
+
+  await expect.element(screen.getByText('the vault could not be decrypted')).toBeVisible();
+  await expect
+    .element(screen.getByText(/credential store could not be read/u).first())
+    .toBeVisible();
+});
+
+test('minting the first token from the row asks for no confirmation', async () => {
+  const screen = await renderSettings({
+    settings: { ...defaultSettings(), requireGatewayToken: true },
+  });
+
+  await screen.getByRole('button', { name: 'Generate' }).click();
+
+  await expect.element(screen.getByText(/^rc-local-/)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Cancel' }).elements()).toHaveLength(0);
 });

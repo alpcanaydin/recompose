@@ -183,3 +183,43 @@ describe('the gateway token: the requirement switch', () => {
     expect(await storedToken(ctx)).toMatch(/^rc-local-/);
   });
 });
+
+describe('a credential store that stops answering after a token exists', () => {
+  const refusingCodec: SecretCodec = {
+    encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
+    decrypt: () => {
+      throw new Error('the vault could not be decrypted');
+    },
+    isPlaintextFallback: false,
+  };
+
+  test('a status read that fails answers the failure rather than a mask', async () => {
+    const ctx = await freshContext();
+    const handlers = createStorageIpcHandlers(ctx);
+
+    await handlers['gateway-token:mint']();
+
+    const refusing = createStorageIpcHandlers({ ...ctx, getCodec: () => refusingCodec });
+    const status = await refusing['gateway-token:status']();
+
+    expect(status.ok).toBe(false);
+  });
+
+  test('a copy whose read fails never reaches the clipboard', async () => {
+    const written: string[] = [];
+    const ctx = await freshContext({
+      writeClipboard: (text) => {
+        written.push(text);
+      },
+    });
+    const handlers = createStorageIpcHandlers(ctx);
+
+    await handlers['gateway-token:mint']();
+
+    const refusing = createStorageIpcHandlers({ ...ctx, getCodec: () => refusingCodec });
+    const copied = await refusing['gateway-token:copy']();
+
+    expect(copied.ok).toBe(false);
+    expect(written).toEqual([]);
+  });
+});
