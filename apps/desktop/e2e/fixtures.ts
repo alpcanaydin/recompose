@@ -49,6 +49,34 @@ async function restoreLoginItem(
   }, openAtLogin);
 }
 
+const clipboardIsSafeToTouch = process.platform !== 'linux';
+
+async function readClipboard(app: ElectronApplication): Promise<string | null> {
+  if (!clipboardIsSafeToTouch) {
+    return null;
+  }
+
+  try {
+    return await app.evaluate(({ clipboard }) => clipboard.readText());
+  } catch {
+    return null;
+  }
+}
+
+async function restoreClipboard(app: ElectronApplication, text: string | null): Promise<void> {
+  if (text === null) {
+    return;
+  }
+
+  try {
+    await app.evaluate(({ clipboard }, held) => {
+      clipboard.writeText(held);
+    }, text);
+  } catch {
+    return;
+  }
+}
+
 export const test = base.extend<ElectronFixtures>({
   electronApp: async ({}, use) => {
     const userDataDir = await mkdtemp(join(homedir(), '.recompose-e2e-'));
@@ -67,15 +95,13 @@ export const test = base.extend<ElectronFixtures>({
     });
 
     const priorLoginItem = await readLoginItem(app);
-    const priorClipboard = await app.evaluate(({ clipboard }) => clipboard.readText());
+    const priorClipboard = await readClipboard(app);
 
     try {
       await use(app);
     } finally {
       await restoreLoginItem(app, priorLoginItem);
-      await app.evaluate(({ clipboard }, text) => {
-        clipboard.writeText(text);
-      }, priorClipboard);
+      await restoreClipboard(app, priorClipboard);
       await app.close();
       await rm(userDataDir, { force: true, recursive: true });
     }
