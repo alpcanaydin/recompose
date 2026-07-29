@@ -1,13 +1,20 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { fc, test } from '@fast-check/vitest';
+import { defaultSettings } from '@recompose/contracts';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 
 import type { SecretCodec } from '../storage/safe-storage-codec';
+import type { IpcHandlers } from './dispatch';
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
+import type { StorageIpcContext } from './storage-context';
+import type { StorageIpcHandlers } from './storage-ipc';
 
+import { GATEWAY_TOKEN_REF } from '../settings/gateway-token';
+import { getSecret, loadVaultFile } from '../storage/vault';
 import { dispatchIpc } from './dispatch';
-import { createStorageIpcHandlers, type StorageIpcContext } from './storage-ipc';
+import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
   encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
@@ -22,11 +29,21 @@ async function freshContext(
 
   return {
     userDataPath,
+    homeFolder: '/Users/ada',
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
+    writeClipboard: () => undefined,
+    applySettings: () => undefined,
+    readLoginItem: () => false,
     ...overrides,
   };
+}
+
+function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
+  const absent = async (): Promise<never> => Promise.reject(new Error('not under test'));
+
+  return { ...storage, 'system:get': absent, 'system:open-config-folder': absent };
 }
 
 const connectRequest = {
@@ -86,7 +103,7 @@ describe('storage ipc handlers: accounts connect secret hygiene', () => {
     const malformedRequest = { ...connectRequest, kind: 'oauth' };
 
     const result = await dispatchIpc(
-      handlers,
+      handlersForDispatch(handlers),
       'accounts:connect',
       malformedRequest,
       trustedSender,
@@ -122,4 +139,49 @@ describe('storage ipc handlers: accounts connect logs nothing', () => {
       errorSpy.mockRestore();
     }
   });
+});
+
+const tokenAct = fc.constantFrom('require-on', 'require-off', 'regenerate');
+
+async function readSettingsDocument(userDataPath: string): Promise<string> {
+  return readFile(join(userDataPath, 'settings.json'), 'utf8').catch(() => '');
+}
+
+async function readStoredToken(userDataPath: string): Promise<string> {
+  const vault = await loadVaultFile(join(userDataPath, 'vault.bin'), () => undefined);
+
+  return getSecret(vault, fakeCodec, GATEWAY_TOKEN_REF) ?? '';
+}
+
+function windowsOf(value: string, size: number): string[] {
+  return Array.from({ length: Math.max(value.length - size + 1, 0) }, (_, start) =>
+    value.slice(start, start + size),
+  );
+}
+
+describe('storage ipc handlers: the settings document and the token', () => {
+  test.prop([fc.array(tokenAct, { minLength: 1, maxLength: 8 })])(
+    'no sequence of requirement toggles and regenerations writes a token fragment to disk',
+    async (acts) => {
+      const ctx = await freshContext();
+      const handlers = createStorageIpcHandlers(ctx);
+
+      for (const act of acts) {
+        if (act === 'regenerate') {
+          await handlers['gateway-token:mint'](undefined);
+        } else {
+          await handlers['settings:save']({
+            ...defaultSettings(),
+            requireGatewayToken: act === 'require-on',
+          });
+        }
+      }
+
+      const document = await readSettingsDocument(ctx.userDataPath);
+      const token = await readStoredToken(ctx.userDataPath);
+
+      expect(document).not.toContain('rc-local-');
+      expect(windowsOf(token, 8).some((window) => document.includes(window))).toBe(false);
+    },
+  );
 });

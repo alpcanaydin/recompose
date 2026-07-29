@@ -1,0 +1,13 @@
+{
+  "ignore": [
+    "**/out/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/.features-gen/**",
+    "**/reports/**",
+    "**/test-results/**",
+    "**/playwright-report/**",
+    "**/storybook-static/**",
+    "**/.turbo/**"
+  ]
+}

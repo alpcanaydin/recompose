@@ -1,55 +1,27 @@
-import type { AccountsDocument, IpcError, IpcRequest } from '@recompose/contracts';
+import type { AccountsDocument, IpcRequest, SettingsPatch } from '@recompose/contracts';
 
+import { withSettingsPatch } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
 
-import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { IpcHandlers } from './dispatch';
 
 import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { loadSettingsFile, saveSettingsFile } from '../storage/settings-store';
+import { deleteSecret, saveVaultFile, setSecret } from '../storage/vault';
+import { inVaultOrder } from '../storage/vault-order';
 import {
-  deleteSecret,
-  loadVaultFile,
-  saveVaultFile,
-  setSecret,
-  VaultNewerSchemaError,
-} from '../storage/vault';
-
-export type StorageIpcContext = {
-  userDataPath: string;
-  getCodec: () => SecretCodec;
-  isEncryptionAvailable: () => boolean;
-  onCorrupt: (quarantinedPath: string) => void;
-};
-
-type StoragePaths = {
-  gatewaysDir: string;
-  settingsFile: string;
-  accountsFile: string;
-  vaultFile: string;
-};
-
-function storagePathsFor(userDataPath: string): StoragePaths {
-  return {
-    gatewaysDir: join(userDataPath, 'gateways'),
-    settingsFile: join(userDataPath, 'settings.json'),
-    accountsFile: join(userDataPath, 'accounts.json'),
-    vaultFile: join(userDataPath, 'vault.bin'),
-  };
-}
-
-function failure(code: IpcError['code'], message: string) {
-  return { ok: false as const, error: { code, message } };
-}
-
-function storageFailure(error: unknown) {
-  return failure(
-    'storage-failed',
-    error instanceof Error ? error.message : 'storage operation failed',
-  );
-}
+  copyGatewayTokenToClipboard,
+  getGatewayTokenStatus,
+  mintGatewayTokenIntoVault,
+} from './gateway-token-ipc';
+import {
+  openVaultForWrite,
+  storagePathsFor,
+  type StorageIpcContext,
+  type StoragePaths,
+} from './storage-context';
+import { openVault, storageFailure } from './storage-envelope';
 
 async function readAccounts(
   ctx: StorageIpcContext,
@@ -62,7 +34,7 @@ async function listGateways(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -76,49 +48,51 @@ async function saveGateway(
 
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
 async function getSettings(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
-    return { ok: true as const, value: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
+    const stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
+
+    return { ok: true as const, value: { ...stored, launchAtLogin: ctx.readLoginItem() } };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
+}
+
+async function writeSettings(ctx: StorageIpcContext, paths: StoragePaths, patch: SettingsPatch) {
+  const previous = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
+
+  await saveSettingsFile(paths.settingsFile, withSettingsPatch(previous, patch));
+
+  return { stored: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
 }
 
 async function saveSettings(
   ctx: StorageIpcContext,
   paths: StoragePaths,
-  settings: IpcRequest<'settings:save'>,
+  patch: IpcRequest<'settings:save'>,
 ) {
-  try {
-    await saveSettingsFile(paths.settingsFile, settings);
+  let written;
 
-    return { ok: true as const, value: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
+  try {
+    written = await writeSettings(ctx, paths, patch);
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
+
+  ctx.applySettings(written.stored, patch.launchAtLogin);
+
+  return { ok: true as const, value: { ...written.stored, launchAtLogin: ctx.readLoginItem() } };
 }
 
 async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, value: await readAccounts(ctx, paths) };
   } catch (error) {
-    return storageFailure(error);
-  }
-}
-
-async function openVaultForWrite(ctx: StorageIpcContext, paths: StoragePaths) {
-  try {
-    return { ok: true as const, vault: await loadVaultFile(paths.vaultFile, ctx.onCorrupt) };
-  } catch (error) {
-    if (error instanceof VaultNewerSchemaError) {
-      return failure('vault-newer-schema', error.message);
-    }
-
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -127,10 +101,6 @@ async function connectAccount(
   paths: StoragePaths,
   request: IpcRequest<'accounts:connect'>,
 ) {
-  if (!ctx.isEncryptionAvailable()) {
-    return failure('vault-unavailable', 'OS secret encryption is unavailable');
-  }
-
   const opened = await openVaultForWrite(ctx, paths);
 
   if (!opened.ok) {
@@ -159,7 +129,7 @@ async function connectAccount(
 
     return { ok: true as const, value: updated };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
@@ -176,7 +146,7 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    const opened = await openVaultForWrite(ctx, paths);
+    const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 
     if (!opened.ok) {
       return opened;
@@ -193,11 +163,25 @@ async function removeAccount(
 
     return { ok: true as const, value: updated };
   } catch (error) {
-    return storageFailure(error);
+    return storageFailure(error, ctx.homeFolder);
   }
 }
 
-export function createStorageIpcHandlers(ctx: StorageIpcContext): IpcHandlers {
+export type StorageIpcHandlers = Pick<
+  IpcHandlers,
+  | 'gateways:list'
+  | 'gateways:save'
+  | 'settings:get'
+  | 'settings:save'
+  | 'accounts:list'
+  | 'accounts:connect'
+  | 'accounts:remove'
+  | 'gateway-token:status'
+  | 'gateway-token:mint'
+  | 'gateway-token:copy'
+>;
+
+export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHandlers {
   const paths = storagePathsFor(ctx.userDataPath);
 
   return {
@@ -206,7 +190,13 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): IpcHandlers {
     'settings:get': async () => getSettings(ctx, paths),
     'settings:save': async (settings) => saveSettings(ctx, paths, settings),
     'accounts:list': async () => listAccounts(ctx, paths),
-    'accounts:connect': async (request) => connectAccount(ctx, paths, request),
-    'accounts:remove': async (request) => removeAccount(ctx, paths, request),
+    'accounts:connect': async (request) =>
+      inVaultOrder(async () => connectAccount(ctx, paths, request)),
+    'accounts:remove': async (request) =>
+      inVaultOrder(async () => removeAccount(ctx, paths, request)),
+    'gateway-token:status': async () => getGatewayTokenStatus(ctx, paths),
+    'gateway-token:mint': async () =>
+      inVaultOrder(async () => mintGatewayTokenIntoVault(ctx, paths)),
+    'gateway-token:copy': async () => copyGatewayTokenToClipboard(ctx, paths),
   };
 }

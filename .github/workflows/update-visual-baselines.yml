@@ -5,18 +5,24 @@ on:
     inputs:
       branch:
         description: branch whose visual baselines get regenerated
-        required: true
+        required: false
         type: string
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
 
 concurrency:
-  group: update-visual-baselines-${{ inputs.branch }}
+  group: update-visual-baselines-${{ inputs.branch || github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   regenerate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'update-baselines' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +35,7 @@ jobs:
         if: runner.os == 'Linux'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -40,11 +46,23 @@ jobs:
       - run: pnpm --filter @recompose/desktop exec node node_modules/electron/install.js
       - run: pnpm exec turbo run build
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.TURBO_TOKEN || '' }}
           TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
+      - name: Start from no baselines for this platform
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            macOS) mine='-darwin.png' ;;
+            Linux) mine='-linux.png' ;;
+            Windows) mine='-win32.png' ;;
+            *) echo "::error::unknown runner $RUNNER_OS"; exit 1 ;;
+          esac
+          find apps/desktop/e2e/visual.spec.ts-snapshots -name "*$mine" -delete
+          echo "removed the $mine baselines, so each one gets written rather than rewritten"
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y gnome-keyring
       - if: runner.os == 'Linux'
+        continue-on-error: true
         run: |
           cat > /tmp/visual-update-linux.sh <<'SCRIPT'
           set -e
@@ -56,7 +74,34 @@ jobs:
           SCRIPT
           dbus-run-session -- bash /tmp/visual-update-linux.sh
       - if: runner.os != 'Linux'
+        continue-on-error: true
         run: pnpm --filter @recompose/desktop run test:e2e:visual:update
+      - if: runner.os == 'Linux'
+        name: The regenerated baselines must match what this runner produces
+        run: |
+          cat > /tmp/visual-verify-linux.sh <<'SCRIPT'
+          set -e
+          eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
+          eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
+          export XDG_CURRENT_DESKTOP=GNOME
+          export RECOMPOSE_PASSWORD_STORE=gnome-libsecret
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:visual
+          SCRIPT
+          dbus-run-session -- bash /tmp/visual-verify-linux.sh
+      - if: runner.os != 'Linux'
+        name: The regenerated baselines must match what this runner produces
+        run: pnpm --filter @recompose/desktop run test:e2e:visual
+      - name: Keep only the platform this runner speaks for
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            macOS) keep='-darwin.png' ;;
+            Linux) keep='-linux.png' ;;
+            Windows) keep='-win32.png' ;;
+            *) echo "::error::unknown runner $RUNNER_OS"; exit 1 ;;
+          esac
+          find apps/desktop/e2e/visual.spec.ts-snapshots -name '*.png' ! -name "*$keep" -delete
+          find apps/desktop/e2e/visual.spec.ts-snapshots -name '*.png'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: visual-baselines-${{ runner.os }}
@@ -74,7 +119,7 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -90,7 +135,11 @@ jobs:
             exit 0
           fi
           git commit -m "test(e2e): update visual baselines"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
+          remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch "$remote" "$BRANCH"
+          git rebase FETCH_HEAD
+          git push "$remote" "HEAD:refs/heads/${BRANCH}"
+          echo "::notice::Baselines landed. The repository token cannot start a workflow run, so push once more or re-run the checks to turn this branch green."
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          BRANCH: ${{ inputs.branch }}
+          BRANCH: ${{ inputs.branch || github.event.pull_request.head.ref || github.ref_name }}

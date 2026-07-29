@@ -124,15 +124,15 @@ Every change directory MUST carry at least one spec delta with a scenario from i
 - Then the same commit adds a spec delta with at least one scenario
 - And the validation gate stays green on every commit
 
-### Requirement: Blast-radius path guard
+### Requirement: Adversarial review before the pull request
 
-The pipeline MUST verify in continuous integration that a pull request touching blast-radius paths carries a successful `feature-cycle/reviewed` commit status on its head commit. A missing or unsuccessful status fails the guard, and the failure names the heavy review pass as the way to clear it. The blast-radius path classes are the Electron main and preload sources, the contracts package, the storage layer, the workflow definitions, and the package manifests. The workflow definitions class spans both the continuous integration tree and the saved-workflow tree.
+The pipeline MUST run the heavy adversarial review on the working tree before a pull request opens. It MUST NOT tie that review to any continuous integration check or commit status. The review answers with the findings that survived. The session fixes each surviving finding on the branch, then pushes once the review answers with none. Continuous integration therefore judges what the machine gates can judge, and the review stays the pass that finds what those gates miss.
 
-#### Scenario: a blast-radius pull request lacks the review marker
+#### Scenario: the review finds a defect before the branch leaves the machine
 
-- When a pull request changes a blast-radius path without a successful `feature-cycle/reviewed` status on its head commit
-- Then the path guard fails the check
-- And the failure names the heavy review pass as the way to clear the guard
+- When the heavy adversarial review answers with a surviving finding
+- Then the session fixes the finding on the branch before the pull request opens
+- And no continuous integration check waits on the review
 
 ### Requirement: Edit-time test-first gate
 
@@ -158,7 +158,7 @@ The pipeline MUST block an implementation edit that no failing test precedes. Th
 
 - When a subagent edits a checkout file whose path runs through a symlink
 - Then the glob match can miss and the edit lands unjudged
-- And patch coverage, the diff-scoped mutation run, the adversarial review, and the path guard still hold the merge
+- And patch coverage and the diff-scoped mutation run still hold the merge
 
 #### Scenario: an edit lands outside the session's checkout
 

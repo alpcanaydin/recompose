@@ -1,13 +1,19 @@
-import { GATEWAY_CONFIG_VERSION, type GatewayConfig } from '@recompose/contracts';
+import {
+  defaultSettings,
+  GATEWAY_CONFIG_VERSION,
+  type GatewayConfig,
+  type Settings,
+} from '@recompose/contracts';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import type { SecretCodec } from '../storage/safe-storage-codec';
+import type { StorageIpcContext } from './storage-context';
 
 import { loadVaultFile } from '../storage/vault';
-import { createStorageIpcHandlers, type StorageIpcContext } from './storage-ipc';
+import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
   encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
@@ -22,9 +28,13 @@ async function freshContext(
 
   return {
     userDataPath,
+    homeFolder: '/Users/ada',
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
+    writeClipboard: () => undefined,
+    applySettings: () => undefined,
+    readLoginItem: () => false,
     ...overrides,
   };
 }
@@ -50,6 +60,8 @@ const gateway: GatewayConfig = {
   layout: { nodes: {} },
 };
 
+const changedSettings: Settings = { ...defaultSettings(), theme: 'dark', enginePort: 9000 };
+
 const connectRequest = {
   provider: 'anthropic',
   kind: 'api-key' as const,
@@ -74,15 +86,48 @@ describe('storage ipc handlers: settings', () => {
     const handlers = createStorageIpcHandlers(await freshContext());
 
     const first = await handlers['settings:get'](undefined);
-    const written = await handlers['settings:save']({
-      schemaVersion: 1,
-      theme: 'dark',
-      enginePort: 9000,
-    });
+    const written = await handlers['settings:save'](changedSettings);
     const second = await handlers['settings:get'](undefined);
 
     expect(first).toMatchObject({ ok: true, value: { theme: 'system', enginePort: 8397 } });
     expect(written).toEqual(second);
+  });
+
+  test('a stored document reaches the seam that applies it outside the window', async () => {
+    const applied: Settings[] = [];
+    const handlers = createStorageIpcHandlers(
+      await freshContext({
+        applySettings: (settings) => {
+          applied.push(settings);
+        },
+      }),
+    );
+
+    await handlers['settings:save'](changedSettings);
+
+    expect(applied).toEqual([changedSettings]);
+  });
+
+  test('a document that never reached the disk applies nothing', async () => {
+    const blockingDir = await mkdtemp(join(tmpdir(), 'recompose-ipc-unapplied-'));
+    const blockingPath = join(blockingDir, 'not-a-directory');
+
+    await writeFile(blockingPath, '', 'utf8');
+
+    const applied: Settings[] = [];
+    const handlers = createStorageIpcHandlers(
+      await freshContext({
+        userDataPath: blockingPath,
+        homeFolder: '/Users/ada',
+        applySettings: (settings) => {
+          applied.push(settings);
+        },
+      }),
+    );
+
+    await handlers['settings:save'](changedSettings);
+
+    expect(applied).toEqual([]);
   });
 });
 
@@ -233,11 +278,7 @@ describe('storage ipc handlers: storage failures', () => {
 
     const handlers = createStorageIpcHandlers(await freshContext({ userDataPath: blockingPath }));
 
-    const result = await handlers['settings:save']({
-      schemaVersion: 1,
-      theme: 'dark',
-      enginePort: 9000,
-    });
+    const result = await handlers['settings:save'](changedSettings);
 
     expect(result).toMatchObject({ ok: false, error: { code: 'storage-failed' } });
   });

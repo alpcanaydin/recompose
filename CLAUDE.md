@@ -10,6 +10,7 @@
 
 - `main` stays protected. Never commit to it, locally or remotely.
 - Every job (feature, fix, docs, config, skills) gets its own worktree and branch, and lands through a PR. One job = one branch.
+- **Worktrees live at `.claude/worktrees/<name>`, never beside the repository.** A sibling directory reads as a second project to anyone browsing, and `EnterWorktree` refuses to switch into a path outside that directory, which strands a subagent that needs to reach it. The repository's own tooling already assumes the convention: `.vale.ini` and `cspell.json` both exclude `.claude/worktrees`.
 
 ## CodeRabbit reviews
 
@@ -76,6 +77,7 @@
 - Tailwind builds the design system; its source of truth is the Claude Design project **"recompose-design-system."**
 - Use the `design-system-patterns` skill for design-system architecture (tokens, variants, component structure).
 - Use the `tailwind-design-system` skill for the Tailwind implementation.
+- For an Apple Human Interface Guidelines (HIG) question that needs judgement rather than a rule, query the `hig` MCP server or read the `macos-design-guidelines` skill, which carries the numbered rules this project cites in review.
 
 ## Frontend (renderer) skills
 
@@ -86,6 +88,8 @@
 - Use the `vercel-composition-patterns` skill when designing component APIs or structuring components (canvas nodes, inspector, drawers), favoring composition over prop drilling.
 - Use the `vercel-react-view-transitions` skill when implementing UI transitions/animations between views or states (screen switches, drawer open/close, node focus).
 - Use the `storybook-stories` skill when writing or reviewing any Storybook story, the Storybook config, or the fake bridge decorator.
+- **A new component under a `ui/` segment ships its `*.stories.tsx` sibling before the branch leaves your machine.** `pnpm run lint:stories` compares the branch against `main` and blocks the push while any sibling is missing.
+- **Anything that reaches the screen gets looked at through `claude-in-chrome`, in both schemes, before it lands.** That covers a component, a story, a design token, and the Storybook config. The suite proves semantics, never appearance: axe passed a dark scheme that rendered light, a label printed twice, an inert row that looked live, and a selected segment at 1.05 to 1 against its track. Measure the close calls from the page rather than squinting at them.
 - Use the `writing-guidelines` skill when writing any user-facing copy, docs, or README text.
 
 ## Long-form writing

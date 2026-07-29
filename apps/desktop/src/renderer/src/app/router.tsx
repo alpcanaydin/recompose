@@ -10,12 +10,12 @@ export type AppRouterOptions = {
 };
 
 export function createAppRouter(options: AppRouterOptions) {
-  const history = options.history ?? (import.meta.env.PROD ? createHashHistory() : undefined);
+  const history = options.history ?? createHashHistory();
 
   return createRouter({
     routeTree,
     context: { queryClient: options.queryClient },
-    ...(history === undefined ? {} : { history }),
+    history,
   });
 }
 

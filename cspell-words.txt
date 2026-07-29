@@ -6,6 +6,7 @@ Alpcan
 alpcanaydin
 anchore
 andrej
+APPIMAGE
 asar
 Attio
 Aydin
@@ -107,6 +108,7 @@ servernum
 setstate
 shellcheck
 snapcraft
+spinbuttons
 Squarespace
 steiger
 steiger's
@@ -118,6 +120,7 @@ Supabase
 Syft
 Tauri
 TEAMID
+textboxes
 textnodes
 Toggl
 toggleable
@@ -132,10 +135,12 @@ Typeform
 unbootable
 uncoverable
 undeferred
+unjudged
+unlinted
+unpadded
 unscanned
 unstub
 untypes
-unjudged
 unvalidated
 unwritable
 upserts

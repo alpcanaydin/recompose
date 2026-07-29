@@ -20,7 +20,7 @@
     ".": {
       "entry": ["steiger.config.ts", "probity.config.ts"],
       "ignore": [".claude/workflows/**"],
-      "ignoreDependencies": ["@playwright/mcp", "@steiger/toolkit", "@swc/core"],
+      "ignoreDependencies": ["@playwright/mcp", "@steiger/toolkit", "@swc/core", "hig-mcp"],
       "ignoreBinaries": ["mise"]
     }
   }

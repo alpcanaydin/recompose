@@ -6,6 +6,11 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
 import { accountsQueryOptions } from '../pages/providers';
+import {
+  gatewayTokenQueryOptions,
+  settingsQueryOptions,
+  systemQueryOptions,
+} from '../pages/settings';
 import { installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
@@ -88,6 +93,64 @@ test('the /providers route loader warms the query cache before any component ren
   expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
 });
 
+test('the sidebar carries a System group holding Settings', async () => {
+  const screen = await renderAt('/');
+
+  const system = screen.getByRole('group', { name: 'System' });
+
+  await expect.element(system).toBeVisible();
+  await expect.element(system.getByRole('link', { name: 'Settings' })).toBeVisible();
+});
+
+test('clicking the settings link navigates to the settings screen', async () => {
+  const screen = await renderAt('/');
+
+  await screen.getByRole('link', { name: 'Settings' }).click();
+
+  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+});
+
+test('arriving at settings through the shortcut lands focus on the first control', async () => {
+  const screen = await renderAt('/settings?focus=first-control');
+
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
+});
+
+test('arriving at settings through the sidebar leaves focus where the person put it', async () => {
+  const screen = await renderAt('/');
+
+  const settings = screen.getByRole('link', { name: 'Settings' });
+
+  await settings.click();
+
+  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
+  await expect.element(settings).toHaveFocus();
+});
+
+test('the /settings route loader warms the settings, system, and token caches before any component renders', async () => {
+  installFakeBridge();
+
+  const queryClient = createQueryClient();
+  const router = createAppRouter({
+    queryClient,
+    history: createMemoryHistory({ initialEntries: ['/settings'] }),
+  });
+
+  await router.load();
+
+  expect(queryClient.getQueryData(settingsQueryOptions.queryKey)).toMatchObject({
+    theme: 'system',
+  });
+  expect(queryClient.getQueryData(systemQueryOptions.queryKey)).toMatchObject({
+    fileBrowser: 'finder',
+  });
+  expect(queryClient.getQueryData(gatewayTokenQueryOptions.queryKey)).toEqual({
+    ok: true,
+    value: { masked: null, storage: 'available' },
+  });
+});
+
 test('a valid gateway slug shows the canvas placeholder for that gateway', async () => {
   const screen = await renderAt('/gateways/my-gateway');
 
@@ -101,9 +164,7 @@ test('an invalid gateway slug lands on the not-found state', async () => {
   await expect.element(screen.getByText('Not found')).toBeVisible();
 });
 
-test('production builds default to hash-based history so file:// navigation works', () => {
-  import.meta.env.PROD = true;
-
+test('every build defaults to hash-based history, so one url shape reaches the window', () => {
   try {
     const router = createAppRouter({ queryClient: createQueryClient() });
 
@@ -112,7 +173,32 @@ test('production builds default to hash-based history so file:// navigation work
 
     expect(window.location.hash).toBe('#/providers');
   } finally {
-    import.meta.env.PROD = false;
     window.location.hash = '';
   }
+});
+
+test('pressing the shortcut again brings focus back to the first control', async () => {
+  installFakeBridge();
+
+  const queryClient = createQueryClient();
+  const history = createMemoryHistory({ initialEntries: ['/settings?focus=first-control&at=1'] });
+  const router = createAppRouter({ queryClient, history });
+
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+
+  const launch = screen.getByRole('switch', { name: 'Launch at login' });
+
+  await expect.element(launch).toHaveFocus();
+
+  screen.getByRole('link', { name: 'Providers' }).element().focus();
+
+  await expect.element(launch).not.toHaveFocus();
+
+  history.push('/settings?focus=first-control&at=2');
+
+  await expect.element(launch).toHaveFocus();
 });

@@ -1,6 +1,8 @@
 :root {
   --blue-500: #0a84ff;
   --blue-600: #007aff;
+  --blue-400: #3d9bff;
+  --blue-700: #0064d2;
   --green-500: #32d74b;
   --green-600: #28cd41;
   --orange-500: #ff9f0a;
@@ -10,7 +12,9 @@
   --teal-500: #40c8e0;
   --teal-600: #30b0c7;
   --red-500: #ff453a;
+  --red-400: #ff6961;
   --red-600: #ff3b30;
+  --red-700: #d70015;
   --yellow-500: #ffd60a;
   --yellow-600: #c79000;
 
@@ -19,18 +23,24 @@
   --white-a55: rgb(255 255 255 / 55%);
   --white-a28: rgb(255 255 255 / 28%);
   --white-a13: rgb(255 255 255 / 13%);
+  --white-a18: rgb(255 255 255 / 18%);
   --white-a08: rgb(255 255 255 / 8.5%);
   --white-a06: rgb(255 255 255 / 5.5%);
 
   --black-a88: rgb(0 0 0 / 88%);
+  --black-a56: rgb(0 0 0 / 56%);
   --black-a52: rgb(0 0 0 / 52%);
   --black-a28: rgb(0 0 0 / 28%);
+  --black-a16: rgb(0 0 0 / 16%);
   --black-a09: rgb(0 0 0 / 9%);
   --black-a06: rgb(0 0 0 / 5.5%);
 
   --gray-50: #f9f9fb;
   --gray-75-a80: rgb(246 246 250 / 80%);
   --gray-100: #f4f4f6;
+  --gray-200: #e9e9eb;
+  --gray-700: #48484a;
+  --gray-800: #39393d;
   --gray-850: #2e2e33;
   --gray-900: #28282c;
   --gray-925-a82: rgb(30 30 34 / 82%);

@@ -1,6 +1,6 @@
 # 0039: The review marker and the blast-radius path guard
 
-**Status**: Accepted
+**Status**: Superseded by [0051](0051-the-review-status-guard-stops-blocking-the-merge.md)
 **Date**: 2026-07-27
 
 ## Context

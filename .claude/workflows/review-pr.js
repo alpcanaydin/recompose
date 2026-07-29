@@ -1,7 +1,7 @@
 export const meta = {
   name: 'review-pr',
   description:
-    'Heavy adversarial review over a PR diff. Args: sha is the reviewed head commit, repo is the owner/repo slug, baseSha is the base commit the reviewed range starts from. Runs two adversarial-reviewer seats with model and angle diversity, escalates conflicting verdicts to a Fable judge at maximum effort, and posts the feature-cycle/reviewed commit status only when no finding survives.',
+    'Heavy adversarial review over a working tree before a pull request exists. Args: sha is the head commit under review, repo is the owner/repo slug, baseSha is the base commit the reviewed range starts from. Runs two adversarial-reviewer seats with model and angle diversity, escalates conflicting verdicts to a Fable judge at maximum effort, and answers with the findings that survived so they can be fixed before the branch is pushed for review.',
   phases: ['Review', 'Judge', 'Verify'],
 }
 
@@ -52,16 +52,6 @@ const judgeSchema = {
     reason: { type: 'string' },
     confidence: { type: 'number', minimum: 0, maximum: 100 },
     reproduced: { type: 'boolean' },
-  },
-}
-
-const statusSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['posted'],
-  properties: {
-    posted: { type: 'boolean' },
-    detail: { type: 'string' },
   },
 }
 
@@ -133,15 +123,6 @@ function judgePrompt(group, input) {
     'Settle the conflict yourself. Reproduce the claim by running the commands that would show the break.',
     'Reproduce or drop: rule confirmed only when you reproduce it at confidence 80 or above, otherwise rule dropped and give the reason.',
     'Report your confidence from 0 to 100 and whether you reproduced the claim.',
-  ].join('\n')
-}
-
-function statusPrompt(input) {
-  return [
-    `The heavy adversarial review passed with no surviving findings for ${input.repo} at commit ${input.sha}.`,
-    'Post the reviewed commit status by running this exact command:',
-    `gh api repos/${input.repo}/statuses/${input.sha} -f state=success -f context=feature-cycle/reviewed -f description="Adversarial review passed with no surviving findings"`,
-    'Report posted true only when the command returns a created status.',
   ].join('\n')
 }
 
@@ -308,20 +289,10 @@ const judgeCalls = disputes.map((group, index) => ({
   reason: rulings[index].reason,
 }))
 
-let statusPosted = false
 if (confirmedFindings.length === 0) {
-  const posting = await agent(statusPrompt(input), {
-    label: 'post-reviewed-status',
-    phase: 'Verify',
-    schema: statusSchema,
-  })
-  if (!posting || posting.posted !== true) {
-    const detail = (posting && posting.detail) || 'the posting agent reported no created status'
-    throw new Error(`review-pr failed to post the reviewed status: ${detail}`)
-  }
-  statusPosted = true
+  log('no finding survived; the tree is ready for a pull request')
 } else {
-  log(`${confirmedFindings.length} finding(s) survived; withholding the reviewed status for the fix cycle`)
+  log(`${confirmedFindings.length} finding(s) survived; fix them before opening the pull request`)
 }
 
 return {
@@ -329,5 +300,4 @@ return {
   droppedFindings,
   seatLabels,
   judgeCalls,
-  statusPosted,
 }

@@ -8,6 +8,10 @@
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
     },
+    "hig": {
+      "command": "pnpm",
+      "args": ["exec", "hig-mcp"]
+    },
     "storybook": {
       "type": "http",
       "url": "http://localhost:6006/mcp"

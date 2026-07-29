@@ -21,6 +21,10 @@ pre-commit:
     - name: dead
       priority: 1
       run: pnpm run lint:dead
+    - name: hig
+      priority: 1
+      glob: '*.{ts,tsx,css,html}'
+      run: pnpm run lint:hig
     - name: dup
       priority: 1
       run: pnpm run lint:dup
@@ -45,6 +49,11 @@ pre-commit:
     - name: typecheck
       priority: 3
       run: pnpm run typecheck
+
+pre-push:
+  jobs:
+    - name: stories
+      run: pnpm run lint:stories
 
 commit-msg:
   jobs:

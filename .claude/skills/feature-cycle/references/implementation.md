@@ -5,13 +5,15 @@ Implementation wraps the `superpowers:subagent-driven-development` executor and 
 ## Open the phase
 
 1. **Sync.** Run the sync step from `SKILL.md`: fetch, rebase onto `main`, gate suite green, ledger hygiene. No cluster opens before it passes.
-2. **Compile the outer loop.** The approved scenarios compile through playwright-bdd into a failing outer loop. The outer loop must be red before the first cluster opens, so it can prove green later.
+2. **Compile the outer loop, locally.** Copy the approved scenarios into `apps/desktop/e2e/features/<capability>/`, run `bddgen`, and confirm it fails on missing step definitions. That failure is the outer loop, and it has to exist before the first cluster opens so a later green means something. Capture the failing output into the phase report, then **remove the copy without committing it**.
+
+   The red outer loop is local evidence, never a commit. `ci.yml` runs `test:e2e` on every pull request, and the repository forbids committing a failing state, so a feature file that lands without its step definitions turns the whole branch red for as long as the clusters take. The scenarios graduate for real inside the cluster that owns the end-to-end tree, together with the step definitions that answer them, so no commit is ever red. The two rules only look opposed: one asks the loop to fail before the work, the other asks the history never to record a failure. Proving it locally satisfies both.
 
 ## Cluster order
 
 - **Contracts cluster first, alone.** The shared contract files are single collision points, so `cluster 0` lands the contracts and merges by itself before any parallel work starts.
 - **Disjoint ownership only.** Two clusters run in parallel only when their file ownership does not overlap. Overlapping ownership serializes.
-- **Staggered worktrees.** Each parallel cluster runs in its own worktree, created with a stagger to dodge the documented `git worktree add` race. A fresh worktree needs no seeding step: the first `pnpm` command installs what the tree lacks, and the pre-commit prose job syncs its own styles when they are missing. Both were measured on a bare worktree, where the gate suite ran and blocked a bad commit without any manual setup.
+- **Staggered worktrees.** Each parallel cluster runs in its own worktree under `.claude/worktrees/`, created with a stagger to dodge the documented `git worktree add` race. Never place one beside the repository: `EnterWorktree` refuses to switch into a path outside that directory, so a subagent that needs to reach it can't. A fresh worktree needs no seeding step: the first `pnpm` command installs what the tree lacks, and the pre-commit prose job syncs its own styles when they are missing. Both were measured on a bare worktree, where the gate suite ran and blocked a bad commit without any manual setup.
 
 Every cluster runs a `tdd-implementer` subagent, one per cluster, one worktree each.
 
@@ -33,10 +35,18 @@ Test layers are explicit tasks, not implicit hopes.
 
 - **Unit and integration** tests stay inside their TDD clusters, driven by the red-green-refactor loop.
 - **Property tests** open one task per invariant, gated on the behavior it exercises landing first.
-- **End-to-end step definitions** open one task per scenario, gated on the screen or behavior it exercises landing first.
-- **Storybook stories** are the definition of done for renderer clusters, not an afterthought.
+- **End-to-end step definitions** fan out by feature file, gated on the screen or behavior they exercise landing first.
 
-**End-to-end dispatch rule.** When a task touches end-to-end tests, step definitions, or `.feature` files, dispatch it with the `playwright-best-practices` and `gherkin-best-practices` skills invoked before any writing. This is task-type-conditional loading, applied at dispatch to the tasks that need it, not a permanent preload. The `tdd-implementer` definition already carries the matching instruction.
+  The shared end-to-end surface lands alone and first: the fixture, the navigation steps, and the visual baselines. It carries no feature file, so nothing goes red. Then one unit per feature file runs in parallel, each owning exactly one `.feature` and one `steps/<capability>-<area>.steps.ts`, which makes their file sets disjoint by construction.
+
+  **Each unit graduates its own feature file together with its step definitions, in one commit.** `bddgen` fails the whole tree on a single undefined step, so a feature file that lands without its steps turns the branch red for as long as the fan-out runs. That constraint is also what stops the graduation from being one big-bang step at the end.
+
+  Writing every step definition in one late cluster is the failure mode this replaces. It serializes the largest remaining chunk of work, and it discovers an unautomatable scenario at the worst possible moment, after the set has frozen.
+- **Every new component under `ui/` ships its story before the branch leaves the machine.** A cluster that adds a component without one gets stopped at `pre-push` by `pnpm run lint:stories`, which names the file. Leaving it for later costs a whole review round: the gap surfaced once at the pull request, after ninety commits, when seven components had gone storyless and the design sweep that walked every story had walked past all seven.
+- **Visual baselines belong to the runners, never to a laptop.** Regenerate them with the `update-baselines` label or a `workflow_dispatch` that passes `--ref` for the branch, then land each runner's own platform. A baseline written locally will not match continuous integration, because the fonts differ, so `test:e2e:visual` reads red on a developer machine once the real baselines land. That red is the arrangement working, not a regression.
+- **Storybook stories** are the definition of done for renderer clusters, not an afterthought. A renderer cluster closes only once someone has opened its stories through `claude-in-chrome`, in both schemes, and reported what they saw. A green story suite proves the semantics and says nothing about the appearance, which is where the defects that reach a person actually live.
+
+**End-to-end dispatch rule.** When a task touches end-to-end tests, step definitions, or `.feature` files, dispatch it with the `playwright-best-practices` and `gherkin-best-practices` skills invoked before any writing. The `tdd-implementer` definition carries both the instruction and the two skills in its `skills` list. The list is what makes the instruction reachable: a subagent can only invoke skills its definition pins, so an instruction naming a skill the definition omits fails with an unknown-skill error at the moment it matters.
 
 ## Merge train
 
