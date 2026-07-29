@@ -35,22 +35,31 @@ function RootLayout() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <aside className="app-drag w-60 bg-surface-sidebar px-4 pt-13 pb-4 text-body text-ink-secondary">
+      <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-4 pt-13 pb-4 text-body text-ink-secondary">
         <nav className="app-no-drag flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <Link to="/">Gateways</Link>
-            <Link to="/providers">Providers</Link>
+            <Link className="nav-item" to="/">
+              Gateways
+            </Link>
+            <Link className="nav-item" to="/providers">
+              Providers
+            </Link>
           </div>
           <div aria-labelledby={systemId} className="flex flex-col gap-2" role="group">
             <h2 className="text-overline text-ink uppercase" id={systemId}>
               System
             </h2>
-            <Link to="/settings">Settings</Link>
+            <Link className="nav-item" to="/settings">
+              Settings
+            </Link>
           </div>
         </nav>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-surface-content px-6 pt-13 pb-6 text-body">
-        <Outlet />
+      <main className="relative flex-1 bg-surface-content text-body">
+        <div aria-hidden className="app-drag absolute inset-x-0 top-0 h-13" />
+        <div className="h-full overflow-y-auto px-6 pt-13 pb-6">
+          <Outlet />
+        </div>
       </main>
       <Suspense>
         <RouterDevtools />

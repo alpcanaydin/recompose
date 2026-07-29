@@ -1,10 +1,8 @@
 import type { ReactNode, Ref } from 'react';
 
 const toneClasses = {
-  plain:
-    'h-control rounded-control border border-line-selected bg-surface-card px-2 text-control text-ink focus-ring',
-  destructive:
-    'h-control rounded-control border border-danger bg-surface-card px-2 text-control text-ink focus-ring',
+  plain: 'push-button focus-ring',
+  destructive: 'push-button border-danger text-danger-ink focus-ring',
 };
 
 type RowActionProps = {

@@ -22,7 +22,7 @@ export function FieldGroup({ heading, children }: FieldGroupProps) {
       <h2 className="px-3 text-overline text-ink uppercase" id={headingId}>
         {heading}
       </h2>
-      <div className="divide-y divide-line-subtle rounded-card border border-line-subtle bg-surface-card px-3">
+      <div className="divide-y divide-line-subtle rounded-card border border-line-subtle bg-surface-card px-4">
         {children}
       </div>
     </section>

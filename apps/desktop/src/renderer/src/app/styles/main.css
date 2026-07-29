@@ -12,6 +12,14 @@ body,
   font-family: var(--font-sans);
   color: var(--color-ink);
   user-select: none;
+  cursor: default;
+}
+
+a,
+button,
+[role='switch'],
+[role='radio'] {
+  cursor: default;
 }
 
 .app-drag {
