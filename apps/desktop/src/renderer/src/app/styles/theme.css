@@ -36,7 +36,7 @@
   --color-danger: light-dark(var(--red-700), var(--red-500));
   --color-danger-ink: light-dark(var(--red-700), var(--red-400));
 
-  --text-title: 19px;
+  --text-title: 22px;
   --text-title--font-weight: 600;
   --text-title--letter-spacing: -0.4px;
   --text-heading: 15px;
@@ -45,10 +45,11 @@
   --text-body--line-height: 1.45;
   --text-control: 12px;
   --text-caption: 11px;
-  --text-overline: 9px;
+  --text-overline: 10px;
   --text-overline--font-weight: 700;
   --text-overline--letter-spacing: 1.4px;
   --text-mono-value: 11px;
+  --text-footnote: 10px;
 
   --spacing-column: 720px;
   --spacing-row: 48px;

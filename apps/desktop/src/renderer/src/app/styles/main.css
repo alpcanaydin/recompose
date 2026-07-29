@@ -15,6 +15,11 @@ body,
   cursor: default;
 }
 
+body {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
 a,
 button,
 [role='switch'],

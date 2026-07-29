@@ -9,8 +9,8 @@ export function ProvidersPage() {
   const { data } = useSuspenseQuery(accountsQueryOptions);
 
   return (
-    <section>
-      <h1 className="text-ink">Providers</h1>
+    <section className="mx-auto flex w-full max-w-column flex-col gap-5">
+      <h1 className="text-title text-ink">Providers</h1>
       <AccountList accounts={data.accounts} />
       <ConnectAccountForm />
     </section>

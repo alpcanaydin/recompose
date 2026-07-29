@@ -62,9 +62,15 @@ export function ConnectAccountForm() {
           }}
           value={draft.kind}
         />
-        <button type="submit">Connect</button>
+        <button className="push-button focus-ring" type="submit">
+          Connect
+        </button>
       </form>
-      {connect.error === null ? null : <p role="alert">{connect.error.message}</p>}
+      {connect.error === null ? null : (
+        <p className="text-caption text-danger-ink" role="alert">
+          {connect.error.message}
+        </p>
+      )}
     </>
   );
 }
