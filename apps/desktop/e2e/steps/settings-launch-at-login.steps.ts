@@ -40,13 +40,19 @@ async function storedLaunchAtLogin(app: ElectronApplication): Promise<boolean> {
     await app.evaluate(({ app: running }) => running.getPath('userData')),
     'settings.json',
   );
-  const document: unknown = JSON.parse(await readFile(settingsFile, 'utf8'));
+  const written = await readFile(settingsFile, 'utf8').catch(() => null);
 
-  if (typeof document !== 'object' || document === null || !('launchAtLogin' in document)) {
-    throw new Error(`the settings document at ${settingsFile} names no launch at login flag`);
+  if (written === null) {
+    return false;
   }
 
-  return document.launchAtLogin === true;
+  const document: unknown = JSON.parse(written);
+
+  if (typeof document !== 'object' || document === null) {
+    throw new Error(`the settings document at ${settingsFile} is not a document`);
+  }
+
+  return 'launchAtLogin' in document && document.launchAtLogin === true;
 }
 
 async function operatingSystemListsRecompose(app: ElectronApplication): Promise<boolean> {
