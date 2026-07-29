@@ -7,22 +7,57 @@ import {
   useCopyGatewayToken,
   useMintGatewayToken,
 } from '../api/gateway-token';
+import { tokenRowStatus } from '../lib/token-status';
 import { TokenActions } from './token-actions';
 import { TokenConfirmation } from './token-confirmation';
 
-const consequence = 'Clients holding the old token stop connecting.';
 const nothingMintedYet = 'Nothing has been minted yet.';
 
-function statusFor(confirming: boolean, copied: boolean, failed: boolean): { status?: string } {
-  if (confirming) {
-    return { status: consequence };
-  }
+type TokenControlProps = {
+  masked: string | null;
+  confirming: boolean;
+  onCopy: () => void;
+  onMintNow: () => void;
+  onStartConfirming: () => void;
+  onStopConfirming: () => void;
+};
 
-  if (failed) {
-    return { status: 'The value could not be minted.' };
-  }
+function TokenControl({
+  masked,
+  confirming,
+  onCopy,
+  onMintNow,
+  onStartConfirming,
+  onStopConfirming,
+}: TokenControlProps) {
+  return (
+    <div
+      className="flex items-center gap-2"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          onStopConfirming();
+        }
+      }}
+    >
+      {confirming ? (
+        <TokenConfirmation onCancel={onStopConfirming} onConfirm={onMintNow} />
+      ) : (
+        <TokenActions
+          masked={masked}
+          onCopy={onCopy}
+          onMint={() => {
+            if (masked === null) {
+              onMintNow();
 
-  return copied ? { status: 'Copied.' } : {};
+              return;
+            }
+
+            onStartConfirming();
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
 /** The masked gateway credential, its copy action, and the confirmation guarding a new one. */
@@ -44,38 +79,27 @@ export function GatewayTokenRow() {
   return (
     <FieldRow
       control={
-        <div
-          className="flex items-center gap-2"
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              stopConfirming();
-            }
+        <TokenControl
+          confirming={confirming}
+          masked={gateway.masked}
+          onCopy={() => {
+            copy.mutate();
           }}
-        >
-          {confirming ? (
-            <TokenConfirmation onCancel={stopConfirming} onConfirm={mintNow} />
-          ) : (
-            <TokenActions
-              masked={gateway.masked}
-              onCopy={() => {
-                copy.mutate();
-              }}
-              onMint={() => {
-                if (gateway.masked === null) {
-                  mintNow();
-
-                  return;
-                }
-
-                setConfirming(true);
-              }}
-            />
-          )}
-        </div>
+          onMintNow={mintNow}
+          onStartConfirming={() => {
+            setConfirming(true);
+          }}
+          onStopConfirming={stopConfirming}
+        />
       }
       description={gateway.masked ?? nothingMintedYet}
       label="API token"
-      {...statusFor(confirming, copy.isSuccess, mint.isError)}
+      {...tokenRowStatus({
+        confirming,
+        copied: copy.isSuccess,
+        copyFailed: copy.isError,
+        mintFailed: mint.isError,
+      })}
     />
   );
 }

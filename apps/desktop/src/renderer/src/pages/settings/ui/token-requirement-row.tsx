@@ -6,6 +6,7 @@ import { gatewayTokenQueryOptions, useMintGatewayToken } from '../api/gateway-to
 import { settingsQueryOptions, useSettingsWriter } from '../api/settings';
 import { saveStatusFor } from '../lib/save-failure';
 import { tokenRequirementNote } from '../lib/token-note';
+import { couldNotMint } from '../lib/token-status';
 
 /** The switch that demands a token, and the warning about the store holding it. */
 export function TokenRequirementRow() {
@@ -30,7 +31,9 @@ export function TokenRequirementRow() {
     }
   };
 
-  const note = tokenRequirementNote(token.storage, refused);
+  const mintRefused = settings.requireGatewayToken && mint.isError;
+  const note =
+    tokenRequirementNote(token.storage, refused) ?? (mintRefused ? couldNotMint : undefined);
 
   return (
     <FieldRow

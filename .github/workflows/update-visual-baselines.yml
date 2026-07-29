@@ -5,18 +5,24 @@ on:
     inputs:
       branch:
         description: branch whose visual baselines get regenerated
-        required: true
+        required: false
         type: string
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
 
 concurrency:
-  group: update-visual-baselines-${{ inputs.branch }}
+  group: update-visual-baselines-${{ inputs.branch || github.event.pull_request.head.ref }}
   cancel-in-progress: true
 
 jobs:
   regenerate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'update-baselines' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +35,7 @@ jobs:
         if: runner.os == 'Linux'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch || github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -74,7 +80,7 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch || github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -91,6 +97,7 @@ jobs:
           fi
           git commit -m "test(e2e): update visual baselines"
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
+          echo "::notice::Baselines landed. The repository token cannot start a workflow run, so push once more or re-run the checks to turn this branch green."
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          BRANCH: ${{ inputs.branch }}
+          BRANCH: ${{ inputs.branch || github.event.pull_request.head.ref }}

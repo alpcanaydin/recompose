@@ -1,3 +1,11 @@
 {
-  "ignore": ["**/out/**", "**/dist/**", "**/coverage/**", "**/.features-gen/**"]
+  "ignore": [
+    "**/out/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/.features-gen/**",
+    "**/reports/**",
+    "**/test-results/**",
+    "**/playwright-report/**"
+  ]
 }

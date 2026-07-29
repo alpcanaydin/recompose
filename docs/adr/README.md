@@ -53,3 +53,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0045](0045-launch-at-login-absent-on-linux.md)                | Launch at Login Never Renders on Linux                                              | Accepted | 2026-07-29 |
 | [0046](0046-open-config-folder-over-reveal.md)                 | The Config Folder Opens Through shell.openPath                                      | Accepted | 2026-07-29 |
 | [0047](0047-gateway-token-vault-and-clipboard.md)              | The Gateway Token Lives in the Vault and Copies Through Main                        | Accepted | 2026-07-29 |
+| [0048](0048-visual-baselines-regenerate-from-a-label.md)       | Visual Baselines Regenerate From a Pull-Request Label                               | Accepted | 2026-07-29 |

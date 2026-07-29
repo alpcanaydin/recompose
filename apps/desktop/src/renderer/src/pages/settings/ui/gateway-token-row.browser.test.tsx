@@ -127,3 +127,37 @@ test('turning the requirement off takes the token row off the screen', async () 
 
   await expect.poll(() => screen.getByRole('button', { name: 'Copy' }).elements()).toHaveLength(0);
 });
+
+test('a mint the vault refuses states why, rather than reading as nothing minted yet', async () => {
+  const screen = await renderSettings({
+    overrides: {
+      'gateway-token:mint': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'the vault refused the write' },
+        }),
+    },
+  });
+
+  await turnOnRequirement(screen);
+
+  await expect.element(screen.getByText('The value could not be minted.')).toBeVisible();
+});
+
+test('a copy the vault refuses states why, rather than reading as copied', async () => {
+  const screen = await renderWithToken();
+
+  installFakeBridge({
+    overrides: {
+      'gateway-token:copy': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'token-missing', message: 'no token stands in the vault' },
+        }),
+    },
+  });
+
+  await screen.getByRole('button', { name: 'Copy' }).click();
+
+  await expect.element(screen.getByText('The value could not be copied.')).toBeVisible();
+});
