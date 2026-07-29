@@ -6,7 +6,7 @@ const needsStore = 'recompose cannot store a token without a system credential s
 const plainText =
   'No system keyring is available, so recompose stores the token in plain text on this machine.';
 
-export function tokenRequirementNote(
+function tokenRequirementNote(
   storage: GatewayTokenStatus['storage'],
   refused: boolean,
 ): string | undefined {
