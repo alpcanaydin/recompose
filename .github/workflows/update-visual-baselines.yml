@@ -71,6 +71,17 @@ jobs:
           count=$(find apps/desktop/e2e/visual.spec.ts-snapshots -name '*.png' | wc -l)
           echo "baselines present: $count"
           test "$count" -gt 0
+      - name: Keep only the platform this runner speaks for
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            macOS) keep='-darwin.png' ;;
+            Linux) keep='-linux.png' ;;
+            Windows) keep='-win32.png' ;;
+            *) echo "::error::unknown runner $RUNNER_OS"; exit 1 ;;
+          esac
+          find apps/desktop/e2e/visual.spec.ts-snapshots -name '*.png' ! -name "*$keep" -delete
+          find apps/desktop/e2e/visual.spec.ts-snapshots -name '*.png'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: visual-baselines-${{ runner.os }}
