@@ -44,6 +44,19 @@ export const WithTokenRequired = meta.story({
   },
 });
 
+/**
+ * The column as the settings shortcut leaves it, with the focus ring already on the first
+ * control a person can move.
+ *
+ * @summary Reach for it when checking where the keyboard route lands.
+ */
+export const OpenedByShortcut = meta.story({
+  args: { focus: 'first-control' },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
+  },
+});
+
 /** The same column under the dark scheme, where each card lifts off the content surface. */
 export const DarkScheme = meta.story({
   globals: { theme: 'dark' },

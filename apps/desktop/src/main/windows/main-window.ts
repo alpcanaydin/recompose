@@ -9,14 +9,12 @@ import {
   isAllowedNavigation,
   type NavigationPolicy,
 } from './navigation-policy';
-import { rendererBaseFor, rendererUrlFor } from './renderer-url';
+import { SETTINGS_SHORTCUT_ROUTE, rendererBaseFor, rendererUrlFor } from './renderer-url';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
 
 export const HOME_ROUTE = '/';
-
-const SETTINGS_ROUTE = '/settings';
 
 function rendererBase(): string {
   const { ELECTRON_RENDERER_URL: devServerUrl } = process.env;
@@ -98,12 +96,12 @@ export function openSettingsSurface(): void {
   const [openWindow] = BrowserWindow.getAllWindows();
 
   if (openWindow === undefined) {
-    createMainWindow(SETTINGS_ROUTE);
+    createMainWindow(SETTINGS_SHORTCUT_ROUTE);
 
     return;
   }
 
   reveal(openWindow);
 
-  void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), SETTINGS_ROUTE));
+  void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), SETTINGS_SHORTCUT_ROUTE));
 }

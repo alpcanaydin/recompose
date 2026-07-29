@@ -1,7 +1,7 @@
 import { fc, test as propertyTest } from '@fast-check/vitest';
 import { describe, expect, test } from 'vitest';
 
-import { rendererBaseFor, rendererUrlFor } from './renderer-url';
+import { SETTINGS_SHORTCUT_ROUTE, rendererBaseFor, rendererUrlFor } from './renderer-url';
 
 const packagedBase = 'app://renderer/index.html';
 const devBase = 'http://localhost:5173';
@@ -36,6 +36,16 @@ describe('the address a window opens a route at', () => {
 
   test('the home route names itself rather than leaving the fragment off', () => {
     expect(rendererUrlFor(packagedBase, '/')).toBe('app://renderer/index.html#/');
+  });
+
+  test('the settings shortcut asks the surface it opens to place focus', () => {
+    expect(rendererUrlFor(packagedBase, SETTINGS_SHORTCUT_ROUTE)).toBe(
+      'app://renderer/index.html#/settings?focus=first-control',
+    );
+  });
+
+  test('a settings arrival the shortcut never made carries no such request', () => {
+    expect(rendererUrlFor(packagedBase, '/settings')).not.toContain('focus');
   });
 
   propertyTest.prop([fc.constantFrom(packagedBase, devBase), fc.stringMatching(/^\/[a-z/-]*$/)])(
