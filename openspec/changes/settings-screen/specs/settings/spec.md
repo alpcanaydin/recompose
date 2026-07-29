@@ -40,7 +40,7 @@ The app MUST answer the settings shortcut even when no window stands open, becau
 
 ### Requirement: Launch at login
 
-The app MUST offer a launch-at-login switch backed by the operating system login item rather than by a stored flag alone. The switch MUST report what the operating system holds, so a change made outside the app doesn't leave the screen lying.
+On a platform that carries login items, the app MUST offer a launch-at-login switch backed by the operating system login item rather than by a stored flag alone. Where the platform carries none, the row MUST be absent rather than dimmed. The switch MUST report what the operating system holds, so a change made outside the app doesn't leave the screen lying.
 
 #### Scenario: a person turns launch at login on
 

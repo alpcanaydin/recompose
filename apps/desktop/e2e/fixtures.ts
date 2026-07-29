@@ -94,14 +94,17 @@ export const test = base.extend<ElectronFixtures>({
       process.stderr.write(chunk);
     });
 
-    const priorLoginItem = await readLoginItem(app);
-    const priorClipboard = await readClipboard(app);
-
     try {
-      await use(app);
+      const priorLoginItem = await readLoginItem(app);
+      const priorClipboard = await readClipboard(app);
+
+      try {
+        await use(app);
+      } finally {
+        await restoreLoginItem(app, priorLoginItem);
+        await restoreClipboard(app, priorClipboard);
+      }
     } finally {
-      await restoreLoginItem(app, priorLoginItem);
-      await restoreClipboard(app, priorClipboard);
       await app.close();
       await rm(userDataDir, { force: true, recursive: true });
     }

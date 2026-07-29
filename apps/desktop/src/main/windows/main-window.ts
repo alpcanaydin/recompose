@@ -111,7 +111,16 @@ export function openSettingsSurface(): void {
 
   reveal(openWindow);
 
-  void openWindow.webContents.loadURL(
-    rendererUrlFor(rendererBase(), `${SETTINGS_SHORTCUT_ROUTE}&at=${String(pressCount())}`),
-  );
+  const route = `${SETTINGS_SHORTCUT_ROUTE}&at=${String(pressCount())}`;
+
+  if (openWindow.webContents.getURL().startsWith(rendererBase())) {
+    void openWindow.webContents.executeJavaScript(
+      `location.hash = ${JSON.stringify(route)};`,
+      true,
+    );
+
+    return;
+  }
+
+  void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), route));
 }

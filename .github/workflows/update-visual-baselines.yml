@@ -46,7 +46,7 @@ jobs:
       - run: pnpm --filter @recompose/desktop exec node node_modules/electron/install.js
       - run: pnpm exec turbo run build
         env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.TURBO_TOKEN || '' }}
           TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
       - name: Start from no baselines for this platform
         shell: bash
