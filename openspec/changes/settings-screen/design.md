@@ -32,7 +32,7 @@ Underneath all that, the settings schema moves from version 1 to version 2. `set
 - `apps/desktop/src/main/storage/safe-storage-codec.ts`: `isPlaintextFallback` supplies the plaintext warning the token row shows on Linux.
 - `apps/desktop/src/main/index.ts`: its `window-all-closed` handler quits on every platform but macOS, which the tray has to change.
 - `apps/desktop/src/main/windows/main-window.ts`: it loads one fixed URL, so the settings shortcut needs a route parameter on the window factory.
-- `apps/desktop/src/renderer/src/app/router.tsx`: hash history runs in production only, so the design makes it unconditional and gives the main process one URL shape.
+- `apps/desktop/src/renderer/src/app/router.tsx`: hash history ran in production only, which left the shortcut landing on the gateways screen under the development server. It's unconditional now, so the main process builds one URL shape.
 - `apps/desktop/src/renderer/src/pages/providers/api/accounts.ts`: its query-options plus mutation-with-invalidation shape carries straight into the settings api segment.
 - `apps/desktop/src/renderer/src/shared/testing/fake-bridge.ts`: it hardcodes a version 1 settings document, so every story and browser test breaks without a seed parameter and five new stubs.
 - `apps/desktop/e2e/visual.spec.ts`: it drives the providers form by role, which is why `AccountKindField` keeps its native select.
@@ -132,7 +132,7 @@ An application menu item carries the `CmdOrCtrl+,` accelerator. A menu accelerat
 
 Its handler resolves one of two paths. With no window open it calls `createMainWindow('/settings')`, and the factory appends the route to the renderer URL. With a window open it shows the window, focuses it, and loads the settings URL into the existing web contents. `router.tsx` moves to unconditional hash history so both modes build the same URL shape, and so a fragment change is all the navigation needs.
 
-The settings page places focus on its first live control when it mounts, which satisfies the shortcut's focus requirement without a second mechanism.
+The shortcut carries a search param, and the page places focus on its first live control only when it arrives that way. Mounting would steal focus from someone who clicked over from the sidebar, which the accessibility references cite against.
 
 ### Rows that wait
 

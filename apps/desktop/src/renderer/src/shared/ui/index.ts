@@ -1,4 +1,5 @@
 export { FieldGroup } from './field-group';
+export { placeFocus } from './place-focus';
 export { FieldRow } from './field-row';
 export { NumericField } from './numeric-field';
 export { SegmentedControl } from './segmented-control';

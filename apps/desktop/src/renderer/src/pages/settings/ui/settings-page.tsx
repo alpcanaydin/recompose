@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { placeFocus } from '../../../shared/ui';
 import { firstLiveControl } from '../lib/first-live-control';
 import { AppearanceSection } from './appearance-section';
 import { DataSection } from './data-section';
@@ -20,7 +21,7 @@ export function SettingsPage({ focus }: SettingsPageProps) {
       return;
     }
 
-    firstLiveControl(surface.current)?.focus();
+    placeFocus(firstLiveControl(surface.current));
   }, [focus]);
 
   return (

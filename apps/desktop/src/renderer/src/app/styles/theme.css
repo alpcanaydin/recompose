@@ -59,14 +59,16 @@
 }
 
 @utility focus-ring {
-  &:focus-visible {
+  &:focus-visible,
+  &[data-placed-focus] {
     outline: 2px solid var(--color-accent);
     outline-offset: 1px;
   }
 }
 
 @utility focus-ring-wide {
-  &:focus-visible {
+  &:focus-visible,
+  &[data-placed-focus] {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }

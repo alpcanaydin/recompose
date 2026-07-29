@@ -164,9 +164,7 @@ test('an invalid gateway slug lands on the not-found state', async () => {
   await expect.element(screen.getByText('Not found')).toBeVisible();
 });
 
-test('production builds default to hash-based history so file:// navigation works', () => {
-  import.meta.env.PROD = true;
-
+test('every build defaults to hash-based history, so one url shape reaches the window', () => {
   try {
     const router = createAppRouter({ queryClient: createQueryClient() });
 
@@ -175,7 +173,6 @@ test('production builds default to hash-based history so file:// navigation work
 
     expect(window.location.hash).toBe('#/providers');
   } finally {
-    import.meta.env.PROD = false;
     window.location.hash = '';
   }
 });

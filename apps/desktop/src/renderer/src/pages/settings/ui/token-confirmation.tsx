@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { placeFocus } from '../../../shared/ui';
 import { RowAction } from './row-action';
 
 type TokenConfirmationProps = {
@@ -18,7 +19,7 @@ export function TokenConfirmation({ onCancel, onConfirm }: TokenConfirmationProp
   const safeChoice = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    safeChoice.current?.focus();
+    placeFocus(safeChoice.current);
   }, []);
 
   return (
