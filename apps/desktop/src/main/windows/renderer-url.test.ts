@@ -1,7 +1,12 @@
 import { fc, test as propertyTest } from '@fast-check/vitest';
 import { describe, expect, test } from 'vitest';
 
-import { SETTINGS_SHORTCUT_ROUTE, rendererBaseFor, rendererUrlFor } from './renderer-url';
+import {
+  SETTINGS_SHORTCUT_ROUTE,
+  rendererBaseFor,
+  rendererUrlFor,
+  settingsShortcutRouteFor,
+} from './renderer-url';
 
 const packagedBase = 'app://renderer/index.html';
 const devBase = 'http://localhost:5173';
@@ -58,4 +63,15 @@ describe('the address a window opens a route at', () => {
       expect(url.split('#')).toHaveLength(2);
     },
   );
+});
+
+describe('the settings shortcut, pressed more than once', () => {
+  test('each press names a location the router has not seen', () => {
+    expect(settingsShortcutRouteFor(1)).not.toBe(settingsShortcutRouteFor(2));
+  });
+
+  test('every press still asks for the settings route and its focus', () => {
+    expect(settingsShortcutRouteFor(7)).toContain(SETTINGS_SHORTCUT_ROUTE);
+    expect(settingsShortcutRouteFor(7)).toContain('focus=first-control');
+  });
 });

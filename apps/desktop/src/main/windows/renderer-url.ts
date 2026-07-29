@@ -13,3 +13,13 @@ export function rendererBaseFor(development: boolean, devServerUrl: string | und
 export function rendererUrlFor(base: string, route: string): string {
   return `${base}#${route}`;
 }
+
+/**
+ * The settings route stamped with the press that asked for it.
+ *
+ * @summary Every press has to differ from the last, or the router treats the second one as the
+ * same location and the focus request never runs again.
+ */
+export function settingsShortcutRouteFor(press: number): string {
+  return `${SETTINGS_SHORTCUT_ROUTE}&at=${String(press)}`;
+}

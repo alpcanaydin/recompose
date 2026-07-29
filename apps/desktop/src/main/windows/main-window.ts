@@ -9,7 +9,12 @@ import {
   isAllowedNavigation,
   type NavigationPolicy,
 } from './navigation-policy';
-import { SETTINGS_SHORTCUT_ROUTE, rendererBaseFor, rendererUrlFor } from './renderer-url';
+import {
+  SETTINGS_SHORTCUT_ROUTE,
+  rendererBaseFor,
+  rendererUrlFor,
+  settingsShortcutRouteFor,
+} from './renderer-url';
 import { windowOptionsFor } from './window-options';
 
 const isMac = process.platform === 'darwin';
@@ -111,7 +116,7 @@ export function openSettingsSurface(): void {
 
   reveal(openWindow);
 
-  const route = `${SETTINGS_SHORTCUT_ROUTE}&at=${String(pressCount())}`;
+  const route = settingsShortcutRouteFor(pressCount());
 
   if (openWindow.webContents.getURL().startsWith(rendererBase())) {
     void openWindow.webContents.executeJavaScript(
