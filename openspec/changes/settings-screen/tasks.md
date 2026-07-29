@@ -38,13 +38,13 @@ What this leaves for later clusters: the system cluster keeps everything except 
 **Blockers:** reads what contracts produces. The two system handlers and the two pure decisions feeding them already landed with the compile unit, so this cluster starts from them rather than creating them.
 
 - [x] **Step 1: The pure platform decisions.** `login-item.ts` maps the platform and the packaged flag to available, unpackaged, or unsupported. `file-browser.ts` maps the platform to the browser the reveal label names. Both landed with the compile unit, because `system:get` can't answer without them.
-- [ ] **Step 2: The login item takes a write.** Reading landed; setting it didn't. One shared call site keeps the path and arguments identical between the read and the write, which is the documented cause of a switch that lies.
-- [ ] **Step 3: The tray controller owns the whole lifecycle.** The reference lives at module scope, because a collected reference makes the icon vanish minutes later with no error. The menu always carries a quit item, which is the only way out on Windows and Linux once the last window may close.
-- [ ] **Step 4: The quit policy becomes a pure decision.** The app quits on a non-macOS platform only when the tray isn't showing.
-- [ ] **Step 5: The window gains a floor.** `window-options.ts` carries no minimum size today, so the column tears below 850 pixels.
-- [ ] **Step 6: The settings shortcut rides an application menu accelerator,** and it opens a window when none stands open.
+- [x] **Step 2: The login item takes a write.** Reading landed; setting it didn't. One shared call site keeps the path and arguments identical between the read and the write, which is the documented cause of a switch that lies.
+- [x] **Step 3: The tray controller owns the whole lifecycle.** The reference lives at module scope, because a collected reference makes the icon vanish minutes later with no error. The menu always carries a quit item, which is the only way out on Windows and Linux once the last window may close.
+- [x] **Step 4: The quit policy becomes a pure decision.** The app quits on a non-macOS platform only when the tray isn't showing.
+- [x] **Step 5: The window gains a floor.** `window-options.ts` carries no minimum size today, so the column tears below 850 pixels.
+- [x] **Step 6: The settings shortcut rides an application menu accelerator,** and it opens a window when none stands open.
 - [x] **Step 7: The config folder opens through `shell.openPath`,** and a non-empty result maps to a typed failure rather than a silent one. It landed with the compile unit, because it sits on the channel map.
-- [ ] **Step 8: One apply seam serves boot and save.** It sets the theme source and the tray from the document, and it consumes the storage result its caller discards today.
+- [x] **Step 8: One apply seam serves boot and save.** It sets the theme source and the tray from the document, and it consumes the storage result its caller discards today.
 
 ## The shared-kit cluster
 
@@ -52,11 +52,11 @@ What this leaves for later clusters: the system cluster keeps everything except 
 
 **Blockers:** reads the port range that contracts produces.
 
-- [ ] **Step 1: Adopt `@base-ui/react` and add the inert-state token.** The token line lands beside its neighbors, because the palette carries nothing for a control that can't move.
-- [ ] **Step 2: The switch, the segmented control, and the numeric field.** The segmented control builds on a radio group, never a toggle group, so arrow keys move and select under one tab stop. The numeric field keeps a text input with a numeric input mode, and it owns the draft against committed distinction.
-- [ ] **Step 3: The setting row and the setting group.** The row carries a label, a description, an error, and an inert state that stays in the tab order and names what it waits for.
-- [ ] **Step 4: `TextField` moves into the shared kit** and rebuilds on the same base. `AccountKindField` stays in its page and recomposes on the shared primitives, because it holds account-kind knowledge rather than presentation.
-- [ ] **Step 5: A story per control, in both schemes,** with the accessibility addon as a merge gate rather than an advisory. The numeric field's story settles the open question about its exposed role.
+- [x] **Step 1: Adopt `@base-ui/react` and add the inert-state token.** The token line lands beside its neighbors, because the palette carries nothing for a control that can't move.
+- [x] **Step 2: The switch, the segmented control, and the numeric field.** The segmented control builds on a radio group, never a toggle group, so arrow keys move and select under one tab stop. The numeric field keeps a text input with a numeric input mode, and it owns the draft against committed distinction.
+- [x] **Step 3: The setting row and the setting group.** The row carries a label, a description, an error, and an inert state that stays in the tab order and names what it waits for.
+- [x] **Step 4: `TextField` moves into the shared kit** and rebuilds on the same base. `AccountKindField` stays in its page. It recomposed on the row primitive first, which threw its control to the far edge of a form, so it now stacks like the fields beside it.
+- [x] **Step 5: A story per control, in both schemes,** with the accessibility addon as a merge gate rather than an advisory. The numeric field's story settles the open question about its exposed role.
 
 ## The settings-page cluster
 
@@ -78,9 +78,9 @@ What this leaves for later clusters: the system cluster keeps everything except 
 **Blockers:** wires the factories clusters A and B, and C, produce.
 
 - [x] **Step 1: Assemble the full handler map** from both factories, and register every channel. It landed with the compile unit, because the map is total and the seam is where totality gets checked.
-- [ ] **Step 2: Apply the document at boot,** before the window exists, so no wrong-theme flash occurs.
-- [ ] **Step 3: The quit rule and the teardown.** The tray dies on the way out, so no ghost icon survives.
-- [ ] **Step 4: Coverage excludes for the thin Electron shells,** and the mutation scope for the new node-side logic.
+- [x] **Step 2: Apply the document at boot,** before the window exists, so no wrong-theme flash occurs.
+- [x] **Step 3: The quit rule and the teardown.** The tray dies on the way out, so no ghost icon survives.
+- [x] **Step 4: Coverage excludes for the thin Electron shells,** and the mutation scope for the new node-side logic.
 
 ## The acceptance foundation
 
