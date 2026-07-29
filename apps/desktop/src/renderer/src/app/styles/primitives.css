@@ -11,6 +11,7 @@
   --teal-600: #30b0c7;
   --red-500: #ff453a;
   --red-600: #ff3b30;
+  --red-700: #d70015;
   --yellow-500: #ffd60a;
   --yellow-600: #c79000;
 
@@ -23,6 +24,7 @@
   --white-a06: rgb(255 255 255 / 5.5%);
 
   --black-a88: rgb(0 0 0 / 88%);
+  --black-a56: rgb(0 0 0 / 56%);
   --black-a52: rgb(0 0 0 / 52%);
   --black-a28: rgb(0 0 0 / 28%);
   --black-a09: rgb(0 0 0 / 9%);

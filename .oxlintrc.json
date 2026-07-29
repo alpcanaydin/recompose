@@ -648,6 +648,12 @@
       "rules": {
         "react-doctor/expo-no-non-inlined-env": "off"
       }
+    },
+    {
+      "files": ["apps/desktop/src/renderer/src/**"],
+      "rules": {
+        "react-doctor/no-barrel-import": "off"
+      }
     }
   ]
 }

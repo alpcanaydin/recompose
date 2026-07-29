@@ -63,7 +63,7 @@ All three candidate approaches arrived at the same answers below.
 The branch records no row height, no spacing, and no control size, so the build would improvise them. This section fixes them.
 
 - **Column and window.** The column reads `w-full max-w-[560px]` and centers in the content area. The window gains a minimum near 720 by 500.
-- **Row.** 44 pixels tall at rest. The label sits at the 13 pixel body size, and the description sits at 11 pixels in the tertiary ink token.
+- **Row.** 44 pixels tall at rest. The label sits at the 13 pixel body size, and the description sits at 11 pixels in the secondary ink token. This line first read tertiary, which measures 1.99 to 1 against the card and can't carry text at any size. Tertiary stays for decoration that carries no meaning.
 - **Control.** 22 to 28 pixels tall, which matches macOS density. Base UI ships its primitives unstyled, so nothing lands correct by default.
 - **Rhythm.** 20 points between groups and 8 points within one. Hierarchy comes from space rather than from smaller type. The 9 pixel overline stays a section-heading voice and never carries a reason or a status.
 - **Telemetry keeps the full row anatomy.** A label, a static right-aligned value reading None, and a description stating that recompose never phones home. An empty control slot would read as a control that failed to load.
