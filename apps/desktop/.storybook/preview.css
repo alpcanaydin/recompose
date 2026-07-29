@@ -1,7 +1,9 @@
-.scheme-light {
+html.scheme-light,
+html.scheme-light body {
   color-scheme: light;
 }
 
-.scheme-dark {
+html.scheme-dark,
+html.scheme-dark body {
   color-scheme: dark;
 }

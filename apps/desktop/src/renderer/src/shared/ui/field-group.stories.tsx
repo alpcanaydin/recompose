@@ -59,6 +59,9 @@ export const Basic = meta.story({
 export const DarkScheme = meta.story({
   args: { children: <GeneralRows /> },
   globals: { theme: 'dark' },
+  play: async () => {
+    await expect(getComputedStyle(document.body).colorScheme).toBe('dark');
+  },
 });
 
 function ServerRows() {
