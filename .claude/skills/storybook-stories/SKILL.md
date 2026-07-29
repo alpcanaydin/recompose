@@ -43,3 +43,19 @@ Agents consume stories through manifests built by static analysis (source: [Stor
 
 - `pnpm --filter @recompose/desktop exec vitest run --project storybook` runs every story as a browser test.
 - `pnpm --filter @recompose/desktop run storybook` serves the workshop on port 6006, with the MCP endpoint at `/mcp`.
+
+### Look at it, every time
+
+**Any change that reaches the screen gets opened in the browser through claude-in-chrome, in both schemes, before it lands.** That covers a component, a story, a design token, and the Storybook config. Load the affected stories at `http://localhost:6006/iframe.html?id=<story-id>&globals=theme:light` and again with `theme:dark`.
+
+This isn't ceremony. On the run that wrote this rule every gate was green, axe included, while all of the following shipped:
+
+- The dark scheme rendered light. The theme class reached the root element, and the app stylesheet gave `body` its own `color-scheme`, which beats what it inherits.
+- A row printed its label twice, because one control named itself visibly while its three siblings used `aria-label`.
+- An inert row looked identical to a live one, since only its control carried the state.
+- A selected segment sat at 1.05 to 1 against its track, carried by a shadow alone.
+- Every group story rendered at 1654 pixels, three times the width the layout contract fixes, so nobody had seen the real proportions.
+
+Axe passed all five, because each one is a fact about appearance rather than about semantics. A suite that never looks can't catch them.
+
+**Measure the close calls rather than squinting.** Read computed style straight from the page, and compute the ratio when a state indicator or a muted ink is in question. Three of those five were only provable by number, and one of them looked fine in a screenshot.

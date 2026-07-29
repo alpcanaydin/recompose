@@ -87,6 +87,7 @@
 - Use the `vercel-composition-patterns` skill when designing component APIs or structuring components (canvas nodes, inspector, drawers), favoring composition over prop drilling.
 - Use the `vercel-react-view-transitions` skill when implementing UI transitions/animations between views or states (screen switches, drawer open/close, node focus).
 - Use the `storybook-stories` skill when writing or reviewing any Storybook story, the Storybook config, or the fake bridge decorator.
+- **Anything that reaches the screen gets looked at through `claude-in-chrome`, in both schemes, before it lands.** That covers a component, a story, a design token, and the Storybook config. The suite proves semantics, never appearance: axe passed a dark scheme that rendered light, a label printed twice, an inert row that looked live, and a selected segment at 1.05 to 1 against its track. Measure the close calls from the page rather than squinting at them.
 - Use the `writing-guidelines` skill when writing any user-facing copy, docs, or README text.
 
 ## Long-form writing

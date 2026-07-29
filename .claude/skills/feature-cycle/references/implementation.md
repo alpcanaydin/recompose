@@ -42,7 +42,7 @@ Test layers are explicit tasks, not implicit hopes.
   **Each unit graduates its own feature file together with its step definitions, in one commit.** `bddgen` fails the whole tree on a single undefined step, so a feature file that lands without its steps turns the branch red for as long as the fan-out runs. That constraint is also what stops the graduation from being one big-bang step at the end.
 
   Writing every step definition in one late cluster is the failure mode this replaces. It serializes the largest remaining chunk of work, and it discovers an unautomatable scenario at the worst possible moment, after the set has frozen.
-- **Storybook stories** are the definition of done for renderer clusters, not an afterthought.
+- **Storybook stories** are the definition of done for renderer clusters, not an afterthought. A renderer cluster closes only once someone has opened its stories through `claude-in-chrome`, in both schemes, and reported what they saw. A green story suite proves the semantics and says nothing about the appearance, which is where the defects that reach a person actually live.
 
 **End-to-end dispatch rule.** When a task touches end-to-end tests, step definitions, or `.feature` files, dispatch it with the `playwright-best-practices` and `gherkin-best-practices` skills invoked before any writing. This is task-type-conditional loading, applied at dispatch to the tasks that need it, not a permanent preload. The `tdd-implementer` definition already carries the matching instruction.
 
