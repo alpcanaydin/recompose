@@ -7,7 +7,7 @@ let tail: Promise<unknown> = Promise.resolve();
  * interleaved lose whichever secret was written first.
  */
 export async function inVaultOrder<Answer>(work: () => Promise<Answer>): Promise<Answer> {
-  const answered = tail.then(work, work);
+  const answered = tail.then(work);
 
   tail = answered.then(
     () => undefined,

@@ -3,13 +3,12 @@ import type { Settings } from '@recompose/contracts';
 
 import { expect } from '@playwright/test';
 import { defaultSettings, loadSettings } from '@recompose/contracts';
-import { chmod, readFile } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { Given, Then, When } from '../fixtures';
 
 const sectionHeadings = ['General', 'Server', 'Appearance', 'Data'];
-const readOnlyDirectory = 0o500;
 
 function settingsScreen(page: Page): Locator {
   return page.getByRole('main');
@@ -57,7 +56,10 @@ async function storedThemeAndPort(
 }
 
 Given('the settings document cannot be written', async ({ electronApp }) => {
-  await chmod(await userDataPath(electronApp), readOnlyDirectory);
+  const settingsFile = join(await userDataPath(electronApp), 'settings.json');
+
+  await rm(settingsFile, { force: true, recursive: true });
+  await mkdir(settingsFile);
 });
 
 When('commits port {int} straight after', async ({ page }, port: number) => {
