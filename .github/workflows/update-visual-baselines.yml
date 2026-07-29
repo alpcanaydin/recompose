@@ -96,7 +96,10 @@ jobs:
             exit 0
           fi
           git commit -m "test(e2e): update visual baselines"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
+          remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch "$remote" "$BRANCH"
+          git rebase FETCH_HEAD
+          git push "$remote" "HEAD:refs/heads/${BRANCH}"
           echo "::notice::Baselines landed. The repository token cannot start a workflow run, so push once more or re-run the checks to turn this branch green."
         env:
           GITHUB_TOKEN: ${{ github.token }}
