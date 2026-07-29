@@ -48,6 +48,17 @@ jobs:
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAMID: ${{ vars.TURBO_TEAMID }}
+      - name: Start from no baselines for this platform
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            macOS) mine='-darwin.png' ;;
+            Linux) mine='-linux.png' ;;
+            Windows) mine='-win32.png' ;;
+            *) echo "::error::unknown runner $RUNNER_OS"; exit 1 ;;
+          esac
+          find apps/desktop/e2e/visual.spec.ts-snapshots -name "*$mine" -delete
+          echo "removed the $mine baselines, so each one gets written rather than rewritten"
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y gnome-keyring
       - if: runner.os == 'Linux'
