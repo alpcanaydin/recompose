@@ -21,6 +21,34 @@ type ElectronFixtures = {
   page: Page;
 };
 
+function platformHoldsLoginItem(): boolean {
+  return process.platform === 'darwin' || process.platform === 'win32';
+}
+
+async function readLoginItem(app: ElectronApplication): Promise<boolean | null> {
+  if (!platformHoldsLoginItem()) {
+    return null;
+  }
+
+  return app.evaluate(
+    ({ app: runningApp }) =>
+      runningApp.getLoginItemSettings({ path: process.execPath, args: [] }).openAtLogin,
+  );
+}
+
+async function restoreLoginItem(
+  app: ElectronApplication,
+  openAtLogin: boolean | null,
+): Promise<void> {
+  if (openAtLogin === null) {
+    return;
+  }
+
+  await app.evaluate(({ app: runningApp }, enabled) => {
+    runningApp.setLoginItemSettings({ path: process.execPath, args: [], openAtLogin: enabled });
+  }, openAtLogin);
+}
+
 export const test = base.extend<ElectronFixtures>({
   electronApp: async ({}, use) => {
     const userDataDir = await mkdtemp(join(tmpdir(), 'recompose-e2e-'));
@@ -38,8 +66,14 @@ export const test = base.extend<ElectronFixtures>({
       process.stderr.write(chunk);
     });
 
-    await use(app);
-    await app.close();
+    const priorLoginItem = await readLoginItem(app);
+
+    try {
+      await use(app);
+    } finally {
+      await restoreLoginItem(app, priorLoginItem);
+      await app.close();
+    }
   },
   page: async ({ electronApp }, use) => {
     const page = await electronApp.firstWindow();

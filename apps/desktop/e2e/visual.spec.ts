@@ -15,6 +15,11 @@ async function openProviders(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
 }
 
+async function openSettings(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+}
+
 test('the home screen matches its baseline', async ({ page }) => {
   await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
   await settleFonts(page);
@@ -38,4 +43,10 @@ test('the providers screen matches its baseline with a connected account', async
   await expect(page.getByRole('listitem').filter({ hasText: 'Claude Max' })).toBeVisible();
   await settleFonts(page);
   await expect(page).toHaveScreenshot('providers-connected.png');
+});
+
+test('the settings screen matches its baseline', async ({ page }) => {
+  await openSettings(page);
+  await settleFonts(page);
+  await expect(page).toHaveScreenshot('settings.png');
 });

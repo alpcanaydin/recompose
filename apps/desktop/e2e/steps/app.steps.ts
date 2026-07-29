@@ -11,6 +11,11 @@ Given('the app is on the providers screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
 });
 
+Given('the app is on the settings screen', async ({ page }) => {
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+});
+
 Then('it offers to select a gateway or create one', async ({ page }) => {
   await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
 });
