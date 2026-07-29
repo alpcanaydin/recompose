@@ -28,10 +28,6 @@ type WorkflowEntry = {
 const WORKFLOW_ENTRIES: readonly WorkflowEntry[] = [
   { name: 'the gate launcher', path: join(HOOKS_DIRECTORY, 'launch-gate.mjs') },
   { name: 'the transcript resolver', path: join(HOOKS_DIRECTORY, 'resolve-transcript.mts') },
-  {
-    name: 'the blast-radius path guard',
-    path: join(HOOKS_DIRECTORY, '..', 'path-guard', 'path-guard.mts'),
-  },
 ];
 
 function workspaceWithReporter(): string {

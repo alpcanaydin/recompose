@@ -25,17 +25,17 @@ Before the commit chain, a `rules-reviewer` makes one read-only pass over the di
 
 ## Commit chain
 
-Write the commit chain in caveman-commit style. The task reports carry the red runs, so the commit chain stays green at every commit. Write the commit chain, push it, then run `/review-pr` on the pushed head before opening the pull request. A finding found there gets fixed, pushed, and re-reviewed, because the fresh push drops the status. The `/review-pr` workflow takes `sha`, the reviewed head commit, `repo`, the `owner/repo` slug, and `baseSha`, the base commit the reviewed range starts from. The workflow reviews the `baseSha...sha` range, so the marker binds to the reviewed diff. The `review-pr` workflow posts the `feature-cycle/reviewed` commit status on the reviewed head commit through `gh api`, once the process assertion passes and no finding survives.
+Write the commit chain in caveman-commit style. The task reports carry the red runs, so the commit chain stays green at every commit. Write the commit chain, then run `/review-pr` on the local head **before pushing and before any pull request exists**. A finding it names gets fixed on the branch, and the review runs again on the new head. The branch pushes once the review answers with no surviving finding. The `/review-pr` workflow takes `sha`, the head commit under review, `repo`, the `owner/repo` slug, and `baseSha`, the base commit the reviewed range starts from. The workflow reviews the `baseSha...sha` range. It posts no commit status and no continuous integration check waits on it, so a push never re-opens a review round.
 
-The **path guard** runs deterministically in continuous integration. It reads the `feature-cycle/reviewed` status on the head commit. A pull request that touches blast-radius paths without that status fails the guard, which names the heavy pass as the way to clear it. A new push carries no status, so a re-review follows any change. Blast-radius paths are the Electron main and preload sources, the contracts package, storage, workflow definitions, and package manifests.
+The review has **no continuous integration counterpart**. Nothing in the pipeline reads whether a commit was reviewed, so the discipline lives in this reference rather than in a gate. The reason is recorded in ADR-0051: a status bound to a commit cannot survive the fixes the review itself asks for, because each fix moves the head and the branch is asked to review a commit that already carries the answer.
 
-**Incremental re-review.** `baseSha` is a free parameter, so a re-review costs only the increment. The first pass takes the pull request base, and each later pass takes the previous reviewed head as `baseSha`. One ceiling comes with the convention. The path guard reads only whether the head carries the status, so it cannot walk the chain and confirm the reviewed ranges cover the branch, which keeps the marker scoped to drift protection (ADR-0039). ADR-0040 carries the reasoning.
+**Incremental re-review.** `baseSha` is a free parameter, so a re-review costs only the increment. The first pass takes the branch point, and each later pass takes the previous reviewed head as `baseSha`. Nothing walks the chain to confirm the reviewed ranges cover the branch, so a session that skips a range leaves it unread. ADR-0040 carries the reasoning.
 
 ## Pull-request line
 
 Open the pull request. On it:
 
-- **Gate tier.** The machine gates, the compiled acceptance scenarios, and the path guard run behind the `ci-success` barrier.
+- **Gate tier.** The machine gates and the compiled acceptance scenarios run behind the `ci-success` barrier.
 - **CodeRabbit.** CodeRabbit reviews every pull request under the existing thread protocol: judge each finding against the docs and the actual code before acting, reply on the thread naming the fixing commit and resolve it, and leave a rejected or deferred finding unresolved with the reasoning until the exchange settles.
 
 ## Fix cycle
