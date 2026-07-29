@@ -65,12 +65,21 @@ jobs:
       - if: runner.os != 'Linux'
         continue-on-error: true
         run: pnpm --filter @recompose/desktop run test:e2e:visual:update
-      - name: Fail only when the regeneration produced nothing
-        shell: bash
+      - if: runner.os == 'Linux'
+        name: The regenerated baselines must match what this runner produces
         run: |
-          count=$(find apps/desktop/e2e/visual.spec.ts-snapshots -name '*.png' | wc -l)
-          echo "baselines present: $count"
-          test "$count" -gt 0
+          cat > /tmp/visual-verify-linux.sh <<'SCRIPT'
+          set -e
+          eval "$(printf '\n' | gnome-keyring-daemon --unlock)"
+          eval "$(printf '\n' | gnome-keyring-daemon --start --components=secrets)"
+          export XDG_CURRENT_DESKTOP=GNOME
+          export RECOMPOSE_PASSWORD_STORE=gnome-libsecret
+          xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:visual
+          SCRIPT
+          dbus-run-session -- bash /tmp/visual-verify-linux.sh
+      - if: runner.os != 'Linux'
+        name: The regenerated baselines must match what this runner produces
+        run: pnpm --filter @recompose/desktop run test:e2e:visual
       - name: Keep only the platform this runner speaks for
         shell: bash
         run: |
