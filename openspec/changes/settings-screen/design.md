@@ -352,10 +352,10 @@ Two failures never reach an error code, because the observed truth already repor
 - `apps/desktop/vitest.config.ts`: coverage excludes for the tray and menu shells (modify)
 - `apps/desktop/stryker.config.json`: mutate excludes for the same two shells (modify)
 - `apps/desktop/package.json`: the `@base-ui/react` dependency (modify)
-- `docs/adr/0043-base-ui-shared-component-base.md`: the kit's base and the rejected libraries (create)
-- `docs/adr/0044-launch-at-login-absent-on-linux.md`: the Linux stance (create)
-- `docs/adr/0045-open-config-folder-over-reveal.md`: `shell.openPath` over `showItemInFolder` (create)
-- `docs/adr/0046-gateway-token-vault-and-clipboard.md`: the token's storage, copy route, and reveal stance (create)
+- `docs/adr/0044-base-ui-shared-component-base.md`: the kit's base and the rejected libraries (create)
+- `docs/adr/0045-launch-at-login-absent-on-linux.md`: the Linux stance (create)
+- `docs/adr/0046-open-config-folder-over-reveal.md`: `shell.openPath` over `showItemInFolder` (create)
+- `docs/adr/0047-gateway-token-vault-and-clipboard.md`: the token's storage, copy route, and reveal stance (create)
 - `docs/adr/README.md`: four index rows (modify)
 
 ## Interfaces
@@ -420,7 +420,7 @@ The segmented control builds on the radio group primitive rather than a toggle g
 
 **Alternatives considered:** Radix, rejected because it ships no number field at all, which makes the hardest primitive of the four a hand-rolled spinbutton. React Aria Components, rejected because its deeper localization and its heavier style contract buy little against a single Chromium target and a bespoke two-tier token system. Ark UI, rejected because its multi-framework state-machine layer is surface this React-only renderer can't use. Hand-rolling all four, rejected because the maintainer expects many more presentational components as screens land, and one base beats four bespoke implementations.
 
-**ADR draft:** `docs/adr/0043-base-ui-shared-component-base.md`
+**ADR draft:** `docs/adr/0044-base-ui-shared-component-base.md`
 
 ### 2. Launch at login never renders on Linux
 
@@ -428,7 +428,7 @@ Electron's login-item calls cover macOS and Windows. The Linux request sits clos
 
 **Alternatives considered:** the `auto-launch` package, rejected on three counts. Its last stable release predates this repository, a release candidate has sat unreleased for over two years, and it guesses the executable path from `process.execPath`. That last value is wrong for an AppImage. A hand-written autostart file against the freedesktop specification, rejected because the maintainer's locked decision draws a line between absent and inert, and an unwritten platform integration is absent. Rendering the row inert on Linux, rejected for the same reason: inert means not right now, and this is never.
 
-**ADR draft:** `docs/adr/0044-launch-at-login-absent-on-linux.md`
+**ADR draft:** `docs/adr/0045-launch-at-login-absent-on-linux.md`
 
 ### 3. The config folder opens through `shell.openPath`
 
@@ -436,7 +436,7 @@ Electron's login-item calls cover macOS and Windows. The Linux request sits clos
 
 **Alternatives considered:** `shell.showItemInFolder`, rejected on the missing failure signal and on a long defect tail around paths carrying a dot, a forward slash, or a non-Latin character.
 
-**ADR draft:** `docs/adr/0045-open-config-folder-over-reveal.md`
+**ADR draft:** `docs/adr/0046-open-config-folder-over-reveal.md`
 
 ### 4. The gateway token lives in the vault and copies through main
 
@@ -448,7 +448,7 @@ The bearer-token standard mandates transport security, which a loopback listener
 
 **Alternatives considered:** storing the token in the settings document, rejected because the document is plain text and the spec forbids it. `navigator.clipboard.writeText` in the renderer, rejected because it needs the plaintext in the renderer and it meets a permission handler that denies everything. A reveal action beside copy, rejected because a revealed token survives in screenshots and screen shares. Deleting the token when the requirement turns off, rejected because the spec requires it to survive.
 
-**ADR draft:** `docs/adr/0046-gateway-token-vault-and-clipboard.md`
+**ADR draft:** `docs/adr/0047-gateway-token-vault-and-clipboard.md`
 
 ### 5. The migration guard lands before the first migration
 
@@ -591,5 +591,5 @@ A fresh-context reviewer diffs the result against these criteria:
 - `pages/providers/ui/text-field.tsx` no longer exists, `connect-account-form.tsx` imports from `shared/ui`, and `AccountKindField` still renders a native select.
 - The four waiting rows carry `aria-disabled="true"`, sit in the tab order, and reference a visible reason.
 - `applySettings` has exactly two callers, the boot path and the save handler.
-- Four Architecture Decision Records land as 0043 through 0046, and the index carries their rows.
+- Four Architecture Decision Records land as 0044 through 0047, and the index carries their rows. The numbers shifted by one, because 0043 landed while this change was in flight.
 - Visual baselines exist for the settings screen on all three platforms, and the home and providers baselines regenerated.
