@@ -16,6 +16,7 @@
   --color-surface-hover: light-dark(var(--black-a06), var(--white-a08));
   --color-surface-thumb: var(--white);
   --color-surface-track: light-dark(var(--gray-200), var(--gray-800));
+  --color-surface-chip: light-dark(var(--white), var(--gray-700));
   --color-track-off: light-dark(var(--gray-200), var(--gray-800));
   --color-track-off-hover: light-dark(var(--black-a28), var(--gray-700));
 
@@ -124,7 +125,7 @@
 
 @utility chip-selected {
   border: 1px solid var(--color-line-selected);
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface-chip);
   font-weight: 500;
   box-shadow: 0 1px 1.5px rgb(0 0 0 / 12%);
 }

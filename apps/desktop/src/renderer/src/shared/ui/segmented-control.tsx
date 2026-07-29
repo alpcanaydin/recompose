@@ -40,7 +40,7 @@ export function SegmentedControl<Value extends string>({
     <RadioGroup
       aria-disabled={inert || undefined}
       aria-label={label}
-      className="inline-flex h-segment items-center gap-hairline rounded-control border border-line-subtle bg-surface-track p-hairline aria-disabled:bg-surface-inert"
+      className="inline-flex h-segment items-center gap-hairline rounded-control bg-surface-track p-hairline aria-disabled:bg-surface-inert"
       onValueChange={(next) => {
         if (inert) {
           return;
