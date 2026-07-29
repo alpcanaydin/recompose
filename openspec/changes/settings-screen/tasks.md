@@ -123,7 +123,15 @@ Electron offers no read path either. `Tray` exposes `setContextMenu`, `popUpCont
 
 The scenario therefore leaves the gherkin set, which brings the set level with the spec. Its claim keeps the two homes the design gave it. Four tests in `apps/desktop/src/main/tray/tray-menu-template.test.ts` pin the Quit item, its handler, and its place after the separator. Manual verification step 7 walks the rest.
 
-### Amendment: the login-item reporting scenario moves to the renderer layer
+### Where the acceptance tree stops proving things, and what does instead
+
+An adversarial pass mutated the built bundle and found three acceptance claims that survived every mutation they name. Two turned out to be honest limits rather than defects, and recording which is which stops the next reader from trusting the wrong line.
+
+**The tray now reports what it holds.** `menuBarVisible` read `menuBarTray !== null`, a variable kept beside the tray rather than the tray itself. A `hideMenuBarTray` that dropped the reference without destroying passed all 52 scenarios and left an icon on screen forever. The controller keeps its reference and answers from `isDestroyed()`, so the same mutation now fails the scenario that claims the icon goes away. That was a defect, and it's fixed.
+
+**The port range keeps two guards, so one scenario can't fail alone.** Removing the field's range check leaves the four out-of-range scenarios green, because `dispatchIpc` refuses the payload against `settingsSchema` and nothing reaches disk. The spec asks only that the app keeps the stored port and that the field states its range, and both hold under either guard. The field snapping back to the stored value is a separate claim the spec never makes, and `engine-port-row.browser.test.tsx` plus the `Out Of Range Reverts` story carry it. Defense in depth reads as vacuity from inside a single layer.
+
+**An inert row can't prove immovability through the app.** Every waiting row renders a controlled value with a literal and a no-op handler, so its position holds whatever the guard does. The end-to-end steps now assert what they can observe: the row announces `aria-disabled`, absorbs the key press without losing focus, and owns no field in the stored document. `switch.browser.test.tsx` pins the guard itself, as do the `Inert` stories for the segmented control and the text field. Every one of them goes red when the guard leaves.
 
 `launch-at-login.feature` froze with a third scenario, `The switch reports the operating system, not the stored flag`. Its Given asks the operating system to list recompose, and `setLoginItemSettings` writes one machine-global entry that every parallel worker shares. On macOS the `path` and `args` options belong to Windows, so each worker addresses the same binary. The unit measured the damage. The scenario failed two runs in three under the default three workers. A worker launching inside the on window captures the listing, then writes it back after the scenario clears it. The teardown that exists to leave no login item behind is what strands one.
 

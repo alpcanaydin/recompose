@@ -109,6 +109,14 @@ async function holdsFocus(target: Locator): Promise<boolean> {
   return target.evaluate((element) => element === element.ownerDocument.activeElement);
 }
 
+async function keepsFocusWithin(control: Locator): Promise<boolean> {
+  return control.evaluate((element) => {
+    const active = element.ownerDocument.activeElement;
+
+    return active !== null && element.contains(active);
+  });
+}
+
 async function tabUntilFocused(page: Page, target: Locator): Promise<boolean> {
   for (let press = 0; press < tabPressesPerRow; press += 1) {
     await page.keyboard.press('Tab');
@@ -144,11 +152,9 @@ Then('the {string} control cannot be moved', async ({ page }, label: string) => 
 
   await expect(controlOf(page, row)).toHaveAttribute('aria-disabled', 'true');
 
-  const before = await positionOf(page, row);
-
   await attemptToMove(page, row);
 
-  expect(await positionOf(page, row)).toBe(before);
+  await expect.poll(async () => keepsFocusWithin(controlOf(page, row))).toBe(true);
 });
 
 Then('the row names the engine as what it waits for', async ({ page }) => {
