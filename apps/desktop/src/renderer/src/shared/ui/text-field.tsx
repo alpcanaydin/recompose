@@ -30,7 +30,7 @@ export function TextField({
       <Field.Control
         aria-disabled={inert || undefined}
         aria-label={label}
-        className="h-[22px] rounded-control border border-line-strong bg-surface-card px-2 text-control text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent aria-disabled:cursor-not-allowed aria-disabled:border-line-faint aria-disabled:bg-surface-inert"
+        className="field-control focus-ring aria-disabled:cursor-not-allowed aria-disabled:bg-surface-inert"
         onChange={(event) => {
           onChangeValue(event.currentTarget.value);
         }}

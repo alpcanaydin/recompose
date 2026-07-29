@@ -31,7 +31,7 @@ export function Switch({
       aria-disabled={inert || undefined}
       aria-label={label}
       checked={checked}
-      className="flex h-[22px] w-[36px] shrink-0 rounded-pill border border-line-subtle bg-line-strong p-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-disabled:cursor-not-allowed aria-disabled:border-line-faint aria-disabled:bg-surface-inert data-checked:border-accent data-checked:bg-accent"
+      className="switch-track focus-ring-wide aria-disabled:cursor-not-allowed aria-disabled:bg-surface-inert data-checked:border-accent data-checked:bg-accent"
       onCheckedChange={(next) => {
         if (inert) {
           return;
@@ -40,7 +40,7 @@ export function Switch({
         onChangeChecked(next);
       }}
     >
-      <BaseSwitch.Thumb className="size-[16px] rounded-pill bg-surface-card transition-transform data-checked:translate-x-3.5" />
+      <BaseSwitch.Thumb className="size-thumb rounded-pill bg-surface-card transition-transform data-checked:translate-x-3.5" />
     </BaseSwitch.Root>
   );
 }

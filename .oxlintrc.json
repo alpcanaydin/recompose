@@ -592,7 +592,12 @@
     "tailwindcss/enforce-consistent-variable-syntax": "error",
     "tailwindcss/consistent-variant-order": "error",
     "tailwindcss/enforce-consistent-important-position": "error",
-    "tailwindcss/enforce-consistent-line-wrapping": "error",
+    "tailwindcss/enforce-consistent-line-wrapping": [
+      "error",
+      {
+        "printWidth": 200
+      }
+    ],
     "tailwindcss/enforce-logical": "error",
     "tailwindcss/enforce-negative-arbitrary-values": "error",
     "tailwindcss/max-class-count": "error"

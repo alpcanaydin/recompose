@@ -22,7 +22,7 @@ export function AccountKindField({ value, onChangeValue }: AccountKindFieldProps
           onChangeValue(accountKindSchema.parse(event.currentTarget.value));
         }}
         render={
-          <select className="h-[22px] w-fit rounded-control border border-line-strong bg-surface-card px-2 text-control text-ink">
+          <select className="h-control w-fit rounded-control border border-line-strong bg-surface-card px-2 text-control text-ink">
             <option value="subscription">subscription</option>
             <option value="api-key">api-key</option>
             <option value="aggregator">aggregator</option>

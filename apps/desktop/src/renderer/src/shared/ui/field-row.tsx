@@ -33,7 +33,7 @@ export function FieldRow({
   const notes = [description, inert ? reason : undefined].filter((note) => note !== undefined);
 
   return (
-    <Field.Root className="flex min-h-[44px] items-center justify-between gap-4 py-2">
+    <Field.Root className="flex min-h-row items-center justify-between gap-4 py-2">
       <div className="flex flex-col gap-0.5">
         <Field.Label className={inert ? 'text-body text-ink-secondary' : 'text-body text-ink'}>
           {label}
@@ -45,7 +45,7 @@ export function FieldRow({
         ))}
         {status === undefined ? null : (
           <Field.Description
-            className="border-l-2 border-danger pl-2 text-caption text-ink"
+            className="border-s-2 border-danger ps-2 text-caption text-ink"
             role="alert"
           >
             {status}

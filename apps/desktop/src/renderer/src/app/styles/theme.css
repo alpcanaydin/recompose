@@ -42,8 +42,63 @@
   --text-overline--letter-spacing: 1.4px;
   --text-mono-value: 11px;
 
+  --spacing-column: 560px;
+  --spacing-row: 44px;
+  --spacing-track: 36px;
+  --spacing-segment: 24px;
+  --spacing-control: 22px;
+  --spacing-chip: 18px;
+  --spacing-thumb: 16px;
+  --spacing-port: 76px;
+  --spacing-hairline: 2px;
+
   --radius-chip: 4px;
   --radius-control: 6px;
   --radius-card: 10px;
   --radius-pill: 999px;
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+}
+
+@utility focus-ring-wide {
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@utility field-control {
+  height: var(--spacing-control);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface-card);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-control);
+  color: var(--color-ink);
+}
+
+@utility chip-selected {
+  border: 1px solid var(--color-line-selected);
+  background-color: var(--color-surface-raised);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+}
+
+@utility switch-track {
+  display: flex;
+  height: var(--spacing-control);
+  width: var(--spacing-track);
+  flex-shrink: 0;
+  border: 1px solid var(--color-line-subtle);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-line-strong);
+  padding: var(--spacing-hairline);
+  transition:
+    background-color 150ms,
+    border-color 150ms;
 }

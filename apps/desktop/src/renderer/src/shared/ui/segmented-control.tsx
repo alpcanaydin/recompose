@@ -37,7 +37,7 @@ export function SegmentedControl<Value extends string>({
     <RadioGroup
       aria-disabled={inert || undefined}
       aria-label={label}
-      className="inline-flex h-[24px] items-center gap-[2px] rounded-control border border-line-subtle bg-surface-content p-[2px] aria-disabled:cursor-not-allowed aria-disabled:bg-surface-inert"
+      className="inline-flex h-segment items-center gap-hairline rounded-control border border-line-subtle bg-surface-content p-hairline aria-disabled:cursor-not-allowed aria-disabled:bg-surface-inert"
       onValueChange={(next) => {
         if (inert) {
           return;
@@ -49,7 +49,7 @@ export function SegmentedControl<Value extends string>({
     >
       {options.map((option) => (
         <Radio.Root
-          className="flex h-[18px] cursor-default items-center rounded-chip px-2 text-control text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent data-checked:border data-checked:border-line-selected data-checked:bg-surface-raised data-checked:font-medium data-checked:shadow-sm"
+          className="flex h-chip cursor-default items-center rounded-chip px-2 text-control text-ink focus-ring data-checked:chip-selected"
           key={option.value}
           value={option.value}
         >
