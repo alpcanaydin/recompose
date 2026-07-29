@@ -13,7 +13,3 @@ Feature: Theme
     Then the app opens in dark
     And it never paints light first
 
-  Scenario: The system theme follows the operating system
-    Given the theme reads system
-    When the operating system switches to dark
-    Then the app repaints in dark without a restart

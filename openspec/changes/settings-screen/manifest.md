@@ -13,5 +13,6 @@ approvals:
   - gate 2 approved the scenario set, which freezes here, and the solution design with its seven clusters and four Architecture Decision Record drafts
   - the first replan merged contracts into the process boundary, because the total channel map makes them one compile unit and the design's own totality guard forbids a green contracts-only commit
   - the same unit then absorbed the two system handlers and the assembly seam, for the same reason one step further out, while the tray, the menu, the window floor, and the apply seam stayed with their cluster
+  - the frozen set lost one scenario at the maintainer's amendment: the system theme following the operating system moves to the main process, because every renderer emulation hook outranks nativeTheme and would pass against a broken app
 branch: worktree-settings-screen
 ---
