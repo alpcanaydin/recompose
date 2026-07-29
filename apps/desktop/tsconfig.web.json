@@ -7,7 +7,8 @@
     "src/preload/*.d.ts",
     ".storybook/preview.ts",
     ".storybook/recompose-bridge.tsx",
-    ".storybook/settings-column.tsx"
+    ".storybook/settings-column.tsx",
+    ".storybook/system-report.ts"
   ],
   "compilerOptions": {
     "composite": true,
