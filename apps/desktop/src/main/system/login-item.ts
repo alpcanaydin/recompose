@@ -36,7 +36,8 @@ export function createLoginItem(
   const target: LoginItemTarget = { path: executablePath, args: [] };
 
   return {
-    isEnabled: () => port.getLoginItemSettings(target).openAtLogin,
+    isEnabled: () =>
+      availability === 'available' ? port.getLoginItemSettings(target).openAtLogin : false,
     setEnabled: (enabled) => {
       if (availability !== 'available') {
         return;

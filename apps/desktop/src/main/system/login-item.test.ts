@@ -105,6 +105,28 @@ describe('the launch-at-login switch against the operating system', () => {
   });
 });
 
+describe('a platform the login item never reaches', () => {
+  test('a platform without a login item is never asked what it holds', () => {
+    const operatingSystem = fakeOperatingSystem();
+    let reads = 0;
+    const watched = {
+      ...operatingSystem,
+      getLoginItemSettings: (options: { path: string; args: string[] }) => {
+        reads += 1;
+
+        return operatingSystem.getLoginItemSettings(options);
+      },
+    };
+
+    operatingSystem.setLoginItemSettings({ path: packagedExecutable, args: [], openAtLogin: true });
+
+    const loginItem = createLoginItem(watched, 'unsupported', packagedExecutable);
+
+    expect(loginItem.isEnabled()).toBe(false);
+    expect(reads).toBe(0);
+  });
+});
+
 describe('the read and the write name the same executable', () => {
   propertyTest.prop([fc.string({ minLength: 1 }), fc.boolean()])(
     'whatever the switch writes for an executable, the switch reads back',

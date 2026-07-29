@@ -18,8 +18,8 @@ export function AccountKindField({ value, onChangeValue }: AccountKindFieldProps
     <Field.Root className="flex flex-col gap-1">
       <Field.Label className="text-body text-ink">Kind</Field.Label>
       <Field.Control
-        onChange={(event) => {
-          onChangeValue(accountKindSchema.parse(event.currentTarget.value));
+        onValueChange={(picked) => {
+          onChangeValue(accountKindSchema.parse(picked));
         }}
         render={
           <select className="h-control w-fit rounded-control border border-line-strong bg-surface-card px-2 text-control text-ink">
