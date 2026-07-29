@@ -2,7 +2,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 
 import { _electron as electron } from '@playwright/test';
 import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createBdd, test as base } from 'playwright-bdd';
 
@@ -51,7 +51,7 @@ async function restoreLoginItem(
 
 export const test = base.extend<ElectronFixtures>({
   electronApp: async ({}, use) => {
-    const userDataDir = await mkdtemp(join(tmpdir(), 'recompose-e2e-'));
+    const userDataDir = await mkdtemp(join(homedir(), '.recompose-e2e-'));
     const app = await electron.launch({
       args: [appRoot],
       env: {

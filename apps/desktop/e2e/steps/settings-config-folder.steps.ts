@@ -35,12 +35,20 @@ async function configFolder(app: ElectronApplication): Promise<string> {
   return app.evaluate(({ app: running }) => running.getPath('userData'));
 }
 
-async function homeShorthandConfigFolder(app: ElectronApplication): Promise<string> {
-  return app.evaluate(({ app: running }) => {
-    const folder = running.getPath('userData');
-    const home = running.getPath('home');
+type FolderNames = {
+  leaf: string;
+  accountName: string;
+};
 
-    return folder.startsWith(home) ? `~${folder.slice(home.length)}` : folder;
+async function folderNames(app: ElectronApplication): Promise<FolderNames> {
+  return app.evaluate(({ app: running }) => {
+    const segments = running.getPath('userData').split(/[/\\]/u).filter(Boolean);
+    const home = running.getPath('home').split(/[/\\]/u).filter(Boolean);
+
+    return {
+      leaf: segments.at(-1) ?? '',
+      accountName: home.at(-1) ?? '',
+    };
   });
 }
 
@@ -98,9 +106,10 @@ When('the maintainer reveals the config folder', async ({ electronApp, page }) =
 Then(
   'the config folder row shows the folder that holds the settings document',
   async ({ electronApp, page }) => {
-    const folder = await homeShorthandConfigFolder(electronApp);
+    const { leaf, accountName } = await folderNames(electronApp);
 
-    await expect(dataSection(page).getByText(folder)).toBeVisible();
+    await expect(dataSection(page).getByText(leaf, { exact: false })).toBeVisible();
+    await expect(dataSection(page).getByText(accountName, { exact: false })).toHaveCount(0);
   },
 );
 
