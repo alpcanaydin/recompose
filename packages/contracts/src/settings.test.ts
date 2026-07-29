@@ -1,7 +1,7 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { defaultSettings, ENGINE_PORT_RANGE, loadSettings } from './settings';
+import { defaultSettings, ENGINE_PORT_RANGE, loadSettings, withSettingsPatch } from './settings';
 
 describe('app settings', () => {
   test('defaults: system theme, engine on 8397, every switch off', () => {
@@ -103,4 +103,46 @@ describe('the engine port range', () => {
       }
     },
   );
+});
+
+describe('a save that names only the fields it changes', () => {
+  test('a named field replaces what the document held', () => {
+    const stored = { ...defaultSettings(), theme: 'light' as const, enginePort: 9000 };
+
+    expect(withSettingsPatch(stored, { theme: 'dark' })).toMatchObject({
+      theme: 'dark',
+      enginePort: 9000,
+    });
+  });
+
+  test('a field the patch leaves out keeps what the document held', () => {
+    const stored = { ...defaultSettings(), launchAtLogin: true, showInMenuBar: true };
+
+    expect(withSettingsPatch(stored, { theme: 'dark' })).toEqual({
+      ...stored,
+      theme: 'dark',
+    });
+  });
+
+  test('a field named as undefined is left out rather than written back as nothing', () => {
+    const stored = { ...defaultSettings(), launchAtLogin: true };
+
+    expect(withSettingsPatch(stored, { launchAtLogin: undefined })).toEqual(stored);
+  });
+
+  test('a patch that names nothing leaves the document as it stands', () => {
+    const stored = { ...defaultSettings(), enginePort: 9100 };
+
+    expect(withSettingsPatch(stored, {})).toEqual(stored);
+  });
+
+  test('a patch carrying a value the document rejects fails loudly', () => {
+    expect(() => withSettingsPatch(defaultSettings(), { enginePort: 70000 })).toThrow();
+  });
+
+  test('the schema version a patch can never name survives every merge', () => {
+    expect(withSettingsPatch(defaultSettings(), { theme: 'dark' }).schemaVersion).toBe(
+      defaultSettings().schemaVersion,
+    );
+  });
 });

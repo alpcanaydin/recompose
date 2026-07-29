@@ -534,7 +534,6 @@ jobs:
         zizmor,
         actionlint,
         commitlint-pr,
-        path-guard,
       ]
     if: always()
     runs-on: ubuntu-latest
