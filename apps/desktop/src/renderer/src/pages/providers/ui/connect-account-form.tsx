@@ -42,7 +42,7 @@ export function ConnectAccountForm() {
 
   return (
     <>
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+      <form className="flex flex-col items-start gap-3" onSubmit={handleSubmit}>
         {textEntries.map(({ field, label, type }) => (
           <div className="flex flex-col gap-1" key={field}>
             <span className="text-body text-ink">{label}</span>
