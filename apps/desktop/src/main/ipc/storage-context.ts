@@ -7,6 +7,8 @@ import type { SecretCodec } from '../storage/safe-storage-codec';
 import { ipcFailure, openVault } from './storage-envelope';
 
 export type StorageIpcContext = {
+  /** What the operating system currently holds for the login item. */
+  readLoginItem: () => boolean;
   userDataPath: string;
   getCodec: () => SecretCodec;
   isEncryptionAvailable: () => boolean;

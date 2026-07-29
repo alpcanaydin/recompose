@@ -28,7 +28,7 @@ export const Basic = meta.story({
 export const OnWindows = meta.story({
   parameters: reportingSystem({
     fileBrowser: 'explorer',
-    configFolder: String.raw`C:\Users\someone\AppData\Roaming\recompose`,
+    configFolder: String.raw`~\AppData\Roaming\recompose`,
   }),
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('button', { name: 'Show in Explorer' })).toBeVisible();
@@ -39,7 +39,7 @@ export const OnWindows = meta.story({
 export const OnLinux = meta.story({
   parameters: reportingSystem({
     fileBrowser: 'file-manager',
-    configFolder: '/home/someone/.config/recompose',
+    configFolder: '~/.config/recompose',
   }),
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('button', { name: 'Open folder' })).toBeVisible();

@@ -14,17 +14,18 @@ function applyPresentation(effects: SettingsEffects, settings: Settings): void {
 /**
  * Applies a document a person just saved.
  *
- * @summary The login item only takes a write when this save changed it, because the operating
- * system owns that flag between saves and a stored value would otherwise undo a removal made there.
+ * @summary The login item takes a write only when the save asks for something other than what the
+ * machine already holds, so an unrelated save never undoes a removal made outside the app and a
+ * person whose stored value drifted from the operating system can still move the switch.
  */
 export function applyChosenSettings(
   effects: SettingsEffects,
   settings: Settings,
-  previous: Settings,
+  held: Settings,
 ): void {
   applyPresentation(effects, settings);
 
-  if (settings.launchAtLogin !== previous.launchAtLogin) {
+  if (settings.launchAtLogin !== held.launchAtLogin) {
     effects.setLoginItem(settings.launchAtLogin);
   }
 }

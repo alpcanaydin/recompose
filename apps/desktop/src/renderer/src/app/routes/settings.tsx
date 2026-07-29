@@ -6,6 +6,7 @@ import {
   settingsQueryOptions,
   systemQueryOptions,
 } from '../../pages/settings';
+import { PageError } from '../../shared/ui';
 
 type SettingsSearch = {
   focus?: 'first-control';
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/settings')({
     ]);
   },
   component: SettingsRoute,
+  errorComponent: PageError,
 });
 
 function SettingsRoute() {

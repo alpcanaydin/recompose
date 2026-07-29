@@ -4,12 +4,14 @@ import type { FileBrowser } from '../system/file-browser';
 import type { LoginItemAvailability } from '../system/login-item';
 import type { IpcHandlers } from './dispatch';
 
+import { homeRelative } from '../system/home-relative';
 import { ipcFailure } from './storage-envelope';
 
 export type SystemIpcContext = {
   fileBrowser: FileBrowser;
   loginItem: LoginItemAvailability;
   configFolder: string;
+  homeFolder: string;
   readLoginItem: () => boolean;
   isMenuBarVisible: () => boolean;
   openFolder: (path: string) => Promise<string>;
@@ -23,7 +25,7 @@ function observeSystem(ctx: SystemIpcContext): SystemState {
     loginItem: ctx.loginItem,
     loginItemEnabled: ctx.readLoginItem(),
     menuBarVisible: ctx.isMenuBarVisible(),
-    configFolder: ctx.configFolder,
+    configFolder: homeRelative(ctx.configFolder, ctx.homeFolder),
   };
 }
 

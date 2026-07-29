@@ -33,6 +33,7 @@ async function freshContext(
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
     applySettings: () => undefined,
+    readLoginItem: () => false,
     ...overrides,
   };
 }

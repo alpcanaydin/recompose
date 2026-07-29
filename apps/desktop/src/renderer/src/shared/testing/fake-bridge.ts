@@ -9,7 +9,7 @@ const observedSystem: SystemState = {
   loginItem: 'available',
   loginItemEnabled: false,
   menuBarVisible: false,
-  configFolder: '/Users/someone/Library/Application Support/recompose',
+  configFolder: '~/Library/Application Support/recompose',
 };
 
 export type BridgeParameters = {

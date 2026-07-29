@@ -39,6 +39,7 @@ function context(): StorageIpcContext {
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
     applySettings: () => undefined,
+    readLoginItem: () => false,
   };
 }
 

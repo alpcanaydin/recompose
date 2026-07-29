@@ -92,12 +92,14 @@ function assembleIpcHandlers(): IpcHandlers {
       writeClipboard: (text) => {
         clipboard.writeText(text);
       },
+      readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
       loginItem: loginItemAvailability,
       configFolder: userDataPath,
+      homeFolder: app.getPath('home'),
       readLoginItem: () => loginItem.isEnabled(),
       isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),

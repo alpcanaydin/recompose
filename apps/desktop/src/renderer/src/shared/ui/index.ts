@@ -6,3 +6,4 @@ export { SegmentedControl } from './segmented-control';
 export { Switch } from './switch';
 export { LabelledTextField } from './labelled-text-field';
 export { TextField } from './text-field';
+export { PageError } from './page-error';

@@ -11,6 +11,7 @@ function systemContext(overrides: Partial<SystemIpcContext> = {}): SystemIpcCont
     fileBrowser: 'finder',
     loginItem: 'available',
     configFolder,
+    homeFolder: '/home/someone',
     readLoginItem: () => false,
     isMenuBarVisible: () => false,
     openFolder: async () => Promise.resolve(''),
@@ -36,7 +37,7 @@ describe('the system state behind the settings screen', () => {
         loginItem: 'unpackaged',
         loginItemEnabled: true,
         menuBarVisible: true,
-        configFolder,
+        configFolder: '~/.config/recompose',
       },
     });
   });

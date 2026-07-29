@@ -593,3 +593,13 @@ A fresh-context reviewer diffs the result against these criteria:
 - `applySettings` has exactly two callers, the boot path and the save handler.
 - Four Architecture Decision Records land as 0044 through 0047, and the index carries their rows. The numbers shifted by one, because 0043 landed while this change was in flight.
 - Visual baselines exist for the settings screen on all three platforms, and the home and providers baselines regenerated.
+
+## Amendments recorded during review
+
+Three defects the adversarial review reproduced changed decisions this document had already recorded.
+
+- **The login item answers to the operating system, not to the stored value.** The row renders what `getLoginItemSettings` reports, so gating the write on the stored value against itself left the switch dead in both directions once the two drifted apart. `settings:get` now answers with `launchAtLogin` read from the operating system, and the save handler compares the incoming document against that same reading. The stored field survives as the value the app writes back, and the machine stays the authority on what it currently holds.
+- **A route that can't read its data fails inside the outlet.** The `/settings` loader unwraps its envelope and throws on a failure, which reached the root error boundary and took the whole shell with it, including the action that reveals the folder a person would repair. Both data routes now name a `PageError` component, so the sidebar survives a settings document the process can't read.
+- **The main process shortens the config folder.** The renderer matched three hard-coded home shapes, so a layered-image or network home such as `/var/home/ada` printed the account name. The main process shortens the path against `app.getPath('home')` before it crosses the bridge, which also keeps the account name off the bridge entirely. `shell.openPath` still receives the real path.
+
+The acceptance criterion naming six controls in `shared/ui/index.ts` reads as eight, since the review added `PageError` beside the `LabelledTextField` that the merge train added earlier. Every one of them still ships a story.

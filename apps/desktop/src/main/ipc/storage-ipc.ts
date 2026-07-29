@@ -53,7 +53,9 @@ async function saveGateway(
 
 async function getSettings(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
-    return { ok: true as const, value: await loadSettingsFile(paths.settingsFile, ctx.onCorrupt) };
+    const stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
+
+    return { ok: true as const, value: { ...stored, launchAtLogin: ctx.readLoginItem() } };
   } catch (error) {
     return storageFailure(error);
   }
@@ -80,9 +82,9 @@ async function saveSettings(
     return storageFailure(error);
   }
 
-  ctx.applySettings(written.stored, written.previous);
+  ctx.applySettings(written.stored, { ...written.previous, launchAtLogin: ctx.readLoginItem() });
 
-  return { ok: true as const, value: written.stored };
+  return { ok: true as const, value: { ...written.stored, launchAtLogin: ctx.readLoginItem() } };
 }
 
 async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
