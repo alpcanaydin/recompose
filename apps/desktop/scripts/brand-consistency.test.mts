@@ -1,7 +1,23 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { brandPalette } from './brand-palette.mts';
 import { flattenedMarkFills } from './icon-geometry.mts';
+
+function readMaster(name: string): string {
+  return readFileSync(fileURLToPath(new URL(`../build/${name}`, import.meta.url)), 'utf8');
+}
+
+function colorsPaintedIn(master: string): readonly string[] {
+  return [...new Set(master.match(/#[0-9A-Fa-f]{6}/g) ?? [])]
+    .map((color) => color.toUpperCase())
+    .toSorted();
+}
+
+function sortedUpperCase(colors: readonly string[]): readonly string[] {
+  return colors.map((color) => color.toUpperCase()).toSorted();
+}
 
 describe('the brand palette', () => {
   it('records exactly the seven source anchors the mark is built from', () => {
@@ -42,5 +58,65 @@ describe('the flattened mark fills', () => {
       'outerBandBottom',
       'outerBandTop',
     ]);
+  });
+});
+
+describe('the flattened 1024 master', () => {
+  const master = readMaster('mark.svg');
+
+  it('paints only the tile anchors and the fills derived from the palette', () => {
+    expect(colorsPaintedIn(master)).toEqual(
+      sortedUpperCase([
+        brandPalette.tileTop,
+        brandPalette.tileBottom,
+        flattenedMarkFills.darkBandTop,
+        flattenedMarkFills.darkBandBottom,
+        flattenedMarkFills.outerBandTop,
+        flattenedMarkFills.outerBandBottom,
+        flattenedMarkFills.noteTop,
+        flattenedMarkFills.noteBottom,
+      ]),
+    );
+  });
+
+  it('leaves no translucent stop behind, because every stop is already composited', () => {
+    expect(master).not.toContain('stop-opacity');
+    expect(master).not.toContain('fill-opacity');
+  });
+
+  it('drops the clip path the unflattened source carried', () => {
+    expect(master).not.toContain('clipPath');
+    expect(master).not.toContain('clip-path');
+  });
+
+  it('draws on the 1024 canvas every rendition scales from', () => {
+    expect(master).toContain('viewBox="0 0 1024 1024"');
+  });
+
+  it('nests the two bands at the master inset fractions of the edge', () => {
+    expect(master).toContain('x="48" y="48" width="928" height="928"');
+    expect(master).toContain('x="96" y="96" width="832" height="832"');
+  });
+});
+
+describe('the purpose drawn small master', () => {
+  const smallMaster = readMaster('mark-small.svg');
+
+  it('paints the cream note inside the dark contour and nothing else', () => {
+    expect(colorsPaintedIn(smallMaster)).toEqual(
+      sortedUpperCase([brandPalette.noteCream, brandPalette.frameTop]),
+    );
+  });
+
+  it('holds the contour at the weight that still renders at 16 pixels', () => {
+    expect(smallMaster).toContain('stroke-width="64"');
+  });
+
+  it('leaves transparency behind the glyph, so no tile competes at small sizes', () => {
+    expect(smallMaster).not.toContain('<rect');
+  });
+
+  it('draws on the same 1024 canvas as the full mark', () => {
+    expect(smallMaster).toContain('viewBox="0 0 1024 1024"');
   });
 });
