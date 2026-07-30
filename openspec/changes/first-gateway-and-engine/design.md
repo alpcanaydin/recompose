@@ -134,7 +134,7 @@ The home surface shows the ghost graph, the heading, the body copy, and the call
 
 ### What the settings surface sheds
 
-`EnginePortRow` retires with its browser test and stories, and `enginePort` leaves the schema. The bind address row becomes a static value row reading `127.0.0.1` with the description "Fixed at loopback. recompose never serves the network." The autostart row stays inert and its reason becomes "Waits on launch-time start." The log-retention row keeps naming the engine, because request logging still doesn't exist.
+`EnginePortRow` retires with its browser test and stories, and `enginePort` leaves the schema. The bind address row becomes a static value row reading `127.0.0.1` with the description "Fixed at loopback. recompose never serves the network." The autostart row stays inert and its reason becomes "Waits on launch-time start." The log-retention row stops naming the engine too, because the engine has arrived and request logging is what it actually waits for.
 
 ### Trade-offs in view
 
@@ -319,7 +319,7 @@ The `role="alert"` line for a failed start inserts a fresh node per attempt, bec
 - `packages/contracts/src/ipc.ts`: five channels, the `ipcEvents` map, its derived types, and two error codes (modify)
 - `packages/contracts/src/ipc.test.ts`: the roster moves to seventeen, plus event-map coverage (modify)
 - `packages/contracts/src/ipc.test-d.ts`: totality over seventeen channels, the event map, nine codes, and the union arms (modify)
-- `packages/contracts/src/settings.ts`: `enginePort` and `ENGINE_PORT_RANGE` leave, version stays 2 (modify)
+- `packages/contracts/src/settings.ts`: `enginePort` and `ENGINE_PORT_RANGE` leave, version moves to 3 with a migration that drops the field (modify)
 - `packages/contracts/src/settings.test.ts`: the port assertions leave (modify)
 - `packages/contracts/src/settings.test-d.ts`: asserts the absence of `enginePort` (modify)
 - `packages/contracts/src/index.ts`: re-exports the two new modules (modify)

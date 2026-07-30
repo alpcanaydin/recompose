@@ -40,7 +40,7 @@ export function DataSection() {
         description="Drops request logs older than the window you choose."
         inert
         label="Keep request logs"
-        reason="Waiting on the engine."
+        reason="Waits on request logging."
       />
     </FieldGroup>
   );

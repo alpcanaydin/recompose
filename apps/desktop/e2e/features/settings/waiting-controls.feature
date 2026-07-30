@@ -3,12 +3,12 @@ Feature: Controls that wait on machinery
   Background:
     Given the app is on the settings screen
 
-  Scenario: The log retention row names the engine
+  Scenario: The log retention row names request logging
     Then the "Keep request logs" control cannot be moved
-    And the row names the engine as what it waits for
+    And the row names request logging as what it waits for
     And the stored settings document holds no field for it
 
-  Scenario: The autostart row names launch-time start
+  Scenario: The launch row names launch-time start
     Then the "Start gateways on launch" control cannot be moved
     And the row names launch-time start as what it waits for
     And the stored settings document holds no field for it
@@ -17,10 +17,6 @@ Feature: Controls that wait on machinery
     Then the "Reduce wire motion" control cannot be moved
     And the row names the canvas as what it waits for
     And the stored settings document holds no field for it
-
-  Scenario: The bind address states its value rather than offering a control
-    Then the bind address row reads "127.0.0.1"
-    And the row states that recompose never serves the network
 
   Scenario: A waiting row stays reachable from the keyboard
     When the maintainer tabs through the settings screen

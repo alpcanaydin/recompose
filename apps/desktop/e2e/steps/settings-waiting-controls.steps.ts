@@ -28,7 +28,7 @@ const waitingRows: readonly WaitingRow[] = [
   {
     label: 'Keep request logs',
     role: 'radiogroup',
-    awaits: 'Waiting on the engine.',
+    awaits: 'Waits on request logging.',
     settingField: 'keepRequestLogs',
   },
 ];
@@ -140,9 +140,9 @@ Then('the {string} control cannot be moved', async ({ page }, label: string) => 
   await expect.poll(async () => keepsFocusWithin(controlOf(page, row))).toBe(true);
 });
 
-Then('the row names the engine as what it waits for', async ({ page }) => {
+Then('the row names request logging as what it waits for', async ({ page }) => {
   await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
-    containing('Waiting on the engine.'),
+    containing('Waits on request logging.'),
   );
 });
 
