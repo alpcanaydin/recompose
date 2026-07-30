@@ -10,7 +10,7 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0002](0002-engine-in-electron-utilityprocess.md)                           | Gateway Engine Runs in Electron's utilityProcess                                    | Accepted   | 2026-07-21 |
 | [0003](0003-scaffold-with-electron-vite.md)                                 | Scaffold with electron-vite                                                         | Accepted   | 2026-07-21 |
 | [0004](0004-pnpm-workspaces-turborepo.md)                                   | pnpm Workspaces + Turborepo                                                         | Accepted   | 2026-07-21 |
-| [0005](0005-single-port-path-per-gateway.md)                                | Single Port, Path per Gateway, Both Dialects Always                                 | Accepted   | 2026-07-21 |
+| [0005](0005-single-port-path-per-gateway.md)                                | Single Port, Path per Gateway, Both Dialects Always                                 | Superseded | 2026-07-21 |
 | [0006](0006-local-quality-gate-layer.md)                                    | Local Quality Gate Layer                                                            | Accepted   | 2026-07-21 |
 | [0007](0007-ci-layer.md)                                                    | CI Layer                                                                            | Accepted   | 2026-07-22 |
 | [0008](0008-liquid-glass-window-chrome.md)                                  | Liquid Glass Window Chrome via electron-liquid-glass                                | Accepted   | 2026-07-22 |
@@ -60,3 +60,8 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0052](0052-the-dev-entry-point-fetches-the-electron-binary.md)             | The Dev Entry Point Fetches the Electron Binary                                     | Accepted   | 2026-07-30 |
 | [0053](0053-flow-green-is-a-canvas-token-the-palette-does-not-carry-yet.md) | Flow Green Is a Canvas Token the Palette Doesn't Carry Yet                          | Accepted   | 2026-07-30 |
 | [0054](0054-a-newer-settings-document-is-a-typed-failure.md)                | A Newer Settings Document Is a Typed Failure, Not Damage                            | Accepted   | 2026-07-30 |
+| [0055](0055-each-gateway-owns-its-own-loopback-port.md)                     | Each Gateway Owns Its Own Loopback Port                                             | Accepted   | 2026-07-31 |
+| [0056](0056-the-engine-serves-over-hono.md)                                 | The Engine Serves Over Hono                                                         | Accepted   | 2026-07-31 |
+| [0057](0057-lifecycle-state-pushes-over-a-typed-event-map.md)               | Lifecycle State Pushes Over a Typed Event Map                                       | Accepted   | 2026-07-31 |
+| [0058](0058-the-slug-rule-tightens-to-a-device-safe-identifier.md)          | The Slug Rule Tightens to a Bounded, Device-Safe Identifier                         | Accepted   | 2026-07-31 |
+| [0059](0059-the-permission-policy-allows-one-clipboard-write.md)            | The Permission Policy Allows One Clipboard Write                                    | Accepted   | 2026-07-31 |
