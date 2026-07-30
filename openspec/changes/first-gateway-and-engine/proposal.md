@@ -115,7 +115,7 @@ What closes it: one semantic elevation token, `--shadow-raised`, a soft wide sha
 
 ### No primary filled button exists
 
-The kit's only button voice is the neutral `push-button` utility, and the empty state's call to action needs a filled primary. What closes it: a filled sibling utility beside `push-button`, accent fill with a white label at the control size, hover on `--color-accent-hover`. The empty state and the sheet footer are its only consumers. The frontend rules require measuring the label against the fill from the page, in both schemes, before it lands.
+The kit's only button voice is the neutral `push-button` utility, and the empty state's call to action needs a filled primary. What closes it: a filled sibling utility beside `push-button` at the control size. The measurement it demanded settled its color. A white label on the accent fill reads 4.01 to 1, and axe refused it against the 4.5 to 1 that text needs. The fill therefore reads a new `--color-accent-fill` on `--blue-700`, which measures 5.59 to 1 in both schemes. That token carries one value rather than the `light-dark(...)` pair ADR-0009 asks for, following the `--color-surface-thumb` precedent. The cost is that the button reads duller than the accent beside it in dark. The empty state and the sheet footer are its only consumers.
 
 ### The renderer draws no icon
 
