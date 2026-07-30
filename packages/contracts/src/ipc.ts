@@ -9,6 +9,7 @@ export const ipcErrorSchema = z.strictObject({
   code: z.enum([
     'vault-unavailable',
     'vault-newer-schema',
+    'settings-newer-schema',
     'validation-failed',
     'storage-failed',
     'folder-open-failed',

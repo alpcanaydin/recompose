@@ -21,5 +21,6 @@ describe('ipc result unwrap', () => {
     const resultError = caught instanceof IpcResultError ? caught : null;
 
     expect(resultError?.code).toBe('vault-unavailable');
+    expect(resultError?.message).toBe('no keychain');
   });
 });

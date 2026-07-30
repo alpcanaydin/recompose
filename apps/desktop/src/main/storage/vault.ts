@@ -1,6 +1,12 @@
 import type { SecretCodec } from './safe-storage-codec';
 
-import { quarantineFile, readJsonWithQuarantine, writeJsonAtomic } from './json-file';
+import {
+  isRecord,
+  newerSchemaVersion,
+  quarantineFile,
+  readJsonWithQuarantine,
+  writeJsonAtomic,
+} from './json-file';
 
 export type VaultDocument = {
   schemaVersion: 1;
@@ -16,9 +22,7 @@ export class VaultNewerSchemaError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
+const VAULT_VERSION = 1;
 
 function isVaultDocument(value: unknown): value is VaultDocument {
   if (!isRecord(value)) {
@@ -27,23 +31,11 @@ function isVaultDocument(value: unknown): value is VaultDocument {
 
   const { schemaVersion, entries } = value;
 
-  if (schemaVersion !== 1 || !isRecord(entries)) {
+  if (schemaVersion !== VAULT_VERSION || !isRecord(entries)) {
     return false;
   }
 
   return Object.values(entries).every((entry) => typeof entry === 'string');
-}
-
-function readNewerSchemaVersion(value: unknown): number | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const { schemaVersion } = value;
-
-  return typeof schemaVersion === 'number' && Number.isInteger(schemaVersion) && schemaVersion > 1
-    ? schemaVersion
-    : undefined;
 }
 
 export async function loadVaultFile(
@@ -60,7 +52,7 @@ export async function loadVaultFile(
     return raw;
   }
 
-  const newerVersion = readNewerSchemaVersion(raw);
+  const newerVersion = newerSchemaVersion(raw, VAULT_VERSION);
 
   if (newerVersion !== undefined) {
     throw new VaultNewerSchemaError(newerVersion);

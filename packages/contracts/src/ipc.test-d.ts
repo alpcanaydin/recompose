@@ -67,6 +67,7 @@ describe('ipc response contracts', () => {
     expectTypeOf<IpcError['code']>().toEqualTypeOf<
       | 'vault-unavailable'
       | 'vault-newer-schema'
+      | 'settings-newer-schema'
       | 'validation-failed'
       | 'storage-failed'
       | 'folder-open-failed'
