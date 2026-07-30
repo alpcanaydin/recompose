@@ -91,7 +91,7 @@ A gateway MUST start serving as it saves, so a person who just named a gateway c
 
 ### Requirement: The sidebar lists gateways with their own state
 
-The sidebar MUST list every stored gateway. Each row MUST report whether that gateway serves, and the report MUST NOT rest on color alone. Two gateways in different states MUST read differently.
+The sidebar MUST list every stored gateway. Each row MUST carry a mark reporting whether that gateway serves. The mark MUST carry the state word as its accessible name, so a screen reader speaks the state rather than leaving a reader to infer it. Two gateways in different states MUST read differently.
 
 #### Scenario: one gateway runs and another stays still
 

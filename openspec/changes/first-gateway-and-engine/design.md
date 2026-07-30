@@ -373,7 +373,7 @@ The `role="alert"` line for a failed start inserts a fresh node per attempt, bec
 ### Renderer, shared
 
 - `apps/desktop/src/renderer/src/shared/ui/sheet.tsx`: the Base UI dialog primitive with `initialFocus`, the scrim, and the elevation (create)
-- `apps/desktop/src/renderer/src/shared/ui/status-indicator.tsx`: filled dot for running, hollow ring for stopped, state word as accessible name (create)
+- `apps/desktop/src/renderer/src/shared/ui/status-indicator.tsx`: filled dot in the running token or the stopped token, state word as accessible name (create)
 - `apps/desktop/src/renderer/src/shared/ui/copy-button.tsx`: the icon-only copy affordance with the check swap and the `role="status"` announcement (create)
 - `apps/desktop/src/renderer/src/shared/ui/*.stories.tsx`: one story sibling per new component (create)
 - `apps/desktop/src/renderer/src/shared/ui/index.ts`: exports the three (modify)
@@ -666,7 +666,7 @@ Run the desktop app from `apps/desktop` with `pnpm dev`, then walk the loop.
 2. The button opens the sheet with focus in the name field. Typing a name, keeping the offered port, and saving closes the sheet. The sidebar shows the gateway with a filled running dot.
 3. `curl http://127.0.0.1:PORT/health` and `curl http://[::1]:PORT/health` both answer 200 with the gateway's name. `curl -X POST http://localhost:PORT/v1/chat/completions` answers 404 with the OpenAI envelope naming the gateway. `/v1/messages` answers the Anthropic envelope.
 4. The toolbar shows the address pill reading `http://localhost:PORT` with a dimmed state word, and the copy button puts the bare origin on the clipboard and announces "Address copied."
-5. Stop from the toolbar flips the row to the hollow ring, and the curl now refuses to connect. Start brings it back without touching a second gateway created alongside it.
+5. Stop from the toolbar flips the row to the stopped token, and the curl now refuses to connect. Start brings it back without touching a second gateway created alongside it.
 6. Occupy a gateway's port with another process, then start it. The row stays hollow, the line reads "Another process holds port" with the number, and "Move to a free port" restores service on a new port the pill reflects.
 7. The menu bar tray lists every gateway with start, stop, and restart, unavailable entries dimmed rather than missing, and the submenu follows a toolbar stop without reopening.
 8. CmdOrCtrl+N opens the creation sheet from anywhere. Creating a slug or port a stored gateway holds keeps the sheet open with the conflict sentence under the field.

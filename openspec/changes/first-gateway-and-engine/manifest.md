@@ -26,5 +26,7 @@ approvals:
   - gate 2 approved the scenario set, which freezes here, and the solution design with its six task clusters, its five-layer test matrix, and its five ADR drafts
   - the channel roster reaches seventeen rather than fifteen, because a snapshot read keeps first paint from racing the first push, and the move-to-a-free-port recovery needs its own channel now that saving carries creation-only semantics
   - the first replan moved the five engine channels from the contracts cluster to the main-process cluster, because IpcHandlers is a total mapped type and three of the five need the engine host, so landing them earlier would have forced either a lying handler body or a Partial that trades away the totality ADR-0018 bought
+  - the frozen scenario set took its first amendment: the state mark reads as a filled dot in two colors, green for running and red for stopped, so the gateways delta drops the rule that the report may not rest on color alone
+  - the amendment carries a known cost the maintainer accepted, that green and red are the pair a reader with deuteranopia or protanopia can't separate, and the mark's accessible name is what still carries the state
 branch: worktree-first-gateway-and-engine
 ---
