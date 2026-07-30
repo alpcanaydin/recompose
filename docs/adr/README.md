@@ -57,6 +57,6 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0049](0049-stories-guard-runs-before-the-pull-request.md)                  | The Stories Guard Runs Before the Pull Request                                      | Accepted   | 2026-07-29 |
 | [0050](0050-patch-coverage-target-moves-to-95.md)                           | The Patch Coverage Target Moves to 95 Percent                                       | Accepted   | 2026-07-29 |
 | [0051](0051-the-review-status-guard-stops-blocking-the-merge.md)            | The Adversarial Review Leaves Continuous Integration                                | Accepted   | 2026-07-30 |
-| [0052](0052-the-dev-entry-point-fetches-the-electron-binary.md)  | The Dev Entry Point Fetches the Electron Binary                                     | Accepted   | 2026-07-30 |
+| [0052](0052-the-dev-entry-point-fetches-the-electron-binary.md)             | The Dev Entry Point Fetches the Electron Binary                                     | Accepted   | 2026-07-30 |
 | [0053](0053-flow-green-is-a-canvas-token-the-palette-does-not-carry-yet.md) | Flow Green Is a Canvas Token the Palette Doesn't Carry Yet                          | Accepted   | 2026-07-30 |
 | [0054](0054-a-newer-settings-document-is-a-typed-failure.md)                | A Newer Settings Document Is a Typed Failure, Not Damage                            | Accepted   | 2026-07-30 |
