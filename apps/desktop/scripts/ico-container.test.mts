@@ -1,3 +1,4 @@
+import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
 import { encodeIco, type RasterImage } from './ico-container.mts';
@@ -59,6 +60,60 @@ function payloadAt(container: Buffer, directory: readonly DirectoryEntry[], inde
   const entry = entryAt(directory, index);
 
   return container.subarray(entry.offset, entry.offset + entry.byteLength);
+}
+
+function gradientSquare(size: number): RasterImage {
+  const rgba = new Uint8Array(size * size * 4);
+
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
+      const at = (row * size + column) * 4;
+
+      rgba[at] = (column * 7) % 251;
+      rgba[at + 1] = (row * 11) % 241;
+      rgba[at + 2] = (row + column) % 239;
+      rgba[at + 3] = 0xff;
+    }
+  }
+
+  return { size, rgba };
+}
+
+function pixelsFromPng(payload: Buffer, size: number): Uint8Array {
+  const rows = inflateSync(
+    payload.subarray(payload.indexOf('IDAT') + 4, payload.indexOf('IEND') - 4),
+  );
+  const pixels = new Uint8Array(size * size * 4);
+
+  for (let row = 0; row < size; row += 1) {
+    const from = row * (size * 4 + 1);
+
+    expect(rows.readUInt8(from)).toBe(0);
+    pixels.set(rows.subarray(from + 1, from + 1 + size * 4), row * size * 4);
+  }
+
+  return pixels;
+}
+
+function pixelsFromBitmap(payload: Buffer, size: number): Uint8Array {
+  const rowBytes = size * 4;
+  const pixels = new Uint8Array(size * rowBytes);
+
+  for (let row = 0; row < size; row += 1) {
+    const from = 40 + (size - 1 - row) * rowBytes;
+
+    for (let column = 0; column < size; column += 1) {
+      const at = from + column * 4;
+      const to = row * rowBytes + column * 4;
+
+      pixels[to] = payload.readUInt8(at + 2);
+      pixels[to + 1] = payload.readUInt8(at + 1);
+      pixels[to + 2] = payload.readUInt8(at);
+      pixels[to + 3] = payload.readUInt8(at + 3);
+    }
+  }
+
+  return pixels;
 }
 
 const renditions = [opaqueSquare(16, 0x10), opaqueSquare(48, 0x30), opaqueSquare(256, 0xf0)];
@@ -125,5 +180,23 @@ describe('the Windows icon payloads', () => {
 
   it('refuses an image whose buffer does not match its declared edge', () => {
     expect(() => encodeIco([{ size: 16, rgba: new Uint8Array(8) }])).toThrow('16');
+  });
+});
+
+describe('the pixels a Windows icon entry gives back', () => {
+  it('returns every bitmap pixel exactly as it went in', () => {
+    const source = gradientSquare(32);
+    const container = encodeIco([source]);
+    const directory = readDirectory(container);
+
+    expect(pixelsFromBitmap(payloadAt(container, directory, 0), 32)).toEqual(source.rgba);
+  });
+
+  it('returns every PNG pixel exactly as it went in', () => {
+    const source = gradientSquare(256);
+    const container = encodeIco([source]);
+    const directory = readDirectory(container);
+
+    expect(pixelsFromPng(payloadAt(container, directory, 0), 256)).toEqual(source.rgba);
   });
 });
