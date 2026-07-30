@@ -1,5 +1,5 @@
 appId: sh.recompose.app
-productName: recompose
+productName: Recompose
 directories:
   buildResources: build
 afterPack: ./build/after-pack.cjs

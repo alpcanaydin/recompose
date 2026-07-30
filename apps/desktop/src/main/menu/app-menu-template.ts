@@ -15,7 +15,7 @@ function settingsItem(onOpenSettings: () => void): AppMenuItem {
 
 function macApplicationMenu(onOpenSettings: () => void): AppMenuItem {
   return {
-    label: 'recompose',
+    label: 'Recompose',
     submenu: [
       { role: 'about' },
       { type: 'separator' },

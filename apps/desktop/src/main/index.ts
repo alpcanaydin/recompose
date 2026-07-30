@@ -28,6 +28,9 @@ import {
 import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
 import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 
+app.setName('Recompose');
+app.setAboutPanelOptions({ applicationName: 'Recompose' });
+
 const trayMenuHandlers = {
   onOpenWindow: showMainWindow,
   onOpenSettings: openSettingsSurface,

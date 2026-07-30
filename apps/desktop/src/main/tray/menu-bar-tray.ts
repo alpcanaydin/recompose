@@ -42,7 +42,7 @@ export function showMenuBarTray(handlers: TrayMenuHandlers): void {
 
   const tray = new Tray(trayIcon());
 
-  tray.setToolTip('recompose');
+  tray.setToolTip('Recompose');
   tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate(handlers)));
 
   menuBarTray = tray;
