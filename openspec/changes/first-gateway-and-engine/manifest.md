@@ -25,5 +25,6 @@ approvals:
   - the address copy stays in the renderer and the permission policy opens exactly one allow for it, which amends the deny-everything baseline ADR-0028 set and earns a fifth ADR, because a baseline that grows its first exception is a decision rather than a detail
   - gate 2 approved the scenario set, which freezes here, and the solution design with its six task clusters, its five-layer test matrix, and its five ADR drafts
   - the channel roster reaches seventeen rather than fifteen, because a snapshot read keeps first paint from racing the first push, and the move-to-a-free-port recovery needs its own channel now that saving carries creation-only semantics
+  - the first replan moved the five engine channels from the contracts cluster to the main-process cluster, because IpcHandlers is a total mapped type and three of the five need the engine host, so landing them earlier would have forced either a lying handler body or a Partial that trades away the totality ADR-0018 bought
 branch: worktree-first-gateway-and-engine
 ---
