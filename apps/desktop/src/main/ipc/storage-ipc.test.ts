@@ -43,6 +43,7 @@ const gateway: GatewayConfig = {
   schemaVersion: GATEWAY_CONFIG_VERSION,
   slug: 'personal',
   displayName: 'Personal',
+  port: 8397,
   virtualModels: [
     {
       id: 'vm1',

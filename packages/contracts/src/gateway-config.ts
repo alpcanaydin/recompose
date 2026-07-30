@@ -5,9 +5,40 @@ import { nonBlankString } from './non-blank';
 
 export const GATEWAY_CONFIG_VERSION = 1;
 
+export const GATEWAY_PORT_RANGE = { min: 1024, max: 65535 } as const;
+
+export const gatewayPortSchema = z.int().min(GATEWAY_PORT_RANGE.min).max(GATEWAY_PORT_RANGE.max);
+
+const WINDOWS_DEVICE_NAMES = new Set([
+  'con',
+  'prn',
+  'aux',
+  'nul',
+  'com1',
+  'com2',
+  'com3',
+  'com4',
+  'com5',
+  'com6',
+  'com7',
+  'com8',
+  'com9',
+  'lpt1',
+  'lpt2',
+  'lpt3',
+  'lpt4',
+  'lpt5',
+  'lpt6',
+  'lpt7',
+  'lpt8',
+  'lpt9',
+]);
+
 export const gatewaySlugSchema = z
   .string()
-  .regex(/^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*$/, 'lowercase slug with single dashes');
+  .max(63, 'at most 63 characters')
+  .regex(/^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*$/, 'lowercase slug with single dashes')
+  .refine((slug) => !WINDOWS_DEVICE_NAMES.has(slug), 'Windows reserves this name');
 
 const targetSchema = z.strictObject({
   kind: z.literal('target'),
@@ -56,7 +87,8 @@ export const gatewayConfigSchema = z.strictObject({
   schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
   slug: gatewaySlugSchema,
   displayName: z.string().trim().min(1),
-  virtualModels: z.array(virtualModelSchema).min(1),
+  port: gatewayPortSchema,
+  virtualModels: z.array(virtualModelSchema),
   layout: layoutSchema,
 });
 
