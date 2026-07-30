@@ -1,6 +1,6 @@
 ---
 tier: full
-phase: design
+phase: implementation
 approvals:
   - the full tier over no override, because the gateway contract, a new engine subsystem, the process boundary, and three renderer slices all change together
   - the gateway config schema stays at version 1 with no migration, and backward compatibility constrains nothing anywhere in this change, because recompose has no release and no stored document
@@ -22,5 +22,8 @@ approvals:
   - gate 1 approved the design document with the design critique folded in, covering the toolbar drag region that would have eaten every click, the running-state token that measured level with the stopped one, the sidebar compositing over the desktop rather than a token, and the shape carrier that replaced a repeated state word
   - the settings schema moves to version 3 through a migration that drops the port, reversing a gate-1 simplification that rested on a check run against the wrong path; a stored version 2 document carrying the field sits under the @recompose/desktop user-data directory, and the schema is strict, so a version-free removal would read that document as damage
   - the gateway document takes a required port field at version 1 with no migration, confirmed rather than assumed, because the stored gateways directory holds no document to quarantine
+  - the address copy stays in the renderer and the permission policy opens exactly one allow for it, which amends the deny-everything baseline ADR-0028 set and earns a fifth ADR, because a baseline that grows its first exception is a decision rather than a detail
+  - gate 2 approved the scenario set, which freezes here, and the solution design with its six task clusters, its five-layer test matrix, and its five ADR drafts
+  - the channel roster reaches seventeen rather than fifteen, because a snapshot read keeps first paint from racing the first push, and the move-to-a-free-port recovery needs its own channel now that saving carries creation-only semantics
 branch: worktree-first-gateway-and-engine
 ---

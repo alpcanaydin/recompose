@@ -555,7 +555,15 @@ The address carries no secret, so the copy affordance runs in the renderer, and 
 
 **Alternatives considered:** a copy channel through main, rejected because the locked decision reserves that route for secrets. A channel for public text would widen the main-process surface instead of the narrower permission. `document.execCommand('copy')`, rejected as deprecated machinery adopted to dodge a one-line policy statement.
 
-**ADR draft:** None, though the change note belongs beside ADR-0028's record when the file lands.
+**ADR draft:** required, and it amends ADR-0028's security baseline rather than sitting beside it. A deny-everything policy that grows its first allow is a technical decision, and the project records every one.
+
+**Context.** ADR-0028 set the permission policy to deny every request and every check, unconditionally. Nothing in the app had ever needed a permission. The address pill's copy affordance is the first surface that does, because a person who can't paste the address can't point a client at the gateway.
+
+**Decision.** `permission-policy.ts` allows `clipboard-sanitized-write` and nothing else. The policy spec enumerates the allowed set, so a second allow can't arrive without a failing test naming it.
+
+**Alternatives.** Route the copy through main, which holds the baseline at zero cost but spends the secret-bearing route on public text and grows the channel surface. Keep the deny and ship no copy affordance, which leaves a person retyping an address from a pill.
+
+**Consequences.** Good: the allow is one named permission, gated by a user gesture in Chromium regardless, and the enumerated set makes every later widening visible in a diff. Bad: the baseline stops reading as absolute, and the next contributor meets a policy with exceptions rather than a rule. The enumeration is what keeps that honest.
 
 ### 11. The dark story project drives the scheme from the outside
 
@@ -609,7 +617,7 @@ The contracts cluster lands alone first, per the locked decision. After it, clus
 - **Task 3: the kit, the tokens, and the dark project.** (depends on: task 1 only for ordering, hands off: `Sheet`, `StatusIndicator`, `CopyButton`, the three tokens, the primary utility, and the `storybook-dark` project) Owns the three new `shared/ui` components with stories, both style files, `apps/desktop/.storybook/preview.ts`, and `apps/desktop/vitest.config.ts`. Runs beside tasks 2 and 5.
 - **Task 4: the main process.** (depends on: task 2, because the fork imports the child entry it produces, and on task 3 for `apps/desktop/vitest.config.ts`, a shared-file blocker resolved by task 3 landing first) Owns `apps/desktop/src/main/` outside the settings files task 1 touched, both preload files, the resources, `apps/desktop/package.json`, and `apps/desktop/stryker.config.json`.
 - **Task 5: widgets, pages, and the fake bridge.** (depends on: task 1 for types and task 3 for kit components, hands off: the three widget slices and the reworked home surface) Owns everything under `widgets/`, `pages/home/`, `shared/api/`, `shared/testing/fake-bridge.ts`, `.storybook/recompose-bridge.tsx`, and the two route files. Runs beside task 4 on disjoint files.
-- **Task 6: acceptance, visual, and records.** (depends on: tasks 4 and 5, because it inspects the running app they produce, hands off: the merged branch evidence) Owns everything under `apps/desktop/e2e/` outside task 1's settings retirement, and the four ADR files with the index.
+- **Task 6: acceptance, visual, and records.** (depends on: tasks 4 and 5, because it inspects the running app they produce, hands off: the merged branch evidence) Owns everything under `apps/desktop/e2e/` outside task 1's settings retirement, and the five ADR files with the index.
 
 The genuine blockers, named: task 2 reads task 1's schemas. Task 4 reads task 2's child entry and shares one file with task 3. Task 5 reads task 1's types and task 3's components. Task 6 inspects what tasks 4 and 5 produce. Every other pair runs in parallel.
 
@@ -670,5 +678,5 @@ A fresh-context reviewer diffs the result against these criteria:
 - Every routing and refusal spec runs through `app.request()`, and only the listener and packaging specs touch a socket.
 - The failed start crosses as `ok: true` with the stopped-plus-failure state, and no `engine-port-taken` code exists.
 - The three new kit components ship stories, `pnpm run lint:stories` passes, and both storybook projects run with the scheme assertion in place.
-- The four ADRs land from the drafts above, and the index carries their rows.
+- The five ADRs land from the drafts above, and the index carries their rows.
 - The retiring copy "Select a gateway or create one to get started." appears nowhere, and the compiled gateway and engine features pass through the features glob.
