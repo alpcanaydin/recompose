@@ -17,7 +17,7 @@ export default defineConfig({
     { name: 'acceptance', testDir: acceptanceDir },
     { name: 'proofs', testMatch: /boot-proof\.spec\.ts/ },
     { name: 'leak', testMatch: /leak\.spec\.ts/ },
-    { name: 'packaged', testMatch: /packaged-smoke\.spec\.ts/, timeout: 120_000 },
+    { name: 'packaged', testMatch: /packaged-(smoke|icons)\.spec\.ts/, timeout: 120_000 },
     { name: 'visual', testMatch: /visual\.spec\.ts/ },
   ],
 });
