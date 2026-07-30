@@ -32,7 +32,6 @@
 
   --color-accent: light-dark(var(--blue-600), var(--blue-500));
   --color-accent-hover: light-dark(var(--blue-700), var(--blue-400));
-  --color-success: light-dark(var(--green-600), var(--green-500));
   --color-warning: light-dark(var(--orange-600), var(--orange-500));
   --color-danger: light-dark(var(--red-700), var(--red-500));
   --color-danger-ink: light-dark(var(--red-700), var(--red-400));
