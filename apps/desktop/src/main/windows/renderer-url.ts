@@ -23,3 +23,11 @@ export function rendererUrlFor(base: string, route: string): string {
 export function settingsShortcutRouteFor(press: number): string {
   return `${SETTINGS_SHORTCUT_ROUTE}&at=${String(press)}`;
 }
+
+export function newGatewayRouteFor(press: number): string {
+  return `/?create=true&at=${String(press)}`;
+}
+
+export function getStartedRouteFor(press: number): string {
+  return `/?getStarted=true&at=${String(press)}`;
+}

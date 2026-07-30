@@ -25,6 +25,22 @@ type GatewayTokenHandlers = Pick<
   RecomposeIpc,
   'gateway-token:status' | 'gateway-token:mint' | 'gateway-token:copy'
 >;
+type EngineHandlers = Pick<
+  RecomposeIpc,
+  'gateways:offer-port' | 'gateways:move-port' | 'engine:start' | 'engine:stop' | 'engine:states'
+>;
+
+const OFFERED_PORT = 51234;
+
+function engineHandlers(): EngineHandlers {
+  return {
+    'gateways:offer-port': async () => Promise.resolve({ ok: true, value: OFFERED_PORT }),
+    'gateways:move-port': async () => Promise.resolve({ ok: true, value: [] }),
+    'engine:start': async () => Promise.resolve({ ok: true, value: { status: 'running' } }),
+    'engine:stop': async () => Promise.resolve({ ok: true, value: { status: 'stopped' } }),
+    'engine:states': async () => Promise.resolve({ ok: true, value: {} }),
+  };
+}
 
 function settingsHandlers(seed: Settings): SettingsHandlers {
   let stored = seed;
@@ -114,6 +130,7 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
     ...accountHandlers(parameters.accounts ?? emptyDocument),
     ...systemHandlers(),
     ...gatewayTokenHandlers(),
+    ...engineHandlers(),
     ...parameters.overrides,
   };
 }

@@ -124,6 +124,7 @@ textboxes
 textnodes
 Toggl
 toggleable
+togglefullscreen
 tokenless
 topsecret
 tosorted

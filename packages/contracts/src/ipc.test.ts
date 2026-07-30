@@ -22,10 +22,15 @@ const channelNames: IpcChannel[] = [
   'gateway-token:status',
   'gateway-token:mint',
   'gateway-token:copy',
+  'gateways:offer-port',
+  'gateways:move-port',
+  'engine:start',
+  'engine:stop',
+  'engine:states',
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the twelve specified channels exist', () => {
+  test('exactly the seventeen specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 

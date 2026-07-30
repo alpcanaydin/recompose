@@ -1,4 +1,9 @@
-import type { AccountsDocument, IpcRequest, SettingsPatch } from '@recompose/contracts';
+import type {
+  AccountsDocument,
+  GatewayConfig,
+  IpcRequest,
+  SettingsPatch,
+} from '@recompose/contracts';
 
 import { withSettingsPatch } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
@@ -42,13 +47,39 @@ async function listGateways(ctx: StorageIpcContext, paths: StoragePaths) {
   }
 }
 
+function conflictWith(stored: readonly GatewayConfig[], saving: GatewayConfig) {
+  if (stored.some((one) => one.slug === saving.slug)) {
+    return ipcFailure('slug-conflict', `Another gateway already holds the slug "${saving.slug}".`);
+  }
+
+  const holder = stored.find((one) => one.port === saving.port);
+
+  if (holder !== undefined) {
+    return ipcFailure('port-conflict', `${holder.slug} already holds this port.`);
+  }
+
+  return null;
+}
+
 async function saveGateway(
   ctx: StorageIpcContext,
   paths: StoragePaths,
   config: IpcRequest<'gateways:save'>,
 ) {
   try {
+    const stored = await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt);
+    const conflict = conflictWith(stored, config);
+
+    if (conflict !== null) {
+      return conflict;
+    }
+
     await saveGatewayConfig(paths.gatewaysDir, config);
+    ctx.startGateway({
+      slug: config.slug,
+      displayName: config.displayName,
+      port: config.port,
+    });
 
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
   } catch (error) {

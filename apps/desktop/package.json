@@ -49,6 +49,7 @@
     "@fast-check/vitest": "0.4.1",
     "@playwright/test": "1.61.1",
     "@recompose/contracts": "workspace:*",
+    "@recompose/engine": "workspace:*",
     "@storybook/addon-a11y": "10.5.4",
     "@storybook/addon-mcp": "0.7.0",
     "@storybook/addon-themes": "10.5.4",

@@ -25,6 +25,7 @@ export default defineConfig({
         'src/renderer/src/shared/testing/**',
         'src/**/*.d.ts',
         'src/main/index.ts',
+        'src/main/engine-host/spawn-engine.ts',
         'src/main/ipc/register-ipc.ts',
         'src/main/menu/app-menu.ts',
         'src/main/protocol/app-protocol.ts',

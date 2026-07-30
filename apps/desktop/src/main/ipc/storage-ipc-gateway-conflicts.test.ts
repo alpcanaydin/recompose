@@ -1,0 +1,144 @@
+import {
+  GATEWAY_CONFIG_VERSION,
+  type EngineGateway,
+  type GatewayConfig,
+  type IpcError,
+} from '@recompose/contracts';
+import { mkdtemp, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
+
+import type { SecretCodec } from '../storage/safe-storage-codec';
+import type { StorageIpcContext } from './storage-context';
+
+import { createStorageIpcHandlers } from './storage-ipc';
+
+const fakeCodec: SecretCodec = {
+  encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
+  decrypt: (encrypted) => Buffer.from(encrypted, 'base64').toString('utf8'),
+  isPlaintextFallback: false,
+};
+
+function gatewayNamed(slug: string, displayName: string, port: number): GatewayConfig {
+  return {
+    schemaVersion: GATEWAY_CONFIG_VERSION,
+    slug,
+    displayName,
+    port,
+    virtualModels: [],
+    layout: { nodes: {} },
+  };
+}
+
+async function freshContext(started: EngineGateway[]): Promise<StorageIpcContext> {
+  return {
+    userDataPath: await mkdtemp(join(tmpdir(), 'recompose-conflicts-')),
+    homeFolder: '/Users/ada',
+    getCodec: () => fakeCodec,
+    isEncryptionAvailable: () => true,
+    onCorrupt: () => undefined,
+    writeClipboard: () => undefined,
+    applySettings: () => undefined,
+    readLoginItem: () => false,
+    startGateway: (gateway) => {
+      started.push(gateway);
+    },
+  };
+}
+
+function refusalIn(answer: { ok: true } | { ok: false; error: IpcError }): IpcError {
+  if (answer.ok) {
+    throw new Error('the save landed where the spec expected a refusal');
+  }
+
+  return answer.error;
+}
+
+async function bytesOf(userDataPath: string, slug: string): Promise<string> {
+  return readFile(join(userDataPath, 'gateways', `${slug}.json`), 'utf8');
+}
+
+const codex = gatewayNamed('codex', 'Codex', 8397);
+
+describe('a save that collides with a stored gateway', () => {
+  test('a slug a stored gateway holds is refused rather than overwritten', async () => {
+    const context = await freshContext([]);
+    const handlers = createStorageIpcHandlers(context);
+
+    await handlers['gateways:save'](codex);
+    const answer = await handlers['gateways:save'](gatewayNamed('codex', 'Impostor', 9001));
+
+    expect(refusalIn(answer).code).toBe('slug-conflict');
+    expect(refusalIn(answer).message).toContain('codex');
+  });
+
+  test('the stored document survives a slug collision byte for byte', async () => {
+    const context = await freshContext([]);
+    const handlers = createStorageIpcHandlers(context);
+
+    await handlers['gateways:save'](codex);
+    const before = await bytesOf(context.userDataPath, 'codex');
+
+    await handlers['gateways:save'](gatewayNamed('codex', 'Impostor', 9001));
+
+    expect(await bytesOf(context.userDataPath, 'codex')).toBe(before);
+  });
+
+  test('a port a stored gateway holds is refused, and the message names the holder', async () => {
+    const context = await freshContext([]);
+    const handlers = createStorageIpcHandlers(context);
+
+    await handlers['gateways:save'](codex);
+    const answer = await handlers['gateways:save'](gatewayNamed('gemini', 'Gemini', 8397));
+
+    expect(refusalIn(answer).code).toBe('port-conflict');
+    expect(refusalIn(answer).message).toBe('codex already holds this port.');
+  });
+
+  test('a refused port collision writes no second document', async () => {
+    const context = await freshContext([]);
+    const handlers = createStorageIpcHandlers(context);
+
+    await handlers['gateways:save'](codex);
+    await handlers['gateways:save'](gatewayNamed('gemini', 'Gemini', 8397));
+
+    await expect(handlers['gateways:list'](undefined)).resolves.toEqual({
+      ok: true,
+      value: [codex],
+    });
+  });
+});
+
+describe('what a save asks the engine for', () => {
+  test('a stored gateway is handed to the engine to serve at once', async () => {
+    const started: EngineGateway[] = [];
+    const handlers = createStorageIpcHandlers(await freshContext(started));
+
+    await handlers['gateways:save'](codex);
+
+    expect(started).toEqual([{ slug: 'codex', displayName: 'Codex', port: 8397 }]);
+  });
+
+  test('a refused save asks the engine for nothing', async () => {
+    const started: EngineGateway[] = [];
+    const handlers = createStorageIpcHandlers(await freshContext(started));
+
+    await handlers['gateways:save'](codex);
+    await handlers['gateways:save'](gatewayNamed('codex', 'Impostor', 9001));
+
+    expect(started).toEqual([{ slug: 'codex', displayName: 'Codex', port: 8397 }]);
+  });
+
+  test('a gateway on a free slug and a free port joins the list and serves', async () => {
+    const started: EngineGateway[] = [];
+    const handlers = createStorageIpcHandlers(await freshContext(started));
+    const gemini = gatewayNamed('gemini', 'Gemini', 8398);
+
+    await handlers['gateways:save'](codex);
+    const answer = await handlers['gateways:save'](gemini);
+
+    expect(answer).toEqual({ ok: true, value: [codex, gemini] });
+    expect(started.map((gateway) => gateway.slug)).toEqual(['codex', 'gemini']);
+  });
+});

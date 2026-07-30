@@ -1,11 +1,17 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { defaultSettings, type Settings } from '@recompose/contracts';
+import { defaultSettings, type EngineStates, type Settings } from '@recompose/contracts';
 import { app, BrowserWindow, clipboard, nativeTheme, safeStorage, session, shell } from 'electron';
 import { join } from 'path';
 
+import type { EngineHost } from './engine-host/engine-host';
 import type { IpcHandlers } from './ipc/dispatch';
 import type { SettingsEffects } from './settings/apply-settings';
 
+import { createEngineHost } from './engine-host/engine-host';
+import { createGatewayLifecycleRequests } from './engine-host/gateway-lifecycle-requests';
+import { probeFreePort } from './engine-host/probe-free-port';
+import { spawnEngineChild } from './engine-host/spawn-engine';
+import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
 import { createSystemIpcHandlers } from './ipc/system-ipc';
@@ -13,20 +19,42 @@ import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { applyBootSettings, applyChosenSettings } from './settings/apply-settings';
+import { listGatewayConfigs } from './storage/gateway-store';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
 import { createLoginItem, loginItemAvailabilityFor } from './system/login-item';
-import { hideMenuBarTray, isMenuBarTrayVisible, showMenuBarTray } from './tray/menu-bar-tray';
+import {
+  hideMenuBarTray,
+  isMenuBarTrayVisible,
+  refreshMenuBarTray,
+  showMenuBarTray,
+} from './tray/menu-bar-tray';
 import { resolveUserDataOverride } from './user-data-override';
 import {
   createMainWindow,
   HOME_ROUTE,
+  openGetStartedSurface,
+  openNewGatewaySurface,
   openSettingsSurface,
   showMainWindow,
 } from './windows/main-window';
-import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
+import { allowsPermission } from './windows/permission-policy';
 import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
+
+let engineHost: EngineHost | null = null;
+
+function gatewaysDir(): string {
+  return join(app.getPath('userData'), 'gateways');
+}
+
+const gatewayLifecycle = createGatewayLifecycleRequests({
+  host: () => engineHost,
+  gatewaysDir,
+  onCorrupt: (quarantinedPath) => {
+    onStorageCorrupt(quarantinedPath);
+  },
+});
 
 const trayMenuHandlers = {
   onOpenWindow: showMainWindow,
@@ -34,6 +62,9 @@ const trayMenuHandlers = {
   onQuit: () => {
     app.quit();
   },
+  onStartGateway: gatewayLifecycle.start,
+  onStopGateway: gatewayLifecycle.stop,
+  onRestartGateway: gatewayLifecycle.restart,
 };
 
 if (process.platform === 'linux') {
@@ -80,10 +111,17 @@ function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
 
-function assembleIpcHandlers(): IpcHandlers {
+function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
   const userDataPath = app.getPath('userData');
 
   return {
+    ...createEngineIpcHandlers({
+      host: engineHost,
+      userDataPath,
+      homeFolder: app.getPath('home'),
+      onCorrupt: onStorageCorrupt,
+      probeFreePort,
+    }),
     ...createStorageIpcHandlers({
       userDataPath,
       getCodec: () => createSafeStorageCodec(),
@@ -95,6 +133,11 @@ function assembleIpcHandlers(): IpcHandlers {
       homeFolder: app.getPath('home'),
       readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,
+      startGateway: (gateway) => {
+        engineHost.start(gateway).catch((error: unknown) => {
+          console.error(`recompose stored ${gateway.slug} but could not start it`, error);
+        });
+      },
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
@@ -108,30 +151,52 @@ function assembleIpcHandlers(): IpcHandlers {
   };
 }
 
-async function storedSettings(): Promise<Settings> {
+type BootState = { settings: Settings; slugs: string[] };
+
+async function storedState(): Promise<BootState> {
   try {
     const state = await initializeStorage(app.getPath('userData'), onStorageCorrupt);
 
-    return state.settings;
+    return { settings: state.settings, slugs: state.gateways.map((gateway) => gateway.slug) };
   } catch (error) {
     console.error('storage initialization failed', error);
 
-    return defaultSettings();
+    return { settings: defaultSettings(), slugs: [] };
   }
+}
+
+function pushEngineStates(states: EngineStates): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send('engine:state', states);
+  }
+}
+
+function repaintTray(states: EngineStates): void {
+  listGatewayConfigs(gatewaysDir(), onStorageCorrupt)
+    .then((stored) => {
+      refreshMenuBarTray(
+        stored.map((gateway) => ({ slug: gateway.slug, displayName: gateway.displayName })),
+        states,
+      );
+    })
+    .catch((error: unknown) => {
+      console.error('recompose could not read its gateways for the menu bar', error);
+    });
 }
 
 function registerPermissionHandlers(): void {
   const permissionRequestHandler = (
     _webContents: unknown,
-    _permission: string,
+    permission: string,
     callback: (allowed: boolean) => void,
   ) => {
-    callback(denyPermissionRequest());
+    callback(allowsPermission(permission));
   };
 
   session.defaultSession.setPermissionRequestHandler(permissionRequestHandler);
 
-  const permissionCheckHandler = () => denyPermissionCheck();
+  const permissionCheckHandler = (_webContents: unknown, permission: string) =>
+    allowsPermission(permission);
 
   session.defaultSession.setPermissionCheckHandler(permissionCheckHandler);
 }
@@ -153,7 +218,14 @@ registerAppScheme();
 async function startRecompose(): Promise<void> {
   serveRenderer(join(__dirname, '../renderer'));
 
-  registerIpcHandlers(assembleIpcHandlers());
+  const boot = await storedState();
+
+  engineHost = createEngineHost({ knownSlugs: boot.slugs, spawnChild: spawnEngineChild });
+  engineHost.onStatesChanged(pushEngineStates);
+  engineHost.onStatesChanged(repaintTray);
+  repaintTray(engineHost.states());
+
+  registerIpcHandlers(assembleIpcHandlers(engineHost));
 
   electronApp.setAppUserModelId('sh.recompose.app');
 
@@ -163,9 +235,13 @@ async function startRecompose(): Promise<void> {
 
   registerPermissionHandlers();
 
-  installAppMenu(openSettingsSurface);
+  installAppMenu({
+    onOpenSettings: openSettingsSurface,
+    onNewGateway: openNewGatewaySurface,
+    onShowGetStarted: openGetStartedSurface,
+  });
 
-  applySettingsAtBoot(await storedSettings());
+  applySettingsAtBoot(boot.settings);
 
   createMainWindow(HOME_ROUTE);
 
@@ -185,6 +261,7 @@ void app
 
 app.on('before-quit', () => {
   hideMenuBarTray();
+  engineHost?.dispose();
 });
 
 app.on('window-all-closed', () => {

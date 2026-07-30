@@ -3,6 +3,8 @@ import { describe, expect, test } from 'vitest';
 
 import {
   SETTINGS_SHORTCUT_ROUTE,
+  getStartedRouteFor,
+  newGatewayRouteFor,
   rendererBaseFor,
   rendererUrlFor,
   settingsShortcutRouteFor,
@@ -73,5 +75,33 @@ describe('the settings shortcut, pressed more than once', () => {
   test('every press still asks for the settings route and its focus', () => {
     expect(settingsShortcutRouteFor(7)).toContain(SETTINGS_SHORTCUT_ROUTE);
     expect(settingsShortcutRouteFor(7)).toContain('focus=first-control');
+  });
+});
+
+describe('the route that opens the gateway creation sheet', () => {
+  test('it asks the home surface to open the sheet', () => {
+    expect(newGatewayRouteFor(1)).toContain('/?create=true');
+  });
+
+  test('each press names a location the router has not seen', () => {
+    expect(newGatewayRouteFor(1)).not.toBe(newGatewayRouteFor(2));
+  });
+
+  test('every press still asks for the sheet', () => {
+    expect(newGatewayRouteFor(9)).toContain('create=true');
+  });
+});
+
+describe('the route that brings the get-started card back', () => {
+  test('it asks the home surface to show the card', () => {
+    expect(getStartedRouteFor(1)).toContain('/?getStarted=true');
+  });
+
+  test('each press names a location the router has not seen', () => {
+    expect(getStartedRouteFor(1)).not.toBe(getStartedRouteFor(2));
+  });
+
+  test('it never asks for the creation sheet at the same time', () => {
+    expect(getStartedRouteFor(3)).not.toContain('create');
   });
 });

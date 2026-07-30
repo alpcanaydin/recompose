@@ -31,6 +31,7 @@ async function freshContext(
     writeClipboard: () => undefined,
     applySettings: () => undefined,
     readLoginItem: () => false,
+    startGateway: () => undefined,
     ...overrides,
   };
 }
