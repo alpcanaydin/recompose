@@ -1,6 +1,7 @@
 import { fc, test } from '@fast-check/vitest';
 import {
   defaultSettings,
+  GATEWAY_CONFIG_VERSION,
   ipcChannels,
   type AccountsDocument,
   type GatewayTokenStatus,
@@ -15,7 +16,7 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
-const settings: Settings = { ...defaultSettings(), theme: 'dark', enginePort: 9000 };
+const settings: Settings = { ...defaultSettings(), theme: 'dark' };
 const emptyAccounts: AccountsDocument = { schemaVersion: 1, accounts: [] };
 const systemState: SystemState = {
   fileBrowser: 'finder',
@@ -136,14 +137,25 @@ describe('ipc dispatch: the settings patch', () => {
   });
 
   test('a handler result that violates the response contract is rejected loudly', async () => {
-    const outOfRangePort = 70000;
     const handlers = handlersWith({
-      'settings:get': async () =>
-        Promise.resolve({ ok: true, value: { ...settings, enginePort: outOfRangePort } }),
+      'gateways:list': async () =>
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              schemaVersion: GATEWAY_CONFIG_VERSION,
+              slug: 'Not A Slug',
+              displayName: 'Personal',
+              port: 8397,
+              virtualModels: [],
+              layout: { nodes: {} },
+            },
+          ],
+        }),
     });
 
     await expect(
-      dispatchIpc(handlers, 'settings:get', undefined, trustedSender, allowedOrigins),
+      dispatchIpc(handlers, 'gateways:list', undefined, trustedSender, allowedOrigins),
     ).rejects.toThrow();
   });
 });

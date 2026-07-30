@@ -24,8 +24,12 @@ Feature: The settings screen
 
   Scenario: Two changes in quick succession both survive
     When the maintainer switches the theme to dark
-    And commits port 9000 straight after
-    Then the stored settings hold the dark theme and port 9000
+    And shows recompose in the menu bar straight after
+    Then the stored settings hold the dark theme and the menu bar presence
+
+  Scenario: The Server group offers no port
+    Then the Server group offers no port control
+    And the stored settings document holds no port
 
   Scenario: Telemetry states a value rather than offering a control
     Then the telemetry row reads "None"

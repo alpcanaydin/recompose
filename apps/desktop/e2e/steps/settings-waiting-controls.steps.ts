@@ -7,22 +7,16 @@ import { Then, When } from '../fixtures';
 
 type WaitingRow = {
   label: string;
-  role: 'radiogroup' | 'switch' | 'textbox';
+  role: 'radiogroup' | 'switch';
   awaits: string;
   settingField: string;
 };
 
 const waitingRows: readonly WaitingRow[] = [
   {
-    label: 'Bind address',
-    role: 'textbox',
-    awaits: 'Waiting on the engine.',
-    settingField: 'bindAddress',
-  },
-  {
     label: 'Start gateways on launch',
     role: 'switch',
-    awaits: 'Waiting on the engine.',
+    awaits: 'Waits on launch-time start.',
     settingField: 'startGatewaysOnLaunch',
   },
   {
@@ -41,7 +35,6 @@ const waitingRows: readonly WaitingRow[] = [
 
 const tabPressesPerRow = 12;
 const settingsDocumentName = 'settings.json';
-const rejectedBindAddress = '0.0.0.0';
 
 let namedRow: WaitingRow | undefined;
 let positionBeforeAttempt: string | undefined;
@@ -82,10 +75,6 @@ function keyboardTargetOf(page: Page, row: WaitingRow): Locator {
 async function positionOf(page: Page, row: WaitingRow): Promise<string> {
   const control = controlOf(page, row);
 
-  if (row.role === 'textbox') {
-    return control.inputValue();
-  }
-
   if (row.role === 'radiogroup') {
     return control.getByRole('radio', { checked: true }).innerText();
   }
@@ -95,12 +84,6 @@ async function positionOf(page: Page, row: WaitingRow): Promise<string> {
 
 async function attemptToMove(page: Page, row: WaitingRow): Promise<void> {
   await keyboardTargetOf(page, row).focus();
-
-  if (row.role === 'textbox') {
-    await page.keyboard.type(rejectedBindAddress);
-
-    return;
-  }
 
   await page.keyboard.press(row.role === 'switch' ? 'Space' : 'ArrowRight');
 }
@@ -163,6 +146,22 @@ Then('the row names the engine as what it waits for', async ({ page }) => {
   );
 });
 
+Then('the row names launch-time start as what it waits for', async ({ page }) => {
+  await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
+    containing('Waits on launch-time start.'),
+  );
+});
+
+Then('the bind address row reads {string}', async ({ page }, address: string) => {
+  await expect(page.getByText(address, { exact: true })).toBeVisible();
+});
+
+Then('the row states that recompose never serves the network', async ({ page }) => {
+  await expect(
+    page.getByText('Fixed at loopback. recompose never serves the network.'),
+  ).toBeVisible();
+});
+
 Then('the row names the canvas as what it waits for', async ({ page }) => {
   await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
     containing('Waiting on the canvas.'),
@@ -197,8 +196,8 @@ Then('each one states what it waits for while focused', async ({ page }) => {
   }
 });
 
-When('the maintainer tries to change the bind address', async ({ page }) => {
-  const row = rowNamed('Bind address');
+When('the maintainer tries to start gateways on launch', async ({ page }) => {
+  const row = rowNamed('Start gateways on launch');
 
   namedRow = row;
   positionBeforeAttempt = await positionOf(page, row);

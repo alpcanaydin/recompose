@@ -32,9 +32,9 @@ function isMissingFile(failure: unknown): boolean {
   return failure instanceof Error && 'code' in failure && failure.code === 'ENOENT';
 }
 
-async function storedThemeAndPort(
+async function storedThemeAndMenuBar(
   settingsFile: string,
-): Promise<Pick<Settings, 'enginePort' | 'theme'>> {
+): Promise<Pick<Settings, 'showInMenuBar' | 'theme'>> {
   const document = await readFile(settingsFile, 'utf8').catch((failure: unknown) => {
     if (isMissingFile(failure)) {
       return null;
@@ -44,15 +44,15 @@ async function storedThemeAndPort(
   });
 
   if (document === null) {
-    const { enginePort, theme } = defaultSettings();
+    const { showInMenuBar, theme } = defaultSettings();
 
-    return { enginePort, theme };
+    return { showInMenuBar, theme };
   }
 
   const stored: unknown = JSON.parse(document);
-  const { enginePort, theme } = loadSettings(stored);
+  const { showInMenuBar, theme } = loadSettings(stored);
 
-  return { enginePort, theme };
+  return { showInMenuBar, theme };
 }
 
 Given('the settings document cannot be written', async ({ electronApp }) => {
@@ -62,11 +62,8 @@ Given('the settings document cannot be written', async ({ electronApp }) => {
   await mkdir(settingsFile);
 });
 
-When('commits port {int} straight after', async ({ page }, port: number) => {
-  const field = section(page, 'Server').getByRole('textbox', { name: 'Port' });
-
-  await field.fill(String(port));
-  await field.press('Enter');
+When('shows recompose in the menu bar straight after', async ({ page }) => {
+  await section(page, 'General').getByRole('switch', { name: 'Show in menu bar' }).click();
 });
 
 Then(
@@ -116,15 +113,30 @@ Then('the row states that the change was not saved', async ({ page }) => {
 });
 
 Then(
-  'the stored settings hold the dark theme and port {int}',
-  async ({ electronApp }, port: number) => {
+  'the stored settings hold the dark theme and the menu bar presence',
+  async ({ electronApp }) => {
     const settingsFile = join(await userDataPath(electronApp), 'settings.json');
 
     await expect
-      .poll(async () => storedThemeAndPort(settingsFile))
-      .toEqual({ enginePort: port, theme: 'dark' });
+      .poll(async () => storedThemeAndMenuBar(settingsFile))
+      .toEqual({ showInMenuBar: true, theme: 'dark' });
   },
 );
+
+Then('the Server group offers no port control', async ({ page }) => {
+  await expect(section(page, 'Server').getByRole('textbox', { name: 'Port' })).toHaveCount(0);
+  await expect(section(page, 'Server').getByText('Port', { exact: true })).toHaveCount(0);
+});
+
+Then('the stored settings document holds no port', async ({ page }) => {
+  const stored = await page.evaluate(async () => window.recompose['settings:get']());
+
+  if (!stored.ok) {
+    throw new Error('The app could not read the stored settings document.');
+  }
+
+  expect(Object.keys(stored.value)).not.toContain('enginePort');
+});
 
 Then('the telemetry row reads {string}', async ({ page }, value: string) => {
   await expect(section(page, 'General').getByText(value, { exact: true })).toBeVisible();

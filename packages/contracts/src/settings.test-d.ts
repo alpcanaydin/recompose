@@ -3,8 +3,8 @@ import { describe, expectTypeOf, test } from 'vitest';
 import type { Settings } from './index';
 
 describe('the settings document contract', () => {
-  test('the document pins itself to schema version 2', () => {
-    expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<2>();
+  test('the document pins itself to schema version 3', () => {
+    expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<3>();
   });
 
   test('the three switches the screen writes are plain booleans', () => {
@@ -13,20 +13,19 @@ describe('the settings document contract', () => {
     expectTypeOf<Settings['requireGatewayToken']>().toEqualTypeOf<boolean>();
   });
 
-  test('the theme and the port keep the shape version 1 gave them', () => {
+  test('the theme keeps the shape version 1 gave it', () => {
     expectTypeOf<Settings['theme']>().toEqualTypeOf<'system' | 'light' | 'dark'>();
-    expectTypeOf<Settings['enginePort']>().toEqualTypeOf<number>();
   });
 
-  test('the document holds exactly six fields, so nothing can name a token', () => {
+  test('the document holds exactly five fields, so nothing can name a port', () => {
     expectTypeOf<keyof Settings>().toEqualTypeOf<
-      | 'schemaVersion'
-      | 'theme'
-      | 'enginePort'
-      | 'launchAtLogin'
-      | 'showInMenuBar'
-      | 'requireGatewayToken'
+      'schemaVersion' | 'theme' | 'launchAtLogin' | 'showInMenuBar' | 'requireGatewayToken'
     >();
+  });
+
+  test('no field names a port, because a port belongs to one gateway', () => {
+    expectTypeOf<Settings>().not.toHaveProperty('enginePort');
+    expectTypeOf<Settings>().not.toHaveProperty('port');
   });
 
   test('no field on the document names a token', () => {

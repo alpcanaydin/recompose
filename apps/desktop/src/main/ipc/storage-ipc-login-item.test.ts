@@ -102,11 +102,11 @@ describe('a save that names only part of the document', () => {
     const { ctx } = await osBackedContext(false);
     const handlers = createStorageIpcHandlers(ctx);
 
-    await handlers['settings:save']({ enginePort: 9100, theme: 'dark' });
+    await handlers['settings:save']({ launchAtLogin: true, theme: 'dark' });
     await handlers['settings:save']({ showInMenuBar: true });
 
     expect(await handlers['settings:get'](undefined)).toMatchObject({
-      value: { enginePort: 9100, theme: 'dark', showInMenuBar: true },
+      value: { launchAtLogin: true, theme: 'dark', showInMenuBar: true },
     });
   });
 

@@ -1,28 +1,20 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 
-import { FieldGroup, FieldRow, Switch, TextField } from '../../../shared/ui';
+import { FieldGroup, FieldRow, Switch } from '../../../shared/ui';
 import { settingsQueryOptions } from '../api/settings';
-import { EnginePortRow } from './engine-port-row';
 import { GatewayTokenRow } from './gateway-token-row';
 import { TokenRequirementRow } from './token-requirement-row';
 
-const waitingOnEngine = 'Waiting on the engine.';
-
-/** Port, bind address, and the token the gateway demands, in local-network order. */
+/** The address every gateway answers on, and the token the gateway demands. */
 export function ServerSection() {
   const { data: settings } = useSuspenseQuery(settingsQueryOptions);
 
   return (
     <FieldGroup heading="Server">
-      <EnginePortRow />
       <FieldRow
-        control={
-          <TextField inert label="Bind address" onChangeValue={() => {}} value="127.0.0.1" />
-        }
-        description="Chooses the interface the gateway answers on."
-        inert
+        control={<span className="text-control text-ink-secondary">127.0.0.1</span>}
+        description="Fixed at loopback. recompose never serves the network."
         label="Bind address"
-        reason={waitingOnEngine}
       />
       <TokenRequirementRow />
       {settings.requireGatewayToken ? <GatewayTokenRow /> : null}
@@ -38,7 +30,7 @@ export function ServerSection() {
         description="Starts every gateway as recompose opens."
         inert
         label="Start gateways on launch"
-        reason={waitingOnEngine}
+        reason="Waits on launch-time start."
       />
     </FieldGroup>
   );

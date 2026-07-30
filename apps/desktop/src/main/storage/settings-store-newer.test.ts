@@ -11,11 +11,7 @@ async function documentFrom(schemaVersion: number): Promise<{ dir: string; file:
   const dir = await mkdtemp(join(tmpdir(), 'recompose-newer-'));
   const file = join(dir, 'settings.json');
 
-  await writeFile(
-    file,
-    JSON.stringify({ schemaVersion, theme: 'dark', enginePort: 9100, whatever: true }),
-    'utf8',
-  );
+  await writeFile(file, JSON.stringify({ schemaVersion, theme: 'dark', whatever: true }), 'utf8');
 
   return { dir, file };
 }

@@ -2,14 +2,11 @@ import { z } from 'zod';
 
 import { migrateDocument, type Migration } from './migration';
 
-export const SETTINGS_VERSION = 2;
-
-export const ENGINE_PORT_RANGE = { min: 1024, max: 65535 } as const;
+export const SETTINGS_VERSION = 3;
 
 export const settingsSchema = z.strictObject({
   schemaVersion: z.literal(SETTINGS_VERSION),
   theme: z.enum(['system', 'light', 'dark']),
-  enginePort: z.int().min(ENGINE_PORT_RANGE.min).max(ENGINE_PORT_RANGE.max),
   launchAtLogin: z.boolean(),
   showInMenuBar: z.boolean(),
   requireGatewayToken: z.boolean(),
@@ -44,7 +41,15 @@ const addVersionTwoSwitches: Migration = {
   }),
 };
 
-const settingsMigrations: readonly Migration[] = [addVersionTwoSwitches];
+const dropEnginePort: Migration = {
+  from: 2,
+  migrate: ({ enginePort: _retired, ...withoutThePort }) => ({
+    ...withoutThePort,
+    schemaVersion: 3,
+  }),
+};
+
+const settingsMigrations: readonly Migration[] = [addVersionTwoSwitches, dropEnginePort];
 
 export function loadSettings(doc: unknown): Settings {
   return settingsSchema.parse(migrateDocument(doc, settingsMigrations, SETTINGS_VERSION));
@@ -54,7 +59,6 @@ export function defaultSettings(): Settings {
   return {
     schemaVersion: SETTINGS_VERSION,
     theme: 'system',
-    enginePort: 8397,
     launchAtLogin: false,
     showInMenuBar: false,
     requireGatewayToken: false,

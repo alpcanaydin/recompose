@@ -10,15 +10,15 @@ const meta = preview.meta({
   decorators: [inSettingsColumn],
 });
 
-/** The port a person can set, beside the two rows still waiting on the engine. */
+/** The loopback address stated as a value, beside the row still waiting on launch-time start. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('textbox', { name: 'Port' })).toHaveValue('8397');
-    await expect(await canvas.findByRole('textbox', { name: 'Bind address' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await expect(await canvas.findAllByText('Waiting on the engine.')).not.toHaveLength(0);
+    await expect(await canvas.findByText('127.0.0.1')).toBeVisible();
+    await expect(
+      await canvas.findByText('Fixed at loopback. recompose never serves the network.'),
+    ).toBeVisible();
+    await expect(canvas.queryByRole('textbox', { name: 'Port' })).toBeNull();
+    await expect(await canvas.findByText('Waits on launch-time start.')).toBeVisible();
   },
 });
 

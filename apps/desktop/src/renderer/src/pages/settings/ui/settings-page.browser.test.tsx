@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, type ReactNode } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { userEvent } from 'vitest/browser';
 
 import type { BridgeParameters } from '../../../shared/testing';
 
@@ -66,20 +67,35 @@ test('the screen groups its settings under General, Server, Appearance, and Data
   ]);
 });
 
-test('a row that waits on the engine stays reachable and names the engine', async () => {
+test('a waiting row stays reachable and names what it waits for', async () => {
   const screen = await renderSettings();
 
   const waiting = [
-    screen.getByRole('textbox', { name: 'Bind address' }),
-    screen.getByRole('switch', { name: 'Start gateways on launch' }),
-    screen.getByRole('radiogroup', { name: 'Keep request logs' }),
+    {
+      control: screen.getByRole('switch', { name: 'Start gateways on launch' }),
+      awaits: /launch-time start/i,
+    },
+    {
+      control: screen.getByRole('radiogroup', { name: 'Keep request logs' }),
+      awaits: /engine/i,
+    },
   ];
 
-  for (const control of waiting) {
+  for (const { control, awaits } of waiting) {
     await expect.element(control).toHaveAttribute('aria-disabled', 'true');
     await expect.element(control).not.toHaveAttribute('disabled');
-    await expect.element(control).toHaveAccessibleDescription(/engine/i);
+    await expect.element(control).toHaveAccessibleDescription(awaits);
   }
+});
+
+test('the bind address states its value rather than offering a control', async () => {
+  const screen = await renderSettings();
+
+  await expect.element(screen.getByText('127.0.0.1', { exact: true })).toBeVisible();
+  await expect
+    .element(screen.getByText('Fixed at loopback. recompose never serves the network.'))
+    .toBeVisible();
+  expect(screen.container.querySelectorAll('[aria-label="Bind address"]')).toHaveLength(0);
 });
 
 test('the reduced wire motion row stays reachable and names the canvas', async () => {
@@ -95,7 +111,6 @@ test('no waiting row owns a field in the settings document', async () => {
   await renderSettings();
 
   expect(Object.keys(await storedSettings()).sort()).toEqual([
-    'enginePort',
     'launchAtLogin',
     'requireGatewayToken',
     'schemaVersion',
@@ -143,16 +158,16 @@ test('two changes in quick succession both survive', async () => {
   const screen = await renderSettings();
 
   await screen.getByRole('radio', { name: 'Dark' }).click();
-  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
-  await screen.getByRole('heading', { name: 'Settings' }).click();
+  screen.getByRole('switch', { name: 'Show in menu bar' }).element().focus();
+  await userEvent.keyboard(' ');
 
   await expect
     .poll(async () => {
       const stored = await storedSettings();
 
-      return `${stored.theme}:${String(stored.enginePort)}`;
+      return `${stored.theme}:${String(stored.showInMenuBar)}`;
     })
-    .toBe('dark:9000');
+    .toBe('dark:true');
 });
 
 test('a change leaves the maintainer on the control they used', async () => {
