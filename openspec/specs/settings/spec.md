@@ -40,7 +40,13 @@ The app MUST answer the settings shortcut even when no window stands open, becau
 
 ### Requirement: Launch at login
 
-On a platform that carries login items, the app MUST offer a launch-at-login switch backed by the operating system login item rather than by a stored flag alone. Where the platform carries none, the row MUST be absent rather than dimmed. The switch MUST report what the operating system holds, so a change made outside the app doesn't leave the screen lying.
+On a platform that carries login items, the app MUST offer a launch-at-login switch backed by the operating system login item rather than by a stored flag alone. Where the platform carries none, the row MUST be absent rather than dimmed. A build that isn't packaged MUST render the row unavailable and name the development build as the reason. A login item registered from a development tree would point at the runner rather than at the app. The switch MUST report what the operating system holds, so a change made outside the app doesn't leave the screen lying.
+
+#### Scenario: a development build offers the row it can't move
+
+- When a person opens the settings screen from a build that isn't packaged
+- Then the launch-at-login row renders unavailable and names the development build
+- And the row stays reachable by keyboard
 
 #### Scenario: a person turns launch at login on
 
