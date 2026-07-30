@@ -153,7 +153,7 @@ Layer inventory:
 - `Assets/tile-dark.svg`: the dark background. The tile gradient deepens toward `frameTop` and `frameBottom`, the dark band stays at its concentric radii, and the light outer band is absent.
 - `Assets/note.svg`: the note glyph with flattened fills, identical in every appearance.
 
-`icon.json` declares the 1024 canvas, a background group carrying the tile layers, a foreground group carrying the note, and three appearances:
+`icon.json` declares the 1024 canvas, three groups, and three appearances. The two-group sketch died on the tool: actool 26.6 ignores layer-level specializations, so each tile rides its own group and group-level rules do the hiding. Groups list front-to-back, with the note first. The measured mask radius is 231.165 on the 1024 canvas, the volume constant expressed on this grid, and the bands sit concentric to it:
 
 - default shows `tile.svg` behind `note.svg`,
 - dark shows `tile-dark.svg` behind the same `note.svg`,
