@@ -20,6 +20,86 @@ function sortedUpperCase(colors: readonly string[]): readonly string[] {
   return colors.map((color) => color.toUpperCase()).toSorted();
 }
 
+const ICON_BUNDLE_LAYERS = ['Assets/note.svg', 'Assets/tile.svg', 'Assets/tile-dark.svg'];
+const SRGB_COMPONENT_PATTERN = /srgb:([\d.]+),([\d.]+),([\d.]+),[\d.]+/g;
+const CHANNEL_MAX = 255;
+
+function readIconBundle(name: string): string {
+  return readFileSync(
+    fileURLToPath(new URL(`../build/icon.icon/${name}`, import.meta.url)),
+    'utf8',
+  );
+}
+
+function hexFromChannel(component: string): string {
+  return Math.round(Number(component) * CHANNEL_MAX)
+    .toString(16)
+    .padStart(2, '0');
+}
+
+function colorsDeclaredIn(source: string): readonly string[] {
+  const componentColors = [...source.matchAll(SRGB_COMPONENT_PATTERN)].map(
+    ([, red = '0', green = '0', blue = '0']) =>
+      `#${hexFromChannel(red)}${hexFromChannel(green)}${hexFromChannel(blue)}`,
+  );
+
+  return [
+    ...new Set(sortedUpperCase([...(source.match(/#[0-9A-Fa-f]{6}/g) ?? []), ...componentColors])),
+  ].toSorted();
+}
+
+const traceableFills = new Set(
+  sortedUpperCase([...Object.values(brandPalette), ...Object.values(flattenedMarkFills)]),
+);
+
+function untraceableFillsIn(name: string): readonly { file: string; color: string }[] {
+  return colorsDeclaredIn(readIconBundle(name))
+    .filter((color) => !traceableFills.has(color))
+    .map((color) => ({ file: name, color }));
+}
+
+describe('the Icon Composer bundle', () => {
+  it('traces every fill it declares back to the palette record', () => {
+    expect(['icon.json', ...ICON_BUNDLE_LAYERS].flatMap(untraceableFillsIn)).toEqual([]);
+  });
+
+  it('fills the manifest backdrop with the frame bottom anchor', () => {
+    expect(colorsDeclaredIn(readIconBundle('icon.json'))).toEqual(
+      sortedUpperCase([brandPalette.frameBottom]),
+    );
+  });
+
+  it('paints the note layer from the composited note stops alone', () => {
+    expect(colorsDeclaredIn(readIconBundle('Assets/note.svg'))).toEqual(
+      sortedUpperCase([flattenedMarkFills.noteTop, flattenedMarkFills.noteBottom]),
+    );
+  });
+
+  it('paints the light tile layer from the tile anchors and the composited bands', () => {
+    expect(colorsDeclaredIn(readIconBundle('Assets/tile.svg'))).toEqual(
+      sortedUpperCase([
+        brandPalette.tileTop,
+        brandPalette.tileBottom,
+        flattenedMarkFills.darkBandTop,
+        flattenedMarkFills.darkBandBottom,
+        flattenedMarkFills.outerBandTop,
+        flattenedMarkFills.outerBandBottom,
+      ]),
+    );
+  });
+
+  it('paints the dark tile layer from the frame anchors and the composited dark band', () => {
+    expect(colorsDeclaredIn(readIconBundle('Assets/tile-dark.svg'))).toEqual(
+      sortedUpperCase([
+        brandPalette.frameTop,
+        brandPalette.frameBottom,
+        flattenedMarkFills.darkBandTop,
+        flattenedMarkFills.darkBandBottom,
+      ]),
+    );
+  });
+});
+
 describe('the brand palette', () => {
   it('records exactly the seven source anchors the mark is built from', () => {
     expect(brandPalette).toEqual({
