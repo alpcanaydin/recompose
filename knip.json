@@ -8,6 +8,7 @@
         "e2e/fixtures.ts",
         "e2e/*.spec.ts",
         "e2e/steps/**/*.ts",
+        "scripts/generate-icons.mts",
         "vitest.mutation.config.ts"
       ],
       "ignoreDependencies": ["chromatic", "fast-check"],

@@ -9,9 +9,13 @@ import {
   fluentOuterRadius,
   icoPlan,
   linuxLadder,
+  markCanvas,
+  sharedRendition,
+  silhouetteOf,
   tileInsetFraction,
   tileSampleAt,
   usesSmallGlyph,
+  volumeRendition,
 } from './icon-geometry.mts';
 
 const hexColor = fc
@@ -170,5 +174,76 @@ describe('the small glyph cutoff', () => {
   it('draws the tile rendition from 32 points up', () => {
     expect(usesSmallGlyph(32)).toBe(false);
     expect(usesSmallGlyph(48)).toBe(false);
+  });
+});
+
+const straightMaster = [
+  '<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">',
+  '<rect width="1024" height="1024" fill="url(#outerBand)"/>',
+  '<rect x="48" y="48" width="928" height="928" fill="url(#darkBand)"/>',
+  '<rect x="96" y="96" width="832" height="832" fill="url(#tile)"/>',
+  '</svg>',
+].join('\n');
+
+describe('the shared Windows and Linux rendition', () => {
+  const rendition = sharedRendition(straightMaster);
+
+  it('rounds the outer edge to the Fluent radius on the master canvas', () => {
+    const [, outer] = /rect width="1024" height="1024" rx="([\d.]+)"/.exec(rendition) ?? [];
+
+    expect(Number(outer)).toBeCloseTo(fluentOuterRadius(markCanvas), 3);
+  });
+
+  it('leaves both bands square, because the Fluent radius never reaches their insets', () => {
+    expect(rendition).toContain('<rect x="48" y="48" width="928" height="928" rx="0"');
+    expect(rendition).toContain('<rect x="96" y="96" width="832" height="832" rx="0"');
+  });
+
+  it('refuses a master whose frame rectangles it cannot find', () => {
+    expect(() => sharedRendition('<svg></svg>')).toThrow('frame');
+  });
+});
+
+describe('the volume rendition', () => {
+  const rendition = volumeRendition(straightMaster);
+
+  it('insets the mark by the transparent margin the legacy grid leaves', () => {
+    expect(rendition).toContain('translate(100 100) scale(0.8046875)');
+  });
+
+  it('rounds the outer corner so it lands at the pinned legacy radius', () => {
+    const masterRadius = Number(
+      /rect width="1024" height="1024" rx="([\d.]+)"/.exec(rendition)?.[1],
+    );
+
+    expect(masterRadius * 0.8046875).toBeCloseTo(186, 4);
+  });
+
+  it('runs both bands concentric to that corner', () => {
+    const [, darkBand] = /width="928" height="928" rx="([\d.]+)"/.exec(rendition) ?? [];
+    const [, tile] = /width="832" height="832" rx="([\d.]+)"/.exec(rendition) ?? [];
+
+    expect(Number(darkBand) * 0.8046875).toBeCloseTo(147.375, 3);
+    expect(Number(tile) * 0.8046875).toBeCloseTo(108.75, 3);
+  });
+
+  it('keeps the whole thing on the 1024 canvas the container renders from', () => {
+    expect(rendition.startsWith('<svg width="1024" height="1024" viewBox="0 0 1024 1024"')).toBe(
+      true,
+    );
+  });
+});
+
+describe('the tray template silhouette', () => {
+  const smallMaster =
+    '<path d="M0 0" fill="#F2EBD1" stroke="#0C1341" stroke-width="64" stroke-linejoin="round"/>';
+
+  it('flattens the cream note and its contour into one opaque black shape', () => {
+    const silhouette = silhouetteOf(smallMaster);
+
+    expect(silhouette).toContain('fill="#000000"');
+    expect(silhouette).toContain('stroke="#000000"');
+    expect(silhouette).not.toContain('#F2EBD1');
+    expect(silhouette).not.toContain('#0C1341');
   });
 });

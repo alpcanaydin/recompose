@@ -39,6 +39,66 @@ export function usesSmallGlyph(points: number): boolean {
   return points < SMALL_GLYPH_CUTOFF_POINTS;
 }
 
+export const markCanvas = 1024;
+
+const VOLUME_TILE_EDGE = 824;
+const VOLUME_MARGIN = 100;
+const VOLUME_OUTER_RADIUS = 186;
+const VOLUME_SCALE = VOLUME_TILE_EDGE / markCanvas;
+
+const FRAME_RECTANGLES = [
+  '<rect width="1024" height="1024"',
+  '<rect x="48" y="48" width="928" height="928"',
+  '<rect x="96" y="96" width="832" height="832"',
+] as const;
+
+function roundedTo(value: number): number {
+  return Number(value.toFixed(4));
+}
+
+function withFrameRadii(master: string, radii: readonly number[]): string {
+  return FRAME_RECTANGLES.reduce((svg, opening, index) => {
+    if (!svg.includes(opening)) {
+      throw new Error(`The master is missing the frame rectangle "${opening}"`);
+    }
+
+    return svg.replace(opening, `${opening} rx="${roundedTo(radii[index] ?? 0)}"`);
+  }, master);
+}
+
+export function sharedRendition(master: string): string {
+  const outer = fluentOuterRadius(markCanvas);
+
+  return withFrameRadii(master, [
+    outer,
+    concentricRadius(outer, markCanvas * darkBandInsetFraction),
+    concentricRadius(outer, markCanvas * tileInsetFraction),
+  ]);
+}
+
+export function volumeRendition(master: string): string {
+  const outer = VOLUME_OUTER_RADIUS / VOLUME_SCALE;
+  const inset = withFrameRadii(master, [
+    outer,
+    concentricRadius(outer, markCanvas * darkBandInsetFraction),
+    concentricRadius(outer, markCanvas * tileInsetFraction),
+  ]);
+
+  return [
+    `<svg width="${markCanvas}" height="${markCanvas}" viewBox="0 0 ${markCanvas} ${markCanvas}" fill="none" xmlns="http://www.w3.org/2000/svg">`,
+    `<g transform="translate(${VOLUME_MARGIN} ${VOLUME_MARGIN}) scale(${VOLUME_SCALE})">`,
+    inset,
+    '</g>',
+    '</svg>',
+  ].join('\n');
+}
+
+export function silhouetteOf(smallMaster: string): string {
+  return smallMaster
+    .replaceAll(brandPalette.noteCream, '#000000')
+    .replaceAll(brandPalette.frameTop, '#000000');
+}
+
 function channelsOf(color: string): ColorChannels {
   if (!HEX_TRIPLET.test(color)) {
     throw new Error(`Expected a six digit hex color, received "${color}"`);
