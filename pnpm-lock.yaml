@@ -465,6 +465,9 @@ importers:
         specifier: 4.12.32
         version: 4.12.32
     devDependencies:
+      '@fast-check/vitest':
+        specifier: 0.4.1
+        version: 0.4.1(vitest@4.1.10)
       '@stryker-mutator/core':
         specifier: 9.6.1
         version: 9.6.1(@types/node@24.13.3)(supports-color@7.2.0)
@@ -477,6 +480,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 4.1.10
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      fast-check:
+        specifier: 4.9.0
+        version: 4.9.0
       oxlint:
         specifier: 1.75.0
         version: 1.75.0(oxlint-tsgolint@7.0.2001)

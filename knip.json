@@ -18,7 +18,8 @@
       "ignoreDependencies": ["fast-check"]
     },
     "packages/engine": {
-      "entry": ["vitest.mutation.config.ts"]
+      "entry": ["vitest.mutation.config.ts"],
+      "ignoreDependencies": ["fast-check"]
     },
     ".": {
       "entry": ["steiger.config.ts", "probity.config.ts"],
