@@ -42,7 +42,7 @@ On macOS 26 and later, the system MUST render the icon from a native Icon Compos
 
 ### Requirement: The macOS icon carries default, dark, and mono appearances
 
-The Icon Composer asset MUST define the default, dark, and mono appearances. The note geometry MUST stay identical across appearances. Only the tile changes. In dark, the tile MUST deepen toward the dark band palette and the light outer band MUST drop. In mono, the note MUST stand alone, and the system derives clear and tinted from it.
+The Icon Composer asset MUST define the default, dark, and mono appearances. The note geometry MUST stay identical across appearances. The tile varies, and in dark and mono the note carries fills derived over the dark backdrop, because the light-backdrop fills glare there. In dark, the tile MUST deepen toward the dark band palette and the light outer band MUST drop. In mono, the note MUST stand alone, and the system derives clear and tinted from it.
 
 #### Scenario: the dock switches to dark
 

@@ -13,5 +13,6 @@ approvals:
   - the palette records seven anchors with fills derived through one pure function, because literals with hidden arithmetic invite drift
   - the packaged lane keeps plain Playwright, so the gherkin stays the review contract and the glass edge and tray tint stay manual checks
   - the raster interface widened at the task 1 replan to carry the renderer's own PNG bytes, deleting the hand-written encoder, after the review proved premultiplied alpha in the shipped ico
+  - the maintainer's eyeball pass amended the appearance rule for color only: the note's fills re-derive over the dark backdrop in dark and mono, the geometry never varies, and the watch preview stays out of scope with the target matrix
 branch: worktree-app-icon
 ---
