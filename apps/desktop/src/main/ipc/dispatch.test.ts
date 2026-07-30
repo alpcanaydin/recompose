@@ -48,6 +48,11 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'gateway-token:status': reject,
     'gateway-token:mint': reject,
     'gateway-token:copy': reject,
+    'gateways:offer-port': reject,
+    'gateways:move-port': reject,
+    'engine:start': reject,
+    'engine:stop': reject,
+    'engine:states': reject,
   };
 
   return { ...base, ...overrides };
@@ -67,6 +72,11 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'gateway-token:status': async () => Promise.resolve({ ok: true, value: tokenStatus }),
     'gateway-token:mint': async () => Promise.resolve({ ok: true, value: tokenStatus }),
     'gateway-token:copy': async () => Promise.resolve({ ok: true, value: undefined }),
+    'gateways:offer-port': async () => Promise.resolve({ ok: true, value: 51234 }),
+    'gateways:move-port': async () => Promise.resolve({ ok: true, value: [] }),
+    'engine:start': async () => Promise.resolve({ ok: true, value: { status: 'running' } }),
+    'engine:stop': async () => Promise.resolve({ ok: true, value: { status: 'stopped' } }),
+    'engine:states': async () => Promise.resolve({ ok: true, value: {} }),
   };
 }
 
@@ -80,6 +90,8 @@ const voidRequestChannel = fc.constantFrom<IpcChannel>(
   'gateway-token:status',
   'gateway-token:mint',
   'gateway-token:copy',
+  'gateways:offer-port',
+  'engine:states',
 );
 const nonUndefinedJunk = fc.anything().filter((value) => value !== undefined);
 

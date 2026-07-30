@@ -43,7 +43,16 @@ async function freshContext(
 function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
   const absent = async (): Promise<never> => Promise.reject(new Error('not under test'));
 
-  return { ...storage, 'system:get': absent, 'system:open-config-folder': absent };
+  return {
+    ...storage,
+    'system:get': absent,
+    'system:open-config-folder': absent,
+    'gateways:offer-port': absent,
+    'gateways:move-port': absent,
+    'engine:start': absent,
+    'engine:stop': absent,
+    'engine:states': absent,
+  };
 }
 
 const connectRequest = {

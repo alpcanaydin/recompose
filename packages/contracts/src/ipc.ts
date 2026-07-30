@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { accountKindSchema, accountsDocumentSchema } from './accounts';
-import { engineStatesSchema } from './engine-state';
-import { gatewayConfigSchema } from './gateway-config';
+import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
+import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { nonBlankString } from './non-blank';
 import { settingsPatchSchema, settingsSchema } from './settings';
 
@@ -76,6 +76,20 @@ export const ipcChannels = {
   'gateway-token:status': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
   'gateway-token:mint': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
   'gateway-token:copy': { request: z.void(), response: ipcResult(z.void()) },
+  'gateways:offer-port': { request: z.void(), response: ipcResult(gatewayPortSchema) },
+  'gateways:move-port': {
+    request: z.strictObject({ slug: gatewaySlugSchema }),
+    response: ipcResult(z.array(gatewayConfigSchema)),
+  },
+  'engine:start': {
+    request: z.strictObject({ slug: gatewaySlugSchema }),
+    response: ipcResult(gatewayEngineStateSchema),
+  },
+  'engine:stop': {
+    request: z.strictObject({ slug: gatewaySlugSchema }),
+    response: ipcResult(gatewayEngineStateSchema),
+  },
+  'engine:states': { request: z.void(), response: ipcResult(engineStatesSchema) },
 } as const;
 
 export type IpcChannel = keyof typeof ipcChannels;

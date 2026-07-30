@@ -677,6 +677,12 @@
       }
     },
     {
+      "files": ["apps/desktop/src/main/engine-host/spawn-engine.ts"],
+      "rules": {
+        "import/default": "off"
+      }
+    },
+    {
       "files": [".claude/workflows/**"],
       "rules": {
         "react-doctor/expo-no-non-inlined-env": "off"
