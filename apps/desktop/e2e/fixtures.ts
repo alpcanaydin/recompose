@@ -19,6 +19,14 @@ export function inheritedEnv(): Record<string, string> {
   );
 }
 
+/**
+ * Puts the machine's clipboard back the way a scenario found it.
+ *
+ * @summary Only a scenario that copies something asks for this, because the clipboard is one
+ * resource the whole machine shares and a restore from an idle worker clobbers a live copy.
+ */
+type ClipboardKeeper = void;
+
 /** Holds loopback ports away from recompose, the way a rival process on the machine would. */
 export type PortSquatter = {
   take: (port: number) => Promise<void>;
@@ -28,6 +36,7 @@ export type PortSquatter = {
 type ElectronFixtures = {
   electronApp: ElectronApplication;
   page: Page;
+  clipboardKeeper: ClipboardKeeper;
   portSquatter: PortSquatter;
 };
 
@@ -125,13 +134,11 @@ export const test = base.extend<ElectronFixtures>({
 
     try {
       const priorLoginItem = await readLoginItem(app);
-      const priorClipboard = await readClipboard(app);
 
       try {
         await use(app);
       } finally {
         await restoreLoginItem(app, priorLoginItem);
-        await restoreClipboard(app, priorClipboard);
       }
     } finally {
       await app.close();
@@ -145,6 +152,15 @@ export const test = base.extend<ElectronFixtures>({
 
     await page.waitForLoadState('domcontentloaded');
     await use(page);
+  },
+  clipboardKeeper: async ({ electronApp }, use) => {
+    const held = await readClipboard(electronApp);
+
+    try {
+      await use();
+    } finally {
+      await restoreClipboard(electronApp, held);
+    }
   },
   portSquatter: async ({}, use) => {
     const held = new Map<number, Server[]>();

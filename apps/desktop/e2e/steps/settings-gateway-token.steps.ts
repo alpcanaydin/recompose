@@ -161,7 +161,7 @@ When('the maintainer turns the requirement on again', async ({ page }) => {
   await tokenRequirement(page).click();
 });
 
-When('the maintainer copies the token', async ({ page }) => {
+When('the maintainer copies the token', async ({ clipboardKeeper: _, page }) => {
   await page.getByRole('button', { name: 'Copy' }).click();
 });
 
