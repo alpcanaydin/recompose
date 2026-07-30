@@ -1,0 +1,94 @@
+{
+  "fill": {
+    "solid": "srgb:0.00784,0.01176,0.03529,1.00000"
+  },
+  "groups": [
+    {
+      "blur-material": null,
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "note.svg",
+          "name": "note"
+        }
+      ],
+      "lighting": "individual",
+      "name": "note",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "blur-material": null,
+      "hidden-specializations": [
+        {
+          "appearance": "dark",
+          "value": true
+        },
+        {
+          "appearance": "tinted",
+          "value": true
+        }
+      ],
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "tile.svg",
+          "name": "tile"
+        }
+      ],
+      "lighting": "individual",
+      "name": "tile",
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "blur-material": null,
+      "hidden-specializations": [
+        {
+          "appearance": "light",
+          "value": true
+        },
+        {
+          "appearance": "tinted",
+          "value": true
+        }
+      ],
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "tile-dark.svg",
+          "name": "tile dark"
+        }
+      ],
+      "lighting": "individual",
+      "name": "tile dark",
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
+  }
+}
