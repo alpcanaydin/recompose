@@ -1,12 +1,15 @@
 import { expect } from '@playwright/test';
 
 import { Given, Then, When } from '../fixtures';
+import { healthNameAt } from '../gateway-client';
 import {
   createThroughSheet,
+  gatewayAddress,
   gatewayRowReading,
   haltGateway,
   openCreationSheet,
   openGateway,
+  pressToolbarControl,
   seedGateway,
   storedGateway,
 } from '../gateway-screen';
@@ -23,11 +26,13 @@ Given('the creation sheet is open', async ({ page }) => {
 Given('a running gateway named {string}', async ({ page }, name: string) => {
   await seedGateway(page, name);
   await expect(gatewayRowReading(page, name, 'Running')).toBeVisible();
+  focusGateway(page, name);
 });
 
 Given('a stopped gateway named {string}', async ({ page }, name: string) => {
   await seedGateway(page, name);
   await haltGateway(page, name);
+  focusGateway(page, name);
 });
 
 Given(
@@ -50,12 +55,15 @@ When(
 
 When('the maintainer starts {string} from the toolbar', async ({ page }, name: string) => {
   focusGateway(page, name);
-  await openGateway(page, name);
-  await page.getByRole('button', { name: 'Start' }).click();
+  await pressToolbarControl(page, name, 'Start');
 });
 
 Then('the sidebar shows {string} as {word}', async ({ page }, name: string, state: string) => {
   await expect(gatewayRowReading(page, name, state)).toBeVisible();
+});
+
+Then('{string} stops answering', async ({ page }, name: string) => {
+  await expect.poll(async () => healthNameAt(await gatewayAddress(page, name))).toBeNull();
 });
 
 Then('a message names the taken port', async ({ page }) => {

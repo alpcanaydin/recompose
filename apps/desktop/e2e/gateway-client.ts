@@ -52,6 +52,22 @@ export function namedGateway(body: unknown): string {
   return body.gateway;
 }
 
+/**
+ * The gateway serving this address, and nothing when nothing serves it.
+ *
+ * @summary A stopped gateway refuses the connection outright, so the absent answer is a state
+ * worth reading rather than a failure worth throwing.
+ */
+export async function healthNameAt(address: string): Promise<string | null> {
+  try {
+    const answer = await readFrom(address, '/health');
+
+    return answer.status === 200 ? namedGateway(answer.body) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The sentence a refusal carries, which both dialects nest under an error object. */
 export function refusalSentence(body: unknown): string {
   if (!carriesRefusal(body)) {

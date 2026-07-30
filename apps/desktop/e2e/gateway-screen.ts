@@ -4,6 +4,8 @@ import type { GatewayConfig } from '@recompose/contracts';
 import { expect } from '@playwright/test';
 import { GATEWAY_CONFIG_VERSION } from '@recompose/contracts';
 
+import { addressOfPort } from './gateway-client';
+
 const COPY_ADDRESS = 'Copy address';
 
 const CREATE_GATEWAY = 'Create Gateway';
@@ -40,10 +42,20 @@ export function gatewayRowReading(page: Page, name: string, state: string): Loca
   return page.getByRole('link', { exact: true, name: `${name} ${state}` });
 }
 
+/** Where a gateway serves, taken from what it stores rather than from what a screen shows. */
+export async function gatewayAddress(page: Page, name: string): Promise<string> {
+  return addressOfPort((await storedGateway(page, name)).port);
+}
+
 /** Selects a gateway, which is the only way to reach the toolbar that acts on it. */
 export async function openGateway(page: Page, name: string): Promise<void> {
   await gatewayRow(page, name).click();
   await expect(page.getByRole('button', { name: COPY_ADDRESS })).toBeVisible();
+}
+
+export async function pressToolbarControl(page: Page, name: string, action: string): Promise<void> {
+  await openGateway(page, name);
+  await page.getByRole('button', { name: action }).click();
 }
 
 /** The address a person copies out of the toolbar, read off the pill rather than computed. */
