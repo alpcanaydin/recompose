@@ -1,8 +1,11 @@
+export { CopyButton } from './copy-button';
 export { FieldGroup } from './field-group';
 export { placeFocus } from './place-focus';
 export { FieldRow } from './field-row';
 export { NumericField } from './numeric-field';
 export { SegmentedControl } from './segmented-control';
+export { Sheet } from './sheet';
+export { StatusIndicator } from './status-indicator';
 export { Switch } from './switch';
 export { LabelledTextField } from './labelled-text-field';
 export { TextField } from './text-field';

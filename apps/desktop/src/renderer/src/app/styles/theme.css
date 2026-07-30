@@ -15,6 +15,7 @@
   --color-surface-inert: light-dark(var(--gray-100), var(--gray-850));
   --color-surface-hover: light-dark(var(--black-a06), var(--white-a08));
   --color-surface-thumb: var(--white);
+  --color-scrim: light-dark(var(--black-a18), var(--black-a42));
   --color-surface-track: light-dark(var(--gray-200), var(--gray-800));
   --color-surface-chip: light-dark(var(--white), var(--gray-700));
   --color-track-off: light-dark(var(--gray-200), var(--gray-800));
@@ -32,6 +33,9 @@
 
   --color-accent: light-dark(var(--blue-600), var(--blue-500));
   --color-accent-hover: light-dark(var(--blue-700), var(--blue-400));
+  --color-accent-fill: var(--blue-700);
+  --color-running: light-dark(var(--green-700), var(--green-500));
+  --color-stopped: light-dark(var(--red-700), var(--red-500));
   --color-warning: light-dark(var(--orange-600), var(--orange-500));
   --color-danger: light-dark(var(--red-700), var(--red-500));
   --color-danger-ink: light-dark(var(--red-700), var(--red-400));
@@ -60,6 +64,7 @@
   --spacing-chip: 18px;
   --spacing-thumb: 18px;
   --spacing-port: 76px;
+  --spacing-sheet: 404px;
   --spacing-hairline: 2px;
 
   --radius-chip: 4px;
@@ -68,6 +73,7 @@
   --radius-pill: 999px;
 
   --shadow-thumb: 0 1px 2px rgb(0 0 0 / 22%), 0 0 0 0.5px rgb(0 0 0 / 8%);
+  --shadow-raised: 0 12px 32px rgb(0 0 0 / 18%), 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 @utility focus-ring {
@@ -118,6 +124,65 @@
 
   &:active {
     background-color: var(--color-surface-inert);
+    box-shadow: none;
+  }
+}
+
+@utility sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-scrim);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 150ms;
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+    }
+  }
+}
+
+@utility sheet-surface {
+  position: fixed;
+  top: 47%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
+  width: var(--spacing-sheet);
+  border: 1px solid var(--color-line-subtle);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface-card);
+  box-shadow: var(--shadow-raised);
+  padding: calc(var(--spacing) * 5);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      opacity 150ms,
+      scale 150ms;
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+}
+
+@utility push-button-primary {
+  height: var(--spacing-control);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background-color: var(--color-accent-fill);
+  padding-inline: calc(var(--spacing) * 2.5);
+  font-size: var(--text-control);
+  color: var(--white);
+  box-shadow: 0 1px 1.5px rgb(0 0 0 / 10%);
+
+  &:hover {
+    background-color: color-mix(in oklab, var(--color-accent-fill), black 14%);
+  }
+
+  &:active {
     box-shadow: none;
   }
 }
