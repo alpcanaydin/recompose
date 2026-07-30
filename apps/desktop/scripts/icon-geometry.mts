@@ -6,7 +6,9 @@ export type FlattenedStop =
   | 'outerBandTop'
   | 'outerBandBottom'
   | 'noteTop'
-  | 'noteBottom';
+  | 'noteBottom'
+  | 'darkNoteTop'
+  | 'darkNoteBottom';
 
 type ColorChannels = readonly [number, number, number];
 
@@ -137,11 +139,16 @@ export function flattenOver(foreground: string, backdrop: string, alpha: number)
   return colorOf(mixChannels(channelsOf(foreground), channelsOf(backdrop), alpha));
 }
 
-export function tileSampleAt(position: number): string {
-  const top = channelsOf(brandPalette.tileTop);
-  const bottom = channelsOf(brandPalette.tileBottom);
+function gradientSampleAt(top: string, bottom: string, position: number): string {
+  return colorOf(mixChannels(channelsOf(bottom), channelsOf(top), position));
+}
 
-  return colorOf(mixChannels(bottom, top, position));
+export function tileSampleAt(position: number): string {
+  return gradientSampleAt(brandPalette.tileTop, brandPalette.tileBottom, position);
+}
+
+function deepenedTileSampleAt(position: number): string {
+  return gradientSampleAt(brandPalette.frameTop, brandPalette.frameBottom, position);
 }
 
 const darkBandTop = flattenOver(brandPalette.frameTop, brandPalette.tileTop, MARK_STOP_OPACITY);
@@ -160,6 +167,16 @@ export const flattenedMarkFills: Readonly<Record<FlattenedStop, string>> = Objec
   noteBottom: flattenOver(
     brandPalette.brandWhite,
     tileSampleAt(NOTE_SPAN_BOTTOM),
+    MARK_STOP_OPACITY,
+  ),
+  darkNoteTop: flattenOver(
+    brandPalette.noteCream,
+    deepenedTileSampleAt(NOTE_SPAN_TOP),
+    MARK_STOP_OPACITY,
+  ),
+  darkNoteBottom: flattenOver(
+    brandPalette.brandWhite,
+    deepenedTileSampleAt(NOTE_SPAN_BOTTOM),
     MARK_STOP_OPACITY,
   ),
 });

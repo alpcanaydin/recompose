@@ -20,7 +20,12 @@ function sortedUpperCase(colors: readonly string[]): readonly string[] {
   return colors.map((color) => color.toUpperCase()).toSorted();
 }
 
-const ICON_BUNDLE_LAYERS = ['Assets/note.svg', 'Assets/tile.svg', 'Assets/tile-dark.svg'];
+const ICON_BUNDLE_LAYERS = [
+  'Assets/note.svg',
+  'Assets/note-dark.svg',
+  'Assets/tile.svg',
+  'Assets/tile-dark.svg',
+];
 const SRGB_COMPONENT_PATTERN = /srgb:([\d.]+),([\d.]+),([\d.]+),[\d.]+/g;
 const CHANNEL_MAX = 255;
 
@@ -73,6 +78,22 @@ describe('the Icon Composer bundle', () => {
     expect(colorsDeclaredIn(readIconBundle('Assets/note.svg'))).toEqual(
       sortedUpperCase([flattenedMarkFills.noteTop, flattenedMarkFills.noteBottom]),
     );
+  });
+
+  it('paints the dark note layer from the composited dark note stops alone', () => {
+    expect(colorsDeclaredIn(readIconBundle('Assets/note-dark.svg'))).toEqual(
+      sortedUpperCase([flattenedMarkFills.darkNoteTop, flattenedMarkFills.darkNoteBottom]),
+    );
+  });
+
+  it('draws the same note geometry in both appearances, differing only in fill', () => {
+    const fillReference = /url\(#[a-zA-Z]+\)/g;
+    const geometryOf = (layer: string): string =>
+      readIconBundle(layer)
+        .replace(/<defs>[\s\S]*<\/defs>/, '')
+        .replaceAll(fillReference, 'url(#gradient)');
+
+    expect(geometryOf('Assets/note-dark.svg')).toBe(geometryOf('Assets/note.svg'));
   });
 
   it('paints the light tile layer from the tile anchors and the composited bands', () => {
@@ -130,10 +151,17 @@ describe('the flattened mark fills', () => {
     expect(flattenedMarkFills.noteBottom).toBe('#D1D4E7');
   });
 
-  it('derives exactly the six composited stops', () => {
+  it('composites the note over the deepened tile for the dark appearance', () => {
+    expect(flattenedMarkFills.darkNoteTop).toBe('#C4BFB2');
+    expect(flattenedMarkFills.darkNoteBottom).toBe('#CDCDD0');
+  });
+
+  it('derives exactly the eight composited stops', () => {
     expect(Object.keys(flattenedMarkFills).toSorted()).toEqual([
       'darkBandBottom',
       'darkBandTop',
+      'darkNoteBottom',
+      'darkNoteTop',
       'noteBottom',
       'noteTop',
       'outerBandBottom',
