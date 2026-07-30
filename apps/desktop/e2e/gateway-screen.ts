@@ -34,12 +34,17 @@ export function gatewayRow(page: Page, name: string): Locator {
   return page.getByRole('link', { name: new RegExp(`^${name} (Running|Stopped)$`, 'u') });
 }
 
-function creationSheet(page: Page): Locator {
+export function creationSheet(page: Page): Locator {
   return page.getByRole('dialog', { name: CREATION_SHEET });
 }
 
 export function sheetField(page: Page, label: string): Locator {
   return creationSheet(page).getByRole('textbox', { name: label });
+}
+
+/** The sentence standing under a field, which the sheet writes there when a save refuses. */
+export function fieldRefusal(page: Page, label: string): Locator {
+  return sheetField(page, label).locator('xpath=../..').getByRole('alert');
 }
 
 /**
@@ -79,7 +84,7 @@ export async function seedGateway(page: Page, name: string): Promise<GatewayConf
 }
 
 /** Opens the sheet the way the screen offers it, which differs before and after the first gateway. */
-async function openCreationSheet(page: Page): Promise<void> {
+export async function openCreationSheet(page: Page): Promise<void> {
   if (await creationSheet(page).isVisible()) {
     return;
   }
@@ -94,7 +99,7 @@ async function openCreationSheet(page: Page): Promise<void> {
 }
 
 /** Whatever the port field holds right now, waiting out the offer the sheet arrives fetching. */
-async function portFieldValue(page: Page): Promise<string> {
+export async function portFieldValue(page: Page): Promise<string> {
   const field = sheetField(page, 'Port');
 
   await expect(field).not.toHaveValue('');
@@ -108,19 +113,27 @@ export type GatewayDraft = {
   port?: string;
 };
 
-/** The whole creation walk, from the offer on screen to a sheet that has closed behind it. */
-export async function createThroughSheet(page: Page, draft: GatewayDraft): Promise<string> {
-  await openCreationSheet(page);
+export async function fillSheet(page: Page, draft: GatewayDraft): Promise<void> {
   await sheetField(page, 'Name').fill(draft.name);
   await sheetField(page, 'Slug').fill(draft.slug);
 
   if (draft.port !== undefined) {
     await sheetField(page, 'Port').fill(draft.port);
   }
+}
+
+export async function pressCreate(page: Page): Promise<void> {
+  await creationSheet(page).getByRole('button', { name: CREATE_GATEWAY }).click();
+}
+
+/** The whole creation walk, from the offer on screen to a sheet that has closed behind it. */
+export async function createThroughSheet(page: Page, draft: GatewayDraft): Promise<string> {
+  await openCreationSheet(page);
+  await fillSheet(page, draft);
 
   const carried = await portFieldValue(page);
 
-  await creationSheet(page).getByRole('button', { name: CREATE_GATEWAY }).click();
+  await pressCreate(page);
   await expect(creationSheet(page)).toBeHidden();
 
   return carried;

@@ -4,7 +4,6 @@ import { expect } from '@playwright/test';
 
 import { chooseMenuItem } from '../app-menu';
 import { Then, When } from '../fixtures';
-import { freePort } from '../gateway-client';
 import {
   createThroughSheet,
   gatewayRow,
@@ -12,6 +11,7 @@ import {
   storedGateway,
   storedGateways,
 } from '../gateway-screen';
+import { freePort } from '../loopback-ports';
 import { restartedAppFor } from './app.steps';
 
 const NEW_GATEWAY_MENU_ITEM = 'New Gateway…';
