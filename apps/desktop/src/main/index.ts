@@ -30,7 +30,7 @@ import {
   openSettingsSurface,
   showMainWindow,
 } from './windows/main-window';
-import { denyPermissionCheck, denyPermissionRequest } from './windows/permission-policy';
+import { allowsPermission } from './windows/permission-policy';
 import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 
 let engineHost: EngineHost | null = null;
@@ -150,15 +150,16 @@ function pushEngineStates(states: EngineStates): void {
 function registerPermissionHandlers(): void {
   const permissionRequestHandler = (
     _webContents: unknown,
-    _permission: string,
+    permission: string,
     callback: (allowed: boolean) => void,
   ) => {
-    callback(denyPermissionRequest());
+    callback(allowsPermission(permission));
   };
 
   session.defaultSession.setPermissionRequestHandler(permissionRequestHandler);
 
-  const permissionCheckHandler = () => denyPermissionCheck();
+  const permissionCheckHandler = (_webContents: unknown, permission: string) =>
+    allowsPermission(permission);
 
   session.defaultSession.setPermissionCheckHandler(permissionCheckHandler);
 }
