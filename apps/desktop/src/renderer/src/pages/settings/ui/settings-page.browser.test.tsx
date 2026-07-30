@@ -77,7 +77,7 @@ test('a waiting row stays reachable and names what it waits for', async () => {
     },
     {
       control: screen.getByRole('radiogroup', { name: 'Keep request logs' }),
-      awaits: /engine/i,
+      awaits: /request logging/i,
     },
   ];
 
