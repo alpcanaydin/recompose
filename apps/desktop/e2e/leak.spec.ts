@@ -11,7 +11,9 @@ test('navigation between screens keeps the heap bounded', { tag: '@leak' }, asyn
     await providers.click();
     await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
     await gateways.click();
-    await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Create your first gateway' }),
+    ).toBeVisible();
   };
 
   const settledHeap = async () => {
