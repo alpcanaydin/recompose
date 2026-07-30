@@ -283,7 +283,7 @@ Every path sits outside Feature-Sliced Design, matching the code map.
 - `.github/workflows/release.yml`: the mac matrix entry pins to `macos-26` (modify)
 - `.github/workflows/ci.yml`: the e2e mac entry pins to `macos-26`, and the Linux packaged step builds the Linux targets (modify)
 - `.github/workflows/homebrew-bump.yml`: the cask app and name lines move to Recompose (modify)
-- `apps/desktop/e2e/packaged-smoke.spec.ts`: the artifact-level icon and presentation assertions (modify)
+- `apps/desktop/e2e/packaged-icons.spec.ts` and `packaged-artifact.ts`: the artifact-level icon and presentation assertions (create). The 300-line cap keeps them out of `packaged-smoke.spec.ts`, which stays untouched.
 - `docs/adr/0055-app-icon-identity-and-recompose-presentation.md`: the decision set (create)
 - `docs/adr/README.md`: the 0055 index row (modify)
 
@@ -394,7 +394,7 @@ The pixel buffer arrives premultiplied, which is how the renderer stores it. The
 
 ### 8. The gherkin stays the contract, and the packaged spec carries the assertions
 
-The four feature files under `gherkin/app-icon/` remain the review contract. The scenarios a machine can judge land as plain assertions in `packaged-smoke.spec.ts`, titled after the scenarios they prove, because the packaged project runs plain Playwright with no bddgen wiring (`apps/desktop/package.json`, `test:e2e:packaged`). Scenarios no machine can judge, the glass edge and the tray tint, map to the maintainer walkthrough.
+The four feature files under `gherkin/app-icon/` remain the review contract. The scenarios a machine can judge land as plain assertions in `packaged-icons.spec.ts` beside the smoke spec, titled after the scenarios they prove. The packaged project runs plain Playwright with no bddgen wiring (`apps/desktop/package.json`, `test:e2e:packaged`). Scenarios no machine can judge, the glass edge and the tray tint, map to the maintainer walkthrough.
 
 **Alternatives considered:** copying the features into `e2e/features/` with step definitions, rejected because the packaged lane runs plain Playwright and half the steps would assert nothing a process can observe.
 
@@ -427,7 +427,7 @@ Only three blockers justify serializing: a task reads what another produces, two
 - Task 1: masters, palette, script, and gate wiring. Owns everything under `apps/desktop/scripts/`, `build/mark.svg`, `build/mark-small.svg`, `build/icon.ico`, `build/icons/`, `build/volume.icns`, the deletions of `build/icon.png` and `build/icon.icns`, everything under `apps/desktop/resources/`, `apps/desktop/package.json`, `apps/desktop/tsconfig.node.json`, both vitest configs, `apps/desktop/stryker.config.json`, `knip.json`, and `cspell-words.txt`. Depends on: none. Hands off: `brandPalette`, `flattenedMarkFills`, and the committed rasters.
 - Task 2: builder keys, the rider, and the workflows. Owns `apps/desktop/electron-builder.yml`, `apps/desktop/src/main/index.ts`, `app-menu-template.ts` and its spec, `menu-bar-tray.ts`, `release.yml`, `ci.yml`, and `homebrew-bump.yml`. Depends on: none, and runs beside task 1 on disjoint files. Hands off: the four icon keys and the Recompose presentation.
 - Task 3: the Icon Composer bundle, maintainer seat. Owns `build/icon.icon/`. Depends on: task 1, because the layer fills copy from `flattenedMarkFills`, which is a read of what task 1 produces. The manual verification chain stays here: the actool compile, the Icon Composer eyeball of all three appearances, and the dock-size glass-edge check.
-- Task 4: the packaged smoke assertions. Owns `apps/desktop/e2e/packaged-smoke.spec.ts`. Depends on: tasks 1, 2, and 3, because it inspects the artifacts they write. Hands off: the green packaged lane.
+- Task 4: the packaged smoke assertions. Owns `apps/desktop/e2e/packaged-icons.spec.ts` with its helper, plus the drift spec in `brand-consistency.test.mts`. Depends on: tasks 1, 2, and 3, because it inspects the artifacts they write. Hands off: the green packaged lane.
 - Task 5: the record. Owns `docs/adr/0055-app-icon-identity-and-recompose-presentation.md` and the `docs/adr/README.md` index row. Depends on: none, because this design fixes the decision set. Hands off: the accepted ADR.
 
 Two manual steps stay with the maintainer beyond task 3. The first checks the volume icon on a mounted disk image against the legacy-grid intent. The second checks every generated raster, small glyphs included, on light and dark backdrops.
@@ -474,7 +474,7 @@ A fresh-context reviewer diffs the result against these criteria:
 - `apps/desktop/build/` holds no `icon.png` and no `icon.icns`, and `electron-builder.yml` names all four icon keys, so probing decides nothing.
 - `brandPalette` holds exactly seven entries, and `brand-consistency.test.mts` ties `build/mark.svg`, the `.icon` layers, and every committed output to it.
 - `build/icon.ico` steps through 16, 24, 32, 48, and 256, with the small glyph on the first two. `build/icons/` holds nine rungs with the same cutoff. `build/volume.icns` holds the ten pinned entry types.
-- `packaged-smoke.spec.ts` carries the per-platform assertions above, titled after the scenarios they prove, and the scaffold md5 appears in no shipped asset.
+- `packaged-icons.spec.ts` carries the per-platform assertions above, titled after the scenarios they prove, and the scaffold md5 appears in no shipped asset.
 - The mutate list covers the pure script modules, the shell joins the exclusions, and the gate holds at 81.
 - `tray-icon.test.ts` and `window-options.test.ts` stay untouched, and the only moved spec is the application-menu label.
 - `.github/workflows/release.yml` and `ci.yml` pin their mac legs to `macos-26`, and `homebrew-bump.yml` writes `app "Recompose.app"`.

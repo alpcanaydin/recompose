@@ -36,7 +36,7 @@
 
 ## Task 4: The packaged smoke assertions
 
-**Files:** `apps/desktop/e2e/packaged-smoke.spec.ts`.
+**Files:** `apps/desktop/e2e/packaged-icons.spec.ts` and its `packaged-artifact.ts` helper, one `playwright.config.ts` line, one `knip.json` line, and the drift spec in `apps/desktop/scripts/brand-consistency.test.mts`. The 300-line cap forced the assertions out of `packaged-smoke.spec.ts`, which stays untouched.
 
 **Blockers:** inspects the artifacts Tasks 1, 2, and 3 write.
 
