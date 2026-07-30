@@ -1,6 +1,6 @@
 ---
 tier: full
-phase: discovery
+phase: design
 approvals:
   - the full tier over no override, because the gateway contract, a new engine subsystem, the process boundary, and three renderer slices all change together
   - the gateway config schema stays at version 1 with no migration, and backward compatibility constrains nothing anywhere in this change, because recompose has no release and no stored document
@@ -19,5 +19,8 @@ approvals:
   - the menu bar lists every gateway, each carrying a submenu of start, stop, and restart with icons, and an entry a gateway's state rules out renders unavailable rather than disappearing, so the submenu keeps one shape
   - a gateway settings surface becomes a separate feature, so this change offers no way to edit a name, a slug, or a port after creation
   - a failed start offers to move the gateway to a free port, which the separate gateway settings feature makes load-bearing rather than optional, because it's the only recovery this change ships for a squatted port
+  - gate 1 approved the design document with the design critique folded in, covering the toolbar drag region that would have eaten every click, the running-state token that measured level with the stopped one, the sidebar compositing over the desktop rather than a token, and the shape carrier that replaced a repeated state word
+  - the settings schema moves to version 3 through a migration that drops the port, reversing a gate-1 simplification that rested on a check run against the wrong path; a stored version 2 document carrying the field sits under the @recompose/desktop user-data directory, and the schema is strict, so a version-free removal would read that document as damage
+  - the gateway document takes a required port field at version 1 with no migration, confirmed rather than assumed, because the stored gateways directory holds no document to quarantine
 branch: worktree-first-gateway-and-engine
 ---
