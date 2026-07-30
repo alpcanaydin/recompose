@@ -60,3 +60,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0052](0052-the-dev-entry-point-fetches-the-electron-binary.md)             | The Dev Entry Point Fetches the Electron Binary                                     | Accepted   | 2026-07-30 |
 | [0053](0053-flow-green-is-a-canvas-token-the-palette-does-not-carry-yet.md) | Flow Green Is a Canvas Token the Palette Doesn't Carry Yet                          | Accepted   | 2026-07-30 |
 | [0054](0054-a-newer-settings-document-is-a-typed-failure.md)                | A Newer Settings Document Is a Typed Failure, Not Damage                            | Accepted   | 2026-07-30 |
+| [0055](0055-app-icon-identity-and-recompose-presentation.md)                | The App Icon Identity and the Recompose Presentation                                | Accepted   | 2026-07-30 |
