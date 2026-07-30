@@ -20,7 +20,7 @@ That closes the gap between the two environments. The end-to-end suite launches 
 
 `apps/desktop`'s postinstall runs Electron's own installer before rebuilding native modules:
 
-```
+```sh
 install-electron && electron-builder install-app-deps
 ```
 
