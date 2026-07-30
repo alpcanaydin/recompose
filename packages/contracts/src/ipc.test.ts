@@ -194,18 +194,34 @@ describe('the channels that answer with nothing', () => {
 });
 
 describe('ipc error codes', () => {
+  const everyCode = [
+    'vault-unavailable',
+    'vault-newer-schema',
+    'settings-newer-schema',
+    'validation-failed',
+    'storage-failed',
+    'folder-open-failed',
+    'token-missing',
+    'slug-conflict',
+    'port-conflict',
+  ];
+
   test('error codes are the closed set', () => {
-    for (const code of [
-      'vault-unavailable',
-      'vault-newer-schema',
-      'validation-failed',
-      'storage-failed',
-      'folder-open-failed',
-      'token-missing',
-    ]) {
+    for (const code of everyCode) {
       expect(() => ipcErrorSchema.parse({ code, message: 'x' })).not.toThrow();
     }
 
     expect(() => ipcErrorSchema.parse({ code: 'other', message: 'x' })).toThrow();
+  });
+
+  test('the set holds exactly nine codes, so a tenth arrives through a failing test', () => {
+    expect(ipcErrorSchema.shape.code.options).toEqual(everyCode);
+  });
+
+  test('a conflict refusal carries the sentence the field prints', () => {
+    const conflict = { code: 'port-conflict', message: 'work already holds this port.' };
+
+    expect(ipcErrorSchema.parse(conflict)).toEqual(conflict);
+    expect(() => ipcErrorSchema.parse({ code: 'port-conflict', message: '' })).toThrow();
   });
 });

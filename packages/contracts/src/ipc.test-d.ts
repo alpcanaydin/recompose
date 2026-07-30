@@ -2,7 +2,11 @@ import { describe, expectTypeOf, test } from 'vitest';
 
 import type {
   AccountsDocument,
+  EngineDirective,
+  EngineGateway,
+  EngineReport,
   GatewayConfig,
+  GatewayEngineState,
   GatewayTokenStatus,
   IpcChannel,
   IpcError,
@@ -72,6 +76,8 @@ describe('ipc response contracts', () => {
       | 'storage-failed'
       | 'folder-open-failed'
       | 'token-missing'
+      | 'slug-conflict'
+      | 'port-conflict'
     >();
   });
 
@@ -119,6 +125,44 @@ describe('bridge surface totality', () => {
     expectTypeOf<RecomposeIpc['accounts:connect']>().toEqualTypeOf<
       (request: IpcRequest<'accounts:connect'>) => Promise<IpcResponse<'accounts:connect'>>
     >();
+  });
+});
+
+describe('the state one gateway reports', () => {
+  test('a gateway is either serving or stopped, and never a third thing', () => {
+    expectTypeOf<GatewayEngineState['status']>().toEqualTypeOf<'running' | 'stopped'>();
+  });
+
+  test('only a stopped gateway can name the port its start lost', () => {
+    expectTypeOf<Extract<GatewayEngineState, { status: 'running' }>>().not.toHaveProperty(
+      'failure',
+    );
+    expectTypeOf<Extract<GatewayEngineState, { status: 'stopped' }>>().toHaveProperty('failure');
+  });
+
+  test('a failed start names a port and nothing a screen would have to interpret', () => {
+    expectTypeOf<
+      NonNullable<Extract<GatewayEngineState, { status: 'stopped' }>['failure']>
+    >().toEqualTypeOf<{ port: number }>();
+  });
+});
+
+describe('the protocol the two processes speak', () => {
+  test('a directive is exactly a start or a stop', () => {
+    expectTypeOf<EngineDirective['kind']>().toEqualTypeOf<'start' | 'stop'>();
+  });
+
+  test('the child hears only what serving needs, so no secret can reach it', () => {
+    expectTypeOf<EngineGateway>().toEqualTypeOf<{
+      slug: string;
+      displayName: string;
+      port: number;
+    }>();
+  });
+
+  test('a report carries one gateway and the same state every surface reads', () => {
+    expectTypeOf<EngineReport['state']>().toEqualTypeOf<GatewayEngineState>();
+    expectTypeOf<EngineReport['kind']>().toEqualTypeOf<'state'>();
   });
 });
 
