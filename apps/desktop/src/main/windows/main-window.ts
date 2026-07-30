@@ -15,6 +15,7 @@ import {
   rendererBaseFor,
   rendererUrlFor,
   settingsShortcutRouteFor,
+  surfaceRouteOf,
 } from './renderer-url';
 import { windowOptionsFor } from './window-options';
 
@@ -106,18 +107,18 @@ function pressCount(): number {
   return shortcutPresses;
 }
 
-function openSurface(routeFor: (press: number) => string): void {
+function openSurface(routeFor: (press: number, surface: string) => string): void {
   const [openWindow] = BrowserWindow.getAllWindows();
 
   if (openWindow === undefined) {
-    createMainWindow(routeFor(pressCount()));
+    createMainWindow(routeFor(pressCount(), HOME_ROUTE));
 
     return;
   }
 
   reveal(openWindow);
 
-  const route = routeFor(pressCount());
+  const route = routeFor(pressCount(), surfaceRouteOf(openWindow.webContents.getURL()));
 
   if (openWindow.webContents.getURL().startsWith(rendererBase())) {
     void openWindow.webContents.executeJavaScript(
