@@ -13,6 +13,7 @@ Attio
 Aydin
 bddgen
 bestpractices
+BGRA
 blockmap
 boxshadow
 BYOK
@@ -30,8 +31,8 @@ cyclonedx
 dagre
 dbus
 dedup
-depcruise
 değiştir
+depcruise
 diffable
 dmgbuild
 docblocks
