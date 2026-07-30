@@ -5,6 +5,7 @@
     "vitest.config.*",
     "../../vitest.shared.ts",
     "../../steiger.config.ts",
+    "scripts/**/*",
     "src/main/**/*",
     "src/preload/**/*",
     "src/renderer/csp-policy.ts",
@@ -13,7 +14,9 @@
     "e2e/**/*"
   ],
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "composite": true,
+    "noEmit": true,
     "types": ["electron-vite/node"]
   }
 }
