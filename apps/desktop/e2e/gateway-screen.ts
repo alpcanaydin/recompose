@@ -100,6 +100,18 @@ export function fieldRefusal(page: Page, label: string): Locator {
 }
 
 /**
+ * What the engine reports about one gateway, and nothing while it has never touched it.
+ *
+ * @summary Reloading the screen before the save has finished starting would lose the push that
+ * carries the answer, so the arrangement waits for the report the reload will then read back.
+ */
+async function reportedState(page: Page, slug: string): Promise<string | null> {
+  const states = await page.evaluate(async () => window.recompose['engine:states']());
+
+  return states.ok ? (states.value[slug]?.status ?? null) : null;
+}
+
+/**
  * Puts a gateway on disk without walking the sheet, and shows the screen what landed.
  *
  * @summary A scenario that starts from an existing gateway is describing where it starts rather
@@ -129,6 +141,7 @@ export async function seedGateway(page: Page, name: string): Promise<GatewayConf
     throw new Error(`the app stored no gateway named "${name}": ${saved.error.message}`);
   }
 
+  await expect.poll(async () => reportedState(page, config.slug)).not.toBeNull();
   await page.reload();
   await expect(gatewayRow(page, name)).toBeVisible();
 
