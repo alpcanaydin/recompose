@@ -26,7 +26,7 @@ function gatewayNamed(slug: string, port: number): GatewayConfig {
   };
 }
 
-function hostAnswering() {
+function hostAnswering(refusal?: Error) {
   const restarted: EngineGateway[] = [];
 
   const host: EngineHost = {
@@ -35,7 +35,9 @@ function hostAnswering() {
     restart: async (gateway) => {
       restarted.push(gateway);
 
-      return Promise.resolve({ status: 'running' });
+      return refusal === undefined
+        ? Promise.resolve({ status: 'running' })
+        : Promise.reject(refusal);
     },
     states: () => ({}),
     onStatesChanged: () => () => undefined,
@@ -139,7 +141,9 @@ describe('moving a gateway off a port another process took', () => {
       value: [gatewayNamed('codex', 51234), gatewayNamed('gemini', 8398)],
     });
   });
+});
 
+describe('a move the app cannot carry out', () => {
   test('a move naming a gateway nothing stored is refused with the slug in the message', async () => {
     const context = await freshContext([], hostAnswering().host, portsInTurn([51234]));
 
@@ -147,5 +151,45 @@ describe('moving a gateway off a port another process took', () => {
 
     expect(refusalIn(answer).code).toBe('storage-failed');
     expect(refusalIn(answer).message).toContain('codex');
+  });
+
+  test('the gateway moved is the one named, not whichever the directory lists first', async () => {
+    const context = await freshContext(
+      [gatewayNamed('codex', 8397), gatewayNamed('gemini', 8398)],
+      hostAnswering().host,
+      portsInTurn([51234]),
+    );
+
+    await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'gemini' });
+
+    expect(await storedGateway(context.userDataPath, 'codex')).toEqual(gatewayNamed('codex', 8397));
+    expect(await storedGateway(context.userDataPath, 'gemini')).toEqual(
+      gatewayNamed('gemini', 51234),
+    );
+  });
+
+  test('the port a gateway already holds is free for that same gateway to take again', async () => {
+    const context = await freshContext(
+      [gatewayNamed('codex', 8397)],
+      hostAnswering().host,
+      portsInTurn([8397]),
+    );
+
+    const answer = await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
+
+    expect(answer).toEqual({ ok: true, value: [gatewayNamed('codex', 8397)] });
+  });
+
+  test('an engine that refuses the restart reports it rather than claiming the move landed', async () => {
+    const context = await freshContext(
+      [gatewayNamed('codex', 8397)],
+      hostAnswering(new Error('the engine did not report on the start')).host,
+      portsInTurn([51234]),
+    );
+
+    const answer = await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
+
+    expect(refusalIn(answer).code).toBe('storage-failed');
+    expect(refusalIn(answer).message).toContain('the engine did not report');
   });
 });

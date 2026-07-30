@@ -213,6 +213,20 @@ describe('stopping one gateway', () => {
       createEngineIpcHandlers(context)['engine:stop']({ slug: 'codex' }),
     ).resolves.toEqual({ ok: true, value: { status: 'stopped' } });
   });
+
+  test('an engine that never reports the stop becomes a refusal rather than a claim', async () => {
+    const silence = new Error('The engine did not report on the stop of "codex".');
+    const context = await freshContext(
+      [codex],
+      hostAnswering({ status: 'stopped' }, {}, silence).host,
+      portsInTurn([51234]),
+    );
+
+    const answer = await createEngineIpcHandlers(context)['engine:stop']({ slug: 'codex' });
+
+    expect(refusalIn(answer).code).toBe('storage-failed');
+    expect(refusalIn(answer).message).toContain('codex');
+  });
 });
 
 describe('reading which gateways serve', () => {

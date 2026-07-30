@@ -64,6 +64,10 @@ async function directoryHolding(stored: readonly GatewayConfig[]): Promise<strin
   return gatewaysDir;
 }
 
+function complained(spy: { mock: { calls: unknown[][] } }): string {
+  return spy.mock.calls.flat().map(String).join(' ');
+}
+
 function requestsOver(host: EngineHost | null, gatewaysDir: string) {
   return createGatewayLifecycleRequests({
     host: () => host,
@@ -132,7 +136,7 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
 });
 
 describe('a request the engine cannot answer', () => {
-  test('a slug nothing stored is written down rather than swallowed', async () => {
+  test('a slug nothing stored names the gateway and the act it refused', async () => {
     const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const recorded = recordingHost();
     const requests = requestsOver(recorded.host, await directoryHolding([]));
@@ -140,23 +144,33 @@ describe('a request the engine cannot answer', () => {
     requests.start('codex');
 
     await vi.waitFor(() => {
-      expect(complaint.mock.calls.flat().join(' ')).toContain('codex');
+      expect(complained(complaint)).toContain('start the gateway "codex"');
     });
+    expect(complained(complaint)).toContain('stores no gateway');
     expect(recorded.started).toEqual([]);
   });
 
-  test('a request before the engine exists is written down rather than swallowed', async () => {
+  test('a request before the engine exists says so, and reaches no engine at all', async () => {
     const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const requests = requestsOver(null, await directoryHolding([]));
+    const recorded = recordingHost();
+    const requests = createGatewayLifecycleRequests({
+      host: () => null,
+      gatewaysDir: () => tmpdir(),
+      onCorrupt: () => undefined,
+    });
 
     requests.stop('codex');
 
     await vi.waitFor(() => {
-      expect(complaint.mock.calls.flat().join(' ')).toContain('codex');
+      expect(complained(complaint)).toContain('before the engine was ready');
     });
+    expect(complained(complaint)).toContain('stop the gateway "codex"');
+    expect(recorded.stopped).toEqual([]);
   });
+});
 
-  test('an engine that refuses the directive is written down rather than swallowed', async () => {
+describe('an engine that refuses a directive', () => {
+  test('the refusal names the act beside the reason', async () => {
     const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const refusing: EngineHost = {
       ...recordingHost().host,
@@ -167,7 +181,23 @@ describe('a request the engine cannot answer', () => {
     requests.stop('codex');
 
     await vi.waitFor(() => {
-      expect(complaint.mock.calls.flat().join(' ')).toContain('the engine did not report');
+      expect(complained(complaint)).toContain('the engine did not report');
+    });
+    expect(complained(complaint)).toContain('stop the gateway "codex"');
+  });
+
+  test('a restart the engine refuses names the restart, not some other act', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const refusing: EngineHost = {
+      ...recordingHost().host,
+      restart: async () => Promise.reject(new Error('the engine did not report')),
+    };
+    const requests = requestsOver(refusing, await directoryHolding([gatewayNamed('codex', 8397)]));
+
+    requests.restart('codex');
+
+    await vi.waitFor(() => {
+      expect(complained(complaint)).toContain('restart the gateway "codex"');
     });
   });
 });

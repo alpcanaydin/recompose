@@ -1,5 +1,7 @@
 import { createServer } from 'node:http';
 
+import { portFromAddress } from './port-from-address';
+
 const IPV4_LOOPBACK = '127.0.0.1';
 
 export async function probeFreePort(): Promise<number> {
@@ -11,17 +13,11 @@ export async function probeFreePort(): Promise<number> {
       const bound = probe.address();
 
       probe.close(() => {
-        if (bound === null || typeof bound === 'string') {
-          refuse(
-            new Error(
-              'The operating system offered no port number when recompose asked for a free one.',
-            ),
-          );
-
-          return;
+        try {
+          answer(portFromAddress(bound));
+        } catch (error) {
+          refuse(error instanceof Error ? error : new Error(String(error)));
         }
-
-        answer(bound.port);
       });
     });
   });

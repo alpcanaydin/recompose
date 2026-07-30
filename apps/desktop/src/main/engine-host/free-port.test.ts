@@ -40,6 +40,12 @@ describe('offering a port the creation sheet can keep', () => {
     ).resolves.toBe(51234);
   });
 
+  test('the attempt count is a ceiling, so no probe runs past it', async () => {
+    await expect(
+      offerFreePort(new Set([8397]), probeAnswering([8397, 8397, 51234]), 2),
+    ).rejects.toThrow('free port');
+  });
+
   test('a probe that cannot bind carries its own failure out rather than looping', async () => {
     const refusingProbe = async (): Promise<number> =>
       Promise.reject(new Error('the loopback probe could not bind'));

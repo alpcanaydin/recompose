@@ -145,6 +145,27 @@ describe('reports the engine host did not ask for', () => {
 
     expect(host.states()).toEqual({ codex: { status: 'running' } });
   });
+
+  test('a report the schema rejects is written down rather than swallowed', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const scripted = scriptedChild(asAsked);
+    const { host } = hostOver(scripted, ['codex']);
+
+    await host.start(codex);
+    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'nonsense' } });
+
+    expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('engine');
+  });
+});
+
+describe('quitting before the engine ever ran', () => {
+  test('disposing without a child is quiet, because a start may never have happened', () => {
+    const { host } = hostOver(scriptedChild(asAsked), ['codex']);
+
+    expect(() => {
+      host.dispose();
+    }).not.toThrow();
+  });
 });
 
 describe('who hears the ledger change', () => {

@@ -40,7 +40,7 @@ async function storedGateways(ctx: EngineIpcContext): Promise<GatewayConfig[]> {
 async function portFreeOf(
   ctx: EngineIpcContext,
   stored: readonly GatewayConfig[],
-  besides: string,
+  besides?: string,
 ): Promise<number> {
   const taken = new Set<number>();
 
@@ -55,7 +55,7 @@ async function portFreeOf(
 
 async function offerPort(ctx: EngineIpcContext) {
   try {
-    return { ok: true as const, value: await portFreeOf(ctx, await storedGateways(ctx), '') };
+    return { ok: true as const, value: await portFreeOf(ctx, await storedGateways(ctx)) };
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);
   }
