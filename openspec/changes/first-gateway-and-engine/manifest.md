@@ -3,6 +3,21 @@ tier: full
 phase: discovery
 approvals:
   - the full tier over no override, because the gateway contract, a new engine subsystem, the process boundary, and three renderer slices all change together
-  - the gateway config schema stays at version 1 with no migration, because recompose has no release and no stored document to carry forward
+  - the gateway config schema stays at version 1 with no migration, and backward compatibility constrains nothing anywhere in this change, because recompose has no release and no stored document
+  - the scope adds the toolbar address pill with its copy affordance and the get-started checklist to the requested set, and leaves the canvas gateway node out
+  - a failed start reaches the screen as a binary stopped dot beside a separate error line naming the port that was taken
+  - the engine serves over Hono and the node-server adapter rather than Node's http, bought for the port-free behavior specs the testing rules ask for, which revisits the line ADR-0002 drew
+  - a failed start travels inside the engine state union rather than as an error code, so the invoke response, the push payload, and the error line read one representation
+  - the contracts cluster lands alone first and opens with the two spikes, the dependency-cruiser verdict on the modulePath import and the node-server adapter under the utility process, rather than meeting either at integration
+  - the story suite gains a second scheme in this change, a dark vitest project beside the light one and an assertion that the requested scheme actually applied, because the components this change adds include one whose only job is to carry a state color
+  - the engine child stays resident across start and stop, and the address copy runs in the renderer, because the address carries no secret and the vault precedent turns on secrecy
+  - each gateway owns its own loopback port and answers at the root of its own address, which supersedes ADR-0005, because a shared port left per-gateway start and stop at routing level and left the per-gateway status dot mirroring one engine state
+  - the slug reservation for v1 and health drops with the shared port, because nothing routes by path any longer, while the length bound and the Windows device-name refusal stay, because the slug is still a filename
+  - the settings screen loses the port outright, which carries a modified delta against the settings capability and retires a shipped row, its browser test, an accepted scenario, and a compiled acceptance feature
+  - the creation sheet takes a port after all, arriving filled with a free one, so a person with no opinion never picks a port and a person with one never fights the app
+  - a new gateway serves the moment it saves, and one that loses its port between the offer and the save stores anyway and shows as stopped beside its failure
+  - the menu bar lists every gateway, each carrying a submenu of start, stop, and restart with icons, and an entry a gateway's state rules out renders unavailable rather than disappearing, so the submenu keeps one shape
+  - a gateway settings surface becomes a separate feature, so this change offers no way to edit a name, a slug, or a port after creation
+  - a failed start offers to move the gateway to a free port, which the separate gateway settings feature makes load-bearing rather than optional, because it's the only recovery this change ships for a squatted port
 branch: worktree-first-gateway-and-engine
 ---

@@ -2,18 +2,18 @@
 
 ## Purpose
 
-The behavioral contract of a gateway in recompose. It covers how a person creates one, what the app stores, how the app lists it, and what the app shows about whether it serves.
+The behavioral contract of a gateway in recompose. It covers how a person creates one, what the app stores, how the app lists it, and what the app shows about whether it serves. It also covers reaching a gateway from the menu bar.
 
 ## ADDED Requirements
 
 ### Requirement: The empty state invites the first gateway
 
-With no gateway stored, the canvas MUST present a single call to action reading "Create your first gateway" rather than an empty surface. The call to action MUST open the creation sheet.
+With no gateway stored, the home surface MUST present a single call to action reading "Create your first gateway" rather than an empty surface. The call to action MUST open the creation sheet.
 
 #### Scenario: a person opens the app with no gateway stored
 
-- When the canvas loads and no gateway exists
-- Then the canvas shows the call to action
+- When the home surface loads and no gateway exists
+- Then the surface shows the call to action
 - And no gateway list renders in the sidebar
 
 #### Scenario: a person triggers the call to action
@@ -22,15 +22,28 @@ With no gateway stored, the canvas MUST present a single call to action reading 
 - Then the creation sheet opens
 - And focus lands on the name field
 
-### Requirement: The creation sheet takes a name and a slug
+### Requirement: A person creates a gateway after the first one
 
-The creation sheet MUST collect a display name and a slug, and nothing else. The sheet MUST NOT ask for a port, because the port belongs to settings and applies to every gateway at once. The sheet MUST reject a slug that breaks the slug format and a slug that a stored gateway already holds.
+The app MUST offer a way to create a gateway once one exists, because the empty-state call to action leaves with the empty state. That way MUST reach the same creation sheet, and a keyboard path MUST reach it too.
 
-#### Scenario: a person saves a valid gateway
+#### Scenario: a person creates a second gateway
 
-- When a person enters a display name and a free slug and saves
-- Then the app stores a gateway document carrying that name and slug
-- And the sheet closes
+- When one gateway exists and a person asks for a new one
+- Then the creation sheet opens
+
+### Requirement: The creation sheet takes a name, a slug, and a port
+
+The creation sheet MUST collect a display name, a slug, and a port. The port field MUST arrive filled with a free port, so a person who has no opinion never picks one. The sheet MUST reject a slug that breaks the slug format and a slug that a stored gateway already holds. It MUST also reject a port outside the accepted range and a port that a stored gateway already holds.
+
+#### Scenario: a person accepts what the sheet offers
+
+- When a person enters a display name and a free slug, leaves the port alone, and saves
+- Then the app stores a gateway carrying that name, that slug, and the offered port
+
+#### Scenario: a person picks their own port
+
+- When a person replaces the offered port with another free port and saves
+- Then the app stores the gateway carrying the port they typed
 
 #### Scenario: a person enters a slug a gateway already holds
 
@@ -44,34 +57,96 @@ The creation sheet MUST collect a display name and a slug, and nothing else. The
 - Then the app refuses the save
 - And the slug field states the format it accepts
 
+#### Scenario: a person enters a port a gateway already holds
+
+- When a person enters a port that a stored gateway holds
+- Then the app refuses the save
+- And the port field names the gateway holding it
+
 ### Requirement: The sheet previews the address the gateway serves
 
-While the sheet stands open, it MUST show the address the gateway would answer on, built from the stored engine port and the slug in the field. The preview MUST follow every keystroke in the slug field.
+While the sheet stands open, it MUST show the address the gateway would answer on, carrying the port in the port field. The preview MUST follow every keystroke in that field. The address MUST be the one a person pastes into a client without adding a path.
 
-#### Scenario: a person types a slug
+#### Scenario: a person changes the port
 
-- When a person types a slug into the sheet
-- Then the preview reads the loopback address carrying the stored engine port and that slug
+- When a person types a different port
+- Then the preview shows the loopback address carrying that port
 
-#### Scenario: the slug field stands empty
+### Requirement: A new gateway serves the moment it saves
 
-- When the slug field holds nothing
-- Then the preview shows the address with the slug segment absent rather than a partial address
+A gateway MUST start serving as it saves, so a person who just named a gateway can use its address at once. A gateway that loses its port to another process MUST save anyway and MUST show as stopped beside its failure.
 
-### Requirement: The sidebar lists gateways with their state
+#### Scenario: a person saves a gateway
 
-The sidebar MUST list every stored gateway. Each row MUST carry a status dot reporting whether the engine serves that gateway. The dot MUST distinguish running from stopped.
+- When a person saves a gateway carrying a free port
+- Then the gateway serves
+- And the sidebar shows it as running
 
-#### Scenario: a person saves the first gateway
+#### Scenario: another process takes the port between the offer and the save
 
-- When a gateway saves
-- Then the sidebar lists it
-- And the canvas stops showing the call to action
+- When a person saves a gateway whose port another process has taken
+- Then the app stores the gateway
+- And the sidebar shows it as stopped
+- And a message names the port
 
-#### Scenario: the engine stops
+### Requirement: The sidebar lists gateways with their own state
 
-- When the engine reports that it stopped
-- Then every gateway row shows the stopped state
+The sidebar MUST list every stored gateway. Each row MUST report whether that gateway serves, and the report MUST NOT rest on color alone. Two gateways in different states MUST read differently.
+
+#### Scenario: one gateway runs and another stays still
+
+- When one gateway runs and a second stays still
+- Then the sidebar shows the running one as running
+- And it shows the other one as stopped
+
+### Requirement: A person starts and stops one gateway from the screen
+
+The screen MUST offer a start and stop action for the gateway a person has selected, and that action MUST reach only that gateway. A gateway that fails to start MUST show as stopped beside a message naming the port it wanted, and the app MUST offer to move it to a free port.
+
+#### Scenario: a person starts the selected gateway
+
+- When a person starts the selected gateway
+- Then that gateway serves
+- And the address the screen shows answers
+
+#### Scenario: a person's gateway loses its port to another process
+
+- When a person starts a gateway whose port another process holds
+- Then the gateway shows as stopped
+- And a message names the port
+- And the app offers to move the gateway to a free port
+
+### Requirement: The menu bar reaches every gateway
+
+While the menu bar carries recompose, its menu MUST list every stored gateway. Each gateway MUST carry its own submenu holding start, stop, and restart, each with an icon. Every entry MUST show whether it's available rather than disappearing, so the submenu keeps one shape as state changes. The menu MUST follow gateway state without asking a person to reopen it.
+
+#### Scenario: a person opens the menu with a gateway running
+
+- When a person opens the menu bar menu and a gateway runs
+- Then that gateway's submenu offers stop and restart
+- And it shows start as unavailable
+
+#### Scenario: a person opens the menu with a gateway stopped
+
+- When a person opens the menu bar menu and a gateway stays still
+- Then that gateway's submenu offers start
+- And it shows stop and restart as unavailable
+
+#### Scenario: a person stops a gateway from the menu bar
+
+- When a person chooses stop in a running gateway's submenu
+- Then that gateway stops answering
+- And the sidebar shows it as stopped
+
+### Requirement: Two gateways never share a port
+
+The app MUST refuse to store a gateway carrying a port that a stored gateway already holds. The refusal MUST NOT overwrite the stored gateway.
+
+#### Scenario: a save collides with a stored gateway
+
+- When a save carries a port that a stored gateway holds
+- Then the app refuses the save
+- And the stored gateway keeps its port
 
 ### Requirement: A gateway exists before its first model
 

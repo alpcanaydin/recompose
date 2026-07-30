@@ -2,47 +2,43 @@
 
 ## Purpose
 
-The behavioral contract of the recompose engine. It covers the loopback server on the stored port and how that server separates one gateway from another. It also covers what the server answers before a provider connects, and how the app learns whether it runs.
+The behavioral contract of the recompose engine. It covers the loopback listener each gateway owns and what that listener answers before a provider connects. It also covers how a person starts and stops one gateway, and how the app learns which gateways serve.
 
 ## ADDED Requirements
 
-### Requirement: One server on the stored port
+### Requirement: A gateway owns its listener and its port
 
-The engine MUST run one HTTP server for every gateway rather than one server per gateway. The server MUST bind the loopback interface and the port the settings document holds. Binding any other interface MUST NOT happen, because recompose fronts paid accounts and a wider bind exposes them.
+Each gateway MUST answer on its own port rather than sharing one with its siblings. Every listener MUST bind the loopback interface and MUST NOT bind any other interface, because recompose fronts paid accounts and a wider bind exposes them. Two gateways MUST NOT hold the same port.
 
-#### Scenario: the engine starts
+#### Scenario: a person starts one gateway
 
-- When a person starts the engine
-- Then one server listens on the loopback interface at the stored port
+- When a person starts a gateway
+- Then a listener answers on that gateway's port on the loopback interface
+- And no other gateway's state changes
 
-#### Scenario: the port is already taken
+#### Scenario: two gateways run at once
 
-- When the stored port is already bound by another process
-- Then the engine reports that it failed to start
-- And the report names the port
+- When two gateways run
+- Then each answers on its own port
+- And a request to one never reaches the other
 
-### Requirement: The first path segment selects the gateway
+### Requirement: A gateway serves at the root of its own address
 
-The engine MUST read the first path segment of a request as a gateway slug and route the request to that gateway. A request naming a slug that no gateway holds MUST answer with a refusal that names the unknown slug.
+A gateway MUST answer at the root of its address rather than under a name-shaped path segment. The address a person copies MUST work as the base URL of a client without an added path.
 
-#### Scenario: a request names a stored gateway
+#### Scenario: a client points at a gateway
 
-- When a request arrives at the path carrying a stored gateway's slug
-- Then the engine handles it as that gateway's request
-
-#### Scenario: a request names an unknown gateway
-
-- When a request arrives carrying a slug that no gateway holds
-- Then the engine answers with a refusal naming the unknown slug
+- When a client sets its base URL to a running gateway's address
+- Then the request the client sends reaches that gateway
 
 ### Requirement: The health path answers for real
 
-Each gateway MUST answer its health path with a real response rather than a placeholder, because the health path proves the server routes before any provider exists.
+Each gateway MUST answer a health path with a real response rather than a placeholder, because the health path proves the listener answers before any provider exists.
 
 #### Scenario: a person checks a gateway's health
 
-- When a request arrives at a stored gateway's health path
-- Then the engine answers with a success carrying that gateway's slug
+- When a request arrives at a running gateway's health path
+- Then the engine answers with a success carrying that gateway's name
 
 ### Requirement: A model request answers with a typed refusal
 
@@ -50,21 +46,39 @@ While a gateway carries no virtual model, a model request against it MUST answer
 
 #### Scenario: a model request reaches a gateway with no model
 
-- When a model request arrives for a gateway carrying no virtual model
+- When a model request arrives for a running gateway carrying no virtual model
 - Then the engine answers with a typed refusal
 - And the refusal names the gateway and states that it holds no model
 
-### Requirement: The engine reports its lifecycle to the app
+### Requirement: A taken port fails one gateway alone
 
-The engine MUST report running and stopped state to the main process, and the main process MUST carry that state to the screen. The screen MUST drive start and stop.
+A gateway whose port another process already holds MUST fail to start, and the report MUST name the port. That failure MUST leave every other gateway untouched, and a second start attempt after the port frees MUST succeed.
 
-#### Scenario: a person starts the engine from the screen
+#### Scenario: another process holds the port
 
-- When a person starts the engine from the screen
-- Then the app shows the running state once the server listens
+- When a person starts a gateway whose port another process holds
+- Then that gateway reports that it failed to start
+- And the report names the port
+- And every other running gateway keeps serving
 
-#### Scenario: a person stops the engine from the screen
+#### Scenario: a person retries after the port frees
 
-- When a person stops the engine from the screen
-- Then the server stops listening
-- And the app shows the stopped state
+- When the port frees and a person starts the gateway again
+- Then the gateway serves
+
+### Requirement: The engine reports each gateway's state
+
+The engine MUST report per-gateway running and stopped state to the main process, and the main process MUST carry that state to the screen. The screen MUST drive start and stop for one gateway at a time.
+
+#### Scenario: a person stops one gateway of two
+
+- When a person stops one of two running gateways
+- Then that gateway stops answering
+- And the app shows it as stopped
+- And the other gateway keeps serving
+
+#### Scenario: a gateway arrives while its siblings run
+
+- When a person saves a new gateway while other gateways run
+- Then the new gateway starts serving on its own port
+- And no running gateway restarts
