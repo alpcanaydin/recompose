@@ -2,6 +2,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect } from '@playwright/test';
 
+import { chooseMenuItem } from '../app-menu';
 import { Given, Then, When } from '../fixtures';
 
 const settingsMenuLabel = 'Settings…';
@@ -9,35 +10,6 @@ const settingsMenuLabel = 'Settings…';
 const menuBarSwitchLabel = 'Show in menu bar';
 
 const firstControlWhenUnpackaged = 'Show in menu bar';
-
-async function chooseSettingsMenuItem(electronApp: ElectronApplication): Promise<void> {
-  await electronApp.evaluate(({ Menu }, label) => {
-    type MenuItems = NonNullable<ReturnType<typeof Menu.getApplicationMenu>>['items'];
-
-    const isMenuAction = (value: unknown): value is () => void => typeof value === 'function';
-
-    const withNested = (items: MenuItems): MenuItems =>
-      items.flatMap((item) => [item, ...withNested(item.submenu?.items ?? [])]);
-
-    const applicationMenu = Menu.getApplicationMenu();
-
-    if (applicationMenu === null) {
-      throw new Error('the application menu is absent, so the settings shortcut has no home');
-    }
-
-    const settings = withNested(applicationMenu.items).find((item) => item.label === label);
-
-    if (settings === undefined) {
-      throw new Error(`the application menu carries no ${label} item`);
-    }
-
-    if (!isMenuAction(settings.click)) {
-      throw new Error(`the ${label} menu item carries no action to run`);
-    }
-
-    settings.click();
-  }, settingsMenuLabel);
-}
 
 async function openWindowCount(electronApp: ElectronApplication): Promise<number> {
   return electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
@@ -79,7 +51,7 @@ Given('the menu bar switch is on and the last window is closed', async ({ electr
 });
 
 When('the maintainer presses the settings shortcut', async ({ electronApp }) => {
-  await chooseSettingsMenuItem(electronApp);
+  await chooseMenuItem(electronApp, settingsMenuLabel);
 });
 
 Then('the main window shows the settings screen', async ({ page }) => {
