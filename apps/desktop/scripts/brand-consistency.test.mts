@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { brandPalette } from './brand-palette.mts';
+import { iconOutputs } from './generate-icons.mts';
 import { flattenedMarkFills } from './icon-geometry.mts';
 
 function readMaster(name: string): string {
@@ -118,5 +119,38 @@ describe('the purpose drawn small master', () => {
 
   it('draws on the same 1024 canvas as the full mark', () => {
     expect(smallMaster).toContain('viewBox="0 0 1024 1024"');
+  });
+});
+
+describe('the committed rasters and containers', () => {
+  const regenerated = iconOutputs();
+
+  it('covers exactly the icon files the packaging targets resolve', () => {
+    expect(regenerated.map(([path]) => path.split('/').slice(-2).join('/')).toSorted()).toEqual([
+      'build/icon.ico',
+      'build/volume.icns',
+      'icons/128x128.png',
+      'icons/16x16.png',
+      'icons/24x24.png',
+      'icons/256x256.png',
+      'icons/32x32.png',
+      'icons/48x48.png',
+      'icons/512x512.png',
+      'icons/64x64.png',
+      'icons/96x96.png',
+      'resources/icon.png',
+      'resources/tray.png',
+      'resources/trayTemplate.png',
+      'resources/trayTemplate@2x.png',
+    ]);
+  });
+
+  it('matches a regeneration from the masters byte for byte, so no hand edit survives', () => {
+    for (const [path, bytes] of regenerated) {
+      expect({ path, bytes: Buffer.from(readFileSync(path)) }).toEqual({
+        path,
+        bytes: Buffer.from(bytes),
+      });
+    }
   });
 });

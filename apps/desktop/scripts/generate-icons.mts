@@ -69,7 +69,7 @@ function volumeEntries(volume: string, small: string): readonly IcnsEntry[] {
   }));
 }
 
-function generate(): readonly [string, Uint8Array][] {
+export function iconOutputs(): readonly [string, Uint8Array][] {
   guardFloor(icoPlan, ICO_FLOOR, 'Windows icon');
   guardFloor(linuxLadder, LADDER_FLOOR, 'Linux ladder');
 
@@ -89,11 +89,13 @@ function generate(): readonly [string, Uint8Array][] {
   ];
 }
 
-const outputs = generate();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const outputs = iconOutputs();
 
-for (const [path, bytes] of outputs) {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, bytes);
+  for (const [path, bytes] of outputs) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, bytes);
+  }
+
+  console.log(`Wrote ${outputs.length} icon files`);
 }
-
-console.log(`Wrote ${outputs.length} icon files`);
