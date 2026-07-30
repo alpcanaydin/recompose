@@ -50,7 +50,9 @@ async function openSettings(page: Page): Promise<void> {
 
 test('the home screen matches its baseline', async ({ electronApp, page }) => {
   await pinLightScheme(electronApp);
-  await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Create your first gateway' }),
+  ).toBeVisible();
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('home-empty.png', capture);
 });
