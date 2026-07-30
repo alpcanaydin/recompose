@@ -29,5 +29,7 @@ approvals:
   - the frozen scenario set took its first amendment: the state mark reads as a filled dot in two colors, green for running and red for stopped, so the gateways delta drops the rule that the report may not rest on color alone
   - the amendment carries a known cost the maintainer accepted, that green and red are the pair a reader with deuteranopia or protanopia can't separate, and the mark's accessible name is what still carries the state
   - the primary button fills with a new single-value accent token rather than the accent itself, because a white label on the accent measured 4.01 to 1 and axe refused it, which departs from the light-dark pairing ADR-0009 asks for and follows the surface-thumb precedent instead
+  - the get-started card and the empty-state invitation share the home surface from the first run, resolving a contradiction the design carried, because the exclusive reading left the card's first step unable to read as current and left the View menu's restore item with nothing to restore
+  - the three widget slices fold into one gateway group, because Steiger's repetitive-naming rule rejects gateway-sidebar, gateway-toolbar, and gateway-create beside each other under fail-on-warnings
 branch: worktree-first-gateway-and-engine
 ---

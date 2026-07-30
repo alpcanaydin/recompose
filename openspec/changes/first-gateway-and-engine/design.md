@@ -124,13 +124,13 @@ The sheet's port field arrives filled by `gateways:offer-port`. Main binds loopb
 
 ### The renderer
 
-The `widgets` layer opens with three slices. `gateway-sidebar` renders the "Local Gateways" group, one row per stored gateway with a trailing status indicator, and the "New Gateway…" row. `gateway-toolbar` renders the start and stop control, the monospace address pill with its copy button, and the failed-start line on its own row. `gateway-create` renders the creation sheet on the new `Sheet` primitive with its live "Serves at" preview.
+The `widgets` layer opens with one `gateway` slice group holding three slices, because Steiger rejects three sibling names sharing a prefix. `sidebar` renders the "Local Gateways" group, one row per stored gateway with a trailing status indicator, and the "New Gateway…" row. `toolbar` renders the start and stop control, the monospace address pill with its copy button, and the failed-start line on its own row. `create` renders the creation sheet on the new `Sheet` primitive with its live "Serves at" preview.
 
 The root layout owns the toolbar container, replacing the bare drag strip, and renders the sidebar widget under the static links. The toolbar cluster carries `app-no-drag` and renders while a gateway route is active. The creation sheet mounts once in the root layout and opens from a root-level `create` search param. The empty-state call to action, the sidebar row, and the application menu all drive the same param. The menu path reuses the shipped settings-shortcut navigation with a press count. The View menu's "Show Get Started" item drives a `getStarted` param the same way, which clears the dismissal key.
 
 Data flows through TanStack Query. `gatewaysQueryOptions` and `engineStatesQueryOptions` live in `shared/api`, because pages and widgets both read them and neither layer may import the other's slices. The route loaders warm both. The `engine:state` push writes into the cache through `setQueryData` on the engine-states key, and the gateway list stays untouched. The subscription binds once at app setup through the preload disposer, so no listener leaks across route changes.
 
-The home surface shows the ghost graph, the heading, the body copy, and the call to action while no gateway exists. Once one exists, home shows a plain surface with the get-started card until the person dismisses it. The card derives its step state from stored documents: a gateway exists, an account exists, and the two waiting steps name what they wait for. Dismissal persists in `localStorage` under a named renderer key, because coaching chrome isn't domain data.
+The home surface shows the ghost graph, the heading, the body copy, and the call to action while no gateway exists. The get-started card sits beside them from the first run, not after it, and stays until the person dismisses it. An earlier revision made the two exclusive. That reading left step one unable to read as the current step, and left the View menu's restore item with nothing to restore on a fresh install. The card derives its step state from stored documents: a gateway exists, an account exists, and the two waiting steps name what they wait for. Dismissal persists in `localStorage` under a named renderer key, because coaching chrome isn't domain data.
 
 ### What the settings surface sheds
 
@@ -386,9 +386,9 @@ The `role="alert"` line for a failed start inserts a fresh node per attempt, bec
 
 ### Renderer, widgets and pages
 
-- `apps/desktop/src/renderer/src/widgets/gateway-sidebar/`: `index.ts`, `ui/gateway-sidebar.tsx`, and its stories (create)
-- `apps/desktop/src/renderer/src/widgets/gateway-toolbar/`: `index.ts`, `ui/gateway-toolbar.tsx`, `ui/failed-start-line.tsx`, and their stories (create)
-- `apps/desktop/src/renderer/src/widgets/gateway-create/`: `index.ts`, `ui/create-gateway-sheet.tsx`, its stories, and `lib/` for the field-message derivations (create)
+- `apps/desktop/src/renderer/src/widgets/gateway/sidebar/`: `index.ts`, `ui/gateway-sidebar.tsx`, and its stories (create)
+- `apps/desktop/src/renderer/src/widgets/gateway/toolbar/`: `index.ts`, `ui/gateway-toolbar.tsx`, `ui/failed-start-line.tsx`, and their stories (create)
+- `apps/desktop/src/renderer/src/widgets/gateway/create/`: `index.ts`, `ui/create-gateway-sheet.tsx`, its stories, and `lib/` for the field-message derivations (create)
 - `apps/desktop/src/renderer/src/pages/home/ui/empty-state.tsx`: the ghost graph, the heading, the body copy, and the call to action (modify)
 - `apps/desktop/src/renderer/src/pages/home/ui/ghost-graph.tsx`: the `aria-hidden` inline SVG (create)
 - `apps/desktop/src/renderer/src/pages/home/ui/get-started-card.tsx`: the checklist card with derived step state and the dismissal (create)
@@ -461,9 +461,9 @@ The `role="alert"` line for a failed start inserts a fresh node per attempt, bec
 - Produces:
   - `shared/api`: `gatewaysQueryOptions`, `engineStatesQueryOptions`, `useSaveGateway()`, `useStartGateway()`, `useStopGateway()`, `useMoveGatewayPort()`, `fetchOfferedPort()`, and `bindEngineStatesToCache(queryClient): () => void`
   - `shared/ui`: `Sheet({ open, onOpenChange, title, description, initialFocus, footer, children })`, `StatusIndicator({ status })`, and `CopyButton({ value, label })`
-  - `widgets/gateway-sidebar`: `GatewaySidebar()`
-  - `widgets/gateway-toolbar`: `GatewayToolbar({ slug })`
-  - `widgets/gateway-create`: `CreateGatewaySheet({ open, onOpenChange })`
+  - `widgets/gateway/sidebar`: `GatewaySidebar()`
+  - `widgets/gateway/toolbar`: `GatewayToolbar({ slug })`
+  - `widgets/gateway/create`: `CreateGatewaySheet({ open, onOpenChange })`
 
 ## Decisions
 
@@ -543,7 +543,7 @@ Pages and widgets both read the gateway list and the engine states, and FSD forb
 
 ### 9. The creation sheet is a widget opened by a search param
 
-The sheet mounts once in the root layout and opens from a root-level `create` search param. The empty-state button, the sidebar row, and the menu item all drive the same param, and the menu path reuses the shipped settings-shortcut navigation with a press count. The sheet component lives in `widgets/gateway-create`, because a page slice can't serve the sidebar widget and the menu at once.
+The sheet mounts once in the root layout and opens from a root-level `create` search param. The empty-state button, the sidebar row, and the menu item all drive the same param, and the menu path reuses the shipped settings-shortcut navigation with a press count. The sheet component lives in `widgets/gateway/create`, because a page slice can't serve the sidebar widget and the menu at once.
 
 **Alternatives considered:** the sheet inside `pages/home`, rejected because opening it from a canvas route would force a surface change first. A dedicated push event for the menu, rejected because navigation already reaches the renderer and a second mechanism would need its own contract.
 
