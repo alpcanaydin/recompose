@@ -1,9 +1,7 @@
 import { Menu } from 'electron';
 
-import { buildAppMenuTemplate } from './app-menu-template';
+import { buildAppMenuTemplate, type AppMenuHandlers } from './app-menu-template';
 
-export function installAppMenu(onOpenSettings: () => void): void {
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate(buildAppMenuTemplate(process.platform, onOpenSettings)),
-  );
+export function installAppMenu(handlers: AppMenuHandlers): void {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildAppMenuTemplate(process.platform, handlers)));
 }

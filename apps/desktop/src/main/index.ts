@@ -27,6 +27,8 @@ import { resolveUserDataOverride } from './user-data-override';
 import {
   createMainWindow,
   HOME_ROUTE,
+  openGetStartedSurface,
+  openNewGatewaySurface,
   openSettingsSurface,
   showMainWindow,
 } from './windows/main-window';
@@ -196,7 +198,11 @@ async function startRecompose(): Promise<void> {
 
   registerPermissionHandlers();
 
-  installAppMenu(openSettingsSurface);
+  installAppMenu({
+    onOpenSettings: openSettingsSurface,
+    onNewGateway: openNewGatewaySurface,
+    onShowGetStarted: openGetStartedSurface,
+  });
 
   applySettingsAtBoot(boot.settings);
 

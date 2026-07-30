@@ -10,7 +10,8 @@ import {
   type NavigationPolicy,
 } from './navigation-policy';
 import {
-  SETTINGS_SHORTCUT_ROUTE,
+  getStartedRouteFor,
+  newGatewayRouteFor,
   rendererBaseFor,
   rendererUrlFor,
   settingsShortcutRouteFor,
@@ -105,18 +106,18 @@ function pressCount(): number {
   return shortcutPresses;
 }
 
-export function openSettingsSurface(): void {
+function openSurface(routeFor: (press: number) => string): void {
   const [openWindow] = BrowserWindow.getAllWindows();
 
   if (openWindow === undefined) {
-    createMainWindow(SETTINGS_SHORTCUT_ROUTE);
+    createMainWindow(routeFor(pressCount()));
 
     return;
   }
 
   reveal(openWindow);
 
-  const route = settingsShortcutRouteFor(pressCount());
+  const route = routeFor(pressCount());
 
   if (openWindow.webContents.getURL().startsWith(rendererBase())) {
     void openWindow.webContents.executeJavaScript(
@@ -128,4 +129,16 @@ export function openSettingsSurface(): void {
   }
 
   void openWindow.webContents.loadURL(rendererUrlFor(rendererBase(), route));
+}
+
+export function openSettingsSurface(): void {
+  openSurface(settingsShortcutRouteFor);
+}
+
+export function openNewGatewaySurface(): void {
+  openSurface(newGatewayRouteFor);
+}
+
+export function openGetStartedSurface(): void {
+  openSurface(getStartedRouteFor);
 }
