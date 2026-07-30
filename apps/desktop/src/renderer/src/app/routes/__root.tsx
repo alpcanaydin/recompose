@@ -1,7 +1,16 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import { Link, Outlet, createRootRouteWithContext } from '@tanstack/react-router';
-import { Suspense, lazy, useId } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Outlet, createRootRouteWithContext, useNavigate, useParams } from '@tanstack/react-router';
+import { Suspense, lazy, useEffect } from 'react';
+
+import {
+  bindEngineStatesToCache,
+  engineStatesQueryOptions,
+  gatewaysQueryOptions,
+} from '../../shared/api';
+import { CreateGatewaySheet } from '../../widgets/gateway/create';
+import { AppSidebar, AppToolbar } from './-app-shell';
 
 const RouterDevtools =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
@@ -25,42 +34,98 @@ export type RouterAppContext = {
   queryClient: QueryClient;
 };
 
+export type RootSearch = {
+  create?: true;
+  getStarted?: true;
+  at?: string;
+};
+
+function pressMark(at: unknown): string | undefined {
+  return typeof at === 'string' || typeof at === 'number' ? String(at) : undefined;
+}
+
+function asked(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
+function surfaceRequest(search: Record<string, unknown>): RootSearch {
+  const request: RootSearch = {};
+  const at = pressMark(search['at']);
+
+  if (asked(search['create'])) {
+    request.create = true;
+  }
+
+  if (asked(search['getStarted'])) {
+    request.getStarted = true;
+  }
+
+  if (at !== undefined) {
+    request.at = at;
+  }
+
+  return request;
+}
+
+function withSheet(previous: RootSearch): RootSearch {
+  return { ...previous, create: true };
+}
+
+function withoutSheet(previous: RootSearch): RootSearch {
+  const remaining: RootSearch = {};
+
+  if (previous.getStarted === true) {
+    remaining.getStarted = true;
+  }
+
+  if (previous.at !== undefined) {
+    remaining.at = previous.at;
+  }
+
+  return remaining;
+}
+
 export const Route = createRootRouteWithContext<RouterAppContext>()({
+  validateSearch: surfaceRequest,
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(gatewaysQueryOptions),
+      context.queryClient.ensureQueryData(engineStatesQueryOptions),
+    ]);
+  },
   component: RootLayout,
   notFoundComponent: NotFound,
 });
 
 function RootLayout() {
-  const systemId = useId();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { create } = Route.useSearch();
+  const { slug } = useParams({ strict: false });
+
+  useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
 
   return (
     <div className="flex h-full overflow-hidden">
-      <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-4 pt-13 pb-4 text-body text-ink-secondary">
-        <nav className="app-no-drag flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <Link className="nav-item" to="/">
-              Gateways
-            </Link>
-            <Link className="nav-item" to="/providers">
-              Providers
-            </Link>
-          </div>
-          <div aria-labelledby={systemId} className="flex flex-col gap-2" role="group">
-            <h2 className="text-overline text-ink uppercase" id={systemId}>
-              System
-            </h2>
-            <Link className="nav-item" to="/settings">
-              Settings
-            </Link>
-          </div>
-        </nav>
-      </aside>
-      <main className="relative flex-1 bg-surface-content text-body">
-        <div aria-hidden className="app-drag absolute inset-x-0 top-0 h-13" />
-        <div className="h-full overflow-y-auto px-6 pt-13 pb-6">
+      <AppSidebar
+        onNewGateway={() => {
+          void navigate({ to: '.', search: withSheet });
+        }}
+      />
+      <main className="flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
+        <AppToolbar slug={slug} />
+        <div className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </div>
       </main>
+      <CreateGatewaySheet
+        onOpenChange={(open) => {
+          if (!open) {
+            void navigate({ to: '.', search: withoutSheet, replace: true });
+          }
+        }}
+        open={create === true}
+      />
       <Suspense>
         <RouterDevtools />
         <QueryDevtools />

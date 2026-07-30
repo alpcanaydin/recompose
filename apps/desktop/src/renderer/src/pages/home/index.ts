@@ -1,1 +1,1 @@
-export { EmptyState } from './ui/empty-state';
+export { HomePage } from './ui/home-page';
