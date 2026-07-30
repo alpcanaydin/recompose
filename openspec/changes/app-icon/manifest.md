@@ -12,5 +12,6 @@ approvals:
   - the runner pin covers both mac legs, and the continuous-integration Linux leg builds real artifacts so the packaged assertions have something to inspect
   - the palette records seven anchors with fills derived through one pure function, because literals with hidden arithmetic invite drift
   - the packaged lane keeps plain Playwright, so the gherkin stays the review contract and the glass edge and tray tint stay manual checks
+  - the raster interface widened at the task 1 replan to carry the renderer's own PNG bytes, deleting the hand-written encoder, after the review proved premultiplied alpha in the shipped ico
 branch: worktree-app-icon
 ---
