@@ -4,6 +4,8 @@ import type { GatewayConfig } from '@recompose/contracts';
 import { expect } from '@playwright/test';
 import { GATEWAY_CONFIG_VERSION } from '@recompose/contracts';
 
+const COPY_ADDRESS = 'Copy address';
+
 const CREATE_GATEWAY = 'Create Gateway';
 
 const CREATION_SHEET = 'Create a gateway';
@@ -32,6 +34,44 @@ export async function storedGateway(page: Page, name: string): Promise<GatewayCo
 
 export function gatewayRow(page: Page, name: string): Locator {
   return page.getByRole('link', { name: new RegExp(`^${name} (Running|Stopped)$`, 'u') });
+}
+
+export function gatewayRowReading(page: Page, name: string, state: string): Locator {
+  return page.getByRole('link', { exact: true, name: `${name} ${state}` });
+}
+
+/** Selects a gateway, which is the only way to reach the toolbar that acts on it. */
+export async function openGateway(page: Page, name: string): Promise<void> {
+  await gatewayRow(page, name).click();
+  await expect(page.getByRole('button', { name: COPY_ADDRESS })).toBeVisible();
+}
+
+/** The address a person copies out of the toolbar, read off the pill rather than computed. */
+export async function shownAddress(page: Page): Promise<string> {
+  const pill = page.getByRole('button', { name: COPY_ADDRESS }).locator('xpath=..');
+  const shown = await pill.innerText();
+  const [address] = /http:\/\/\S+/u.exec(shown) ?? [];
+
+  if (address === undefined) {
+    throw new Error(`the toolbar shows no address, only "${shown}"`);
+  }
+
+  return address;
+}
+
+/** Stops a gateway without walking the toolbar, for a scenario that starts from a stopped one. */
+export async function haltGateway(page: Page, name: string): Promise<void> {
+  const { slug } = await storedGateway(page, name);
+  const answer = await page.evaluate(
+    async (stopping) => window.recompose['engine:stop']({ slug: stopping }),
+    slug,
+  );
+
+  if (!answer.ok) {
+    throw new Error(`the app could not stop "${name}": ${answer.error.message}`);
+  }
+
+  await expect(gatewayRowReading(page, name, 'Stopped')).toBeVisible();
 }
 
 export function creationSheet(page: Page): Locator {

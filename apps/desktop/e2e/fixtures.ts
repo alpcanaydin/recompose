@@ -2,9 +2,12 @@ import type { ElectronApplication, Page } from '@playwright/test';
 
 import { _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { type Server } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createBdd, test as base } from 'playwright-bdd';
+
+import { dropServer, holdPort, LOOPBACK_HOSTS } from './loopback-ports';
 
 const appRoot = join(__dirname, '..');
 
@@ -16,10 +19,36 @@ export function inheritedEnv(): Record<string, string> {
   );
 }
 
+/** Holds loopback ports away from recompose, the way a rival process on the machine would. */
+export type PortSquatter = {
+  take: (port: number) => Promise<void>;
+  release: (port: number) => Promise<void>;
+};
+
 type ElectronFixtures = {
   electronApp: ElectronApplication;
   page: Page;
+  portSquatter: PortSquatter;
 };
+
+async function takePort(held: Map<number, Server[]>, port: number): Promise<void> {
+  const holders = await Promise.all(LOOPBACK_HOSTS.map(async (host) => holdPort(host, port)));
+  const bound = holders.filter((holder): holder is Server => holder !== null);
+
+  if (bound.length === 0) {
+    throw new Error(`the scenario could not take port ${String(port)} away from recompose`);
+  }
+
+  held.set(port, bound);
+}
+
+async function releasePort(held: Map<number, Server[]>, port: number): Promise<void> {
+  const bound = held.get(port) ?? [];
+
+  held.delete(port);
+
+  await Promise.all(bound.map(dropServer));
+}
 
 function platformHoldsLoginItem(): boolean {
   return process.platform === 'darwin' || process.platform === 'win32';
@@ -116,6 +145,18 @@ export const test = base.extend<ElectronFixtures>({
 
     await page.waitForLoadState('domcontentloaded');
     await use(page);
+  },
+  portSquatter: async ({}, use) => {
+    const held = new Map<number, Server[]>();
+
+    try {
+      await use({
+        take: async (port) => takePort(held, port),
+        release: async (port) => releasePort(held, port),
+      });
+    } finally {
+      await Promise.all([...held.keys()].map(async (port) => releasePort(held, port)));
+    }
   },
 });
 

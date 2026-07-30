@@ -1,9 +1,9 @@
 import { createServer, type Server } from 'node:net';
 
-const LOOPBACK_HOSTS = ['127.0.0.1', '::1'];
+export const LOOPBACK_HOSTS = ['127.0.0.1', '::1'];
 
 /** Binds one loopback family, answering with nothing when that family refuses the port. */
-async function holdPort(host: string, port: number): Promise<Server | null> {
+export async function holdPort(host: string, port: number): Promise<Server | null> {
   return new Promise<Server | null>((settle) => {
     const server = createServer();
 
@@ -16,7 +16,7 @@ async function holdPort(host: string, port: number): Promise<Server | null> {
   });
 }
 
-async function dropServer(server: Server): Promise<void> {
+export async function dropServer(server: Server): Promise<void> {
   return new Promise<void>((settle) => {
     server.close(() => {
       settle();
