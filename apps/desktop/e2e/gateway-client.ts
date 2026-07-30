@@ -19,12 +19,28 @@ export async function readFrom(address: string, path: string): Promise<GatewayAn
   return ask(address, path, 'GET');
 }
 
+export async function postTo(address: string, path: string): Promise<GatewayAnswer> {
+  return ask(address, path, 'POST');
+}
+
+export function addressOfPort(port: number): string {
+  return `http://localhost:${String(port)}`;
+}
+
 function isObject(value: unknown): value is object {
   return typeof value === 'object' && value !== null;
 }
 
 function namesAGateway(body: unknown): body is { gateway: string } {
   return isObject(body) && 'gateway' in body && typeof body.gateway === 'string';
+}
+
+function carriesMessage(value: unknown): value is { message: string } {
+  return isObject(value) && 'message' in value && typeof value.message === 'string';
+}
+
+function carriesRefusal(body: unknown): body is { error: { message: string } } {
+  return isObject(body) && 'error' in body && carriesMessage(body.error);
 }
 
 /** The gateway a health answer names, which is the display name rather than the slug. */
@@ -34,4 +50,13 @@ export function namedGateway(body: unknown): string {
   }
 
   return body.gateway;
+}
+
+/** The sentence a refusal carries, which both dialects nest under an error object. */
+export function refusalSentence(body: unknown): string {
+  if (!carriesRefusal(body)) {
+    throw new Error(`the answer carries no typed refusal: ${JSON.stringify(body)}`);
+  }
+
+  return body.error.message;
 }
