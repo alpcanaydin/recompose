@@ -40,9 +40,24 @@ On macOS 26 and later, the system MUST render the icon from a native Icon Compos
 - When the app runs on macOS 15
 - Then the dock renders the legacy bitmap icon
 
+### Requirement: The macOS icon carries default, dark, and mono appearances
+
+The Icon Composer asset MUST define the default, dark, and mono appearances. The note geometry MUST stay identical across appearances. Only the tile changes. In dark, the tile MUST deepen toward the dark band palette and the light outer band MUST drop. In mono, the note MUST stand alone, and the system derives clear and tinted from it.
+
+#### Scenario: the dock switches to dark
+
+- When the system appearance turns dark on macOS 26
+- Then the icon tile deepens while the note keeps its geometry
+
+#### Scenario: a person picks a tinted icon style
+
+- When a person applies a tinted icon style on macOS 26
+- Then the system derives the tint from the mono appearance
+- And the mono appearance shows the note alone
+
 ### Requirement: The menu bar shows the note glyph alone
 
-The tray icon MUST show only the note glyph from the recompose mark, without the frame or the background. On macOS it MUST stay a template image the system tints. On Windows and Linux the coloured variant MUST serve.
+The tray icon MUST show only the note glyph from the recompose mark, without the frame or the background. On macOS it MUST stay a template image the system tints. On Windows and Linux the cream note with its dark contour MUST serve, because a bare glyph has to read on light and dark panels alike.
 
 #### Scenario: the menu bar extra on macOS
 
@@ -53,4 +68,5 @@ The tray icon MUST show only the note glyph from the recompose mark, without the
 #### Scenario: the notification area on Windows
 
 - When the app adds its notification area icon
-- Then the notification area shows the coloured note glyph
+- Then the notification area shows the cream note glyph with its dark contour
+- And the glyph reads on a light taskbar and on a dark taskbar

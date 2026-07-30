@@ -1,3 +1,4 @@
+actool
 affordances
 Airtable
 AKIAIOSFODNN
@@ -60,7 +61,9 @@ Langdock
 Laravel
 Lemni
 letrec
+librsvg
 libsecret
+libvips
 lifecycles
 lintable
 lockfiles
@@ -93,13 +96,17 @@ pipx
 pressable
 proptypes
 pypi
+rasterizes
+rasterizing
 recomposesh
 reimplementation
 renderitem
 Replit
 respawned
+resvg
 rharkor
 rhysd
+rsvg
 screencapture
 Scriptable
 scrollview
