@@ -15,6 +15,29 @@ const HEX_TRIPLET = /^#[0-9a-f]{6}$/i;
 const MARK_STOP_OPACITY = 0.8;
 const NOTE_SPAN_TOP = 46 / 256;
 const NOTE_SPAN_BOTTOM = 210 / 256;
+const FLUENT_RADIUS_ON_48 = 2;
+const FLUENT_GRID = 48;
+const SMALL_GLYPH_CUTOFF_POINTS = 32;
+
+export const darkBandInsetFraction = 12 / 256;
+export const tileInsetFraction = 24 / 256;
+
+export const icoPlan: readonly number[] = Object.freeze([16, 24, 32, 48, 256]);
+export const linuxLadder: readonly number[] = Object.freeze([
+  16, 24, 32, 48, 64, 96, 128, 256, 512,
+]);
+
+export function concentricRadius(outerRadius: number, inset: number): number {
+  return Math.max(outerRadius - inset, 0);
+}
+
+export function fluentOuterRadius(size: number): number {
+  return (size * FLUENT_RADIUS_ON_48) / FLUENT_GRID;
+}
+
+export function usesSmallGlyph(points: number): boolean {
+  return points < SMALL_GLYPH_CUTOFF_POINTS;
+}
 
 function channelsOf(color: string): ColorChannels {
   if (!HEX_TRIPLET.test(color)) {
