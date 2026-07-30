@@ -190,7 +190,7 @@ describe('the Windows icon payloads', () => {
 describe('the alpha a Windows icon bitmap carries', () => {
   const straight = [15, 30, 75, 17, 200, 100, 50, 255, 0, 0, 0, 0, 255, 128, 0, 128];
   const premultipliedByTheRenderer = Uint8Array.from([
-    1, 2, 5, 17, 200, 100, 50, 255, 0, 0, 0, 0, 128, 64, 0, 128,
+    1, 2, 5, 17, 200, 100, 50, 255, 9, 9, 9, 0, 128, 64, 0, 128,
   ]);
   const container = encodeIco([
     { size: 2, rgba: premultipliedByTheRenderer, png: rendererPng(0x02) },
@@ -199,6 +199,10 @@ describe('the alpha a Windows icon bitmap carries', () => {
 
   it('divides out the premultiplied alpha, because the format stores it straight', () => {
     expect([...pixelsFromBitmap(payload, 2)]).toEqual(straight);
+  });
+
+  it('drops the color of a sample with no alpha, rather than dividing by zero', () => {
+    expect([...pixelsFromBitmap(payload, 2)].slice(8, 12)).toEqual([0, 0, 0, 0]);
   });
 
   it('leaves the alpha channel itself untouched', () => {
