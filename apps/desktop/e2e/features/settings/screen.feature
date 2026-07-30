@@ -31,6 +31,10 @@ Feature: The settings screen
     Then the Server group offers no port control
     And the stored settings document holds no port
 
+  Scenario: The bind address states a value rather than offering a control
+    Then the bind address row reads "127.0.0.1"
+    And the row states that recompose never serves the network
+
   Scenario: Telemetry states a value rather than offering a control
     Then the telemetry row reads "None"
     And the row states that recompose never phones home

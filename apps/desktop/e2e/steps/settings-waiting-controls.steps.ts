@@ -152,16 +152,6 @@ Then('the row names launch-time start as what it waits for', async ({ page }) =>
   );
 });
 
-Then('the bind address row reads {string}', async ({ page }, address: string) => {
-  await expect(page.getByText(address, { exact: true })).toBeVisible();
-});
-
-Then('the row states that recompose never serves the network', async ({ page }) => {
-  await expect(
-    page.getByText('Fixed at loopback. recompose never serves the network.'),
-  ).toBeVisible();
-});
-
 Then('the row names the canvas as what it waits for', async ({ page }) => {
   await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
     containing('Waiting on the canvas.'),

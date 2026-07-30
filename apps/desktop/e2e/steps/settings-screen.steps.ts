@@ -138,6 +138,19 @@ Then('the stored settings document holds no port', async ({ page }) => {
   expect(Object.keys(stored.value)).not.toContain('enginePort');
 });
 
+Then('the bind address row reads {string}', async ({ page }, value: string) => {
+  await expect(section(page, 'Server').getByText(value, { exact: true })).toBeVisible();
+  await expect(section(page, 'Server').getByRole('textbox', { name: 'Bind address' })).toHaveCount(
+    0,
+  );
+});
+
+Then('the row states that recompose never serves the network', async ({ page }) => {
+  await expect(
+    section(page, 'Server').getByText('Fixed at loopback. recompose never serves the network.'),
+  ).toBeVisible();
+});
+
 Then('the telemetry row reads {string}', async ({ page }, value: string) => {
   await expect(section(page, 'General').getByText(value, { exact: true })).toBeVisible();
 });
