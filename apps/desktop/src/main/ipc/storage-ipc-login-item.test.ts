@@ -23,6 +23,7 @@ async function osBackedContext(osHolds: boolean) {
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
+    startGateway: () => undefined,
     readLoginItem: () => operatingSystem,
     applySettings: (settings, askedLoginItem) => {
       applyChosenSettings(

@@ -41,6 +41,7 @@ function context(): StorageIpcContext {
     writeClipboard: () => undefined,
     applySettings: () => undefined,
     readLoginItem: () => false,
+    startGateway: () => undefined,
   };
 }
 

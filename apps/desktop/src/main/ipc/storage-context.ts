@@ -1,4 +1,4 @@
-import type { Settings } from '@recompose/contracts';
+import type { EngineGateway, Settings } from '@recompose/contracts';
 
 import { join } from 'node:path';
 
@@ -17,6 +17,8 @@ export type StorageIpcContext = {
   onCorrupt: (quarantinedPath: string) => void;
   writeClipboard: (text: string) => void;
   applySettings: (settings: Settings, askedLoginItem: boolean | undefined) => void;
+  /** A stored gateway serves at once, and the outcome reaches the screen by push rather than here. */
+  startGateway: (gateway: EngineGateway) => void;
 };
 
 export type StoragePaths = {

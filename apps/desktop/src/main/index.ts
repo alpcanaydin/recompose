@@ -109,6 +109,11 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       homeFolder: app.getPath('home'),
       readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,
+      startGateway: (gateway) => {
+        engineHost.start(gateway).catch((error: unknown) => {
+          console.error(`recompose stored ${gateway.slug} but could not start it`, error);
+        });
+      },
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),

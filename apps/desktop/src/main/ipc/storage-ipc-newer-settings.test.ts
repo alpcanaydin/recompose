@@ -28,6 +28,7 @@ async function contextHoldingAFutureDocument(): Promise<StorageIpcContext> {
     onCorrupt: () => undefined,
     writeClipboard: () => undefined,
     readLoginItem: () => false,
+    startGateway: () => undefined,
     applySettings: () => undefined,
   };
 }
