@@ -4,6 +4,7 @@ import type { EngineHost } from '../engine-host/engine-host';
 import type { IpcHandlers } from './dispatch';
 
 import { offerFreePort } from '../engine-host/free-port';
+import { storedEngineGateway } from '../engine-host/stored-gateway';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { storagePathsFor } from './storage-context';
 import { ipcFailure, storageFailure } from './storage-envelope';
@@ -82,13 +83,17 @@ async function movePort(ctx: EngineIpcContext, slug: string) {
 
 async function startGateway(ctx: EngineIpcContext, slug: string) {
   try {
-    const starting = (await storedGateways(ctx)).find((config) => config.slug === slug);
+    const starting = await storedEngineGateway(
+      storagePathsFor(ctx.userDataPath).gatewaysDir,
+      ctx.onCorrupt,
+      slug,
+    );
 
     if (starting === undefined) {
       return noSuchGateway(slug);
     }
 
-    return { ok: true as const, value: await ctx.host.start(asEngineGateway(starting)) };
+    return { ok: true as const, value: await ctx.host.start(starting) };
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);
   }

@@ -8,6 +8,7 @@ import type { IpcHandlers } from './ipc/dispatch';
 import type { SettingsEffects } from './settings/apply-settings';
 
 import { createEngineHost } from './engine-host/engine-host';
+import { createGatewayLifecycleRequests } from './engine-host/gateway-lifecycle-requests';
 import { probeFreePort } from './engine-host/probe-free-port';
 import { spawnEngineChild } from './engine-host/spawn-engine';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
@@ -18,11 +19,17 @@ import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { applyBootSettings, applyChosenSettings } from './settings/apply-settings';
+import { listGatewayConfigs } from './storage/gateway-store';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { fileBrowserFor } from './system/file-browser';
 import { createLoginItem, loginItemAvailabilityFor } from './system/login-item';
-import { hideMenuBarTray, isMenuBarTrayVisible, showMenuBarTray } from './tray/menu-bar-tray';
+import {
+  hideMenuBarTray,
+  isMenuBarTrayVisible,
+  refreshMenuBarTray,
+  showMenuBarTray,
+} from './tray/menu-bar-tray';
 import { resolveUserDataOverride } from './user-data-override';
 import {
   createMainWindow,
@@ -37,12 +44,27 @@ import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 
 let engineHost: EngineHost | null = null;
 
+function gatewaysDir(): string {
+  return join(app.getPath('userData'), 'gateways');
+}
+
+const gatewayLifecycle = createGatewayLifecycleRequests({
+  host: () => engineHost,
+  gatewaysDir,
+  onCorrupt: (quarantinedPath) => {
+    onStorageCorrupt(quarantinedPath);
+  },
+});
+
 const trayMenuHandlers = {
   onOpenWindow: showMainWindow,
   onOpenSettings: openSettingsSurface,
   onQuit: () => {
     app.quit();
   },
+  onStartGateway: gatewayLifecycle.start,
+  onStopGateway: gatewayLifecycle.stop,
+  onRestartGateway: gatewayLifecycle.restart,
 };
 
 if (process.platform === 'linux') {
@@ -149,6 +171,19 @@ function pushEngineStates(states: EngineStates): void {
   }
 }
 
+function repaintTray(states: EngineStates): void {
+  listGatewayConfigs(gatewaysDir(), onStorageCorrupt)
+    .then((stored) => {
+      refreshMenuBarTray(
+        stored.map((gateway) => ({ slug: gateway.slug, displayName: gateway.displayName })),
+        states,
+      );
+    })
+    .catch((error: unknown) => {
+      console.error('recompose could not read its gateways for the menu bar', error);
+    });
+}
+
 function registerPermissionHandlers(): void {
   const permissionRequestHandler = (
     _webContents: unknown,
@@ -187,6 +222,8 @@ async function startRecompose(): Promise<void> {
 
   engineHost = createEngineHost({ knownSlugs: boot.slugs, spawnChild: spawnEngineChild });
   engineHost.onStatesChanged(pushEngineStates);
+  engineHost.onStatesChanged(repaintTray);
+  repaintTray(engineHost.states());
 
   registerIpcHandlers(assembleIpcHandlers(engineHost));
 
