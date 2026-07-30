@@ -13,6 +13,7 @@
     "test:mutation": "stryker run"
   },
   "dependencies": {
+    "@hono/node-server": "2.0.12",
     "@recompose/contracts": "workspace:*",
     "hono": "4.12.32"
   },
