@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { accountKindSchema, accountsDocumentSchema } from './accounts';
+import { engineStatesSchema } from './engine-state';
 import { gatewayConfigSchema } from './gateway-config';
 import { nonBlankString } from './non-blank';
 import { settingsPatchSchema, settingsSchema } from './settings';
@@ -87,4 +88,15 @@ export type IpcResponse<Channel extends IpcChannel> = z.infer<
 
 export type RecomposeIpc = {
   [Channel in IpcChannel]: (request: IpcRequest<Channel>) => Promise<IpcResponse<Channel>>;
+};
+
+export const ipcEvents = {
+  'engine:state': { payload: engineStatesSchema },
+} as const;
+
+export type IpcEvent = keyof typeof ipcEvents;
+export type IpcEventPayload<Event extends IpcEvent> = z.infer<(typeof ipcEvents)[Event]['payload']>;
+
+export type RecomposeIpcEvents = {
+  [Event in IpcEvent]: (listener: (payload: IpcEventPayload<Event>) => void) => () => void;
 };

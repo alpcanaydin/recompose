@@ -5,15 +5,19 @@ import type {
   EngineDirective,
   EngineGateway,
   EngineReport,
+  EngineStates,
   GatewayConfig,
   GatewayEngineState,
   GatewayTokenStatus,
   IpcChannel,
   IpcError,
+  IpcEvent,
+  IpcEventPayload,
   IpcRequest,
   IpcResponse,
   Migration,
   RecomposeIpc,
+  RecomposeIpcEvents,
   Settings,
   SettingsPatch,
   SystemState,
@@ -124,6 +128,26 @@ describe('bridge surface totality', () => {
   test('each bridge entry maps its channel request to a promised response', () => {
     expectTypeOf<RecomposeIpc['accounts:connect']>().toEqualTypeOf<
       (request: IpcRequest<'accounts:connect'>) => Promise<IpcResponse<'accounts:connect'>>
+    >();
+  });
+});
+
+describe('push surface totality', () => {
+  test('the event bridge covers every contract event and nothing else', () => {
+    expectTypeOf<keyof RecomposeIpcEvents>().toEqualTypeOf<IpcEvent>();
+  });
+
+  test('one event exists, and it is the state push', () => {
+    expectTypeOf<IpcEvent>().toEqualTypeOf<'engine:state'>();
+  });
+
+  test('the push carries the whole snapshot rather than one gateway', () => {
+    expectTypeOf<IpcEventPayload<'engine:state'>>().toEqualTypeOf<EngineStates>();
+  });
+
+  test('subscribing answers a disposer, so no listener outlives its subscriber', () => {
+    expectTypeOf<RecomposeIpcEvents['engine:state']>().toEqualTypeOf<
+      (listener: (payload: EngineStates) => void) => () => void
     >();
   });
 });
