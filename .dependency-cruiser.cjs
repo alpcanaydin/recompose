@@ -89,7 +89,7 @@ module.exports = {
       name: 'not-to-unresolvable',
       severity: 'error',
       from: {},
-      to: { couldNotResolve: true, pathNot: ['\\?asset$'] },
+      to: { couldNotResolve: true, pathNot: ['\\?asset$', '\\?modulePath$'] },
     },
     {
       name: 'no-orphans',
