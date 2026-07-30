@@ -54,10 +54,7 @@ fuite
 Gebert
 gitdir
 glassmorphism
-IDAT
 idempotently
-IEND
-IHDR
 inspectable
 karpathy
 Kimi

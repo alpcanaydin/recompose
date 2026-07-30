@@ -1,90 +1,56 @@
-import { deflateSync } from 'node:zlib';
-
-export type RasterImage = { size: number; rgba: Uint8Array };
+export type RasterImage = { size: number; rgba: Uint8Array; png: Uint8Array };
 
 const DIRECTORY_HEADER_BYTES = 6;
 const DIRECTORY_ENTRY_BYTES = 16;
 const BITMAP_HEADER_BYTES = 40;
 const PNG_ENTRY_SIZE = 256;
-const DEFLATE_LEVEL = 9;
-const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const OPAQUE = 255;
 
-const CRC_TABLE = Array.from({ length: 256 }, (_unused, index) => {
-  let remainder = index;
-
-  for (let bit = 0; bit < 8; bit += 1) {
-    remainder = remainder & 1 ? 0xedb88320 ^ (remainder >>> 1) : remainder >>> 1;
-  }
-
-  return remainder >>> 0;
-});
-
-function crc32(bytes: Buffer): number {
-  let remainder = 0xffffffff;
-
-  for (const byte of bytes) {
-    remainder = (CRC_TABLE[(remainder ^ byte) & 0xff] ?? 0) ^ (remainder >>> 8);
-  }
-
-  return (remainder ^ 0xffffffff) >>> 0;
+function straightFromPremultiplied(channel: number, alpha: number): number {
+  return alpha === 0 ? 0 : Math.min(Math.round((channel * OPAQUE) / alpha), OPAQUE);
 }
 
-function pngChunk(type: string, body: Buffer): Buffer {
-  const length = Buffer.alloc(4);
+function writeStraightBgra(target: Buffer, to: number, source: Buffer, at: number): void {
+  const alpha = source.readUInt8(at + 3);
 
-  length.writeUInt32BE(body.byteLength);
-  const typed = Buffer.concat([Buffer.from(type, 'ascii'), body]);
-  const checksum = Buffer.alloc(4);
-
-  checksum.writeUInt32BE(crc32(typed));
-
-  return Buffer.concat([length, typed, checksum]);
+  target.writeUInt8(straightFromPremultiplied(source.readUInt8(at + 2), alpha), to);
+  target.writeUInt8(straightFromPremultiplied(source.readUInt8(at + 1), alpha), to + 1);
+  target.writeUInt8(straightFromPremultiplied(source.readUInt8(at), alpha), to + 2);
+  target.writeUInt8(alpha, to + 3);
 }
 
-function encodePng({ size, rgba }: RasterImage): Buffer {
-  const header = Buffer.alloc(13);
-
-  header.writeUInt32BE(size, 0);
-  header.writeUInt32BE(size, 4);
-  header.writeUInt8(8, 8);
-  header.writeUInt8(6, 9);
-
-  const rows = Buffer.alloc(size * (size * 4 + 1));
-
-  for (let row = 0; row < size; row += 1) {
-    rows.set(rgba.subarray(row * size * 4, (row + 1) * size * 4), row * (size * 4 + 1) + 1);
-  }
-
-  return Buffer.concat([
-    Buffer.from(PNG_SIGNATURE),
-    pngChunk('IHDR', header),
-    pngChunk('IDAT', deflateSync(rows, { level: DEFLATE_LEVEL })),
-    pngChunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-function swapRedAndBlue(pixels: Buffer): void {
-  for (let at = 0; at < pixels.byteLength; at += 4) {
-    const red = pixels.readUInt8(at);
-
-    pixels.writeUInt8(pixels.readUInt8(at + 2), at);
-    pixels.writeUInt8(red, at + 2);
-  }
-}
-
-function bottomUpBgra(rgba: Uint8Array, size: number): Buffer {
+function bottomUpBgra(source: Buffer, size: number): Buffer {
   const rowBytes = size * 4;
   const pixels = Buffer.alloc(size * rowBytes);
 
   for (let row = 0; row < size; row += 1) {
     const from = (size - 1 - row) * rowBytes;
 
-    pixels.set(rgba.subarray(from, from + rowBytes), row * rowBytes);
+    for (let column = 0; column < size; column += 1) {
+      writeStraightBgra(pixels, row * rowBytes + column * 4, source, from + column * 4);
+    }
   }
 
-  swapRedAndBlue(pixels);
-
   return pixels;
+}
+
+function transparencyMask(source: Buffer, size: number): Buffer {
+  const rowBytes = Math.ceil(size / 32) * 4;
+  const mask = Buffer.alloc(rowBytes * size);
+
+  for (let row = 0; row < size; row += 1) {
+    const from = (size - 1 - row) * size * 4;
+
+    for (let column = 0; column < size; column += 1) {
+      if (source.readUInt8(from + column * 4 + 3) === 0) {
+        const at = row * rowBytes + (column >> 3);
+
+        mask.writeUInt8(mask.readUInt8(at) | (0x80 >> (column & 7)), at);
+      }
+    }
+  }
+
+  return mask;
 }
 
 function encodeBitmap({ size, rgba }: RasterImage): Buffer {
@@ -97,9 +63,9 @@ function encodeBitmap({ size, rgba }: RasterImage): Buffer {
   header.writeUInt16LE(32, 14);
   header.writeUInt32LE(size * size * 4, 20);
 
-  const maskRowBytes = Math.ceil(size / 32) * 4;
+  const source = Buffer.from(rgba);
 
-  return Buffer.concat([header, bottomUpBgra(rgba, size), Buffer.alloc(maskRowBytes * size)]);
+  return Buffer.concat([header, bottomUpBgra(source, size), transparencyMask(source, size)]);
 }
 
 function payloadFor(image: RasterImage): Buffer {
@@ -111,12 +77,11 @@ function payloadFor(image: RasterImage): Buffer {
     );
   }
 
-  return image.size >= PNG_ENTRY_SIZE ? encodePng(image) : encodeBitmap(image);
+  return image.size >= PNG_ENTRY_SIZE ? Buffer.from(image.png) : encodeBitmap(image);
 }
 
 export function encodeIco(images: readonly RasterImage[]): Buffer {
   const payloads = images.map(payloadFor);
-
   const directory = Buffer.alloc(DIRECTORY_HEADER_BYTES + images.length * DIRECTORY_ENTRY_BYTES);
 
   directory.writeUInt16LE(0, 0);

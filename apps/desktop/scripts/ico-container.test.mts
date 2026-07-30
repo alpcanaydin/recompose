@@ -1,11 +1,10 @@
-import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
 import { encodeIco, type RasterImage } from './ico-container.mts';
 
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const DIRECTORY_HEADER_BYTES = 6;
 const DIRECTORY_ENTRY_BYTES = 16;
+const BITMAP_HEADER_BYTES = 40;
 
 type DirectoryEntry = {
   width: number;
@@ -15,6 +14,10 @@ type DirectoryEntry = {
   byteLength: number;
   offset: number;
 };
+
+function rendererPng(marker: number): Uint8Array {
+  return Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, marker]);
+}
 
 function opaqueSquare(size: number, red: number): RasterImage {
   const rgba = new Uint8Array(size * size * 4);
@@ -26,7 +29,7 @@ function opaqueSquare(size: number, red: number): RasterImage {
     rgba[pixel * 4 + 3] = 0xff;
   }
 
-  return { size, rgba };
+  return { size, rgba, png: rendererPng(red) };
 }
 
 function readDirectory(container: Buffer): readonly DirectoryEntry[] {
@@ -76,23 +79,7 @@ function gradientSquare(size: number): RasterImage {
     }
   }
 
-  return { size, rgba };
-}
-
-function pixelsFromPng(payload: Buffer, size: number): Uint8Array {
-  const rows = inflateSync(
-    payload.subarray(payload.indexOf('IDAT') + 4, payload.indexOf('IEND') - 4),
-  );
-  const pixels = new Uint8Array(size * size * 4);
-
-  for (let row = 0; row < size; row += 1) {
-    const from = row * (size * 4 + 1);
-
-    expect(rows.readUInt8(from)).toBe(0);
-    pixels.set(rows.subarray(from + 1, from + 1 + size * 4), row * size * 4);
-  }
-
-  return pixels;
+  return { size, rgba, png: rendererPng(0x01) };
 }
 
 function pixelsFromBitmap(payload: Buffer, size: number): Uint8Array {
@@ -100,7 +87,7 @@ function pixelsFromBitmap(payload: Buffer, size: number): Uint8Array {
   const pixels = new Uint8Array(size * rowBytes);
 
   for (let row = 0; row < size; row += 1) {
-    const from = 40 + (size - 1 - row) * rowBytes;
+    const from = BITMAP_HEADER_BYTES + (size - 1 - row) * rowBytes;
 
     for (let column = 0; column < size; column += 1) {
       const at = from + column * 4;
@@ -114,6 +101,13 @@ function pixelsFromBitmap(payload: Buffer, size: number): Uint8Array {
   }
 
   return pixels;
+}
+
+function maskRowsOf(payload: Buffer, size: number): readonly number[] {
+  const maskRowBytes = Math.ceil(size / 32) * 4;
+  const from = BITMAP_HEADER_BYTES + size * size * 4;
+
+  return [...payload.subarray(from, from + maskRowBytes * size)];
 }
 
 const renditions = [opaqueSquare(16, 0x10), opaqueSquare(48, 0x30), opaqueSquare(256, 0xf0)];
@@ -156,47 +150,64 @@ describe('the Windows icon payloads', () => {
     for (const [index, size] of [16, 48].entries()) {
       const payload = payloadAt(encoded, entries, index);
 
-      expect(payload.readUInt32LE(0)).toBe(40);
+      expect(payload.readUInt32LE(0)).toBe(BITMAP_HEADER_BYTES);
       expect(payload.readInt32LE(4)).toBe(size);
       expect(payload.readInt32LE(8)).toBe(size * 2);
       expect(payload.readUInt16LE(14)).toBe(32);
     }
   });
 
-  it('writes the 256 entry as the PNG composition Windows scales down from', () => {
-    const payload = payloadAt(encoded, entries, 2);
-
-    expect(payload.subarray(0, 8)).toEqual(PNG_SIGNATURE);
-    expect(payload.readUInt32BE(16)).toBe(256);
-    expect(payload.readUInt32BE(20)).toBe(256);
+  it('hands the 256 entry the renderer PNG untouched, rather than re encoding it', () => {
+    expect([...payloadAt(encoded, entries, 2)]).toEqual([...rendererPng(0xf0)]);
   });
 
   it('orders the bitmap channels blue first and its rows bottom up', () => {
     const single = encodeIco([opaqueSquare(2, 0xaa)]);
-    const pixels = single.subarray(6 + 16 + 40, 6 + 16 + 40 + 4);
+    const pixels = single.subarray(
+      DIRECTORY_HEADER_BYTES + DIRECTORY_ENTRY_BYTES + BITMAP_HEADER_BYTES,
+      DIRECTORY_HEADER_BYTES + DIRECTORY_ENTRY_BYTES + BITMAP_HEADER_BYTES + 4,
+    );
 
     expect([...pixels]).toEqual([0x80, 0x40, 0xaa, 0xff]);
   });
 
   it('refuses an image whose buffer does not match its declared edge', () => {
-    expect(() => encodeIco([{ size: 16, rgba: new Uint8Array(8) }])).toThrow('16');
+    expect(() => encodeIco([{ size: 16, rgba: new Uint8Array(8), png: rendererPng(0) }])).toThrow(
+      '16',
+    );
+  });
+
+  it('returns every opaque bitmap pixel exactly as it went in', () => {
+    const source = gradientSquare(32);
+    const container = encodeIco([source]);
+
+    expect(pixelsFromBitmap(payloadAt(container, readDirectory(container), 0), 32)).toEqual(
+      source.rgba,
+    );
   });
 });
 
-describe('the pixels a Windows icon entry gives back', () => {
-  it('returns every bitmap pixel exactly as it went in', () => {
-    const source = gradientSquare(32);
-    const container = encodeIco([source]);
-    const directory = readDirectory(container);
+describe('the alpha a Windows icon bitmap carries', () => {
+  const straight = [15, 30, 75, 17, 200, 100, 50, 255, 0, 0, 0, 0, 255, 128, 0, 128];
+  const premultipliedByTheRenderer = Uint8Array.from([
+    1, 2, 5, 17, 200, 100, 50, 255, 0, 0, 0, 0, 128, 64, 0, 128,
+  ]);
+  const container = encodeIco([
+    { size: 2, rgba: premultipliedByTheRenderer, png: rendererPng(0x02) },
+  ]);
+  const payload = payloadAt(container, readDirectory(container), 0);
 
-    expect(pixelsFromBitmap(payloadAt(container, directory, 0), 32)).toEqual(source.rgba);
+  it('divides out the premultiplied alpha, because the format stores it straight', () => {
+    expect([...pixelsFromBitmap(payload, 2)]).toEqual(straight);
   });
 
-  it('returns every PNG pixel exactly as it went in', () => {
-    const source = gradientSquare(256);
-    const container = encodeIco([source]);
-    const directory = readDirectory(container);
+  it('leaves the alpha channel itself untouched', () => {
+    expect([...pixelsFromBitmap(payload, 2)].filter((_unused, at) => at % 4 === 3)).toEqual([
+      17, 255, 0, 128,
+    ]);
+  });
 
-    expect(pixelsFromPng(payloadAt(container, directory, 0), 256)).toEqual(source.rgba);
+  it('marks only the fully transparent pixels in the mask legacy shells still read', () => {
+    expect(maskRowsOf(payload, 2)).toEqual([0x80, 0, 0, 0, 0x00, 0, 0, 0]);
   });
 });

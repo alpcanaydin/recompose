@@ -52,7 +52,7 @@ function planned(masters: { shared: string; small: string }, points: number): st
 }
 
 function icoImages(masters: { shared: string; small: string }): readonly RasterImage[] {
-  return icoPlan.map((size) => ({ size, rgba: render(planned(masters, size), size).rgba }));
+  return icoPlan.map((size) => ({ size, ...render(planned(masters, size), size) }));
 }
 
 function ladderFiles(masters: { shared: string; small: string }): readonly [string, Uint8Array][] {

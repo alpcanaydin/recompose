@@ -313,7 +313,7 @@ Every path sits outside Feature-Sliced Design, matching the code map.
 
 - Consumes: rendered bitmaps and `.png` bytes from the shell.
 - Produces:
-  - `export type RasterImage = { size: number; rgba: Uint8Array }`
+  - `export type RasterImage = { size: number; rgba: Uint8Array; png: Uint8Array }`
   - `encodeIco(images: readonly RasterImage[]): Buffer`
   - `export type IcnsEntry = { type: string; png: Uint8Array }`
   - `encodeIcns(entries: readonly IcnsEntry[]): Buffer`
@@ -384,7 +384,11 @@ Outputs commit beside their masters, matching the pattern `build/` already follo
 
 Entries below 256 land as 32-bit `BGRA` device-independent bitmaps with an `AND` mask, and the 256 entry lands as PNG. Old shell surfaces predate PNG entries at small sizes, while 256 as PNG is the established composition Windows scales down from (`discovery/research.md` section 4). The encoder is pure, so a header round-trip spec pins the layout.
 
-**Alternatives considered:** PNG payloads at every size, rejected because it trades a few kilobytes for a compatibility question this design doesn't need to ask.
+`RasterImage` carries the renderer's own `.png` bytes beside its pixel buffer. The 256 entry writes those bytes straight through, so the repository holds no second PNG encoder.
+
+The pixel buffer arrives premultiplied, which is how the renderer stores it. The `.ico` format wants straight alpha. The bitmap path therefore divides each color channel by its alpha, and leaves the alpha itself alone. The `AND` mask flags every fully transparent sample, which legacy shell surfaces still read.
+
+**Alternatives considered:** PNG payloads at every size, rejected because it trades a few kilobytes for a compatibility question this design doesn't need to ask. A hand-written PNG encoder behind a narrower `RasterImage`, rejected after it shipped premultiplied color into a straight-alpha format.
 
 **ADR draft:** None.
 
