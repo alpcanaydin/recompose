@@ -2,6 +2,7 @@ import type { EngineGateway } from '@recompose/contracts';
 
 import { Hono } from 'hono';
 
+import { guardLoopback } from './loopback-guard';
 import {
   missingModelInAnthropicDialect,
   missingModelInOpenAiDialect,
@@ -13,6 +14,8 @@ const OPENAI_MODEL_PATHS = ['/v1/chat/completions', '/chat/completions'];
 
 export function createGatewayApp(gateway: EngineGateway): Hono {
   const app = new Hono();
+
+  app.use(guardLoopback(gateway.port));
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
 

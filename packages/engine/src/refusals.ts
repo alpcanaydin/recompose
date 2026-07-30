@@ -1,6 +1,6 @@
 type AnthropicRefusal = {
   type: 'error';
-  error: { type: 'not_found_error'; message: string };
+  error: { type: 'not_found_error' | 'permission_error'; message: string };
 };
 
 type OpenAiRefusal = {
@@ -30,6 +30,16 @@ export function missingModelInOpenAiDialect(displayName: string): OpenAiRefusal 
       type: 'invalid_request_error',
       param: null,
       code: 'model_not_found',
+    },
+  };
+}
+
+export function nonLoopbackClient(): AnthropicRefusal {
+  return {
+    type: 'error',
+    error: {
+      type: 'permission_error',
+      message: 'This gateway answers loopback clients only.',
     },
   };
 }
