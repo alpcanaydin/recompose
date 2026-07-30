@@ -72,6 +72,22 @@ The app MUST offer a menu bar switch that adds or removes a tray icon while the 
 - When a person closes the last window and the tray shows
 - Then the app keeps running and the tray stays
 
+### Requirement: A settings document from a newer build
+
+The app MUST read the schema version a settings document names before parsing it. A version beyond what the build supports MUST become a typed failure rather than damage. The app MUST NOT move that document aside, and a save MUST refuse rather than write this build's shape over it. The screen names the version the document carries, so someone who ran a newer build and came back reads what happened instead of losing every setting.
+
+#### Scenario: an older build meets a document from a newer one
+
+- When the settings document names a schema version beyond what the build supports
+- Then the settings screen reports the newer schema and names the version
+- And the document stays untouched where it sits
+- And a save refuses rather than overwriting it
+
+#### Scenario: a settings document is genuinely damaged
+
+- When the settings document names a supported version but fails its schema
+- Then the app moves it aside and carries on with the defaults
+
 ### Requirement: Gateway token
 
 The app MUST hold the gateway token in the vault rather than in the settings document, because the settings document sits on disk in plain text. The screen MUST show a masked token, copy the full value on request, and mint a replacement on request. Turning the token requirement off MUST NOT destroy the stored token.

@@ -7,7 +7,11 @@ import type { IpcHandlers } from './dispatch';
 
 import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
-import { loadSettingsFile, saveSettingsFile } from '../storage/settings-store';
+import {
+  loadSettingsFile,
+  saveSettingsFile,
+  SettingsNewerSchemaError,
+} from '../storage/settings-store';
 import { deleteSecret, saveVaultFile, setSecret } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
 import {
@@ -21,7 +25,7 @@ import {
   type StorageIpcContext,
   type StoragePaths,
 } from './storage-context';
-import { openVault, storageFailure } from './storage-envelope';
+import { ipcFailure, openVault, storageFailure } from './storage-envelope';
 
 async function readAccounts(
   ctx: StorageIpcContext,
@@ -52,13 +56,21 @@ async function saveGateway(
   }
 }
 
+function settingsFailure(error: unknown, home: string) {
+  if (error instanceof SettingsNewerSchemaError) {
+    return ipcFailure('settings-newer-schema', error.message);
+  }
+
+  return storageFailure(error, home);
+}
+
 async function getSettings(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     const stored = await loadSettingsFile(paths.settingsFile, ctx.onCorrupt);
 
     return { ok: true as const, value: { ...stored, launchAtLogin: ctx.readLoginItem() } };
   } catch (error) {
-    return storageFailure(error, ctx.homeFolder);
+    return settingsFailure(error, ctx.homeFolder);
   }
 }
 
@@ -80,7 +92,7 @@ async function saveSettings(
   try {
     written = await writeSettings(ctx, paths, patch);
   } catch (error) {
-    return storageFailure(error, ctx.homeFolder);
+    return settingsFailure(error, ctx.homeFolder);
   }
 
   ctx.applySettings(written.stored, patch.launchAtLogin);
