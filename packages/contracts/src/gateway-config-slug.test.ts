@@ -1,7 +1,7 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { GATEWAY_CONFIG_VERSION, gatewayConfigSchema } from './gateway-config';
+import { GATEWAY_CONFIG_VERSION, gatewayConfigSchema, gatewaySlugSchema } from './gateway-config';
 
 const validConfig = {
   schemaVersion: GATEWAY_CONFIG_VERSION,
@@ -58,6 +58,15 @@ describe('the slug a gateway names its file with', () => {
     for (const slug of ['con-fig', 'my-con', 'console', 'com10', 'lpt0']) {
       expect(gatewayConfigSchema.parse({ ...validConfig, slug }).slug).toBe(slug);
     }
+  });
+
+  test('each refusal states its own rule, because the creation sheet prints the sentence', () => {
+    const refusalFor = (slug: string): string | undefined =>
+      gatewaySlugSchema.safeParse(slug).error?.issues[0]?.message;
+
+    expect(refusalFor('a'.repeat(64))).toBe('at most 63 characters');
+    expect(refusalFor('UPPER')).toBe('lowercase slug with single dashes');
+    expect(refusalFor('con')).toBe('Windows reserves this name');
   });
 });
 

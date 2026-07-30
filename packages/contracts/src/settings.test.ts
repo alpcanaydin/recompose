@@ -1,7 +1,7 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { defaultSettings, loadSettings, withSettingsPatch } from './settings';
+import { defaultSettings, loadSettings, settingsPatchSchema, withSettingsPatch } from './settings';
 
 describe('app settings', () => {
   test('defaults: system theme and every switch off', () => {
@@ -141,6 +141,11 @@ describe('a save that names only the fields it changes', () => {
     const stored = { ...defaultSettings(), showInMenuBar: true };
 
     expect(withSettingsPatch(stored, {})).toEqual(stored);
+  });
+
+  test('a patch cannot name the schema version, because only a migration moves it', () => {
+    expect(settingsPatchSchema.safeParse({ theme: 'dark' }).success).toBe(true);
+    expect(settingsPatchSchema.safeParse({ schemaVersion: 3 }).success).toBe(false);
   });
 
   test('the schema version a patch can never name survives every merge', () => {
