@@ -10,7 +10,7 @@ export type GatewayListeners = {
   close: () => Promise<void>;
 };
 
-type BindOutcome = { bound: Server } | { portTaken: true } | { addressUnavailable: true };
+type BindOutcome = { bound: Server } | { refused: 'port-taken' | 'address-unavailable' };
 
 type OpenOutcome = { opened: GatewayListeners } | { failed: { port: number } };
 
@@ -23,7 +23,7 @@ async function bindTo(app: Hono, address: string, port: number): Promise<BindOut
     });
 
     server.once('error', (error: NodeJS.ErrnoException) => {
-      settle(error.code === 'EADDRINUSE' ? { portTaken: true } : { addressUnavailable: true });
+      settle({ refused: error.code === 'EADDRINUSE' ? 'port-taken' : 'address-unavailable' });
     });
     server.listen({ port, host: address }, () => {
       settle({ bound: server });
@@ -53,7 +53,7 @@ export async function openGatewayListeners(app: Hono, port: number): Promise<Ope
 
   const overIpv6 = await bindTo(app, IPV6_LOOPBACK, port);
 
-  if ('portTaken' in overIpv6) {
+  if (!isBound(overIpv6) && overIpv6.refused === 'port-taken') {
     await stopServing(overIpv4.bound);
 
     return { failed: { port } };

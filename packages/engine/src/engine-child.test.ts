@@ -28,8 +28,10 @@ function aParent(): Parent {
       postMessage: (message) => {
         reports.push(message);
       },
-      on: (_event, handler) => {
-        handlers.push(handler);
+      on: (event: string, handler: (messageEvent: { data: unknown }) => void) => {
+        if (event === 'message') {
+          handlers.push(handler);
+        }
       },
     },
   };
@@ -126,7 +128,10 @@ describe('a directive the child cannot read', () => {
     attachEngineChild(parent.port, aLoopbackHolding([]));
     parent.send({ nonsense: true });
 
-    expect(complaints).toHaveBeenCalled();
+    expect(complaints).toHaveBeenCalledWith(
+      expect.stringContaining('could not read'),
+      expect.anything(),
+    );
     complaints.mockRestore();
   });
 });
