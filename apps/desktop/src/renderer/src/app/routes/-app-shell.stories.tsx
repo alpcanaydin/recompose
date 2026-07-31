@@ -1,9 +1,12 @@
+import { RouterContextProvider } from '@tanstack/react-router';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
 import { gatewaySeed, paintedBox, paintedStyle } from '../../shared/testing';
-import { AppContent, AppToolbar } from './-app-shell';
+import { createQueryClient } from '../query-client';
+import { createAppRouter } from '../router';
+import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
@@ -79,6 +82,30 @@ export const TopEdgeTakesHoldOfTheWindow = meta.story({
     const grabbed = document.elementFromPoint(box.x + box.width / 2, box.y + 10);
 
     await expect(paintedStyle(grabbed).getPropertyValue('-webkit-app-region')).toBe('drag');
+  },
+});
+
+/**
+ * The sidebar's top inset, which clears the window controls instead of reserving toolbar height.
+ *
+ * @summary macOS draws its own controls over this corner, and clearing them is all the inset owes.
+ * Borrowing the toolbar's height reserves eighteen more pixels for a toolbar the sidebar never
+ * carries, which pushes the first group heading below where the rest of the shell expects it.
+ */
+export const SidebarClearsTheWindowControls = meta.story({
+  parameters: { bridge: { engineStates: {}, gateways: [codex] } },
+  render: () => (
+    <RouterContextProvider router={createAppRouter({ queryClient: createQueryClient() })}>
+      <AppSidebar onNewGateway={() => undefined} />
+    </RouterContextProvider>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByRole('heading', { name: 'Local Gateways' });
+
+    const sidebar = canvasElement.firstElementChild?.firstElementChild;
+    const heading = sidebar?.querySelector('h2');
+
+    await expect(paintedBox(heading).top - paintedBox(sidebar).top).toBe(36);
   },
 });
 

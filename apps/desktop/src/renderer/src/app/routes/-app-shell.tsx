@@ -25,7 +25,7 @@ export function AppSidebar({ onNewGateway, restoreGetStarted }: AppSidebarProps)
   const systemId = useId();
 
   return (
-    <aside className="app-drag flex w-60 flex-col border-e border-line-subtle bg-surface-sidebar px-2.5 pt-toolbar pb-2.5 text-body text-ink-secondary">
+    <aside className="app-drag flex w-60 flex-col border-e border-line-subtle bg-surface-sidebar px-2.5 pt-window-controls pb-2.5 text-body text-ink-secondary">
       <nav className="app-no-drag flex flex-1 flex-col overflow-y-auto">
         <Suspense fallback={null}>
           <GatewaySidebar onNewGateway={onNewGateway} />
