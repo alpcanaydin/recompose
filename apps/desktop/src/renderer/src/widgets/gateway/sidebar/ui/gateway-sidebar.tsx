@@ -6,7 +6,7 @@ import {
   gatewayStateIn,
   gatewaysQueryOptions,
 } from '../../../../shared/api';
-import { StatusIndicator } from '../../../../shared/ui';
+import { Icon, StatusIndicator } from '../../../../shared/ui';
 
 type GatewaySidebarProps = {
   /** Asked for when a person wants a gateway beyond the ones already listed. */
@@ -29,21 +29,25 @@ export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
   }
 
   return (
-    <div aria-labelledby={groupId} className="flex flex-col gap-2" role="group">
-      <h2 className="text-overline text-ink uppercase" id={groupId}>
+    <div aria-labelledby={groupId} className="flex flex-col" role="group">
+      <h2 className="nav-group" id={groupId}>
         Local Gateways
       </h2>
       {gateways.map((gateway) => (
-        <a
-          className="nav-item flex items-center gap-2"
-          href={`#/gateways/${gateway.slug}`}
-          key={gateway.slug}
-        >
+        <a className="nav-item text-ink" href={`#/gateways/${gateway.slug}`} key={gateway.slug}>
+          <Icon name="network" />
           <span className="truncate">{gateway.displayName}</span>{' '}
-          <StatusIndicator status={gatewayStateIn(states, gateway.slug).status} />
+          <span className="ms-auto flex">
+            <StatusIndicator status={gatewayStateIn(states, gateway.slug).status} />
+          </span>
         </a>
       ))}
-      <button className="nav-item text-start" onClick={onNewGateway} type="button">
+      <button
+        className="nav-item text-start font-medium text-accent-ink"
+        onClick={onNewGateway}
+        type="button"
+      >
+        <Icon className="size-3.5 icon-emphasis" name="plus" />
         New Gateway…
       </button>
     </div>

@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router';
 import { Suspense, useId } from 'react';
 
+import { Icon } from '../../shared/ui';
 import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GatewayToolbar } from '../../widgets/gateway/toolbar';
 
-const emptyChrome = <div aria-hidden className="h-13" />;
+const emptyChrome = <div aria-hidden className="h-toolbar" />;
 
 type AppSidebarProps = {
   /** Asked for when a person wants a gateway beyond the ones already listed. */
@@ -16,24 +17,25 @@ export function AppSidebar({ onNewGateway }: AppSidebarProps) {
   const systemId = useId();
 
   return (
-    <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-4 pt-13 pb-4 text-body text-ink-secondary">
-      <nav className="app-no-drag flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-          <Link className="nav-item" to="/">
-            Gateways
-          </Link>
-          <Link className="nav-item" to="/providers">
-            Providers
-          </Link>
-        </div>
+    <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-2.5 pt-toolbar pb-2.5 text-body text-ink-secondary">
+      <nav className="app-no-drag flex flex-col">
+        <Link className="nav-item" to="/">
+          <Icon name="network" />
+          Gateways
+        </Link>
+        <Link className="nav-item" to="/providers">
+          <Icon className="size-4 text-accent" name="person" />
+          Providers
+        </Link>
         <Suspense fallback={null}>
           <GatewaySidebar onNewGateway={onNewGateway} />
         </Suspense>
-        <div aria-labelledby={systemId} className="flex flex-col gap-2" role="group">
-          <h2 className="text-overline text-ink uppercase" id={systemId}>
+        <div aria-labelledby={systemId} className="flex flex-col" role="group">
+          <h2 className="nav-group" id={systemId}>
             System
           </h2>
           <Link className="nav-item" to="/settings">
+            <Icon name="gear" />
             Settings
           </Link>
         </div>

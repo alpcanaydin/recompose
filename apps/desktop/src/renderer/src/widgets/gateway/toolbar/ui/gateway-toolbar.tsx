@@ -67,8 +67,8 @@ export function GatewayToolbar({ slug }: GatewayToolbarProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="app-no-drag flex h-13 items-center justify-end gap-2 px-4">
-        <span className="inline-flex h-control items-center gap-1.5 rounded-pill border border-line-subtle bg-surface-raised px-2 font-mono text-mono-value">
+      <div className="app-no-drag flex h-toolbar items-center justify-end gap-2.5 px-3.5">
+        <span className="inline-flex h-7.5 items-center gap-2.25 rounded-control border border-line-subtle bg-surface-raised px-2.5 font-mono text-note">
           <span>
             <span className="text-ink-secondary">http://</span>
             <span className="text-ink">{`localhost:${String(gateway.port)}`}</span>

@@ -34,7 +34,10 @@ export type IconName = keyof typeof glyphs;
 type IconProps = {
   /** Which glyph of the sprite to draw. */
   name: IconName;
-  /** Size and color classes, which is how a caller lands the 15px glyph a button asks for. */
+  /**
+   * Size and color classes, replacing the standing 16px square rather than adding to it, so a
+   * caller that passes anything here names its own size.
+   */
   className?: string;
 };
 
