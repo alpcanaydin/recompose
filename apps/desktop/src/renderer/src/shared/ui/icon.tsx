@@ -15,6 +15,13 @@ const glyphs = {
       <path d="M7.2 11l8.5-4.2M7.2 13l8.5 4.2" />
     </>
   ),
+  spark: (
+    <path
+      d="M12 3c.7 5 1.6 6.4 9 9-7.4 2.6-8.3 4-9 9-.7-5-1.6-6.4-9-9 7.4-2.6 8.3-4 9-9Z"
+      fill="currentColor"
+      stroke="none"
+    />
+  ),
   person: (
     <>
       <circle cx="12" cy="8.4" r="3.5" />

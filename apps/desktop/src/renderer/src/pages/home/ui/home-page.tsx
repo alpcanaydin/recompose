@@ -37,7 +37,7 @@ export function HomePage({ providerConnected, onCreateGateway, restoreRequest }:
   }, [restoreRequest]);
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full dot-grid">
       {gateways.length === 0 && <EmptyState onCreateGateway={onCreateGateway} />}
       {!dismissed && (
         <div className="absolute inset-e-4 bottom-4">

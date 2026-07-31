@@ -126,6 +126,19 @@ test('a surface with no gateway selected leaves the toolbar empty chrome', async
     .not.toBeInTheDocument();
 });
 
+test('a gateway surface reads what its traffic is carrying', async () => {
+  const screen = await renderAt('/gateways/codex', { gateways: [codex] });
+
+  await expect.element(screen.getByText(/req\/min/u)).toBeVisible();
+  await expect.element(screen.getByText(/nodes/u)).toBeVisible();
+});
+
+test('a surface holding no gateway carries no traffic reading', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await expect.element(screen.getByText(/req\/min/u)).not.toBeInTheDocument();
+});
+
 test('an unknown path shows the not-found state inside the shell', async () => {
   const screen = await renderAt('/no-such-page');
 

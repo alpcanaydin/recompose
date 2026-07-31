@@ -16,7 +16,7 @@ const GUIDE_URL = 'https://github.com/recomposesh/recompose';
  */
 export function EmptyState({ onCreateGateway }: EmptyStateProps) {
   return (
-    <section className="flex h-full flex-col items-center justify-center pb-8.5 text-center">
+    <section className="absolute inset-0 flex flex-col items-center justify-center text-center">
       <GhostGraph />
       <h1 className="mb-1.5 text-invitation text-ink">Create your first gateway</h1>
       <p className="mb-4.5 max-w-102.5 text-note leading-normal text-ink-secondary">

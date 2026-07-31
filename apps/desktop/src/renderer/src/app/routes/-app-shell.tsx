@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Link } from '@tanstack/react-router';
 import { Suspense, useId } from 'react';
 
@@ -6,6 +8,8 @@ import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GatewayToolbar } from '../../widgets/gateway/toolbar';
 
 const emptyChrome = <div aria-hidden className="h-toolbar" />;
+
+const dragRegion = <div aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-toolbar" />;
 
 type AppSidebarProps = {
   /** Asked for when a person wants a gateway beyond the ones already listed. */
@@ -49,17 +53,33 @@ type AppToolbarProps = {
   slug: string | undefined;
 };
 
-/** The strip across the top of the content area, empty chrome until a gateway is selected. */
+/**
+ * The strip across the top of the content area, carrying the toolbar of the selected gateway.
+ *
+ * @summary A surface holding no gateway gets no strip at all, only the drag region the hidden
+ * title bar leaves it to supply. That region sits out of the flow, so the content keeps the
+ * whole box rather than starting under a band that reports nothing.
+ */
 export function AppToolbar({ slug }: AppToolbarProps) {
+  if (slug === undefined) {
+    return dragRegion;
+  }
+
   return (
     <div className="app-drag shrink-0 border-b border-line-subtle bg-surface-toolbar">
-      {slug === undefined ? (
-        emptyChrome
-      ) : (
-        <Suspense fallback={emptyChrome}>
-          <GatewayToolbar slug={slug} />
-        </Suspense>
-      )}
+      <Suspense fallback={emptyChrome}>
+        <GatewayToolbar slug={slug} />
+      </Suspense>
     </div>
   );
+}
+
+type AppContentProps = {
+  /** The surface a route paints, which scrolls inside the shell rather than with it. */
+  children: ReactNode;
+};
+
+/** The surface every route paints on, between the toolbar strip and the foot of the shell. */
+export function AppContent({ children }: AppContentProps) {
+  return <div className="relative flex-1 overflow-y-auto">{children}</div>;
 }

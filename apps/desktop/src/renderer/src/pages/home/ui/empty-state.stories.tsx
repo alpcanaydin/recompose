@@ -1,6 +1,7 @@
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
+import { withShellSurface } from '#.storybook/shell-surface';
 
 import { paintedBox, paintedStyle } from '../../../shared/testing';
 import { EmptyState } from './empty-state';
@@ -8,6 +9,21 @@ import { EmptyState } from './empty-state';
 const meta = preview.meta({
   component: EmptyState,
   args: { onCreateGateway: () => {} },
+  decorators: [withShellSurface],
+});
+
+/** The block sits on the middle of the surface it fills, rather than hanging from its top. */
+export const Centred = meta.story({
+  play: async ({ canvas, canvasElement }) => {
+    const ghost = canvasElement.querySelector('svg');
+    const hint = await canvas.findByText('or press ⌘ N');
+    const surface = paintedBox(canvasElement.firstElementChild);
+    const block = { top: paintedBox(ghost).top, bottom: paintedBox(hint).bottom };
+
+    await expect(
+      Math.abs((block.top + block.bottom) / 2 - (surface.top + surface.bottom) / 2),
+    ).toBeLessThan(1);
+  },
 });
 
 /** The invitation a fresh install meets, carrying the one act worth taking on it. */
@@ -30,7 +46,7 @@ export const Rhythm = meta.story({
     const hint = await canvas.findByText('or press ⌘ N');
 
     await expect(paintedBox(ghost).width).toBe(436);
-    await expect(paintedBox(ghost).height).toBe(96);
+    await expect(paintedBox(ghost).height).toBe(114);
     await expect(paintedStyle(ghost).opacity).toBe('0.75');
     await expect(paintedStyle(ghost).marginBottom).toBe('26px');
 

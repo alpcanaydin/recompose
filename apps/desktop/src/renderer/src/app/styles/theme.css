@@ -16,6 +16,7 @@
   --color-surface-hover: light-dark(var(--black-a06), var(--white-a08));
   --color-surface-thumb: var(--white);
   --color-scrim: light-dark(var(--black-a18), var(--black-a42));
+  --color-dot-grid: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 6%));
   --color-surface-track: light-dark(var(--gray-200), var(--gray-800));
   --color-surface-chip: light-dark(var(--white), var(--gray-700));
   --color-track-off: light-dark(var(--gray-200), var(--gray-800));
@@ -83,9 +84,10 @@
   --spacing-sheet-field: 170px;
   --spacing-sheet-port: 74px;
   --spacing-toolbar: 54px;
+  --spacing-page-top: 78px;
   --spacing-status-bar: 38px;
   --spacing-ghost-width: 436px;
-  --spacing-ghost-height: 96px;
+  --spacing-ghost-height: 114px;
   --spacing-hairline: 2px;
 
   --radius-chip: 4px;
@@ -313,6 +315,10 @@
   &:hover {
     background: var(--color-surface-hover);
   }
+}
+
+@utility dot-grid {
+  background: radial-gradient(circle, var(--color-dot-grid) 1px, transparent 1px) 0 0 / 22px 22px;
 }
 
 @utility nav-group {
