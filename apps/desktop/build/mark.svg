@@ -1,0 +1,24 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1024" height="1024" fill="url(#outerBand)"/>
+<rect x="48" y="48" width="928" height="928" fill="url(#darkBand)"/>
+<rect x="96" y="96" width="832" height="832" fill="url(#tile)"/>
+<path fill-rule="evenodd" d="M387.3704 622.612C419.656 618.576 451.204 625.824 475.072 643.964V258.4776C475.072 248.6712 481.696 240.1016 491.172 237.54V237.5108L700.62 181.352C714.572 177.612 727.904 188.4492 727.904 202.29V302.3004C727.904 312.1068 721.252 320.6764 711.804 323.238V323.2676L511.244 377.07V716.084C511.244 810.412 380.2516 872.164 303.9708 814C228.0436 756.104 279.6608 636.048 387.3704 622.612Z" fill="url(#note)"/>
+<defs>
+<linearGradient id="outerBand" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+<stop stop-color="#CFD2DF"/>
+<stop offset="1" stop-color="#898783"/>
+</linearGradient>
+<linearGradient id="darkBand" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+<stop stop-color="#111C5F"/>
+<stop offset="1" stop-color="#06091E"/>
+</linearGradient>
+<linearGradient id="tile" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+<stop stop-color="#2640D9"/>
+<stop offset="1" stop-color="#142273"/>
+</linearGradient>
+<linearGradient id="note" x1="514" y1="184" x2="514" y2="840" gradientUnits="userSpaceOnUse">
+<stop stop-color="#C9C8CF"/>
+<stop offset="1" stop-color="#D1D4E7"/>
+</linearGradient>
+</defs>
+</svg>

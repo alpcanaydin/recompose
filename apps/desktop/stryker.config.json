@@ -1,7 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
   "testRunner": "vitest",
-  "vitest": { "configFile": "vitest.mutation.config.ts" },
+  "vitest": {
+    "configFile": "vitest.mutation.config.ts"
+  },
   "mutate": [
     "src/main/**/*.ts",
     "!src/main/**/*.test.ts",
@@ -10,14 +12,25 @@
     "!src/main/menu/app-menu.ts",
     "!src/main/protocol/app-protocol.ts",
     "!src/main/tray/menu-bar-tray.ts",
-    "!src/main/windows/main-window.ts"
+    "!src/main/windows/main-window.ts",
+    "scripts/**/*.mts",
+    "!scripts/**/*.test.mts",
+    "!scripts/generate-icons.mts",
+    "!scripts/**/*.testkit.mts"
   ],
   "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
   "incremental": true,
   "incrementalFile": "reports/stryker-incremental.json",
   "reporters": ["html", "clear-text", "progress"],
-  "htmlReporter": { "fileName": "reports/mutation/mutation.html" },
-  "thresholds": { "high": 90, "low": 70, "break": 81 },
+  "htmlReporter": {
+    "fileName": "reports/mutation/mutation.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 70,
+    "break": 81
+  },
   "dashboard": {
     "project": "github.com/recomposesh/recompose",
     "version": "main",

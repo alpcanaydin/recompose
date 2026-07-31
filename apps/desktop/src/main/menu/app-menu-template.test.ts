@@ -58,7 +58,7 @@ describe('what a custom application menu must not drop', () => {
   test('macOS keeps the whole application menu around the settings item', () => {
     const [applicationMenu] = buildAppMenuTemplate('darwin', () => undefined);
 
-    expect(applicationMenu?.label).toBe('recompose');
+    expect(applicationMenu?.label).toBe('Recompose');
     expect(shapeOf(applicationMenu?.submenu ?? [])).toEqual([
       'about',
       'separator',
