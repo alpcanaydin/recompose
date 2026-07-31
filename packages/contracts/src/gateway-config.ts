@@ -34,11 +34,38 @@ const WINDOWS_DEVICE_NAMES = new Set([
   'lpt9',
 ]);
 
+const GATEWAY_SLUG_MAX_LENGTH = 63;
+
 export const gatewaySlugSchema = z
   .string()
-  .max(63, 'at most 63 characters')
+  .max(GATEWAY_SLUG_MAX_LENGTH, `at most ${String(GATEWAY_SLUG_MAX_LENGTH)} characters`)
   .regex(/^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*$/, 'lowercase slug with single dashes')
   .refine((slug) => !WINDOWS_DEVICE_NAMES.has(slug), 'Windows reserves this name');
+
+const FALLBACK_GATEWAY_SLUG = 'gateway';
+
+function inBaseLetters(name: string): string {
+  return name.toUpperCase().toLowerCase().normalize('NFD').replaceAll(/\p{M}/gu, '');
+}
+
+/**
+ * The slug a gateway stores its file and its route under, read off the name a person gave it.
+ *
+ * @summary Nobody types a slug, so this is the only thing that writes one. It folds the name to
+ * its base letters, joins what survives with single dashes, and stops at the hostname-label
+ * bound. A name that leaves nothing behind falls back to `gateway`. A name landing on a device
+ * name Windows reserves derives it unchanged, so `gatewaySlugSchema` refuses it where a person
+ * can read the refusal and rename.
+ */
+export function slugFromName(displayName: string): string {
+  const derived = inBaseLetters(displayName)
+    .replaceAll(/[^a-z0-9]+/gu, '-')
+    .replaceAll(/^-|-$/gu, '')
+    .slice(0, GATEWAY_SLUG_MAX_LENGTH)
+    .replace(/-$/u, '');
+
+  return derived === '' ? FALLBACK_GATEWAY_SLUG : derived;
+}
 
 const targetSchema = z.strictObject({
   kind: z.literal('target'),

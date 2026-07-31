@@ -38,6 +38,7 @@ dmgbuild
 docblocks
 domcontentloaded
 dorny
+dotless
 DPAPI
 dyld
 Electrobun
@@ -58,6 +59,8 @@ IDAT
 idempotently
 IHDR
 inspectable
+kapi
+Kapı
 karpathy
 Kimi
 Langdock
