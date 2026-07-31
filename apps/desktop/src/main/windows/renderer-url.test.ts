@@ -8,7 +8,6 @@ import {
   rendererBaseFor,
   rendererUrlFor,
   settingsShortcutRouteFor,
-  surfaceRouteOf,
 } from './renderer-url';
 
 const packagedBase = 'app://renderer/index.html';
@@ -79,36 +78,17 @@ describe('the settings shortcut, pressed more than once', () => {
   });
 });
 
-describe('the surface a loaded renderer stands on', () => {
-  test('a settings arrival reads as the settings surface', () => {
-    expect(surfaceRouteOf(`${packagedBase}#/settings?focus=first-control`)).toBe('/settings');
-  });
-
-  test('a gateway canvas reads as that gateway', () => {
-    expect(surfaceRouteOf(`${devBase}#/gateways/codex`)).toBe('/gateways/codex');
-  });
-
-  test('a window that has loaded no route yet stands on home', () => {
-    expect(surfaceRouteOf(packagedBase)).toBe('/');
-    expect(surfaceRouteOf(`${packagedBase}#`)).toBe('/');
-  });
-});
-
 describe('the route that opens the gateway creation sheet', () => {
-  test('it opens the sheet over the surface the person is already on', () => {
-    expect(newGatewayRouteFor(1, '/settings')).toBe('/settings?create=true&at=1');
-  });
-
-  test('it lands on home when no surface has loaded yet', () => {
+  test('it carries the person to the canvas whatever surface they stand on', () => {
     expect(newGatewayRouteFor(1)).toBe('/?create=true&at=1');
   });
 
   test('each press names a location the router has not seen', () => {
-    expect(newGatewayRouteFor(1, '/providers')).not.toBe(newGatewayRouteFor(2, '/providers'));
+    expect(newGatewayRouteFor(1)).not.toBe(newGatewayRouteFor(2));
   });
 
   test('every press still asks for the sheet', () => {
-    expect(newGatewayRouteFor(9, '/providers')).toContain('create=true');
+    expect(newGatewayRouteFor(9)).toContain('create=true');
   });
 });
 

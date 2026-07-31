@@ -24,24 +24,14 @@ export function settingsShortcutRouteFor(press: number): string {
   return `${SETTINGS_SHORTCUT_ROUTE}&at=${String(press)}`;
 }
 
-const HOME_SURFACE = '/';
-
-/** The route a loaded window stands on, read back out of its fragment. */
-export function surfaceRouteOf(loadedUrl: string): string {
-  const [, fragment = ''] = loadedUrl.split('#');
-  const [route = ''] = fragment.split('?');
-
-  return route === '' ? HOME_SURFACE : route;
-}
-
 /**
- * The creation sheet opened over the surface the person is already on.
+ * The creation sheet opened over the canvas, whatever surface a person stands on.
  *
- * @summary The sheet mounts in the root layout, so every surface can carry it. Naming the
- * current surface is what keeps the shortcut from throwing away the screen someone was reading.
+ * @summary A gateway is born on the canvas, so the sheet asks its questions over the surface the
+ * answer lands on rather than over a settings list the new gateway has nothing to do with.
  */
-export function newGatewayRouteFor(press: number, surface: string = HOME_SURFACE): string {
-  return `${surface}?create=true&at=${String(press)}`;
+export function newGatewayRouteFor(press: number): string {
+  return `/?create=true&at=${String(press)}`;
 }
 
 export function getStartedRouteFor(press: number): string {

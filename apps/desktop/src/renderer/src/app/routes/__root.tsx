@@ -110,7 +110,7 @@ function RootLayout() {
     <div className="flex h-full overflow-hidden">
       <AppSidebar
         onNewGateway={() => {
-          void navigate({ to: '.', search: withSheet });
+          void navigate({ to: '/', search: withSheet });
         }}
         restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
       />
