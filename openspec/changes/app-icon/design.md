@@ -151,13 +151,14 @@ Layer inventory:
 
 - `Assets/tile.svg`: the default background. The full-bleed tile gradient with both frame bands baked at concentric radii, flattened solids only.
 - `Assets/tile-dark.svg`: the dark background. The tile gradient deepens toward `frameTop` and `frameBottom`, the dark band stays at its concentric radii, and the light outer band is absent.
-- `Assets/note.svg`: the note glyph with flattened fills, identical in every appearance.
+- `Assets/note.svg`: the note glyph with flattened fills, for the default appearance.
+- `Assets/note-dark.svg`: the same note geometry with the fills derived again over the dark backdrop, `#C6C4C1` to `#CFD1DB`.
 
-`icon.json` declares the 1024 canvas, three groups, and three appearances. The two-group sketch died on the tool: actool 26.6 ignores layer-level specializations, so each tile rides its own group and group-level rules do the hiding. Groups list front-to-back, with the note first. The measured mask radius is 231.165 on the 1024 canvas, the volume constant expressed on this grid, and the bands sit concentric to it:
+`icon.json` declares the 1024 canvas, four groups, and three appearances. The two-group sketch died on the tool: actool 26.6 ignores layer-level specializations. Each note and each tile therefore rides its own group, and group-level rules do the hiding. Groups list front-to-back, with the notes first. The measured mask radius is 231.165 on the 1024 canvas, the volume constant expressed on this grid, and the bands sit concentric to it:
 
 - default shows `tile.svg` behind `note.svg`,
-- dark shows `tile-dark.svg` behind the same `note.svg`,
-- mono hides the background group and shows the note alone, and the system derives clear and tinted from it.
+- dark shows `tile-dark.svg` behind `note-dark.svg`, which repeats the note geometry over a darker backdrop,
+- mono hides both background groups and shows the dark note alone, and the system derives clear and tinted from it.
 
 Apple's source rules apply: no baked canvas mask, no baked blur, shadow, or specular, and effects configured in Icon Composer only (`discovery/research.md` section 3). The band radii inside the tile layers run concentric to the system mask radius Icon Composer previews.
 
@@ -240,7 +241,7 @@ Every path sits outside Feature-Sliced Design, matching the code map.
 
 - `apps/desktop/build/mark.svg`: the flattened 1024 master, normalized from `discovery/mark.svg` through the pinned flatten rule (create)
 - `apps/desktop/build/mark-small.svg`: the purpose-drawn small note at the pinned weights (create)
-- `apps/desktop/build/icon.icon/`: the hand-authored bundle, `icon.json` plus three layer sources (create)
+- `apps/desktop/build/icon.icon/`: the hand-authored bundle, `icon.json` plus four layer sources (create)
 - `apps/desktop/build/icon.ico`: the five-entry ladder, replacing the stock art (modify)
 - `apps/desktop/build/icons/`: the nine-rung Linux ladder (create)
 - `apps/desktop/build/volume.icns`: the disk-image volume icon at the legacy grid (create)
@@ -449,11 +450,13 @@ Two manual steps stay with the maintainer beyond task 3. The first checks the vo
 
 **Deploy.** One release carries the icons and the rename together. A partial swap ships the Electron logo on the platforms whose format already matched, so nothing here splits (`discovery/research.md` section 2).
 
-**The user-data folder.** `app.setName('Recompose')` runs before the first path read, so `userData` resolves under the new name on every platform. No migration runs, per the approved rider: the folder holds a 151-byte settings document and a near-empty vault, and first launch after the upgrade starts from defaults. The old folder stays on disk untouched.
+**The user-data folder.** `app.setName('Recompose')` runs before the first path read, so `userData` resolves under the new name on every platform. What a person then sees depends on the filesystem underneath. macOS and Windows are case-insensitive, so the new path lands on the existing folder and the settings document and the vault file stay readable. Linux is case-sensitive, so the path genuinely moves, first launch starts from defaults, and the old folder stays on disk untouched.
+
+**The macOS keychain doesn't follow the folder.** `safeStorage` derives its keychain service name from the app name, and matches that name case-sensitively. The rename therefore orphans the key that encrypted the vault the folder just kept. The vault file survives and then fails decryption for good, so the person mints a fresh gateway token once. No migration runs, per the approved rider: the folder holds a 151-byte settings document and a near-empty vault. The maintainer accepted this outcome with documentation rather than code.
 
 **Artifact names.** `${productName}` expands to Recompose, so filenames change case. ADR 0035's phase A ships unsigned with no updater, so no update chain breaks. The homebrew workflow discovers the disk image by suffix and survives, and its cask template moves in this change because its hardcoded app line would not.
 
-**Rollback.** Reverting the release restores the lowercase name, and the app finds the old user-data folder with its prior contents. The Recompose folder lingers unused until a roll-forward. The e2e packaged lane isolates its own user-data directory, so tests never touch either folder (`apps/desktop/e2e/packaged-smoke.spec.ts`, `createPackagedLaunchEnv`).
+**Rollback.** Reverting the release restores the lowercase name, and with it the lowercase keychain service name. On Linux the app finds the old user-data folder with its prior contents, and the Recompose folder lingers unused until a roll-forward. On macOS and Windows the folder never moved, so only the vault changes hands, and a token minted after the rename is the one that orphans. The e2e packaged lane isolates its own user-data directory, so tests never touch either folder (`apps/desktop/e2e/packaged-smoke.spec.ts`, `createPackagedLaunchEnv`).
 
 ## Open questions
 
