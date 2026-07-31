@@ -69,3 +69,5 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0061](0061-the-slug-comes-from-the-name.md)                                | The Slug Comes From the Name, Folded by Hand                                        | Accepted   | 2026-07-31 |
 | [0062](0062-a-schema-version-names-one-shape.md)                            | A Schema Version Names One Shape, and Every Store Reads It First                    | Accepted   | 2026-07-31 |
 | [0063](0063-gateway-ports-come-from-a-recompose-band.md)                    | Gateway Ports Come From a recompose Band, Not the Ephemeral Pool                    | Accepted   | 2026-07-31 |
+| [0064](0064-the-window-controls-follow-the-sidebar.md)                      | The Window Controls Follow the Sidebar                                              | Accepted   | 2026-07-31 |
+| [0065](0065-view-state-stays-in-the-renderer.md)                            | View State Stays in the Renderer, Apart From the Settings Document                  | Accepted   | 2026-07-31 |
