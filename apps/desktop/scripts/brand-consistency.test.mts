@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { brandPalette } from './brand-palette.mts';
 import { iconOutputs } from './generate-icons.mts';
-import { flattenedMarkFills } from './icon-geometry.mts';
+import {
+  concentricRadius,
+  darkBandInsetFraction,
+  flattenedMarkFills,
+  markCanvas,
+  tileInsetFraction,
+} from './icon-geometry.mts';
 
 function readMaster(name: string): string {
   return readFileSync(fileURLToPath(new URL(`../build/${name}`, import.meta.url)), 'utf8');
@@ -28,6 +34,9 @@ const ICON_BUNDLE_LAYERS = [
 ];
 const SRGB_COMPONENT_PATTERN = /srgb:([\d.]+),([\d.]+),([\d.]+),[\d.]+/g;
 const CHANNEL_MAX = 255;
+const CORNER_RADIUS_PATTERN = /rx="([\d.]+)"/g;
+const MEASURED_MASK_RADIUS = 231.165;
+const TILE_LAYERS = ['Assets/tile.svg', 'Assets/tile-dark.svg'];
 
 function readIconBundle(name: string): string {
   return readFileSync(
@@ -51,6 +60,12 @@ function colorsDeclaredIn(source: string): readonly string[] {
   return [
     ...new Set(sortedUpperCase([...(source.match(/#[0-9A-Fa-f]{6}/g) ?? []), ...componentColors])),
   ].toSorted();
+}
+
+function cornerRadiiIn(layer: string): readonly number[] {
+  return [...readIconBundle(layer).matchAll(CORNER_RADIUS_PATTERN)].map((match) =>
+    Number(match[1]),
+  );
 }
 
 const traceableFills = new Set(
@@ -118,6 +133,17 @@ describe('the Icon Composer bundle', () => {
         flattenedMarkFills.darkBandBottom,
       ]),
     );
+  });
+});
+
+describe('the Icon Composer tile geometry', () => {
+  it('rounds both band corners concentric to the measured mask radius, in both tiles', () => {
+    const concentricToTheMask = [
+      concentricRadius(MEASURED_MASK_RADIUS, markCanvas * darkBandInsetFraction),
+      concentricRadius(MEASURED_MASK_RADIUS, markCanvas * tileInsetFraction),
+    ];
+
+    expect(TILE_LAYERS.map(cornerRadiiIn)).toEqual([concentricToTheMask, concentricToTheMask]);
   });
 });
 
@@ -238,10 +264,12 @@ describe('the purpose drawn small master', () => {
 });
 
 describe('the committed rasters and containers', () => {
-  const regenerated = iconOutputs();
-
   it('covers exactly the icon files the packaging targets resolve', () => {
-    expect(regenerated.map(([path]) => path.split('/').slice(-2).join('/')).toSorted()).toEqual([
+    expect(
+      iconOutputs()
+        .map(([path]) => path.split('/').slice(-2).join('/'))
+        .toSorted(),
+    ).toEqual([
       'build/icon.ico',
       'build/volume.icns',
       'icons/128x128.png',
@@ -261,7 +289,7 @@ describe('the committed rasters and containers', () => {
   });
 
   it('matches a regeneration from the masters byte for byte, so no hand edit survives', () => {
-    for (const [path, bytes] of regenerated) {
+    for (const [path, bytes] of iconOutputs()) {
       expect({ path, bytes: Buffer.from(readFileSync(path)) }).toEqual({
         path,
         bytes: Buffer.from(bytes),
