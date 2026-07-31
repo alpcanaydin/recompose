@@ -207,7 +207,7 @@ describe('ipc error codes', () => {
     'storage-failed',
     'folder-open-failed',
     'token-missing',
-    'slug-conflict',
+    'name-conflict',
     'port-conflict',
   ];
 

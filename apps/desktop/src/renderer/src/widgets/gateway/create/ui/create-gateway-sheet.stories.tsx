@@ -12,7 +12,7 @@ const meta = preview.meta({
   args: { open: true, onOpenChange: () => {}, onCreated: () => {} },
 });
 
-/** The sheet as it arrives: three empty fields, a free port already filled, a live preview. */
+/** The sheet as it arrives: an empty name, a free port already filled, a live preview. */
 export const Open = meta.story({
   play: async () => {
     const sheet = await screen.findByRole('dialog', { name: 'Create a gateway' });
@@ -50,11 +50,10 @@ export const SheetBands = meta.story({
   },
 });
 
-/** The one grouped box the three fields sit in, rather than three stacked labelled fields. */
+/** The one grouped box the two fields sit in, rather than two stacked labelled fields. */
 export const GroupedFields = meta.story({
   play: async () => {
     const name = await screen.findByRole('textbox', { name: 'Name' });
-    const slug = await screen.findByRole('textbox', { name: 'Slug' });
     const port = await screen.findByRole('textbox', { name: 'Port' });
     const row = name.closest('div');
     const box = row?.parentElement;
@@ -66,10 +65,9 @@ export const GroupedFields = meta.story({
     await expect(paintedStyle(port.closest('div')).borderBottomWidth).toBe('0px');
 
     await expect(paintedBox(name).width).toBe(170);
-    await expect(paintedBox(slug).width).toBe(170);
     await expect(paintedBox(port).width).toBe(74);
-    await expect(paintedStyle(slug).textAlign).toBe('end');
-    await expect(paintedStyle(slug).fontFamily).toContain('Mono');
+    await expect(paintedStyle(port).textAlign).toBe('end');
+    await expect(paintedStyle(port).fontFamily).toContain('Mono');
     await expect(paintedStyle(name).fontFamily).not.toContain('Mono');
   },
 });
@@ -87,19 +85,17 @@ export const AddressPreview = meta.story({
   },
 });
 
-/** A refused slug, which keeps the sheet open and states the format under the field. */
-export const SlugRefused = meta.story({
+/** A refused name, which keeps the sheet open and says what refused it under the field. */
+export const NameRefused = meta.story({
   play: async ({ userEvent }) => {
-    await userEvent.type(await screen.findByRole('textbox', { name: 'Slug' }), 'Codex');
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Name' }), 'Con');
     await userEvent.click(await screen.findByRole('button', { name: 'Create Gateway' }));
 
     const refusal = await screen.findByRole('alert');
-    const slug = await screen.findByRole('textbox', { name: 'Slug' });
+    const name = await screen.findByRole('textbox', { name: 'Name' });
 
-    await expect(refusal).toHaveTextContent(
-      'Accepts lowercase letters, digits, and single dashes.',
-    );
-    await expect(paintedBox(refusal).top).toBeGreaterThanOrEqual(paintedBox(slug).bottom);
+    await expect(refusal).toHaveTextContent('Windows reserves this name.');
+    await expect(paintedBox(refusal).top).toBeGreaterThanOrEqual(paintedBox(name).bottom);
   },
 });
 

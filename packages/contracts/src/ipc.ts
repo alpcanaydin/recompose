@@ -15,7 +15,7 @@ export const ipcErrorSchema = z.strictObject({
     'storage-failed',
     'folder-open-failed',
     'token-missing',
-    'slug-conflict',
+    'name-conflict',
     'port-conflict',
   ]),
   message: z.string().min(1),

@@ -62,18 +62,28 @@ async function bytesOf(userDataPath: string, slug: string): Promise<string> {
 const codex = gatewayNamed('codex', 'Codex', 8397);
 
 describe('a save that collides with a stored gateway', () => {
-  test('a slug a stored gateway holds is refused rather than overwritten', async () => {
+  test('a name a stored gateway holds is refused rather than overwritten', async () => {
     const context = await freshContext([]);
     const handlers = createStorageIpcHandlers(context);
 
     await handlers['gateways:save'](codex);
-    const answer = await handlers['gateways:save'](gatewayNamed('codex', 'Impostor', 9001));
+    const answer = await handlers['gateways:save'](gatewayNamed('codex', 'Codex', 9001));
 
-    expect(refusalIn(answer).code).toBe('slug-conflict');
-    expect(refusalIn(answer).message).toContain('codex');
+    expect(refusalIn(answer).code).toBe('name-conflict');
+    expect(refusalIn(answer).message).toContain('Codex');
   });
 
-  test('the stored document survives a slug collision byte for byte', async () => {
+  test('two names deriving one slug collide, because one file can hold only one gateway', async () => {
+    const context = await freshContext([]);
+    const handlers = createStorageIpcHandlers(context);
+
+    await handlers['gateways:save'](codex);
+    const answer = await handlers['gateways:save'](gatewayNamed('codex', 'codex', 9001));
+
+    expect(refusalIn(answer).code).toBe('name-conflict');
+  });
+
+  test('the stored document survives a name collision byte for byte', async () => {
     const context = await freshContext([]);
     const handlers = createStorageIpcHandlers(context);
 
@@ -125,7 +135,7 @@ describe('what a save asks the engine for', () => {
     const handlers = createStorageIpcHandlers(await freshContext(started));
 
     await handlers['gateways:save'](codex);
-    await handlers['gateways:save'](gatewayNamed('codex', 'Impostor', 9001));
+    await handlers['gateways:save'](gatewayNamed('codex', 'Codex', 9001));
 
     expect(started).toEqual([{ slug: 'codex', displayName: 'Codex', port: 8397 }]);
   });

@@ -50,7 +50,6 @@ test('a gateway saved from the sheet reaches the sidebar as a running row', asyn
 
   await screen.getByRole('button', { name: 'Create Gateway' }).click();
   await screen.getByRole('textbox', { name: 'Name' }).fill('Codex');
-  await screen.getByRole('textbox', { name: 'Slug' }).fill('codex');
 
   screen.getByRole('button', { name: 'Create Gateway' }).last().element().focus();
 

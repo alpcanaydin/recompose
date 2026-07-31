@@ -21,9 +21,16 @@ Feature: Creating a gateway
     When the maintainer presses the shortcut for a new gateway
     Then the "Create a gateway" sheet opens
 
-  Scenario: Accepting the sheet's offer stores the gateway
-    When the maintainer creates the gateway "Codex" with the slug "codex", leaving the port alone
-    Then the stored gateway carries the name "Codex", the slug "codex", and the offered port
+  Scenario Outline: A stored gateway takes the slug its name derives
+    When the maintainer creates the gateway "<name>", leaving the port alone
+    Then the stored gateway carries the name "<name>", the slug "<slug>", and the offered port
+
+    Examples:
+      | name       | slug       |
+      | Codex      | codex      |
+      | My Gateway | my-gateway |
+      | Kapı       | kapi       |
+      | 网关       | gateway    |
 
   Scenario: A typed port beats the offered one
     When the maintainer creates the gateway "codex" on a free port they typed themselves

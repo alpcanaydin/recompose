@@ -63,9 +63,9 @@ Then('the name field holds focus', async ({ page }) => {
 });
 
 When(
-  'the maintainer creates the gateway {string} with the slug {string}, leaving the port alone',
-  async ({ page }, name: string, slug: string) => {
-    portsTheSheetOffered.set(page, await createThroughSheet(page, { name, slug }));
+  'the maintainer creates the gateway {string}, leaving the port alone',
+  async ({ page }, name: string) => {
+    portsTheSheetOffered.set(page, await createThroughSheet(page, { name }));
   },
 );
 
@@ -86,7 +86,7 @@ When(
     const port = String(await freePort());
 
     portsTheMaintainerTyped.set(page, port);
-    await createThroughSheet(page, { name, port, slug: name });
+    await createThroughSheet(page, { name, port });
   },
 );
 

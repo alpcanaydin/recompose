@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { GatewayConfig } from '@recompose/contracts';
 
 import { expect } from '@playwright/test';
-import { GATEWAY_CONFIG_VERSION } from '@recompose/contracts';
+import { GATEWAY_CONFIG_VERSION, slugFromName } from '@recompose/contracts';
 
 import { addressOfPort } from './gateway-client';
 
@@ -126,7 +126,7 @@ export async function seedGateway(page: Page, name: string): Promise<GatewayConf
 
   const config: GatewayConfig = {
     schemaVersion: GATEWAY_CONFIG_VERSION,
-    slug: name,
+    slug: slugFromName(name),
     displayName: name,
     port: offered.value,
     virtualModels: [],
@@ -174,13 +174,11 @@ export async function portFieldValue(page: Page): Promise<string> {
 
 export type GatewayDraft = {
   name: string;
-  slug: string;
   port?: string;
 };
 
 export async function fillSheet(page: Page, draft: GatewayDraft): Promise<void> {
   await sheetField(page, 'Name').fill(draft.name);
-  await sheetField(page, 'Slug').fill(draft.slug);
 
   if (draft.port !== undefined) {
     await sheetField(page, 'Port').fill(draft.port);

@@ -1,28 +1,28 @@
 import { fc, test as propertyTest } from '@fast-check/vitest';
 import { describe, expect, test } from 'vitest';
 
-import { previewAddressFor, portRefusal, slugRefusal } from './gateway-draft';
+import { previewAddressFor, portRefusal, nameRefusal } from './gateway-draft';
 
-describe('the slug a person types', () => {
-  test('a plain lowercase slug draws no refusal', () => {
-    expect(slugRefusal('codex')).toBeUndefined();
+describe('the name a person types', () => {
+  test('a plain name draws no refusal', () => {
+    expect(nameRefusal('Codex')).toBeUndefined();
   });
 
-  test('a slug carrying an uppercase letter states the format the field accepts', () => {
-    expect(slugRefusal('Codex')).toBe('Accepts lowercase letters, digits, and single dashes.');
+  test('a name carrying spaces and punctuation draws no refusal, because the app derives around them', () => {
+    expect(nameRefusal('Claude, Code & Friends')).toBeUndefined();
   });
 
-  test('a slug ending in a dash states the same format', () => {
-    expect(slugRefusal('codex-')).toBe('Accepts lowercase letters, digits, and single dashes.');
+  test('a name longer than a hostname label allows draws no refusal, because the app trims it', () => {
+    expect(nameRefusal('A'.repeat(200))).toBeUndefined();
+  });
+
+  test('a name written in letters no slug can carry draws no refusal, because the app falls back', () => {
+    expect(nameRefusal('网关')).toBeUndefined();
   });
 
   test('a name Windows keeps for a device says so in its own words', () => {
-    expect(slugRefusal('con')).toBe('Windows reserves this name.');
-  });
-
-  test('a slug longer than a hostname label allows draws a refusal', () => {
-    expect(slugRefusal('a'.repeat(64))).toBeDefined();
-    expect(slugRefusal('a'.repeat(63))).toBeUndefined();
+    expect(nameRefusal('Con')).toBe('Windows reserves this name.');
+    expect(nameRefusal('lpt1')).toBe('Windows reserves this name.');
   });
 });
 

@@ -269,7 +269,7 @@ export const engineReportSchema = z.strictObject({
 
 ### Error codes
 
-`ipcErrorSchema` grows from seven codes to nine: `slug-conflict` and `port-conflict` join the closed set. The `port-conflict` message is load-bearing: main appends "already holds this port." to the holder's slug. The renderer prints the message verbatim, because only main knows the true holder.
+`ipcErrorSchema` grows from seven codes to nine: `name-conflict` and `port-conflict` join the closed set. The `port-conflict` message is load-bearing: main appends "already holds this port." to the holder's slug. The renderer prints the message verbatim, because only main knows the true holder.
 
 ### The type-level specs
 
@@ -277,28 +277,27 @@ export const engineReportSchema = z.strictObject({
 
 ### Storage contracts
 
-Gateway documents stay one JSON file per slug under the gateways directory. `gateways:save` refuses an existing slug with `slug-conflict` and refuses a stored port with `port-conflict` before writing, so the channel keeps creation-only semantics this round. Editing arrives with the gateway settings feature. The checklist dismissal lives in `localStorage` under `recompose.get-started.dismissed`, renderer-side, outside the settings document.
+Gateway documents stay one JSON file per slug under the gateways directory. `gateways:save` refuses a slug a stored gateway holds with `name-conflict` and refuses a stored port with `port-conflict` before writing, so the channel keeps creation-only semantics this round. Editing arrives with the gateway settings feature. The checklist dismissal lives in `localStorage` under `recompose.get-started.dismissed`, renderer-side, outside the settings document.
 
 ## Error handling
 
 The surface carries two failure vocabularies, and the split follows one rule. A failure that refuses an act crosses the boundary as `ok: false` with a code. A failure that describes a gateway's condition rides inside the state union, because the indicator, the error line, and the push must read one value. The proposal locked the split, and this document records the cost rather than hiding it: a reader meets both shapes on one surface.
 
-| Failure                                                   | Representation                                                     | The screen shows                                                                            |
-| --------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| A slug a stored gateway holds                             | `ok: false`, `slug-conflict`                                       | the sheet stays open, and the slug field reads "Another gateway holds this slug."           |
-| A port a stored gateway holds                             | `ok: false`, `port-conflict`                                       | the sheet stays open, and the port field prints the message naming the holder               |
-| A slug the format rejects                                 | never crosses                                                      | the sheet blocks the save and reads "Accepts lowercase letters, digits, and single dashes." |
-| A Windows device name                                     | never crosses                                                      | the sheet blocks the save and reads "Windows reserves this name."                           |
-| A port outside the range                                  | never crosses                                                      | the sheet blocks the save and reads "Accepts 1024 through 65535."                           |
-| Another process holds the port at start                   | state union, `{ status: 'stopped', failure: { port } }`            | the stopped shape, plus "Another process holds port 8397." beside "Move to a free port"     |
-| Another process takes the port between offer and save     | same as above, after a successful save                             | the gateway stores, shows stopped, and the line names the port                              |
-| `::1` refuses the bind on a machine without IPv6 loopback | no failure at all                                                  | nothing, the gateway runs on IPv4 alone                                                     |
-| `EADDRINUSE` on either family                             | state union, `failure: { port }`                                   | the failed-start line, because half a bind is a failed start                                |
-| The engine child dies                                     | state union, every slug folds to `stopped`                         | every indicator shows stopped, and the next start spawns a fresh child                      |
-| The child won't spawn, or a directive times out           | `ok: false`, `storage-failed`, message naming the engine operation | the toolbar's mutation error state                                                          |
-| The free-port probe fails                                 | `ok: false`, `storage-failed`, message naming the probe            | the port field arrives empty, and the range message stands in                               |
-| A settings document from a newer build                    | `ok: false`, `settings-newer-schema`, already shipped              | the settings surface reports it, and gateway creation no longer reads settings at all       |
-| A gateway document write fails                            | `ok: false`, `storage-failed`                                      | the sheet reports the save didn't land                                                      |
+| Failure                                                   | Representation                                                     | The screen shows                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| A name a stored gateway holds                             | `ok: false`, `name-conflict`                                       | the sheet stays open, and the name field reads "Another gateway holds this name."       |
+| A port a stored gateway holds                             | `ok: false`, `port-conflict`                                       | the sheet stays open, and the port field prints the message naming the holder           |
+| A name deriving a Windows device name                     | never crosses                                                      | the sheet blocks the save and reads "Windows reserves this name."                       |
+| A port outside the range                                  | never crosses                                                      | the sheet blocks the save and reads "Accepts 1024 through 65535."                       |
+| Another process holds the port at start                   | state union, `{ status: 'stopped', failure: { port } }`            | the stopped shape, plus "Another process holds port 8397." beside "Move to a free port" |
+| Another process takes the port between offer and save     | same as above, after a successful save                             | the gateway stores, shows stopped, and the line names the port                          |
+| `::1` refuses the bind on a machine without IPv6 loopback | no failure at all                                                  | nothing, the gateway runs on IPv4 alone                                                 |
+| `EADDRINUSE` on either family                             | state union, `failure: { port }`                                   | the failed-start line, because half a bind is a failed start                            |
+| The engine child dies                                     | state union, every slug folds to `stopped`                         | every indicator shows stopped, and the next start spawns a fresh child                  |
+| The child won't spawn, or a directive times out           | `ok: false`, `storage-failed`, message naming the engine operation | the toolbar's mutation error state                                                      |
+| The free-port probe fails                                 | `ok: false`, `storage-failed`, message naming the probe            | the port field arrives empty, and the range message stands in                           |
+| A settings document from a newer build                    | `ok: false`, `settings-newer-schema`, already shipped              | the settings surface reports it, and gateway creation no longer reads settings at all   |
+| A gateway document write fails                            | `ok: false`, `storage-failed`                                      | the sheet reports the save didn't land                                                  |
 
 Three rules bind the handlers. No silent failures: the child logs and ignores a directive that fails its parse, and main logs a child exit before folding the ledger, so nothing disappears without a trace. Errors carry context: every message names the gateway, the port, or the operation. Expected failures travel as typed values: nothing on this surface throws across the bridge except the sender-trust rejection ADR-0018 already carved out.
 

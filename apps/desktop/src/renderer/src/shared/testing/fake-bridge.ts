@@ -88,9 +88,14 @@ export function emitEngineStates(states: EngineStates): void {
 function conflictIn(
   stored: readonly GatewayConfig[],
   arriving: GatewayConfig,
-): { code: 'slug-conflict' | 'port-conflict'; message: string } | undefined {
-  if (stored.some((held) => held.slug === arriving.slug)) {
-    return { code: 'slug-conflict', message: `${arriving.slug} already exists.` };
+): { code: 'name-conflict' | 'port-conflict'; message: string } | undefined {
+  const namesake = stored.find((held) => held.slug === arriving.slug);
+
+  if (namesake !== undefined) {
+    return {
+      code: 'name-conflict',
+      message: `Another gateway already holds the name "${namesake.displayName}".`,
+    };
   }
 
   const portHolder = stored.find((held) => held.port === arriving.port);

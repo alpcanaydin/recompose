@@ -48,7 +48,7 @@ Given(
 When(
   'the maintainer creates the gateway {string} on the offered port',
   async ({ page }, name: string) => {
-    await createThroughSheet(page, { name, slug: name });
+    await createThroughSheet(page, { name });
     focusGateway(page, name);
   },
 );

@@ -48,8 +48,13 @@ async function listGateways(ctx: StorageIpcContext, paths: StoragePaths) {
 }
 
 function conflictWith(stored: readonly GatewayConfig[], saving: GatewayConfig) {
-  if (stored.some((one) => one.slug === saving.slug)) {
-    return ipcFailure('slug-conflict', `Another gateway already holds the slug "${saving.slug}".`);
+  const namesake = stored.find((one) => one.slug === saving.slug);
+
+  if (namesake !== undefined) {
+    return ipcFailure(
+      'name-conflict',
+      `Another gateway already holds the name "${namesake.displayName}".`,
+    );
   }
 
   const holder = stored.find((one) => one.port === saving.port);

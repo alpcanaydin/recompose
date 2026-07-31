@@ -16,8 +16,8 @@ import {
 } from '../gateway-screen';
 import { portIsFree } from '../loopback-ports';
 
-/** The gateway a slug or port scenario is drafting, which is never the one already stored. */
-const DRAFT = { name: 'Gemini', slug: 'gemini' };
+/** The gateway a port scenario is drafting, which is never the one already stored. */
+const DRAFT = { name: 'Gemini' };
 
 /** The port a gateway held before the sheet tried to take it, so the refusal can be proved idle. */
 const portsBeforeTheAttempt = new WeakMap<Page, number>();
@@ -55,8 +55,14 @@ Then('the sheet previews serving at {string}', async ({ page }, address: string)
   await previewShows(page, address);
 });
 
-When('the maintainer tries the slug {string}', async ({ page }, slug: string) => {
-  await fillSheet(page, { name: slug, slug });
+Then('the sheet asks for a name and a port only', async ({ page }) => {
+  await expect(sheetField(page, 'Name')).toBeVisible();
+  await expect(sheetField(page, 'Port')).toBeVisible();
+  await expect(creationSheet(page).getByRole('textbox')).toHaveCount(2);
+});
+
+When('the maintainer tries the name {string}', async ({ page }, name: string) => {
+  await fillSheet(page, { name });
   await pressCreate(page);
 });
 
@@ -77,8 +83,8 @@ Then('the sheet stays open', async ({ page }) => {
   await expect(creationSheet(page)).toBeVisible();
 });
 
-Then('the slug field reads {string}', async ({ page }, refusal: string) => {
-  await expect(fieldRefusal(page, 'Slug')).toHaveText(refusal);
+Then('the name field reads {string}', async ({ page }, refusal: string) => {
+  await expect(fieldRefusal(page, 'Name')).toHaveText(refusal);
 });
 
 Then('the port field reads {string}', async ({ page }, refusal: string) => {
