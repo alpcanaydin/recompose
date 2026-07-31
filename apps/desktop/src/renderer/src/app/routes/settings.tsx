@@ -1,11 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import {
-  SettingsPage,
-  gatewayTokenQueryOptions,
-  settingsQueryOptions,
-  systemQueryOptions,
-} from '../../pages/settings';
+import { SettingsPage, settingsQueryOptions, systemQueryOptions } from '../../pages/settings';
 import { PageError } from '../../shared/ui';
 
 type SettingsSearch = {
@@ -29,7 +24,6 @@ export const Route = createFileRoute('/settings')({
     await Promise.all([
       context.queryClient.ensureQueryData(settingsQueryOptions),
       context.queryClient.ensureQueryData(systemQueryOptions),
-      context.queryClient.ensureQueryData(gatewayTokenQueryOptions),
     ]);
   },
   component: SettingsRoute,

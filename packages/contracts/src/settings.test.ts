@@ -10,7 +10,6 @@ describe('app settings', () => {
       theme: 'system',
       launchAtLogin: false,
       showInMenuBar: false,
-      requireGatewayToken: false,
     });
   });
 
@@ -20,7 +19,6 @@ describe('app settings', () => {
       theme: 'dark',
       launchAtLogin: true,
       showInMenuBar: true,
-      requireGatewayToken: true,
     };
 
     expect(loadSettings(stored)).toEqual(stored);
@@ -30,27 +28,31 @@ describe('app settings', () => {
     expect(() => loadSettings({ ...defaultSettings(), enginePort: 8397 })).toThrow();
   });
 
+  test('a document still naming a token requirement is refused rather than quietly accepted', () => {
+    expect(() => loadSettings({ ...defaultSettings(), requireGatewayToken: false })).toThrow();
+  });
+
   test('unknown keys are rejected', () => {
     expect(() => loadSettings({ ...defaultSettings(), telemetry: true })).toThrow();
   });
 
   test('a missing switch is rejected rather than quietly defaulted', () => {
-    const { requireGatewayToken, ...withoutTheSwitch } = defaultSettings();
+    const { showInMenuBar, ...withoutTheSwitch } = defaultSettings();
 
-    expect(requireGatewayToken).toBe(false);
+    expect(showInMenuBar).toBe(false);
     expect(() => loadSettings(withoutTheSwitch)).toThrow();
   });
 });
 
 describe('a stored version 2 document, the shape a real profile holds', () => {
-  test('the port a real profile still carries is dropped rather than reported as damage', () => {
+  test('the port and the token requirement are dropped rather than reported as damage', () => {
     const storedUnderVersionTwo = {
       schemaVersion: 2,
       theme: 'system',
       enginePort: 8397,
       launchAtLogin: false,
       showInMenuBar: true,
-      requireGatewayToken: false,
+      requireGatewayToken: true,
     };
 
     expect(loadSettings(storedUnderVersionTwo)).toEqual({
@@ -58,7 +60,6 @@ describe('a stored version 2 document, the shape a real profile holds', () => {
       theme: 'system',
       launchAtLogin: false,
       showInMenuBar: true,
-      requireGatewayToken: false,
     });
   });
 
@@ -72,13 +73,14 @@ describe('a stored version 2 document, the shape a real profile holds', () => {
   });
 
   test.prop([versionTwoDocuments])(
-    'every version 2 document reaches version 3 keeping its choices and losing only the port',
+    'every version 2 document reaches version 3 keeping its choices and losing both retired fields',
     (storedUnderVersionTwo) => {
-      const { enginePort, ...withoutThePort } = storedUnderVersionTwo;
+      const { enginePort, requireGatewayToken, ...whatSurvives } = storedUnderVersionTwo;
 
       expect(enginePort).toBeGreaterThan(0);
+      expect(typeof requireGatewayToken).toBe('boolean');
       expect(loadSettings(storedUnderVersionTwo)).toEqual({
-        ...withoutThePort,
+        ...whatSurvives,
         schemaVersion: 3,
       });
     },
@@ -94,7 +96,6 @@ describe('a stored version 1 document', () => {
       theme: 'dark',
       launchAtLogin: false,
       showInMenuBar: false,
-      requireGatewayToken: false,
     });
   });
 
@@ -112,7 +113,6 @@ describe('a stored version 1 document', () => {
         theme: storedUnderVersionOne.theme,
         launchAtLogin: false,
         showInMenuBar: false,
-        requireGatewayToken: false,
       });
     },
   );

@@ -1,13 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { GATEWAY_CONFIG_VERSION } from './gateway-config';
-import {
-  gatewayTokenStatusSchema,
-  ipcChannels,
-  ipcErrorSchema,
-  systemStateSchema,
-  type IpcChannel,
-} from './ipc';
+import { ipcChannels, ipcErrorSchema, systemStateSchema, type IpcChannel } from './ipc';
 
 const channelNames: IpcChannel[] = [
   'gateways:list',
@@ -19,9 +13,6 @@ const channelNames: IpcChannel[] = [
   'accounts:remove',
   'system:get',
   'system:open-config-folder',
-  'gateway-token:status',
-  'gateway-token:mint',
-  'gateway-token:copy',
   'gateways:offer-port',
   'gateways:move-port',
   'engine:start',
@@ -30,13 +21,19 @@ const channelNames: IpcChannel[] = [
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the seventeen specified channels exist', () => {
+  test('exactly the fourteen specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 
   test('no channel exists that could read a secret back', () => {
     for (const name of Object.keys(ipcChannels)) {
       expect(name).not.toMatch(/secret|credential|vault/i);
+    }
+  });
+
+  test('no channel serves a gateway token, because that surface left with the token', () => {
+    for (const name of Object.keys(ipcChannels)) {
+      expect(name).not.toMatch(/token/i);
     }
   });
 
@@ -148,53 +145,11 @@ describe('the system state crossing the bridge', () => {
   });
 });
 
-describe('the gateway token status crossing the bridge', () => {
-  const maskedToken = 'rc-local-********tail';
-
-  test('a stored token arrives masked', () => {
-    const status = { masked: maskedToken, storage: 'available' };
-
-    expect(ipcChannels['gateway-token:status'].response.parse({ ok: true, value: status })).toEqual(
-      {
-        ok: true,
-        value: status,
-      },
-    );
-  });
-
-  test('an empty vault arrives as no mask at all', () => {
-    const status = { masked: null, storage: 'plaintext-fallback' };
-
-    expect(gatewayTokenStatusSchema.parse(status)).toEqual(status);
-  });
-
-  test('a blank mask is rejected, because absence is spelled null', () => {
-    expect(() => gatewayTokenStatusSchema.parse({ masked: '', storage: 'available' })).toThrow();
-  });
-
-  test('the plaintext cannot ride beside the mask', () => {
-    expect(() =>
-      gatewayTokenStatusSchema.parse({
-        masked: maskedToken,
-        storage: 'available',
-        token: 'rc-local-the-whole-thing',
-      }),
-    ).toThrow();
-  });
-
-  test('the secret-storage state is a closed set', () => {
-    expect(() => gatewayTokenStatusSchema.parse({ masked: null, storage: 'encrypted' })).toThrow();
-  });
-});
-
 describe('the channels that answer with nothing', () => {
-  test('opening the config folder and copying the token both carry no value back', () => {
-    for (const name of ['system:open-config-folder', 'gateway-token:copy'] as const) {
-      expect(ipcChannels[name].response.parse({ ok: true, value: undefined })).toEqual({
-        ok: true,
-        value: undefined,
-      });
-    }
+  test('opening the config folder carries no value back', () => {
+    expect(
+      ipcChannels['system:open-config-folder'].response.parse({ ok: true, value: undefined }),
+    ).toEqual({ ok: true, value: undefined });
   });
 });
 
@@ -206,7 +161,6 @@ describe('ipc error codes', () => {
     'validation-failed',
     'storage-failed',
     'folder-open-failed',
-    'token-missing',
     'slug-conflict',
     'port-conflict',
   ];
@@ -219,7 +173,7 @@ describe('ipc error codes', () => {
     expect(() => ipcErrorSchema.parse({ code: 'other', message: 'x' })).toThrow();
   });
 
-  test('the set holds exactly nine codes, so a tenth arrives through a failing test', () => {
+  test('the set holds exactly eight codes, so a ninth arrives through a failing test', () => {
     expect(ipcErrorSchema.shape.code.options).toEqual(everyCode);
   });
 

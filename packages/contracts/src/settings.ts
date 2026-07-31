@@ -9,7 +9,6 @@ export const settingsSchema = z.strictObject({
   theme: z.enum(['system', 'light', 'dark']),
   launchAtLogin: z.boolean(),
   showInMenuBar: z.boolean(),
-  requireGatewayToken: z.boolean(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -41,15 +40,18 @@ const addVersionTwoSwitches: Migration = {
   }),
 };
 
-const dropEnginePort: Migration = {
+const dropWhatBelongsToOneGateway: Migration = {
   from: 2,
-  migrate: ({ enginePort: _retired, ...withoutThePort }) => ({
-    ...withoutThePort,
+  migrate: ({ enginePort: _port, requireGatewayToken: _requirement, ...whatSurvives }) => ({
+    ...whatSurvives,
     schemaVersion: 3,
   }),
 };
 
-const settingsMigrations: readonly Migration[] = [addVersionTwoSwitches, dropEnginePort];
+const settingsMigrations: readonly Migration[] = [
+  addVersionTwoSwitches,
+  dropWhatBelongsToOneGateway,
+];
 
 export function loadSettings(doc: unknown): Settings {
   return settingsSchema.parse(migrateDocument(doc, settingsMigrations, SETTINGS_VERSION));
@@ -61,6 +63,5 @@ export function defaultSettings(): Settings {
     theme: 'system',
     launchAtLogin: false,
     showInMenuBar: false,
-    requireGatewayToken: false,
   };
 }

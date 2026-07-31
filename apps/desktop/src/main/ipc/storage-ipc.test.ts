@@ -32,7 +32,6 @@ async function freshContext(
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
-    writeClipboard: () => undefined,
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,

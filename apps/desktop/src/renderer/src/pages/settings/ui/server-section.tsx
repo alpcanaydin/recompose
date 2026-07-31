@@ -1,14 +1,7 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
-
 import { FieldGroup, FieldRow, Switch } from '../../../shared/ui';
-import { settingsQueryOptions } from '../api/settings';
-import { GatewayTokenRow } from './gateway-token-row';
-import { TokenRequirementRow } from './token-requirement-row';
 
-/** The address every gateway answers on, and the token the gateway demands. */
+/** The address every gateway answers on, and the launch behavior they all share. */
 export function ServerSection() {
-  const { data: settings } = useSuspenseQuery(settingsQueryOptions);
-
   return (
     <FieldGroup heading="Server">
       <FieldRow
@@ -16,8 +9,6 @@ export function ServerSection() {
         description="Fixed at loopback. recompose never serves the network."
         label="Bind address"
       />
-      <TokenRequirementRow />
-      {settings.requireGatewayToken ? <GatewayTokenRow /> : null}
       <FieldRow
         control={
           <Switch

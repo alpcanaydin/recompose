@@ -7,19 +7,18 @@ describe('the settings document contract', () => {
     expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<3>();
   });
 
-  test('the three switches the screen writes are plain booleans', () => {
+  test('the two switches the screen writes are plain booleans', () => {
     expectTypeOf<Settings['launchAtLogin']>().toEqualTypeOf<boolean>();
     expectTypeOf<Settings['showInMenuBar']>().toEqualTypeOf<boolean>();
-    expectTypeOf<Settings['requireGatewayToken']>().toEqualTypeOf<boolean>();
   });
 
   test('the theme keeps the shape version 1 gave it', () => {
     expectTypeOf<Settings['theme']>().toEqualTypeOf<'system' | 'light' | 'dark'>();
   });
 
-  test('the document holds exactly five fields, so nothing can name a port', () => {
+  test('the document holds exactly four fields, so nothing can name a port', () => {
     expectTypeOf<keyof Settings>().toEqualTypeOf<
-      'schemaVersion' | 'theme' | 'launchAtLogin' | 'showInMenuBar' | 'requireGatewayToken'
+      'schemaVersion' | 'theme' | 'launchAtLogin' | 'showInMenuBar'
     >();
   });
 
@@ -28,9 +27,10 @@ describe('the settings document contract', () => {
     expectTypeOf<Settings>().not.toHaveProperty('port');
   });
 
-  test('no field on the document names a token', () => {
+  test('no field on the document names a token, because a token belongs to one gateway', () => {
     expectTypeOf<Settings>().not.toHaveProperty('token');
     expectTypeOf<Settings>().not.toHaveProperty('gatewayToken');
+    expectTypeOf<Settings>().not.toHaveProperty('requireGatewayToken');
     expectTypeOf<Settings>().not.toHaveProperty('secret');
   });
 });

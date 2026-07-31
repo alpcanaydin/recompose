@@ -18,27 +18,8 @@ export const Basic = meta.story({
       await canvas.findByText('Fixed at loopback. recompose never serves the network.'),
     ).toBeVisible();
     await expect(canvas.queryByRole('textbox', { name: 'Port' })).toBeNull();
+    await expect(canvas.queryByRole('switch', { name: 'Require API token' })).toBeNull();
     await expect(await canvas.findByText('Waits on launch-time start.')).toBeVisible();
-  },
-});
-
-/** With the requirement on, the credential row joins the group beneath it. */
-export const TokenRequired = meta.story({
-  parameters: {
-    bridge: {
-      overrides: {
-        'gateway-token:status': async () =>
-          Promise.resolve({
-            ok: true as const,
-            value: { masked: 'rc-local-••••••••9a3d', storage: 'available' as const },
-          }),
-      },
-    },
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('switch', { name: 'Require API token' }));
-
-    await expect(await canvas.findByText(/^rc-local-/u)).toBeVisible();
   },
 });
 

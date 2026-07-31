@@ -7,6 +7,7 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { Given, Then, When } from '../fixtures';
+import { storedSettingsFields } from '../settings-document';
 
 const sectionHeadings = ['General', 'Server', 'Appearance', 'Data'];
 
@@ -129,13 +130,26 @@ Then('the Server group offers no port control', async ({ page }) => {
 });
 
 Then('the stored settings document holds no port', async ({ page }) => {
-  const stored = await page.evaluate(async () => window.recompose['settings:get']());
+  expect(await storedSettingsFields(page)).not.toContain('enginePort');
+});
 
-  if (!stored.ok) {
-    throw new Error('The app could not read the stored settings document.');
-  }
+Then('the Server group offers no token control and no switch demanding one', async ({ page }) => {
+  await expect(
+    section(page, 'Server').getByRole('switch', { name: 'Require API token' }),
+  ).toHaveCount(0);
+  await expect(section(page, 'Server').getByText(/token/iu)).toHaveCount(0);
+});
 
-  expect(Object.keys(stored.value)).not.toContain('enginePort');
+Then('the stored settings document holds no token requirement', async ({ page }) => {
+  expect(await storedSettingsFields(page)).not.toContain('requireGatewayToken');
+});
+
+Then('the Appearance group offers the theme and nothing beside it', async ({ page }) => {
+  await expect(section(page, 'Appearance').getByRole('radiogroup')).toHaveCount(1);
+  await expect(
+    section(page, 'Appearance').getByRole('radiogroup', { name: 'Theme' }),
+  ).toBeVisible();
+  await expect(section(page, 'Appearance').getByRole('switch')).toHaveCount(0);
 });
 
 Then('the bind address row reads {string}', async ({ page }, value: string) => {
