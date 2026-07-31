@@ -18,10 +18,12 @@ export default defineConfig({
   test: {
     coverage: {
       ...coverageDefaults,
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['src/**/*.{ts,tsx}', 'scripts/**/*.mts'],
       exclude: [
         'src/**/*.test.*',
         'src/**/*.browser.test.*',
+        'scripts/**/*.test.mts',
+        'scripts/generate-icons.mts',
         'src/renderer/src/shared/testing/**',
         'src/**/*.d.ts',
         'src/main/index.ts',
@@ -42,7 +44,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
-          include: ['src/**/*.test.{ts,tsx}'],
+          include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mts'],
           exclude: [...defaultExclude, '**/*.browser.test.*'],
         },
       },

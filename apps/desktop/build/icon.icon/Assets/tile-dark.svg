@@ -1,0 +1,15 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1024" height="1024" fill="url(#deepTile)"/>
+<rect x="48" y="48" width="928" height="928" rx="183.165" fill="url(#darkBand)"/>
+<rect x="96" y="96" width="832" height="832" rx="135.165" fill="url(#deepTile)"/>
+<defs>
+<linearGradient id="deepTile" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+<stop stop-color="#192A8D"/>
+<stop offset="1" stop-color="#0B133E"/>
+</linearGradient>
+<linearGradient id="darkBand" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+<stop stop-color="#111C5F"/>
+<stop offset="1" stop-color="#06091E"/>
+</linearGradient>
+</defs>
+</svg>

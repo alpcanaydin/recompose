@@ -108,7 +108,7 @@ describe('bringing the get-started card back', () => {
 describe('the order the menus stand in', () => {
   test('macOS orders its menus the way every Mac app does', () => {
     expect(shapeOf(buildAppMenuTemplate('darwin', idleHandlers))).toEqual([
-      'recompose',
+      'Recompose',
       'File',
       'editMenu',
       'View',
@@ -132,7 +132,7 @@ describe('what a custom application menu must not drop', () => {
   test('macOS keeps the whole application menu around the settings item', () => {
     const [applicationMenu] = buildAppMenuTemplate('darwin', idleHandlers);
 
-    expect(applicationMenu?.label).toBe('recompose');
+    expect(applicationMenu?.label).toBe('Recompose');
     expect(shapeOf(applicationMenu?.submenu ?? [])).toEqual([
       'about',
       'separator',

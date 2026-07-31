@@ -28,6 +28,7 @@
     "build:win": "pnpm run typecheck && pnpm run build && electron-builder --win --publish never",
     "build:mac": "pnpm run typecheck && pnpm run build && electron-builder --mac --publish never",
     "build:linux": "pnpm run typecheck && pnpm run build && electron-builder --linux --publish never",
+    "generate:icons": "node scripts/generate-icons.mts",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "test:e2e": "bddgen -c e2e/playwright.config.ts && playwright test -c e2e/playwright.config.ts --project acceptance --project proofs --grep-invert @quarantine",
@@ -50,6 +51,7 @@
     "@playwright/test": "1.61.1",
     "@recompose/contracts": "workspace:*",
     "@recompose/engine": "workspace:*",
+    "@resvg/resvg-js": "2.6.2",
     "@storybook/addon-a11y": "10.5.4",
     "@storybook/addon-mcp": "0.7.0",
     "@storybook/addon-themes": "10.5.4",
@@ -86,5 +88,6 @@
     "vite": "8.1.5",
     "vitest": "4.1.10",
     "vitest-browser-react": "2.2.0"
-  }
+  },
+  "desktopName": "recompose"
 }

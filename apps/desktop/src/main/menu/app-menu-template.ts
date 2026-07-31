@@ -25,7 +25,7 @@ function newGatewayItem(handlers: AppMenuHandlers): AppMenuItem {
 
 function macApplicationMenu(handlers: AppMenuHandlers): AppMenuItem {
   return {
-    label: 'recompose',
+    label: 'Recompose',
     submenu: [
       { role: 'about' },
       { type: 'separator' },

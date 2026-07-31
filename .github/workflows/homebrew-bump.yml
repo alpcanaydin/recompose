@@ -42,13 +42,13 @@ jobs:
             sha256 "${sha}"
 
             url "${dmg_url}"
-            name "recompose"
+            name "Recompose"
             desc "Local-first AI gateway composer"
             homepage "https://github.com/recomposesh/recompose"
 
             depends_on arch: :arm64
 
-            app "recompose.app"
+            app "Recompose.app"
           end
           CASK
           git config user.name "github-actions[bot]"

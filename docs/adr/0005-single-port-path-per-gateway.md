@@ -1,6 +1,6 @@
 # 0005: Single port, path per gateway, both dialects always
 
-**Status**: Superseded by [0055](0055-each-gateway-owns-its-own-loopback-port.md)
+**Status**: Superseded by [0056](0056-each-gateway-owns-its-own-loopback-port.md)
 **Date**: 2026-07-21
 
 ## Context

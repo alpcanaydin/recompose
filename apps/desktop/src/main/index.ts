@@ -42,6 +42,9 @@ import {
 import { allowsPermission } from './windows/permission-policy';
 import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 
+app.setName('Recompose');
+app.setAboutPanelOptions({ applicationName: 'Recompose' });
+
 let engineHost: EngineHost | null = null;
 
 function gatewaysDir(): string {

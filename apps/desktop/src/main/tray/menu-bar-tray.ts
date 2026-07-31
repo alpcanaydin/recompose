@@ -103,7 +103,7 @@ export function showMenuBarTray(handlers: TrayMenuHandlers): void {
 
   const tray = new Tray(trayIcon());
 
-  tray.setToolTip('recompose');
+  tray.setToolTip('Recompose');
   paintContextMenu(tray, handlers);
 
   menuBarTray = tray;

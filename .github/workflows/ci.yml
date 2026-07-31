@@ -137,7 +137,7 @@ jobs:
       - shell: bash
         run: |
           contracts=$(git diff --name-only "$BASE_SHA"...HEAD -- ':(glob)packages/contracts/src/**/*.ts' | grep -vE '\.(test(-d)?|d)\.ts$' | sed 's|^packages/contracts/||' | paste -sd, -) || true
-          desktop=$(git diff --name-only "$BASE_SHA"...HEAD -- ':(glob)apps/desktop/src/main/**/*.ts' | grep -vE '\.(test|d)\.ts$' | sed 's|^apps/desktop/||' | paste -sd, -) || true
+          desktop=$(git diff --name-only "$BASE_SHA"...HEAD -- ':(glob)apps/desktop/src/main/**/*.ts' ':(glob)apps/desktop/scripts/**/*.mts' | grep -vE '\.(test|testkit|d)\.m?ts$' | sed 's|^apps/desktop/||' | paste -sd, -) || true
           if [ -z "$contracts" ] && [ -z "$desktop" ]; then
             echo "mutation scope untouched, skipping"
             exit 0
@@ -165,7 +165,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-26, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -238,7 +238,10 @@ jobs:
         run: pnpm --filter @recompose/desktop run test:e2e:visual
       - if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:leak
-      - run: pnpm --filter @recompose/desktop exec electron-builder --dir
+      - if: runner.os == 'Linux'
+        run: pnpm --filter @recompose/desktop exec electron-builder --linux --publish never
+      - if: runner.os != 'Linux'
+        run: pnpm --filter @recompose/desktop exec electron-builder --dir
       - if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum pnpm --filter @recompose/desktop run test:e2e:packaged
       - if: runner.os != 'Linux'
