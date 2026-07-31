@@ -43,11 +43,23 @@
   --text-title: 22px;
   --text-title--font-weight: 600;
   --text-title--letter-spacing: -0.4px;
+  --text-invitation: 17px;
+  --text-invitation--font-weight: 600;
+  --text-invitation--letter-spacing: -0.3px;
+  --text-sheet-title: 16px;
+  --text-sheet-title--font-weight: 700;
+  --text-sheet-title--letter-spacing: -0.2px;
   --text-heading: 15px;
+  --text-card-title: 13px;
+  --text-card-title--font-weight: 600;
   --text-heading--font-weight: 600;
   --text-body: 13px;
   --text-body--line-height: 1.45;
+  --text-note: 12.5px;
   --text-control: 12px;
+  --text-detail: 12px;
+  --text-detail--line-height: 1.5;
+  --text-quiet: 11.5px;
   --text-caption: 11px;
   --text-overline: 10px;
   --text-overline--font-weight: 700;
@@ -61,15 +73,26 @@
   --spacing-track-height: 22px;
   --spacing-segment: 24px;
   --spacing-control: 24px;
+  --spacing-button: 28px;
   --spacing-chip: 18px;
   --spacing-thumb: 18px;
   --spacing-port: 76px;
   --spacing-sheet: 404px;
+  --spacing-sheet-row: 38px;
+  --spacing-sheet-field: 170px;
+  --spacing-sheet-port: 74px;
+  --spacing-toolbar: 54px;
+  --spacing-status-bar: 38px;
+  --spacing-ghost-width: 436px;
+  --spacing-ghost-height: 96px;
   --spacing-hairline: 2px;
 
   --radius-chip: 4px;
   --radius-control: 6px;
+  --radius-field-group: 9px;
   --radius-card: 10px;
+  --radius-panel: 11px;
+  --radius-sheet: 13px;
   --radius-pill: 999px;
 
   --shadow-thumb: 0 1px 2px rgb(0 0 0 / 22%), 0 0 0 0.5px rgb(0 0 0 / 8%);
@@ -108,23 +131,24 @@
 }
 
 @utility push-button {
-  height: var(--spacing-control);
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  height: var(--spacing-button);
   border: 1px solid var(--color-line-subtle);
   border-radius: var(--radius-control);
-  background-color: var(--color-surface-card);
-  padding-inline: calc(var(--spacing) * 2.5);
-  font-size: var(--text-control);
+  background-color: var(--color-surface-raised);
+  padding-inline: 13px;
+  font-size: var(--text-note);
+  font-weight: 500;
   color: var(--color-ink);
-  box-shadow: 0 1px 1.5px rgb(0 0 0 / 10%);
 
   &:hover {
-    background-color: var(--color-surface-raised);
     border-color: var(--color-line-strong);
   }
 
   &:active {
     background-color: var(--color-surface-inert);
-    box-shadow: none;
   }
 }
 
@@ -169,21 +193,20 @@
 }
 
 @utility push-button-primary {
-  height: var(--spacing-control);
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  height: var(--spacing-button);
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   background-color: var(--color-accent-fill);
-  padding-inline: calc(var(--spacing) * 2.5);
-  font-size: var(--text-control);
+  padding-inline: 13px;
+  font-size: var(--text-note);
+  font-weight: 500;
   color: var(--white);
-  box-shadow: 0 1px 1.5px rgb(0 0 0 / 10%);
 
   &:hover {
     background-color: color-mix(in oklab, var(--color-accent-fill), black 14%);
-  }
-
-  &:active {
-    box-shadow: none;
   }
 }
 

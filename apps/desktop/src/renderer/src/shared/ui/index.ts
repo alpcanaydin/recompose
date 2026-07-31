@@ -1,5 +1,6 @@
 export { CopyButton } from './copy-button';
 export { FieldGroup } from './field-group';
+export { type IconName, Icon } from './icon';
 export { placeFocus } from './place-focus';
 export { FieldRow } from './field-row';
 export { NumericField } from './numeric-field';
