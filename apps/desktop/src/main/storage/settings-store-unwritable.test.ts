@@ -2,7 +2,7 @@ import { defaultSettings } from '@recompose/contracts';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { loadSettingsFile } from './settings-store';
 
@@ -16,6 +16,10 @@ vi.mock('node:fs/promises', async (importOriginal) => {
         ? Promise.reject(new Error('the disk refused the write'))
         : real.writeFile(...args),
   };
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const storedUnderVersionTwo = {
