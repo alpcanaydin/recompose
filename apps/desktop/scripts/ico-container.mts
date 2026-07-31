@@ -81,18 +81,17 @@ function payloadFor(image: RasterImage): Buffer {
 }
 
 export function encodeIco(images: readonly RasterImage[]): Buffer {
-  const payloads = images.map(payloadFor);
-  const directory = Buffer.alloc(DIRECTORY_HEADER_BYTES + images.length * DIRECTORY_ENTRY_BYTES);
+  const entries = images.map((image) => ({ image, payload: payloadFor(image) }));
+  const directory = Buffer.alloc(DIRECTORY_HEADER_BYTES + entries.length * DIRECTORY_ENTRY_BYTES);
 
   directory.writeUInt16LE(0, 0);
   directory.writeUInt16LE(1, 2);
-  directory.writeUInt16LE(images.length, 4);
+  directory.writeUInt16LE(entries.length, 4);
 
   let offset = directory.byteLength;
 
-  images.forEach((image, index) => {
+  entries.forEach(({ image, payload }, index) => {
     const at = DIRECTORY_HEADER_BYTES + index * DIRECTORY_ENTRY_BYTES;
-    const payload = payloads[index] ?? Buffer.alloc(0);
 
     directory.writeUInt8(image.size % PNG_ENTRY_SIZE, at);
     directory.writeUInt8(image.size % PNG_ENTRY_SIZE, at + 1);
@@ -103,5 +102,5 @@ export function encodeIco(images: readonly RasterImage[]): Buffer {
     offset += payload.byteLength;
   });
 
-  return Buffer.concat([directory, ...payloads]);
+  return Buffer.concat([directory, ...entries.map(({ payload }) => payload)]);
 }

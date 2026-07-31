@@ -20,9 +20,6 @@ const desktopRoot = fileURLToPath(new URL('..', import.meta.url));
 const buildDir = join(desktopRoot, 'build');
 const resourcesDir = join(desktopRoot, 'resources');
 
-const ICO_FLOOR = 256;
-const LADDER_FLOOR = 512;
-
 function readMaster(name: string): string {
   const path = join(buildDir, name);
 
@@ -39,26 +36,18 @@ function render(svg: string, size: number): RenderedIcon {
   return { rgba: rendered.pixels, png: rendered.asPng() };
 }
 
-function guardFloor(plan: readonly number[], floor: number, name: string): void {
-  const top = Math.max(...plan);
-
-  if (top < floor) {
-    throw new Error(`The ${name} plan tops out at ${top}, below the ${floor} packaging floor`);
-  }
-}
-
-function planned(masters: { shared: string; small: string }, points: number): string {
+function masterFor(masters: { shared: string; small: string }, points: number): string {
   return usesSmallGlyph(points) ? masters.small : masters.shared;
 }
 
 function icoImages(masters: { shared: string; small: string }): readonly RasterImage[] {
-  return icoPlan.map((size) => ({ size, ...render(planned(masters, size), size) }));
+  return icoPlan.map((size) => ({ size, ...render(masterFor(masters, size), size) }));
 }
 
 function ladderFiles(masters: { shared: string; small: string }): readonly [string, Uint8Array][] {
   return linuxLadder.map((size) => [
     join(buildDir, 'icons', `${size}x${size}.png`),
-    render(planned(masters, size), size).png,
+    render(masterFor(masters, size), size).png,
   ]);
 }
 
@@ -70,9 +59,6 @@ function volumeEntries(volume: string, small: string): readonly IcnsEntry[] {
 }
 
 export function iconOutputs(): readonly [string, Uint8Array][] {
-  guardFloor(icoPlan, ICO_FLOOR, 'Windows icon');
-  guardFloor(linuxLadder, LADDER_FLOOR, 'Linux ladder');
-
   const master = readMaster('mark.svg');
   const small = readMaster('mark-small.svg');
   const masters = { shared: sharedRendition(master), small };

@@ -13,6 +13,7 @@ export type FlattenedStop =
   | 'darkNoteBottom';
 
 type ColorChannels = readonly [number, number, number];
+type FrameRadius = { opening: string; radius: number };
 
 const HEX_TRIPLET = /^#[0-9a-f]{6}$/i;
 
@@ -61,33 +62,35 @@ function roundedTo(value: number): number {
   return Number(value.toFixed(4));
 }
 
-function withFrameRadii(master: string, radii: readonly number[]): string {
-  return FRAME_RECTANGLES.reduce((svg, opening, index) => {
+function concentricFrame(outerRadius: number): readonly FrameRadius[] {
+  const [edge, darkBand, tile] = FRAME_RECTANGLES;
+
+  return [
+    { opening: edge, radius: outerRadius },
+    {
+      opening: darkBand,
+      radius: concentricRadius(outerRadius, markCanvas * darkBandInsetFraction),
+    },
+    { opening: tile, radius: concentricRadius(outerRadius, markCanvas * tileInsetFraction) },
+  ];
+}
+
+function withFrameRadii(master: string, frame: readonly FrameRadius[]): string {
+  return frame.reduce((svg, { opening, radius }) => {
     if (!svg.includes(opening)) {
       throw new Error(`The master is missing the frame rectangle "${opening}"`);
     }
 
-    return svg.replace(opening, `${opening} rx="${roundedTo(radii[index] ?? 0)}"`);
+    return svg.replace(opening, `${opening} rx="${roundedTo(radius)}"`);
   }, master);
 }
 
 export function sharedRendition(master: string): string {
-  const outer = fluentOuterRadius(markCanvas);
-
-  return withFrameRadii(master, [
-    outer,
-    concentricRadius(outer, markCanvas * darkBandInsetFraction),
-    concentricRadius(outer, markCanvas * tileInsetFraction),
-  ]);
+  return withFrameRadii(master, concentricFrame(fluentOuterRadius(markCanvas)));
 }
 
 export function volumeRendition(master: string): string {
-  const outer = VOLUME_OUTER_RADIUS / VOLUME_SCALE;
-  const inset = withFrameRadii(master, [
-    outer,
-    concentricRadius(outer, markCanvas * darkBandInsetFraction),
-    concentricRadius(outer, markCanvas * tileInsetFraction),
-  ]);
+  const inset = withFrameRadii(master, concentricFrame(VOLUME_OUTER_RADIUS / VOLUME_SCALE));
 
   return [
     `<svg width="${markCanvas}" height="${markCanvas}" viewBox="0 0 ${markCanvas} ${markCanvas}" fill="none" xmlns="http://www.w3.org/2000/svg">`,
