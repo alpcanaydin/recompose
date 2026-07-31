@@ -5,6 +5,8 @@ import { Suspense } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
+import type { AccountKind } from '../../../entities/account';
+
 import { installFakeBridge } from '../../../shared/testing';
 import { ProvidersPage } from './providers-page';
 
@@ -21,7 +23,15 @@ const seeded: AccountsDocument = {
   ],
 };
 
-async function renderProviders() {
+const mixed: AccountsDocument = {
+  schemaVersion: 1,
+  accounts: [
+    ...seeded.accounts,
+    { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
+  ],
+};
+
+async function renderProviders(kind?: AccountKind) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -32,11 +42,38 @@ async function renderProviders() {
   return render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<p>Loading…</p>}>
-        <ProvidersPage />
+        <ProvidersPage kind={kind} />
       </Suspense>
     </QueryClientProvider>,
   );
 }
+
+test('a surface narrowed to a kind lists the accounts of that kind and no others', async () => {
+  installFakeBridge({ accounts: mixed });
+
+  const screen = await renderProviders('api-key');
+
+  await expect.element(screen.getByText('Work key', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Claude Max', { exact: true })).not.toBeInTheDocument();
+});
+
+test('a surface narrowed to a kind says which kind it is narrowed to', async () => {
+  installFakeBridge({ accounts: mixed });
+
+  const screen = await renderProviders('api-key');
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
+});
+
+test('a surface asked for no kind lists every account under one heading', async () => {
+  installFakeBridge({ accounts: mixed });
+
+  const screen = await renderProviders();
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeVisible();
+  await expect.element(screen.getByText('Work key', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
+});
 
 test('the providers screen lists connected accounts from the registry', async () => {
   installFakeBridge({ accounts: seeded });

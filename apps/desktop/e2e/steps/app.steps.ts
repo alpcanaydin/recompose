@@ -79,8 +79,8 @@ Given('the app is on the gateways screen', async ({ page }) => {
 });
 
 Given('the app is on the providers screen', async ({ page }) => {
-  await page.getByRole('link', { name: 'Providers' }).click();
-  await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
+  await page.getByRole('link', { name: 'API Keys' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
 });
 
 Given('the app is on the settings screen', async ({ page }) => {

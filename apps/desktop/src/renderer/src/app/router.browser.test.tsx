@@ -6,12 +6,12 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
-import { accountsQueryOptions } from '../pages/providers';
 import {
   gatewayTokenQueryOptions,
   settingsQueryOptions,
   systemQueryOptions,
 } from '../pages/settings';
+import { accountsQueryOptions } from '../shared/api';
 import { installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
@@ -58,20 +58,26 @@ test('an unknown path shows the not-found state inside the shell', async () => {
   const screen = await renderAt('/no-such-page');
 
   await expect.element(screen.getByText('Not found')).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Providers' })).toBeVisible();
-});
-
-test('clicking the providers link navigates to the providers screen', async () => {
-  const screen = await renderAt('/');
-
-  await screen.getByRole('link', { name: 'Providers' }).click();
-
-  await expect.element(screen.getByRole('heading', { name: 'Providers' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
 });
 
 test('navigating to providers loads and renders the registry from the bridge', async () => {
   const screen = await renderAt('/providers', { accounts: seededAccounts() });
 
+  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
+});
+
+test('a request narrowed to a kind lands on the surface for that kind', async () => {
+  const screen = await renderAt('/providers?kind=api-key', { accounts: seededAccounts() });
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
+  await expect.element(screen.getByText('Claude Max', { exact: true })).not.toBeInTheDocument();
+});
+
+test('a request naming no kind the contract knows lists every account instead', async () => {
+  const screen = await renderAt('/providers?kind=not-a-kind', { accounts: seededAccounts() });
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeVisible();
   await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
 });
 
@@ -178,7 +184,7 @@ test('pressing the shortcut again brings focus back to the first control', async
 
   await expect.element(launch).toHaveFocus();
 
-  screen.getByRole('link', { name: 'Providers' }).element().focus();
+  screen.getByRole('link', { name: 'Gateways' }).element().focus();
 
   await expect.element(launch).not.toHaveFocus();
 

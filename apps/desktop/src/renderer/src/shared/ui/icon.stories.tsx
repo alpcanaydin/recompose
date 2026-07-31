@@ -4,7 +4,18 @@ import preview from '#.storybook/preview';
 
 import { type IconName, Icon } from './index';
 
-const sprite: IconName[] = ['plus', 'book', 'check', 'network', 'spark', 'person', 'gauge', 'gear'];
+const sprite: IconName[] = [
+  'plus',
+  'book',
+  'check',
+  'network',
+  'spark',
+  'person',
+  'key',
+  'cube',
+  'gauge',
+  'gear',
+];
 
 const meta = preview.meta({
   component: Icon,

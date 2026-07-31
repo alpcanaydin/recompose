@@ -9,6 +9,7 @@
     ".storybook/recompose-bridge.tsx",
     ".storybook/settings-column.tsx",
     ".storybook/shell-surface.tsx",
+    ".storybook/sidebar-surface.tsx",
     ".storybook/system-report.ts"
   ],
   "compilerOptions": {

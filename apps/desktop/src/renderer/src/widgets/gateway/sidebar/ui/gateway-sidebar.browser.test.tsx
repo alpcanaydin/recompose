@@ -61,14 +61,38 @@ test('a stored gateway gets a row that reaches its canvas', async () => {
     .toHaveAttribute('href', '#/gateways/codex');
 });
 
-test('the sidebar lists no gateway group before the first gateway exists', async () => {
+test('before the first gateway exists the group still offers the way to make one', async () => {
+  const { screen } = await renderSidebar({ gateways: [] });
+
+  const gateways = screen.getByRole('group', { name: 'Local Gateways' });
+
+  await expect.element(gateways).toBeVisible();
+  await expect.element(gateways.getByRole('button', { name: 'New Gateway…' })).toBeVisible();
+});
+
+test('with nothing listed the way to the next gateway spells itself out as a row', async () => {
   const { screen } = await renderSidebar({ gateways: [] });
 
   await expect
     .element(screen.getByRole('button', { name: 'New Gateway…' }))
-    .not.toBeInTheDocument();
+    .toHaveTextContent('New Gateway…');
+});
+
+test('once a gateway is listed the way to the next one keeps its name as a mark', async () => {
+  const { screen } = await renderSidebar({ gateways: [codex] });
+
+  const next = screen.getByRole('button', { name: 'New Gateway…' });
+
+  await expect.element(next).toBeVisible();
+  await expect.element(next).toHaveTextContent('');
+});
+
+test('before the first gateway exists the group lists no gateway row', async () => {
+  const { screen } = await renderSidebar({ gateways: [] });
+
+  await expect.element(screen.getByRole('button', { name: 'New Gateway…' })).toBeVisible();
   await expect
-    .element(screen.getByRole('group', { name: 'Local Gateways' }))
+    .element(screen.getByRole('group', { name: 'Local Gateways' }).getByRole('link'))
     .not.toBeInTheDocument();
 });
 
@@ -79,6 +103,15 @@ test('once a gateway exists the sidebar offers the way to the next one', async (
   await screen.getByRole('button', { name: 'New Gateway…' }).click();
 
   expect(onNewGateway).toHaveBeenCalledTimes(1);
+});
+
+test('the way to the next gateway sits above the gateways already stored', async () => {
+  const { screen } = await renderSidebar({ gateways: [codex] });
+
+  const next = screen.getByRole('button', { name: 'New Gateway…' }).element();
+  const stored = screen.getByRole('link', { name: 'Codex Stopped' }).element();
+
+  expect(next.compareDocumentPosition(stored)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });
 
 test('a gateway group gathers the rows under its own heading', async () => {

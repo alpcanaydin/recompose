@@ -6,6 +6,7 @@ import { Suspense, useId } from 'react';
 import { Icon } from '../../shared/ui';
 import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GatewayToolbar } from '../../widgets/gateway/toolbar';
+import { ProviderSidebar } from '../../widgets/provider/sidebar';
 
 const emptyChrome = <div aria-hidden className="h-toolbar" />;
 
@@ -27,12 +28,11 @@ export function AppSidebar({ onNewGateway }: AppSidebarProps) {
           <Icon name="network" />
           Gateways
         </Link>
-        <Link className="nav-item" to="/providers">
-          <Icon className="size-4 text-accent" name="person" />
-          Providers
-        </Link>
         <Suspense fallback={null}>
           <GatewaySidebar onNewGateway={onNewGateway} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <ProviderSidebar />
         </Suspense>
         <div aria-labelledby={systemId} className="flex flex-col" role="group">
           <h2 className="nav-group" id={systemId}>

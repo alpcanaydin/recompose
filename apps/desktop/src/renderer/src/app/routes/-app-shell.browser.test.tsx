@@ -10,10 +10,27 @@ test('the shell shows the sidebar and the invitation at the root', async () => {
   const screen = await renderAt('/');
 
   await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Providers' })).toBeVisible();
   await expect
     .element(screen.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
     .toBeVisible();
+});
+
+test('the sidebar gathers the account kinds under their own group', async () => {
+  const screen = await renderAt('/');
+
+  const providers = screen.getByRole('group', { name: 'Providers' });
+
+  await expect.element(providers.getByRole('link', { name: 'Subscriptions' })).toBeVisible();
+  await expect.element(providers.getByRole('link', { name: 'API Keys' })).toBeVisible();
+  await expect.element(providers.getByRole('link', { name: 'Aggregators' })).toBeVisible();
+});
+
+test('a kind row points at the providers surface narrowed to that kind', async () => {
+  const screen = await renderAt('/');
+
+  await expect
+    .element(screen.getByRole('link', { name: 'API Keys' }))
+    .toHaveAttribute('href', '#/providers?kind=api-key');
 });
 
 test('the sidebar reaches the creation sheet once the empty state has left', async () => {

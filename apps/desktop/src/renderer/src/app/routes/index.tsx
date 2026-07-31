@@ -2,7 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 
 import { HomePage } from '../../pages/home';
-import { accountsQueryOptions } from '../../pages/providers';
+import { accountsQueryOptions } from '../../shared/api';
 import { PageError } from '../../shared/ui';
 import { type RootSearch } from './__root';
 
