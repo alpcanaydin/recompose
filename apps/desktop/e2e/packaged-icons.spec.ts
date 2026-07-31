@@ -11,6 +11,7 @@ import {
   extractedAppImage,
   extractedDeb,
   fullyTransparentSamples,
+  fullyTransparentSamplesInPng,
   hicolorRung,
   ICO_PNG_ENTRY_SIZE,
   iconFilesUnder,
@@ -22,10 +23,20 @@ import {
 } from './packaged-artifact';
 
 const ICO_LADDER = [16, 24, 32, 48, 256];
-const ICO_SMALL_GLYPH_SIZES = [16, 24];
-const ICO_TILED_SIZES = [32, 48];
+const SMALL_GLYPH_SIZES = [16, 24];
+const TILED_SIZES = [32, 48];
 const HICOLOR_LADDER = [16, 24, 32, 48, 64, 96, 128, 256, 512];
 const markIco = () => icoEntries(join(buildDir, 'icon.ico'));
+
+function expectRuntimeIconIsTheCommittedMark(root: string): void {
+  const shipped = iconFilesUnder(root).filter((file) =>
+    file.endsWith(join('resources', 'icon.png')),
+  );
+  const committed = readFileSync(join(appDir, 'resources', 'icon.png'));
+
+  expect(shipped.length).toBeGreaterThan(0);
+  expect(shipped.map((file) => readFileSync(file))).toEqual(shipped.map(() => committed));
+}
 
 test.describe('the packaged macOS bundle', () => {
   test.skip(process.platform !== 'darwin', 'only a darwin run packages an app bundle');
@@ -49,17 +60,25 @@ test.describe('the packaged macOS bundle', () => {
   });
 
   test('the window icon the app loads at runtime is the recompose mark', () => {
-    const shipped = iconFilesUnder(packagedBundle()).filter((file) =>
-      file.endsWith(join('resources', 'icon.png')),
-    );
-    const committed = readFileSync(join(appDir, 'resources', 'icon.png'));
-
-    expect(shipped.length).toBeGreaterThan(0);
-    expect(shipped.map((file) => readFileSync(file))).toEqual(shipped.map(() => committed));
+    expectRuntimeIconIsTheCommittedMark(packagedBundle());
   });
 
   test('no icon the artifact ships matches the stock Electron artwork', () => {
     expect(scaffoldIconsUnder(packagedBundle())).toEqual([]);
+  });
+});
+
+test.describe('the committed Windows icon container', () => {
+  test('the icon steps through 16, 24, 32, 48, and 256 pixels', () => {
+    expect(markIco().map((entry) => entry.size)).toEqual(ICO_LADDER);
+  });
+
+  test('the 16 and 24 pixel entries drop the tile and show the note alone', () => {
+    const transparencyAt = (sizes: readonly number[]) =>
+      sizes.map((size) => fullyTransparentSamples(entryAtSize(markIco(), size)) > 0);
+
+    expect(transparencyAt(SMALL_GLYPH_SIZES)).toEqual([true, true]);
+    expect(transparencyAt(TILED_SIZES)).toEqual([false, false]);
   });
 });
 
@@ -70,18 +89,6 @@ test.describe('the packaged Windows build', () => {
     const embedded = entryAtSize(markIco(), ICO_PNG_ENTRY_SIZE).payload;
 
     expect(readFileSync(packagedExecutable()).includes(embedded)).toBe(true);
-  });
-
-  test('the icon steps through 16, 24, 32, 48, and 256 pixels', () => {
-    expect(markIco().map((entry) => entry.size)).toEqual(ICO_LADDER);
-  });
-
-  test('the 16 and 24 pixel entries drop the tile and show the note alone', () => {
-    const transparencyAt = (sizes: readonly number[]) =>
-      sizes.map((size) => fullyTransparentSamples(entryAtSize(markIco(), size)) > 0);
-
-    expect(transparencyAt(ICO_SMALL_GLYPH_SIZES)).toEqual([true, true]);
-    expect(transparencyAt(ICO_TILED_SIZES)).toEqual([false, false]);
   });
 
   test('no icon the artifact ships matches the stock Electron artwork', () => {
@@ -99,6 +106,18 @@ test.describe('the packaged Linux build', () => {
     );
 
     expect(installed).toEqual(committed);
+  });
+
+  test('the 16 and 24 pixel rungs drop the tile and show the note alone', () => {
+    const transparencyAt = (sizes: readonly number[]) =>
+      sizes.map((size) => fullyTransparentSamplesInPng(hicolorRung(size)) > 0);
+
+    expect(transparencyAt(SMALL_GLYPH_SIZES)).toEqual([true, true]);
+    expect(transparencyAt(TILED_SIZES)).toEqual([false, false]);
+  });
+
+  test('the window icon the app loads at runtime is the recompose mark', () => {
+    expectRuntimeIconIsTheCommittedMark(extractedDeb());
   });
 
   test('the image carries the recompose mark as its directory icon', () => {
