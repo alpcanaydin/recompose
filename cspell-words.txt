@@ -23,6 +23,7 @@ chromaui
 cliproxyapi
 Codechecks
 codegen
+Commvault
 coderabbit
 componentwise
 cooldown
@@ -120,6 +121,7 @@ Scriptable
 scrollview
 semgrep
 servernum
+Shadowsocks
 setstate
 shellcheck
 snapcraft

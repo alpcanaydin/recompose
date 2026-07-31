@@ -44,6 +44,43 @@ function aLoopback(): Loopback {
   };
 }
 
+function aLoopbackThatOpensSlowly() {
+  const serving = new Set<number>();
+  const waiting: (() => void)[] = [];
+
+  const openListeners: OpenListeners = async (_app, port) => {
+    await new Promise<void>((release) => {
+      waiting.push(release);
+    });
+
+    if (serving.has(port)) {
+      return { failed: { port } };
+    }
+
+    serving.add(port);
+
+    return {
+      opened: {
+        close: async () => {
+          serving.delete(port);
+
+          return Promise.resolve();
+        },
+      },
+    };
+  };
+
+  return {
+    serving,
+    finishOpening: () => {
+      for (const release of waiting.splice(0)) {
+        release();
+      }
+    },
+    openListeners,
+  };
+}
+
 describe('starting a gateway', () => {
   test('a started gateway serves on its own port and reports running', async () => {
     const loopback = aLoopback();
@@ -103,6 +140,50 @@ describe('starting a gateway', () => {
     await runtime.start(codex);
     await runtime.start(codex);
     await runtime.stop(codex.slug);
+
+    expect(loopback.serving).toEqual(new Set());
+  });
+});
+
+describe('a directive arriving while the gateway is still opening', () => {
+  test('a second start reports running, not the gateway holding its own port', async () => {
+    const loopback = aLoopbackThatOpensSlowly();
+    const runtime = createEngineRuntime(loopback.openListeners);
+
+    const first = runtime.start(codex);
+    const second = runtime.start(codex);
+
+    loopback.finishOpening();
+
+    await expect(first).resolves.toEqual({ status: 'running' });
+    await expect(second).resolves.toEqual({ status: 'running' });
+  });
+
+  test('a second start leaves one listener, which one stop closes', async () => {
+    const loopback = aLoopbackThatOpensSlowly();
+    const runtime = createEngineRuntime(loopback.openListeners);
+
+    const first = runtime.start(codex);
+    const second = runtime.start(codex);
+
+    loopback.finishOpening();
+    await first;
+    await second;
+    await runtime.stop(codex.slug);
+
+    expect(loopback.serving).toEqual(new Set());
+  });
+
+  test('a stop leaves nothing serving behind it', async () => {
+    const loopback = aLoopbackThatOpensSlowly();
+    const runtime = createEngineRuntime(loopback.openListeners);
+
+    const starting = runtime.start(codex);
+    const stopping = runtime.stop(codex.slug);
+
+    loopback.finishOpening();
+    await starting;
+    await stopping;
 
     expect(loopback.serving).toEqual(new Set());
   });

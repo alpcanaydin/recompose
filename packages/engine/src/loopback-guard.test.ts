@@ -82,4 +82,19 @@ describe('a browser page reaching a gateway', () => {
 
     expect(refusal.status).toBe(403);
   });
+
+  test('the refusal names the Origin header, not the address the client reached from', async () => {
+    const refusal = await askCodexFrom(`127.0.0.1:${codex.port}`, {
+      headers: { origin: 'http://gateway.example' },
+    });
+
+    expect(await refusal.json()).toEqual({
+      type: 'error',
+      error: {
+        type: 'permission_error',
+        message:
+          'This gateway refuses any request that carries an Origin header, so no web page can reach it.',
+      },
+    });
+  });
 });

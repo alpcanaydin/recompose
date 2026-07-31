@@ -22,10 +22,16 @@ async function bindTo(app: Hono, address: string, port: number): Promise<BindOut
       void answer(incoming, outgoing);
     });
 
-    server.once('error', (error: NodeJS.ErrnoException) => {
+    const refuseTheBind = (error: NodeJS.ErrnoException): void => {
       settle({ refused: error.code === 'EADDRINUSE' ? 'port-taken' : 'address-unavailable' });
-    });
+    };
+
+    server.once('error', refuseTheBind);
     server.listen({ port, host: address }, () => {
+      server.off('error', refuseTheBind);
+      server.on('error', (error: NodeJS.ErrnoException) => {
+        console.error(`The gateway listening on ${address}:${String(port)} hit an error.`, error);
+      });
       settle({ bound: server });
     });
   });

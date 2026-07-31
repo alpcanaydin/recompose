@@ -1,68 +1,115 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { offerFreePort } from './free-port';
+import { GATEWAY_PORT_BAND, offerFreePort } from './free-port';
 
-function probeAnswering(ports: readonly number[]): () => Promise<number> {
-  let answered = 0;
+const HOME = '/Users/ada/Library/Application Support/recompose';
 
-  return async () => {
-    const port = ports[answered % ports.length];
+const lastInBand = GATEWAY_PORT_BAND.first + GATEWAY_PORT_BAND.count - 1;
 
-    answered += 1;
+const wholeBand = Array.from(
+  { length: GATEWAY_PORT_BAND.count },
+  (_unused, step) => GATEWAY_PORT_BAND.first + step,
+);
 
-    return Promise.resolve(port ?? 0);
-  };
+const everyPortFree = async (): Promise<boolean> => Promise.resolve(true);
+
+function everyPortFreeBut(held: readonly number[]): (port: number) => Promise<boolean> {
+  return async (port) => Promise.resolve(!held.includes(port));
 }
 
-const anyPort = fc.integer({ min: 1024, max: 65535 });
+const anInstallFolder = fc.webPath().map((path) => `/Users/ada${path}`);
 
-describe('offering a port the creation sheet can keep', () => {
-  test('a port no gateway holds is the port on offer', async () => {
-    await expect(offerFreePort(new Set([8397]), probeAnswering([51234]))).resolves.toBe(51234);
+describe('offering a gateway a port of its own', () => {
+  test('the offer sits inside the band recompose keeps for gateways', async () => {
+    const offered = await offerFreePort(new Set(), HOME, everyPortFree);
+
+    expect(offered).toBeGreaterThanOrEqual(GATEWAY_PORT_BAND.first);
+    expect(offered).toBeLessThanOrEqual(lastInBand);
   });
 
-  test('a port a gateway already holds sends the probe back out', async () => {
-    await expect(
-      offerFreePort(new Set([8397, 8398]), probeAnswering([8397, 8398, 51234])),
-    ).resolves.toBe(51234);
+  test('a port a stored gateway holds is stepped over', async () => {
+    const first = await offerFreePort(new Set(), HOME, everyPortFree);
+
+    await expect(offerFreePort(new Set([first]), HOME, everyPortFree)).resolves.not.toBe(first);
   });
 
-  test('a probe that keeps answering taken ports fails loudly rather than offering one', async () => {
-    await expect(offerFreePort(new Set([8397]), probeAnswering([8397]), 3)).rejects.toThrow(
-      'free port',
+  test('a port another process holds is stepped over', async () => {
+    const first = await offerFreePort(new Set(), HOME, everyPortFree);
+
+    await expect(offerFreePort(new Set(), HOME, everyPortFreeBut([first]))).resolves.not.toBe(
+      first,
     );
   });
 
-  test('the last attempt still counts, so an offer arrives on the final probe', async () => {
-    await expect(
-      offerFreePort(new Set([8397]), probeAnswering([8397, 8397, 51234]), 3),
-    ).resolves.toBe(51234);
+  test('the same install is offered the same port every time, so a copied address keeps working', async () => {
+    const offered = await offerFreePort(new Set(), HOME, everyPortFree);
+
+    await expect(offerFreePort(new Set(), HOME, everyPortFree)).resolves.toBe(offered);
   });
 
-  test('the attempt count is a ceiling, so no probe runs past it', async () => {
-    await expect(
-      offerFreePort(new Set([8397]), probeAnswering([8397, 8397, 51234]), 2),
-    ).rejects.toThrow('free port');
+  test('an install keeps the exact port it was given, so no release moves an address', async () => {
+    await expect(offerFreePort(new Set(), HOME, everyPortFree)).resolves.toBe(8436);
   });
 
-  test('a probe that cannot bind carries its own failure out rather than looping', async () => {
-    const refusingProbe = async (): Promise<number> =>
-      Promise.reject(new Error('the loopback probe could not bind'));
-
-    await expect(offerFreePort(new Set(), refusingProbe)).rejects.toThrow(
-      'the loopback probe could not bind',
+  test('the walk wraps to the bottom of the band rather than running past the top', async () => {
+    await expect(offerFreePort(new Set([8436]), HOME, everyPortFree)).resolves.toBe(
+      GATEWAY_PORT_BAND.first,
     );
   });
+});
 
-  test.prop([fc.array(anyPort), fc.array(anyPort, { minLength: 1 })])(
-    'an offer that arrives is never a port a stored gateway holds',
-    async (stored, probed) => {
-      const taken = new Set(stored);
+describe('two installs sharing one machine', () => {
+  test.prop([fc.uniqueArray(anInstallFolder, { minLength: 8, maxLength: 24 })])(
+    'they are not all sent to the same end of the band',
+    async (folders) => {
+      const offered = await Promise.all(
+        folders.map(async (folder) => offerFreePort(new Set(), folder, everyPortFree)),
+      );
 
-      const offered = await offerFreePort(taken, probeAnswering(probed), 64).catch(() => null);
-
-      expect(offered === null || !taken.has(offered)).toBe(true);
+      expect(new Set(offered).size).toBeGreaterThan(1);
     },
   );
+});
+
+describe('a band with no room left', () => {
+  test('the failure names the band rather than offering a port outside it', async () => {
+    await expect(offerFreePort(new Set(wholeBand), HOME, everyPortFree)).rejects.toThrow(
+      String(GATEWAY_PORT_BAND.first),
+    );
+  });
+
+  test('every port in the band is tried, and nothing outside it ever is', async () => {
+    const tried: number[] = [];
+    const noneFree = async (port: number): Promise<boolean> => {
+      tried.push(port);
+
+      return Promise.resolve(false);
+    };
+
+    await expect(offerFreePort(new Set(), HOME, noneFree)).rejects.toThrow();
+    expect(new Set(tried)).toEqual(new Set(wholeBand));
+  });
+
+  test('a proof that cannot bind at all carries its own failure out rather than looping', async () => {
+    const refusingProof = async (): Promise<boolean> =>
+      Promise.reject(new Error('the loopback proof could not bind'));
+
+    await expect(offerFreePort(new Set(), HOME, refusingProof)).rejects.toThrow(
+      'the loopback proof could not bind',
+    );
+  });
+});
+
+describe('what an offer never is', () => {
+  test.prop([
+    fc.array(fc.integer({ min: GATEWAY_PORT_BAND.first, max: lastInBand })),
+    anInstallFolder,
+  ])('never a port a stored gateway already holds', async (stored, folder) => {
+    const taken = new Set(stored);
+
+    const offered = await offerFreePort(taken, folder, everyPortFree).catch(() => null);
+
+    expect(offered === null || !taken.has(offered)).toBe(true);
+  });
 });

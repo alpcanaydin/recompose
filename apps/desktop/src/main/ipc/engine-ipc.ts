@@ -3,7 +3,6 @@ import type { EngineGateway, GatewayConfig } from '@recompose/contracts';
 import type { EngineHost } from '../engine-host/engine-host';
 import type { IpcHandlers } from './dispatch';
 
-import { offerFreePort } from '../engine-host/free-port';
 import { storedEngineGateway } from '../engine-host/stored-gateway';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { storagePathsFor } from './storage-context';
@@ -14,7 +13,7 @@ export type EngineIpcContext = {
   userDataPath: string;
   homeFolder: string;
   onCorrupt: (quarantinedPath: string) => void;
-  probeFreePort: () => Promise<number>;
+  probeFreePort: (taken: ReadonlySet<number>, installFolder: string) => Promise<number>;
 };
 
 export type EngineIpcHandlers = Pick<
@@ -40,17 +39,8 @@ async function storedGateways(ctx: EngineIpcContext): Promise<GatewayConfig[]> {
 async function portFreeOf(
   ctx: EngineIpcContext,
   stored: readonly GatewayConfig[],
-  besides?: string,
 ): Promise<number> {
-  const taken = new Set<number>();
-
-  for (const config of stored) {
-    if (config.slug !== besides) {
-      taken.add(config.port);
-    }
-  }
-
-  return offerFreePort(taken, ctx.probeFreePort);
+  return ctx.probeFreePort(new Set(stored.map((config) => config.port)), ctx.userDataPath);
 }
 
 async function offerPort(ctx: EngineIpcContext) {
@@ -70,10 +60,10 @@ async function movePort(ctx: EngineIpcContext, slug: string) {
       return noSuchGateway(slug);
     }
 
-    const moved = { ...moving, port: await portFreeOf(ctx, stored, slug) };
+    const moved = { ...moving, port: await portFreeOf(ctx, stored) };
 
-    await saveGatewayConfig(storagePathsFor(ctx.userDataPath).gatewaysDir, moved);
     await ctx.host.restart(asEngineGateway(moved));
+    await saveGatewayConfig(storagePathsFor(ctx.userDataPath).gatewaysDir, moved);
 
     return { ok: true as const, value: await storedGateways(ctx) };
   } catch (error) {

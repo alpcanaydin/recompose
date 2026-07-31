@@ -44,6 +44,17 @@ export function nonLoopbackClient(): AnthropicRefusal {
   };
 }
 
+export function requestCarriesOrigin(): AnthropicRefusal {
+  return {
+    type: 'error',
+    error: {
+      type: 'permission_error',
+      message:
+        'This gateway refuses any request that carries an Origin header, so no web page can reach it.',
+    },
+  };
+}
+
 export function unservedPath(displayName: string, path: string): AnthropicRefusal {
   return {
     type: 'error',
