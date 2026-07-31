@@ -60,7 +60,7 @@ function hostAnswering(
 async function freshContext(
   stored: readonly GatewayConfig[],
   host: EngineHost,
-  probeFreePort: () => Promise<number>,
+  probeFreePort: EngineIpcContext['probeFreePort'],
 ): Promise<EngineIpcContext> {
   const userDataPath = await mkdtemp(join(tmpdir(), 'recompose-engine-ipc-'));
   const gatewaysDir = join(userDataPath, 'gateways');
@@ -80,15 +80,15 @@ async function freshContext(
   };
 }
 
-function portsInTurn(ports: readonly number[]): () => Promise<number> {
-  let answered = 0;
+function offeringTheFirstFreeOf(ports: readonly number[]): EngineIpcContext['probeFreePort'] {
+  return async (taken) => {
+    const free = ports.find((port) => !taken.has(port));
 
-  return async () => {
-    const port = ports[answered % ports.length] ?? 0;
+    if (free === undefined) {
+      throw new Error('every port on offer is already held');
+    }
 
-    answered += 1;
-
-    return Promise.resolve(port);
+    return Promise.resolve(free);
   };
 }
 
@@ -104,7 +104,7 @@ const codex: GatewayConfig = gatewayNamed('codex', 8397);
 
 describe('offering the creation sheet a port', () => {
   test('the offer is a port the operating system says is free', async () => {
-    const context = await freshContext([], hostAnswering().host, portsInTurn([51234]));
+    const context = await freshContext([], hostAnswering().host, offeringTheFirstFreeOf([51234]));
 
     await expect(
       createEngineIpcHandlers(context)['gateways:offer-port'](undefined),
@@ -112,7 +112,11 @@ describe('offering the creation sheet a port', () => {
   });
 
   test('a port a stored gateway already holds is never offered', async () => {
-    const context = await freshContext([codex], hostAnswering().host, portsInTurn([8397, 51234]));
+    const context = await freshContext(
+      [codex],
+      hostAnswering().host,
+      offeringTheFirstFreeOf([8397, 51234]),
+    );
 
     await expect(
       createEngineIpcHandlers(context)['gateways:offer-port'](undefined),
@@ -133,7 +137,11 @@ describe('offering the creation sheet a port', () => {
 
 describe('starting one gateway', () => {
   test('a started gateway answers the state the engine reported', async () => {
-    const context = await freshContext([codex], hostAnswering().host, portsInTurn([51234]));
+    const context = await freshContext(
+      [codex],
+      hostAnswering().host,
+      offeringTheFirstFreeOf([51234]),
+    );
 
     await expect(
       createEngineIpcHandlers(context)['engine:start']({ slug: 'codex' }),
@@ -145,7 +153,7 @@ describe('starting one gateway', () => {
     const context = await freshContext(
       [{ ...codex, displayName: 'Codex' }],
       recorded.host,
-      portsInTurn([51234]),
+      offeringTheFirstFreeOf([51234]),
     );
 
     await createEngineIpcHandlers(context)['engine:start']({ slug: 'codex' });
@@ -157,7 +165,7 @@ describe('starting one gateway', () => {
     const context = await freshContext(
       [codex],
       hostAnswering({ status: 'stopped', failure: { port: 8397 } }).host,
-      portsInTurn([51234]),
+      offeringTheFirstFreeOf([51234]),
     );
 
     await expect(
@@ -168,7 +176,7 @@ describe('starting one gateway', () => {
 
 describe('reaching for a gateway that is not there', () => {
   test('a start naming a gateway nothing stored is refused with the slug in the message', async () => {
-    const context = await freshContext([], hostAnswering().host, portsInTurn([51234]));
+    const context = await freshContext([], hostAnswering().host, offeringTheFirstFreeOf([51234]));
 
     const answer = await createEngineIpcHandlers(context)['engine:start']({ slug: 'codex' });
 
@@ -181,7 +189,7 @@ describe('reaching for a gateway that is not there', () => {
     const context = await freshContext(
       [codex],
       hostAnswering({ status: 'running' }, {}, silence).host,
-      portsInTurn([51234]),
+      offeringTheFirstFreeOf([51234]),
     );
 
     const answer = await createEngineIpcHandlers(context)['engine:start']({ slug: 'codex' });
@@ -194,7 +202,7 @@ describe('reaching for a gateway that is not there', () => {
 describe('stopping one gateway', () => {
   test('a stopped gateway answers the state the engine reported', async () => {
     const recorded = hostAnswering({ status: 'stopped' });
-    const context = await freshContext([codex], recorded.host, portsInTurn([51234]));
+    const context = await freshContext([codex], recorded.host, offeringTheFirstFreeOf([51234]));
 
     await expect(
       createEngineIpcHandlers(context)['engine:stop']({ slug: 'codex' }),
@@ -206,7 +214,7 @@ describe('stopping one gateway', () => {
     const context = await freshContext(
       [],
       hostAnswering({ status: 'stopped' }).host,
-      portsInTurn([51234]),
+      offeringTheFirstFreeOf([51234]),
     );
 
     await expect(
@@ -219,7 +227,7 @@ describe('stopping one gateway', () => {
     const context = await freshContext(
       [codex],
       hostAnswering({ status: 'stopped' }, {}, silence).host,
-      portsInTurn([51234]),
+      offeringTheFirstFreeOf([51234]),
     );
 
     const answer = await createEngineIpcHandlers(context)['engine:stop']({ slug: 'codex' });
@@ -235,7 +243,7 @@ describe('reading which gateways serve', () => {
     const context = await freshContext(
       [],
       hostAnswering({ status: 'running' }, snapshot).host,
-      portsInTurn([51234]),
+      offeringTheFirstFreeOf([51234]),
     );
 
     await expect(createEngineIpcHandlers(context)['engine:states'](undefined)).resolves.toEqual({

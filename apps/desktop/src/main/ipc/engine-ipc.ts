@@ -3,7 +3,6 @@ import type { EngineGateway, GatewayConfig } from '@recompose/contracts';
 import type { EngineHost } from '../engine-host/engine-host';
 import type { IpcHandlers } from './dispatch';
 
-import { offerFreePort } from '../engine-host/free-port';
 import { storedEngineGateway } from '../engine-host/stored-gateway';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { storagePathsFor } from './storage-context';
@@ -14,7 +13,7 @@ export type EngineIpcContext = {
   userDataPath: string;
   homeFolder: string;
   onCorrupt: (quarantinedPath: string) => void;
-  probeFreePort: () => Promise<number>;
+  probeFreePort: (taken: ReadonlySet<number>, installFolder: string) => Promise<number>;
 };
 
 export type EngineIpcHandlers = Pick<
@@ -41,7 +40,7 @@ async function portFreeOf(
   ctx: EngineIpcContext,
   stored: readonly GatewayConfig[],
 ): Promise<number> {
-  return offerFreePort(new Set(stored.map((config) => config.port)), ctx.probeFreePort);
+  return ctx.probeFreePort(new Set(stored.map((config) => config.port)), ctx.userDataPath);
 }
 
 async function offerPort(ctx: EngineIpcContext) {

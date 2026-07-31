@@ -124,7 +124,7 @@ describe('what the engine host answers a lifecycle request', () => {
     await vi.advanceTimersByTimeAsync(DIRECTIVE_TIMEOUT_MS);
     await restarting;
 
-    expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('codex');
+    expect(String(complaint.mock.calls[0]?.[0])).toContain('codex');
   });
 });
 
