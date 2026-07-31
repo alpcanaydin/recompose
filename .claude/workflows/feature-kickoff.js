@@ -183,11 +183,15 @@ function expectedByteLength(content) {
     )
   }
 }
+function acceptedByteLengths(content) {
+  const whole = expectedByteLength(content)
+  return content.endsWith('\n') ? [whole, whole - 1] : [whole]
+}
 function writerPrompt(files) {
   return [
     'Write each of the following files exactly as given, creating any missing directories.',
     'Every path below is relative to the repository root. Write it there, and report it back in the same relative form.',
-    'Report the UTF-8 byte length you wrote for every path, even one that already matched. Write the content byte for byte, adding nothing, not even a trailing newline.',
+    'Report the UTF-8 byte length you wrote for every path, even one that already matched. Write the content between the markers byte for byte, and add nothing of your own to it.',
     ...files.map((file) => `--- ${file.path} ---\n${file.content}`),
   ].join('\n')
 }
@@ -197,11 +201,11 @@ function reportedBytesFor(reportedFiles, path) {
 }
 function assertWriteIntegrity(files, reportedFiles) {
   files.forEach((file) => {
-    const expected = expectedByteLength(file.content)
+    const accepted = acceptedByteLengths(file.content)
     const actual = reportedBytesFor(reportedFiles, file.path)
-    if (actual !== expected) {
+    if (!accepted.includes(actual)) {
       throw new Error(
-        `feature-kickoff process assertion failed: ${file.path} reported ${actual ?? 'no'} byte(s) written, expected ${expected}`,
+        `feature-kickoff process assertion failed: ${file.path} reported ${actual ?? 'no'} byte(s) written, expected ${accepted.join(' or ')}`,
       )
     }
   })

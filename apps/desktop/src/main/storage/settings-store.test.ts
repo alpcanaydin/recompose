@@ -1,5 +1,5 @@
 import { defaultSettings } from '@recompose/contracts';
-import { mkdtemp, readdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -42,5 +42,43 @@ describe('settings store', () => {
     const entries = await readdir(dir);
 
     expect(entries).toEqual([expect.stringMatching(/^settings\.json\.corrupt-/)]);
+  });
+});
+
+describe('a settings document this build already reads', () => {
+  test('a document that needs no carrying forward is left exactly as it lies', async () => {
+    const file = join(await mkdtemp(join(tmpdir(), 'recompose-settings-')), 'settings.json');
+    const asStored = JSON.stringify(defaultSettings());
+
+    await writeFile(file, asStored, 'utf8');
+
+    await loadSettingsFile(file, () => undefined);
+
+    expect(await readFile(file, 'utf8')).toBe(asStored);
+  });
+
+  test('a document that migrated reaches the disk without waiting for the next save', async () => {
+    const file = join(await mkdtemp(join(tmpdir(), 'recompose-settings-')), 'settings.json');
+
+    await writeFile(
+      file,
+      JSON.stringify({
+        schemaVersion: 2,
+        theme: 'dark',
+        launchAtLogin: false,
+        showInMenuBar: true,
+        enginePort: 8397,
+        requireGatewayToken: true,
+      }),
+    );
+
+    await loadSettingsFile(file, () => undefined);
+
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({
+      ...defaultSettings(),
+      theme: 'dark',
+      launchAtLogin: false,
+      showInMenuBar: true,
+    });
   });
 });

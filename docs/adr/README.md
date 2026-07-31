@@ -71,3 +71,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0063](0063-gateway-ports-come-from-a-recompose-band.md)                    | Gateway Ports Come From a recompose Band, Not the Ephemeral Pool                    | Accepted   | 2026-07-31 |
 | [0064](0064-the-window-controls-follow-the-sidebar.md)                      | The Window Controls Follow the Sidebar                                              | Accepted   | 2026-07-31 |
 | [0065](0065-view-state-stays-in-the-renderer.md)                            | View State Stays in the Renderer, Apart From the Settings Document                  | Accepted   | 2026-07-31 |
+| [0066](0066-a-report-names-the-directive-it-answers.md)                     | A Report Names the Directive It Answers                                             | Accepted   | 2026-08-01 |

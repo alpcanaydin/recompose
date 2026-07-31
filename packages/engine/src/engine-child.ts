@@ -17,10 +17,16 @@ async function reportBack(
     directive.kind === 'start'
       ? {
           kind: 'state',
+          answers: directive.id,
           slug: directive.gateway.slug,
           state: await runtime.start(directive.gateway),
         }
-      : { kind: 'state', slug: directive.slug, state: await runtime.stop(directive.slug) };
+      : {
+          kind: 'state',
+          answers: directive.id,
+          slug: directive.slug,
+          state: await runtime.stop(directive.slug),
+        };
 
   parentPort.postMessage(engineReportSchema.parse(report));
 }

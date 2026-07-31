@@ -11,15 +11,22 @@ export const engineGatewaySchema = z.strictObject({
 
 export type EngineGateway = z.infer<typeof engineGatewaySchema>;
 
+export const directiveIdSchema = z.string().trim().min(1);
+
 export const engineDirectiveSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('start'), gateway: engineGatewaySchema }),
-  z.strictObject({ kind: z.literal('stop'), slug: gatewaySlugSchema }),
+  z.strictObject({
+    kind: z.literal('start'),
+    id: directiveIdSchema,
+    gateway: engineGatewaySchema,
+  }),
+  z.strictObject({ kind: z.literal('stop'), id: directiveIdSchema, slug: gatewaySlugSchema }),
 ]);
 
 export type EngineDirective = z.infer<typeof engineDirectiveSchema>;
 
 export const engineReportSchema = z.strictObject({
   kind: z.literal('state'),
+  answers: directiveIdSchema,
   slug: gatewaySlugSchema,
   state: gatewayEngineStateSchema,
 });

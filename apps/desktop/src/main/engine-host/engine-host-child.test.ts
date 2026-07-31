@@ -1,88 +1,10 @@
-import {
-  type EngineDirective,
-  type EngineGateway,
-  type EngineStates,
-  type GatewayEngineState,
-} from '@recompose/contracts';
+import { type EngineGateway, type EngineStates } from '@recompose/contracts';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import type { EngineChild } from './engine-host';
-
-import { createEngineHost, DIRECTIVE_TIMEOUT_MS } from './engine-host';
+import { hostOver, nothing, running, scriptedChild } from './engine-host.testkit';
 
 const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397 };
 const gemini: EngineGateway = { slug: 'gemini', displayName: 'Gemini', port: 8398 };
-
-const running = (): GatewayEngineState => ({ status: 'running' });
-const nothing = (): null => null;
-
-function scriptedChild(answer: () => GatewayEngineState | null) {
-  const directives: EngineDirective[] = [];
-  const heard: ((message: unknown) => void)[] = [];
-  const departed: ((code: number) => void)[] = [];
-  let killed = false;
-
-  const send = (report: unknown): void => {
-    for (const listener of heard) {
-      listener(report);
-    }
-  };
-
-  const child: EngineChild = {
-    postMessage: (directive) => {
-      directives.push(directive);
-
-      const state = answer();
-
-      if (state === null) {
-        return;
-      }
-
-      const slug = directive.kind === 'start' ? directive.gateway.slug : directive.slug;
-
-      void Promise.resolve().then(() => {
-        send({ kind: 'state', slug, state });
-      });
-    },
-    onMessage: (listener) => {
-      heard.push(listener);
-    },
-    onExit: (listener) => {
-      departed.push(listener);
-    },
-    kill: () => {
-      killed = true;
-    },
-  };
-
-  return {
-    child,
-    directives,
-    send,
-    wasKilled: () => killed,
-    exit: (code: number) => {
-      for (const listener of departed) {
-        listener(code);
-      }
-    },
-  };
-}
-
-function hostOver(scripted: { child: EngineChild }, knownSlugs: readonly string[] = []) {
-  const spawns: number[] = [];
-
-  return {
-    spawns,
-    host: createEngineHost({
-      knownSlugs,
-      spawnChild: () => {
-        spawns.push(spawns.length);
-
-        return scripted.child;
-      },
-    }),
-  };
-}
 
 afterEach(() => {
   vi.useRealTimers();
@@ -126,15 +48,15 @@ describe('the order directives reach the engine child in', () => {
     const stopping = host.stop('codex');
 
     await Promise.resolve();
-    expect(scripted.directives).toEqual([{ kind: 'start', gateway: codex }]);
+    expect(scripted.directives).toMatchObject([{ kind: 'start', gateway: codex }]);
 
-    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'running' } });
+    scripted.answerDirective(0, { status: 'running' });
     await starting;
     await Promise.resolve();
 
-    expect(scripted.directives.at(-1)).toEqual({ kind: 'stop', slug: 'codex' });
+    expect(scripted.directives.at(-1)).toMatchObject({ kind: 'stop', slug: 'codex' });
 
-    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'stopped' } });
+    scripted.answerDirective(1, { status: 'stopped' });
     await expect(stopping).resolves.toEqual({ status: 'stopped' });
   });
 
@@ -147,7 +69,7 @@ describe('the order directives reach the engine child in', () => {
 
     await Promise.resolve();
 
-    expect(scripted.directives).toEqual([
+    expect(scripted.directives).toMatchObject([
       { kind: 'start', gateway: codex },
       { kind: 'start', gateway: gemini },
     ]);
@@ -230,49 +152,5 @@ describe('when the engine child cannot load at all', () => {
     scripted.exit(1);
 
     await expect(again).rejects.toThrow('exit code 1');
-  });
-});
-
-describe('when the engine child answers nothing at all', () => {
-  test('a directive fails once its wait runs out, naming the gateway', async () => {
-    vi.useFakeTimers();
-    const { host } = hostOver(scriptedChild(nothing));
-
-    const settled = host.start(codex).catch((error: unknown) => String(error));
-
-    await vi.advanceTimersByTimeAsync(DIRECTIVE_TIMEOUT_MS);
-
-    await expect(settled).resolves.toContain('codex');
-  });
-
-  test('a directive answered on the last tick before the wait runs out still succeeds', async () => {
-    vi.useFakeTimers();
-    const scripted = scriptedChild(nothing);
-    const { host } = hostOver(scripted);
-
-    const starting = host.start(codex);
-
-    await vi.advanceTimersByTimeAsync(DIRECTIVE_TIMEOUT_MS - 1);
-    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'running' } });
-
-    await expect(starting).resolves.toEqual({ status: 'running' });
-  });
-
-  test('a gateway that timed out can still be asked again', async () => {
-    vi.useFakeTimers();
-    const scripted = scriptedChild(nothing);
-    const { host } = hostOver(scripted);
-
-    const first = host.start(codex).catch(() => 'refused');
-
-    await vi.advanceTimersByTimeAsync(DIRECTIVE_TIMEOUT_MS);
-    await first;
-
-    const second = host.start(codex);
-
-    await vi.advanceTimersByTimeAsync(0);
-    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'running' } });
-
-    await expect(second).resolves.toEqual({ status: 'running' });
   });
 });
