@@ -1,7 +1,15 @@
 import type { QueryClient } from '@tanstack/react-query';
+import type { AnyRouter } from '@tanstack/react-router';
+import type { ComponentType } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { Outlet, createRootRouteWithContext, useNavigate, useParams } from '@tanstack/react-router';
+import {
+  Outlet,
+  createRootRouteWithContext,
+  useNavigate,
+  useParams,
+  useRouter,
+} from '@tanstack/react-router';
 import { Suspense, lazy, useEffect } from 'react';
 
 import {
@@ -13,23 +21,12 @@ import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
 import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
 
-const RouterDevtools =
-  import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? lazy(async () =>
-        import('@tanstack/react-router-devtools').then((module) => ({
-          default: module.TanStackRouterDevtools,
-        })),
-      )
-    : () => null;
+const noDevtools = () => null;
 
-const QueryDevtools =
+const Devtools: ComponentType<{ router: AnyRouter }> =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? lazy(async () =>
-        import('@tanstack/react-query-devtools').then((module) => ({
-          default: module.ReactQueryDevtools,
-        })),
-      )
-    : () => null;
+    ? lazy(async () => import('../devtools').then((module) => ({ default: module.AppDevtools })))
+    : noDevtools;
 
 export type RouterAppContext = {
   queryClient: QueryClient;
@@ -101,6 +98,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 function RootLayout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const router = useRouter();
   const { create } = Route.useSearch();
   const { slug } = useParams({ strict: false });
 
@@ -132,8 +130,7 @@ function RootLayout() {
         open={create === true}
       />
       <Suspense>
-        <RouterDevtools />
-        <QueryDevtools />
+        <Devtools router={router} />
       </Suspense>
     </div>
   );

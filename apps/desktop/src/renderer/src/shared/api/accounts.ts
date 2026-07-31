@@ -2,7 +2,7 @@ import type { IpcRequest } from '@recompose/contracts';
 
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { unwrapIpcResult } from '../../../shared/api';
+import { unwrapIpcResult } from './ipc-result';
 
 export const accountsQueryOptions = queryOptions({
   queryKey: ['accounts'],

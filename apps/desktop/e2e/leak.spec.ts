@@ -4,12 +4,12 @@ import { test } from './fixtures';
 
 test('navigation between screens keeps the heap bounded', { tag: '@leak' }, async ({ page }) => {
   const client = await page.context().newCDPSession(page);
-  const providers = page.getByRole('link', { name: 'Providers' });
+  const providers = page.getByRole('link', { name: 'API Keys' });
   const gateways = page.getByRole('link', { name: 'Gateways' });
 
   const roundTrip = async () => {
     await providers.click();
-    await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
     await gateways.click();
     await expect(
       page.getByRole('heading', { level: 1, name: 'Create your first gateway' }),

@@ -13,26 +13,62 @@ type GatewaySidebarProps = {
   onNewGateway: () => void;
 };
 
+const NEW_GATEWAY = 'New Gateway…';
+
+/** The invitation while the group lists nothing, where a row has the space to name itself. */
+function NewGatewayRow({ onNewGateway }: GatewaySidebarProps) {
+  return (
+    <button
+      className="nav-item text-start font-medium text-accent-ink focus-ring"
+      onClick={onNewGateway}
+      type="button"
+    >
+      <Icon className="size-3.5 icon-emphasis" name="plus" />
+      {NEW_GATEWAY}
+    </button>
+  );
+}
+
 /**
- * The stored gateways, each row reporting whether it serves, over the way to the next one.
+ * The same act once gateways are listed, drawn on the heading rather than under the list.
  *
- * @summary Reach for it in the app shell's sidebar. The group only appears once a gateway
- * exists, because the empty state already carries the invitation to make the first one.
+ * @summary A row below a list reads as a member of that list, so the act moves to the trailing
+ * edge of the heading the way a source list does. It keeps the row's name, so a screen reader
+ * and a scenario both hear the same thing in either shape.
+ */
+function NewGatewayMark({ onNewGateway }: GatewaySidebarProps) {
+  return (
+    <button
+      aria-label={NEW_GATEWAY}
+      className="me-2 mb-0.5 flex size-5 items-center justify-end text-accent-ink focus-ring"
+      onClick={onNewGateway}
+      type="button"
+    >
+      <Icon className="size-3.5 icon-emphasis" name="plus" />
+    </button>
+  );
+}
+
+/**
+ * The way to the next gateway, over the stored ones, each row reporting whether it serves.
+ *
+ * @summary Reach for it in the app shell's sidebar. The group stands whether or not a gateway
+ * exists, so a fresh install still shows where gateways will land and how to make the first.
  */
 export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
   const groupId = useId();
   const { data: gateways } = useSuspenseQuery(gatewaysQueryOptions);
   const { data: states } = useSuspenseQuery(engineStatesQueryOptions);
 
-  if (gateways.length === 0) {
-    return null;
-  }
-
   return (
     <div aria-labelledby={groupId} className="flex flex-col" role="group">
-      <h2 className="nav-group" id={groupId}>
-        Local Gateways
-      </h2>
+      <div className="flex items-end">
+        <h2 className="flex-1 nav-group" id={groupId}>
+          Local Gateways
+        </h2>
+        {gateways.length > 0 && <NewGatewayMark onNewGateway={onNewGateway} />}
+      </div>
+      {gateways.length === 0 && <NewGatewayRow onNewGateway={onNewGateway} />}
       {gateways.map((gateway) => (
         <a className="nav-item text-ink" href={`#/gateways/${gateway.slug}`} key={gateway.slug}>
           <Icon name="network" />
@@ -42,14 +78,6 @@ export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
           </span>
         </a>
       ))}
-      <button
-        className="nav-item text-start font-medium text-accent-ink"
-        onClick={onNewGateway}
-        type="button"
-      >
-        <Icon className="size-3.5 icon-emphasis" name="plus" />
-        New Gateway…
-      </button>
     </div>
   );
 }

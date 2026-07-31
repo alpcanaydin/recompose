@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as UsageRouteImport } from './routes/usage'
 import { Route as GatewaysSlugRouteImport } from './routes/gateways.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsageRoute = UsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GatewaysSlugRoute = GatewaysSlugRouteImport.update({
   id: '/gateways/$slug',
   path: '/gateways/$slug',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
   '/settings': typeof SettingsRoute
+  '/usage': typeof UsageRoute
   '/gateways/$slug': typeof GatewaysSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
   '/settings': typeof SettingsRoute
+  '/usage': typeof UsageRoute
   '/gateways/$slug': typeof GatewaysSlugRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/providers': typeof ProvidersRoute
   '/settings': typeof SettingsRoute
+  '/usage': typeof UsageRoute
   '/gateways/$slug': typeof GatewaysSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/providers' | '/settings' | '/gateways/$slug'
+  fullPaths: '/' | '/providers' | '/settings' | '/usage' | '/gateways/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/providers' | '/settings' | '/gateways/$slug'
-  id: '__root__' | '/' | '/providers' | '/settings' | '/gateways/$slug'
+  to: '/' | '/providers' | '/settings' | '/usage' | '/gateways/$slug'
+  id:
+    '__root__' | '/' | '/providers' | '/settings' | '/usage' | '/gateways/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProvidersRoute: typeof ProvidersRoute
   SettingsRoute: typeof SettingsRoute
+  UsageRoute: typeof UsageRoute
   GatewaysSlugRoute: typeof GatewaysSlugRoute
 }
 
@@ -92,6 +103,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/usage': {
+      id: '/usage'
+      path: '/usage'
+      fullPath: '/usage'
+      preLoaderRoute: typeof UsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gateways/$slug': {
       id: '/gateways/$slug'
       path: '/gateways/$slug'
@@ -106,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProvidersRoute: ProvidersRoute,
   SettingsRoute: SettingsRoute,
+  UsageRoute: UsageRoute,
   GatewaysSlugRoute: GatewaysSlugRoute,
 }
 export const routeTree = rootRouteImport

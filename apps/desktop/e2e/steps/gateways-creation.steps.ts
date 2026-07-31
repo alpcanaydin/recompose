@@ -37,7 +37,9 @@ Then('the screen invites {string}', async ({ page }, invitation: string) => {
 });
 
 Then('the sidebar lists no gateway', async ({ page }) => {
-  await expect(page.getByRole('group', { name: 'Local Gateways' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Local Gateways' }).getByRole('link')).toHaveCount(
+    0,
+  );
 });
 
 When('the maintainer chooses {string}', async ({ page }, label: string) => {

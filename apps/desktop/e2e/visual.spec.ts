@@ -39,8 +39,8 @@ async function settleFonts(app: ElectronApplication, page: Page): Promise<void> 
 }
 
 async function openProviders(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Providers' }).click();
-  await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
+  await page.getByRole('link', { name: 'API Keys' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
 }
 
 async function openSettings(page: Page): Promise<void> {

@@ -1,6 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
-import { useRemoveAccount } from '../api/accounts';
+import { useRemoveAccount } from '../../../shared/api';
 
 type AccountListProps = {
   accounts: AccountsDocument['accounts'];
