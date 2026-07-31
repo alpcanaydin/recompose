@@ -9,7 +9,6 @@ import { IpcResultError, refusalSentence } from '../../../../shared/api';
 
 const RESERVED_NAME_REFUSAL = 'Windows reserves this name.';
 const MISSING_NAME_REFUSAL = 'Give the gateway a name.';
-const NAME_TAKEN_REFUSAL = 'Another gateway holds this name.';
 const MALFORMED_DRAFT_REFUSAL = 'recompose cannot store this gateway as it stands.';
 const PORT_RANGE_REFUSAL = `Accepts ${String(GATEWAY_PORT_RANGE.min)} through ${String(GATEWAY_PORT_RANGE.max)}.`;
 
@@ -63,7 +62,7 @@ export function refusalsBeforeSaving(displayName: string, port: string): DraftRe
 export function refusalFromMain(failure: unknown): DraftRefusals {
   if (failure instanceof IpcResultError) {
     if (failure.code === 'name-conflict') {
-      return { name: NAME_TAKEN_REFUSAL };
+      return { name: failure.message };
     }
 
     if (failure.code === 'port-conflict') {

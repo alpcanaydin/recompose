@@ -149,14 +149,30 @@ test('a port outside the accepted range keeps the sheet open and states the rang
   expect(await storedGateways()).toEqual([]);
 });
 
-test('a name a stored gateway holds keeps the sheet open under the name field', async () => {
+test('a name a stored gateway holds keeps the sheet open and names that gateway', async () => {
   await openSheet({ gateways: [codex] });
 
   await nameField().fill('Codex');
   await press('Create Gateway');
 
-  await expect.element(page.getByText('Another gateway holds this name.')).toBeVisible();
+  await expect
+    .element(page.getByText('Another gateway already holds the name "Codex".'))
+    .toBeVisible();
   await expect.element(sheet()).toBeVisible();
+  expect(await storedGateways()).toHaveLength(1);
+});
+
+test('a name sharing no letter with the one it collides with still names that one', async () => {
+  const chineseGateway = gatewaySeed({ slug: 'gateway', displayName: '网关', port: 51234 });
+
+  await openSheet({ gateways: [chineseGateway] });
+
+  await nameField().fill('関門');
+  await press('Create Gateway');
+
+  await expect
+    .element(page.getByText('Another gateway already holds the name "网关".'))
+    .toBeVisible();
   expect(await storedGateways()).toHaveLength(1);
 });
 

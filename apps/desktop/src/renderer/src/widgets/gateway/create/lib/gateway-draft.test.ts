@@ -77,6 +77,17 @@ describe('the port a person types', () => {
 });
 
 describe('where a refusal the main process sent lands on the sheet', () => {
+  test('a name a stored gateway holds stands under the name field, naming that gateway', () => {
+    expect(
+      refusalFromMain(
+        new IpcResultError({
+          code: 'name-conflict',
+          message: 'Another gateway already holds the name "网关".',
+        }),
+      ),
+    ).toEqual({ name: 'Another gateway already holds the name "网关".' });
+  });
+
   test('a port a stored gateway holds stands under the port field, naming that gateway', () => {
     expect(
       refusalFromMain(
