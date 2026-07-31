@@ -38,6 +38,10 @@ export function AppSidebar({ onNewGateway }: AppSidebarProps) {
           <h2 className="nav-group" id={systemId}>
             System
           </h2>
+          <Link className="nav-item" to="/usage">
+            <Icon name="gauge" />
+            Usage
+          </Link>
           <Link className="nav-item" to="/settings">
             <Icon name="gear" />
             Settings

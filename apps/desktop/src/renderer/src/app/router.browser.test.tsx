@@ -6,17 +6,16 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
-import type { BridgeParameters } from '../shared/testing';
-
 import { accountsQueryOptions } from '../pages/providers';
 import {
   gatewayTokenQueryOptions,
   settingsQueryOptions,
   systemQueryOptions,
 } from '../pages/settings';
-import { gatewaySeed, installFakeBridge } from '../shared/testing';
+import { installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
+import { renderAt } from './testing/render-app';
 
 function seededAccounts(): AccountsDocument {
   return {
@@ -33,34 +32,6 @@ function seededAccounts(): AccountsDocument {
   };
 }
 
-const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
-
-async function renderAt(path: string, parameters: BridgeParameters = {}) {
-  installFakeBridge(parameters);
-
-  const queryClient = createQueryClient();
-  const router = createAppRouter({
-    queryClient,
-    history: createMemoryHistory({ initialEntries: [path] }),
-  });
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  );
-}
-
-test('the shell shows the sidebar and the invitation at the root', async () => {
-  const screen = await renderAt('/');
-
-  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Providers' })).toBeVisible();
-  await expect
-    .element(screen.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
-    .toBeVisible();
-});
-
 test('the call to action opens the creation sheet with focus in the name field', async () => {
   const screen = await renderAt('/');
 
@@ -68,18 +39,6 @@ test('the call to action opens the creation sheet with focus in the name field',
 
   await expect.element(screen.getByRole('dialog', { name: 'Create a gateway' })).toBeVisible();
   await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
-});
-
-test('the sidebar reaches the creation sheet once the empty state has left', async () => {
-  const screen = await renderAt('/', { gateways: [codex] });
-
-  await expect
-    .element(screen.getByRole('heading', { name: 'Create your first gateway' }))
-    .not.toBeInTheDocument();
-
-  await screen.getByRole('button', { name: 'New Gateway…' }).click();
-
-  await expect.element(screen.getByRole('dialog', { name: 'Create a gateway' })).toBeVisible();
 });
 
 test('the keyboard path opens the sheet over any surface and hands that surface back', async () => {
@@ -93,50 +52,6 @@ test('the keyboard path opens the sheet over any surface and hands that surface 
     .element(screen.getByRole('dialog', { name: 'Create a gateway' }))
     .not.toBeInTheDocument();
   await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
-});
-
-test('a gateway saved from the sheet reaches the sidebar as a running row', async () => {
-  const screen = await renderAt('/');
-
-  await screen.getByRole('button', { name: 'Create Gateway' }).click();
-  await screen.getByRole('textbox', { name: 'Name' }).fill('Codex');
-  await screen.getByRole('textbox', { name: 'Slug' }).fill('codex');
-
-  screen.getByRole('button', { name: 'Create Gateway' }).last().element().focus();
-
-  await userEvent.keyboard('{Enter}');
-
-  await expect.element(screen.getByRole('link', { name: 'Codex Running' })).toBeVisible();
-});
-
-test('a selected gateway puts its address and its control in the toolbar', async () => {
-  const screen = await renderAt('/gateways/codex', { gateways: [codex] });
-
-  await expect.element(screen.getByText('localhost:51234')).toBeVisible();
-  await expect.element(screen.getByRole('button', { name: 'Start' })).toBeVisible();
-  await expect.element(screen.getByRole('button', { name: 'Copy address' })).toBeVisible();
-});
-
-test('a surface with no gateway selected leaves the toolbar empty chrome', async () => {
-  const screen = await renderAt('/', { gateways: [codex] });
-
-  await expect.element(screen.getByRole('link', { name: 'Codex Stopped' })).toBeVisible();
-  await expect
-    .element(screen.getByRole('button', { name: 'Copy address' }))
-    .not.toBeInTheDocument();
-});
-
-test('a gateway surface reads what its traffic is carrying', async () => {
-  const screen = await renderAt('/gateways/codex', { gateways: [codex] });
-
-  await expect.element(screen.getByText(/req\/min/u)).toBeVisible();
-  await expect.element(screen.getByText(/nodes/u)).toBeVisible();
-});
-
-test('a surface holding no gateway carries no traffic reading', async () => {
-  const screen = await renderAt('/', { gateways: [codex] });
-
-  await expect.element(screen.getByText(/req\/min/u)).not.toBeInTheDocument();
 });
 
 test('an unknown path shows the not-found state inside the shell', async () => {
@@ -176,13 +91,11 @@ test('the /providers route loader warms the query cache before any component ren
   expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
 });
 
-test('the sidebar carries a System group holding Settings', async () => {
-  const screen = await renderAt('/');
+test('a request for the usage path lands on the usage screen inside the shell', async () => {
+  const screen = await renderAt('/usage');
 
-  const system = screen.getByRole('group', { name: 'System' });
-
-  await expect.element(system).toBeVisible();
-  await expect.element(system.getByRole('link', { name: 'Settings' })).toBeVisible();
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Usage' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
 });
 
 test('clicking the settings link navigates to the settings screen', async () => {
@@ -197,18 +110,6 @@ test('arriving at settings through the shortcut lands focus on the first control
   const screen = await renderAt('/settings?focus=first-control');
 
   await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
-});
-
-test('arriving at settings through the sidebar leaves focus where the person put it', async () => {
-  const screen = await renderAt('/');
-
-  const settings = screen.getByRole('link', { name: 'Settings' });
-
-  await settings.click();
-
-  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
-  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
-  await expect.element(settings).toHaveFocus();
 });
 
 test('the /settings route loader warms the settings, system, and token caches before any component renders', async () => {
