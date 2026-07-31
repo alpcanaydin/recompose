@@ -21,3 +21,13 @@ export function windowButtonsFor(sidebarShown: boolean): { x: number; y: number 
     y: centeredIn(sidebarShown ? SIDEBAR_BAND_HEIGHT : TOOLBAR_HEIGHT),
   };
 }
+
+/**
+ * Whether this platform draws window controls the renderer has to place.
+ *
+ * @summary Only macOS draws them over the renderer's own paint, and `setWindowButtonPosition`
+ * exists on no other platform. Calling it elsewhere throws rather than doing nothing.
+ */
+export function windowButtonsMoveOn(platform: NodeJS.Platform): boolean {
+  return platform === 'darwin';
+}

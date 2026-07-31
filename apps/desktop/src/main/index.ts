@@ -41,6 +41,7 @@ import {
 } from './windows/main-window';
 import { allowsPermission } from './windows/permission-policy';
 import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
+import { windowButtonsMoveOn } from './windows/window-buttons';
 
 app.setName('Recompose');
 app.setAboutPanelOptions({ applicationName: 'Recompose' });
@@ -148,6 +149,10 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),
       placeWindowButtons: (position) => {
+        if (!windowButtonsMoveOn(process.platform)) {
+          return;
+        }
+
         BrowserWindow.getAllWindows()[0]?.setWindowButtonPosition(position);
       },
     }),
