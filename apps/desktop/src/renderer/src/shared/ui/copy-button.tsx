@@ -9,6 +9,13 @@ type CopyButtonProps = {
 
 const CONFIRMATION_LINGERS_MS = 2000;
 
+const announcements = {
+  copied: 'Address copied.',
+  refused: 'Copying failed.',
+} as const;
+
+type CopyOutcome = keyof typeof announcements;
+
 function CopyGlyph() {
   return (
     <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 12 12" width="12">
@@ -43,23 +50,25 @@ function CheckGlyph() {
  * @summary Reach for it beside a value a person needs in another app, where a text button would
  * outweigh what it copies. The glyph confirms the copy for a sighted person and a polite live
  * region confirms it for a screen reader, both clearing so a second copy announces itself again.
+ * A clipboard that refuses the write announces that instead, because a button that answers
+ * nothing reads as a broken one.
  */
 export function CopyButton({ label, value }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const [outcome, setOutcome] = useState<CopyOutcome | undefined>(undefined);
 
   useEffect(() => {
-    if (!copied) {
+    if (outcome === undefined) {
       return undefined;
     }
 
     const clearing = setTimeout(() => {
-      setCopied(false);
+      setOutcome(undefined);
     }, CONFIRMATION_LINGERS_MS);
 
     return () => {
       clearTimeout(clearing);
     };
-  }, [copied]);
+  }, [outcome]);
 
   return (
     <>
@@ -67,16 +76,21 @@ export function CopyButton({ label, value }: CopyButtonProps) {
         aria-label={label}
         className="inline-flex size-4.5 items-center justify-center rounded-chip text-ink-secondary focus-ring hover:text-ink"
         onClick={() => {
-          void navigator.clipboard.writeText(value).then(() => {
-            setCopied(true);
-          });
+          void navigator.clipboard
+            .writeText(value)
+            .then(() => {
+              setOutcome('copied');
+            })
+            .catch(() => {
+              setOutcome('refused');
+            });
         }}
         type="button"
       >
-        {copied ? <CheckGlyph /> : <CopyGlyph />}
+        {outcome === 'copied' ? <CheckGlyph /> : <CopyGlyph />}
       </button>
       <span className="sr-only" role="status">
-        {copied ? 'Address copied.' : ''}
+        {outcome === undefined ? '' : announcements[outcome]}
       </span>
     </>
   );

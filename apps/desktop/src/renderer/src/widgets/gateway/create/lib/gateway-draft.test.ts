@@ -1,7 +1,8 @@
 import { fc, test as propertyTest } from '@fast-check/vitest';
 import { describe, expect, test } from 'vitest';
 
-import { previewAddressFor, portRefusal, nameRefusal } from './gateway-draft';
+import { IpcResultError } from '../../../../shared/api';
+import { previewAddressFor, portRefusal, nameRefusal, refusalFromMain } from './gateway-draft';
 
 describe('the name a person types', () => {
   test('a plain name draws no refusal', () => {
@@ -23,6 +24,15 @@ describe('the name a person types', () => {
   test('a name Windows keeps for a device says so in its own words', () => {
     expect(nameRefusal('Con')).toBe('Windows reserves this name.');
     expect(nameRefusal('lpt1')).toBe('Windows reserves this name.');
+  });
+
+  test('no name at all asks for one, rather than storing a gateway nobody named', () => {
+    expect(nameRefusal('')).toBe('Give the gateway a name.');
+  });
+
+  test('a name of nothing but spacing asks for one too, because it names nothing', () => {
+    expect(nameRefusal('   ')).toBe('Give the gateway a name.');
+    expect(nameRefusal('\t\n')).toBe('Give the gateway a name.');
   });
 });
 
@@ -64,6 +74,49 @@ describe('the port a person types', () => {
       expect(portRefusal(String(port))).toBeDefined();
     },
   );
+});
+
+describe('where a refusal the main process sent lands on the sheet', () => {
+  test('a name a stored gateway holds stands under the name field, naming that gateway', () => {
+    expect(
+      refusalFromMain(
+        new IpcResultError({
+          code: 'name-conflict',
+          message: 'Another gateway already holds the name "网关".',
+        }),
+      ),
+    ).toEqual({ name: 'Another gateway already holds the name "网关".' });
+  });
+
+  test('a port a stored gateway holds stands under the port field, naming that gateway', () => {
+    expect(
+      refusalFromMain(
+        new IpcResultError({ code: 'port-conflict', message: 'codex already holds this port.' }),
+      ),
+    ).toEqual({ port: 'codex already holds this port.' });
+  });
+
+  test('a storage failure stands in the sheet, in the words the main process wrote', () => {
+    expect(
+      refusalFromMain(
+        new IpcResultError({ code: 'storage-failed', message: 'EACCES: permission denied' }),
+      ),
+    ).toEqual({ sheet: 'EACCES: permission denied' });
+  });
+
+  test('a schema refusal trades its own words for a sentence, because it writes for a developer', () => {
+    expect(
+      refusalFromMain(
+        new IpcResultError({ code: 'validation-failed', message: '[{"code":"too_small"}]' }),
+      ),
+    ).toEqual({ sheet: 'recompose cannot store this gateway as it stands.' });
+  });
+
+  test('a failure that never reached the main process still stands in the sheet', () => {
+    expect(refusalFromMain(new Error('the bridge is gone'))).toEqual({
+      sheet: 'the bridge is gone',
+    });
+  });
 });
 
 describe('the address the sheet previews', () => {
