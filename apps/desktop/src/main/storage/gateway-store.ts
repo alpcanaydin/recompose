@@ -1,8 +1,35 @@
-import { loadGatewayConfig, type GatewayConfig } from '@recompose/contracts';
+import {
+  GATEWAY_CONFIG_VERSION,
+  loadGatewayConfig,
+  type GatewayConfig,
+} from '@recompose/contracts';
 import { mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { readDocumentWithQuarantine, writeJsonAtomic } from './json-file';
+import {
+  newerSchemaVersion,
+  quarantineFile,
+  readJsonWithQuarantine,
+  writeJsonAtomic,
+} from './json-file';
+
+/**
+ * A gateway document this build is too old to read.
+ *
+ * @summary Thrown instead of quarantining, so a person who ran a newer build and came back keeps
+ * the gateway rather than watching it disappear from the sidebar, the tray, and the list.
+ */
+export class GatewayNewerSchemaError extends Error {
+  readonly schemaVersion: number;
+
+  constructor(schemaVersion: number) {
+    super(
+      `the gateway document names schema version ${String(schemaVersion)}, and this build reads up to ${String(GATEWAY_CONFIG_VERSION)}`,
+    );
+    this.name = 'GatewayNewerSchemaError';
+    this.schemaVersion = schemaVersion;
+  }
+}
 
 export async function saveGatewayConfig(dir: string, config: GatewayConfig): Promise<void> {
   await writeJsonAtomic(join(dir, `${config.slug}.json`), config);
@@ -12,7 +39,25 @@ async function loadOneGatewayConfig(
   filePath: string,
   onCorrupt: (quarantinedPath: string) => void,
 ): Promise<GatewayConfig | undefined> {
-  return readDocumentWithQuarantine(filePath, loadGatewayConfig, onCorrupt);
+  const raw = await readJsonWithQuarantine(filePath, onCorrupt);
+
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const newer = newerSchemaVersion(raw, GATEWAY_CONFIG_VERSION);
+
+  if (newer !== undefined) {
+    throw new GatewayNewerSchemaError(newer);
+  }
+
+  try {
+    return loadGatewayConfig(raw);
+  } catch {
+    await quarantineFile(filePath, onCorrupt);
+
+    return undefined;
+  }
 }
 
 export async function listGatewayConfigs(
