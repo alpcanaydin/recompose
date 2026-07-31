@@ -147,6 +147,9 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       readLoginItem: () => loginItem.isEnabled(),
       isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),
+      placeWindowButtons: (position) => {
+        BrowserWindow.getAllWindows()[0]?.setWindowButtonPosition(position);
+      },
     }),
   };
 }

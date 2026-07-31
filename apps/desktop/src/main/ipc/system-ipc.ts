@@ -5,6 +5,7 @@ import type { LoginItemAvailability } from '../system/login-item';
 import type { IpcHandlers } from './dispatch';
 
 import { homeRelative } from '../system/home-relative';
+import { windowButtonsFor } from '../windows/window-buttons';
 import { ipcFailure } from './storage-envelope';
 
 export type SystemIpcContext = {
@@ -15,9 +16,14 @@ export type SystemIpcContext = {
   readLoginItem: () => boolean;
   isMenuBarVisible: () => boolean;
   openFolder: (path: string) => Promise<string>;
+  /** Moves the window controls to the band they now sit over. */
+  placeWindowButtons: (position: { x: number; y: number }) => void;
 };
 
-export type SystemIpcHandlers = Pick<IpcHandlers, 'system:get' | 'system:open-config-folder'>;
+export type SystemIpcHandlers = Pick<
+  IpcHandlers,
+  'system:get' | 'system:open-config-folder' | 'system:sidebar-shown'
+>;
 
 function observeSystem(ctx: SystemIpcContext): SystemState {
   return {
@@ -39,9 +45,16 @@ async function openConfigFolder(ctx: SystemIpcContext) {
   return { ok: true as const, value: undefined };
 }
 
+function placedWindowButtons(ctx: SystemIpcContext, shown: boolean) {
+  ctx.placeWindowButtons(windowButtonsFor(shown));
+
+  return { ok: true as const, value: undefined };
+}
+
 export function createSystemIpcHandlers(ctx: SystemIpcContext): SystemIpcHandlers {
   return {
     'system:get': async () => Promise.resolve({ ok: true as const, value: observeSystem(ctx) }),
     'system:open-config-folder': async () => openConfigFolder(ctx),
+    'system:sidebar-shown': async (shown) => Promise.resolve(placedWindowButtons(ctx, shown)),
   };
 }

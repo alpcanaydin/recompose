@@ -38,6 +38,7 @@ const recompose: RecomposeIpc = Object.freeze({
   'accounts:remove': bridgeEntry('accounts:remove'),
   'system:get': bridgeEntry('system:get'),
   'system:open-config-folder': bridgeEntry('system:open-config-folder'),
+  'system:sidebar-shown': bridgeEntry('system:sidebar-shown'),
   'gateways:offer-port': bridgeEntry('gateways:offer-port'),
   'gateways:move-port': bridgeEntry('gateways:move-port'),
   'engine:start': bridgeEntry('engine:start'),

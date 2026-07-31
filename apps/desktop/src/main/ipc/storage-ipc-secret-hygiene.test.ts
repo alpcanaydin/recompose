@@ -45,6 +45,7 @@ function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
     ...storage,
     'system:get': absent,
     'system:open-config-folder': absent,
+    'system:sidebar-shown': absent,
     'gateways:offer-port': absent,
     'gateways:move-port': absent,
     'engine:start': absent,

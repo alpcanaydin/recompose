@@ -108,6 +108,10 @@ function RootLayout() {
 
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
 
+  useEffect(() => {
+    void window.recompose['system:sidebar-shown'](!sidebarAway);
+  }, [sidebarAway]);
+
   return (
     <div className="flex h-full overflow-hidden">
       {!sidebarAway && (

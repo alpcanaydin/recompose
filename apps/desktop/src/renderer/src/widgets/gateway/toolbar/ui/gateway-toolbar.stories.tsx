@@ -15,6 +15,16 @@ const portTaken = {
     }),
 };
 
+type Finds = { findByRole: (role: string, options?: { name: string }) => Promise<HTMLElement> };
+type Presses = { click: (target: Element) => Promise<unknown> };
+
+/** Presses Start and hands back whatever line the attempt left behind. */
+async function lineLeftByStarting(canvas: Finds, userEvent: Presses) {
+  await userEvent.click(await canvas.findByRole('button', { name: 'Start' }));
+
+  return canvas.findByRole('alert');
+}
+
 const meta = preview.meta({
   component: GatewayToolbar,
   args: { slug: 'codex' },
@@ -103,15 +113,40 @@ export const EveryControl = meta.story({
   },
 });
 
+/**
+ * A start the main process refused outright, which used to change nothing on the screen.
+ *
+ * @summary A refused start is not a stopped gateway. The engine never answered, so the sentence
+ * main wrote is the only thing that can tell a person why the button appeared to do nothing.
+ */
+export const StartRefused = meta.story({
+  parameters: {
+    bridge: {
+      engineStates: {},
+      gateways: [codex],
+      overrides: {
+        'engine:start': async () =>
+          Promise.resolve({
+            ok: false as const,
+            error: { code: 'storage-failed' as const, message: 'The engine never answered.' },
+          }),
+      },
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(await lineLeftByStarting(canvas, userEvent)).toHaveTextContent(
+      'The engine never answered.',
+    );
+  },
+});
+
 /** A start that lost its port, carrying the only recovery this build ships. */
 export const StartLostThePort = meta.story({
   parameters: {
     bridge: { gateways: [codex], engineStates: {}, overrides: portTaken },
   },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Start' }));
-
-    await expect(await canvas.findByRole('alert')).toHaveTextContent(
+    await expect(await lineLeftByStarting(canvas, userEvent)).toHaveTextContent(
       'Another process holds port 51234.',
     );
     await expect(await canvas.findByRole('button', { name: 'Move to a free port' })).toBeVisible();
