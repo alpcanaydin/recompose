@@ -53,13 +53,14 @@ export const StripShape = meta.story({
   play: async ({ canvas }) => {
     const start = await canvas.findByRole('button', { name: 'Start' });
     const strip = start.parentElement;
-    const pill = (await canvas.findByRole('button', { name: 'Copy address' })).parentElement;
+    const pill = strip?.firstElementChild;
 
     await expect(paintedStyle(strip).height).toBe('54px');
     await expect(paintedStyle(strip).columnGap).toBe('10px');
     await expect(paintedStyle(strip).paddingLeft).toBe('14px');
 
     await expect(paintedStyle(pill).height).toBe('30px');
+    await expect(paintedStyle(pill).flexGrow).toBe('1');
     await expect(paintedStyle(pill).borderRadius).toBe('6px');
     await expect(paintedStyle(pill).fontSize).toBe('12.5px');
     await expect(paintedStyle(pill).fontFamily).toContain('Mono');
