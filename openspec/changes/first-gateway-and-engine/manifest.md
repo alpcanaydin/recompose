@@ -31,5 +31,8 @@ approvals:
   - the primary button fills with a new single-value accent token rather than the accent itself, because a white label on the accent measured 4.01 to 1 and axe refused it, which departs from the light-dark pairing ADR-0009 asks for and follows the surface-thumb precedent instead
   - the get-started card and the empty-state invitation share the home surface from the first run, resolving a contradiction the design carried, because the exclusive reading left the card's first step unable to read as current and left the View menu's restore item with nothing to restore
   - the three widget slices fold into one gateway group, because Steiger's repetitive-naming rule rejects gateway-sidebar, gateway-toolbar, and gateway-create beside each other under fail-on-warnings
+  - the frozen set took a second amendment, taking the two settings sentences the contracts cluster had already reworded on disk, because both read more precisely than the frozen text and both assert the same behavior
+  - saving a gateway moves the screen to it, because the toolbar carrying its address, its start control, and its copy button renders on the gateway route, so a person who just read an address in the sheet would otherwise have to hunt for it
+  - the visual aligns to the design reference's own stylesheet rather than to the nearest token the file already held, which restores the second empty-state button, the shortcut hint, the sidebar icons, and the status bar
 branch: worktree-first-gateway-and-engine
 ---

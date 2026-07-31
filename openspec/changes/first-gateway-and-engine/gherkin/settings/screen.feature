@@ -24,11 +24,11 @@ Feature: The settings screen
 
   Scenario: Two changes in quick succession both survive
     When the maintainer switches the theme to dark
-    And turns the menu bar switch on straight after
+    And shows recompose in the menu bar straight after
     Then the stored settings hold the dark theme and the menu bar presence
 
-  Scenario: The screen carries no port
-    Then the Server group offers no port
+  Scenario: The Server group offers no port
+    Then the Server group offers no port control
     And the stored settings document holds no port
 
   Scenario: The bind address states a value rather than offering a control
