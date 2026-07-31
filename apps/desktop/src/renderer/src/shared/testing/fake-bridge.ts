@@ -8,7 +8,7 @@ import type {
   SystemState,
 } from '@recompose/contracts';
 
-import { withSettingsPatch, defaultSettings } from '@recompose/contracts';
+import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/contracts';
 
 const emptyDocument: AccountsDocument = { schemaVersion: 1, accounts: [] };
 
@@ -103,6 +103,17 @@ function conflictIn(
   return undefined;
 }
 
+function refusalSaving(
+  stored: readonly GatewayConfig[],
+  arriving: GatewayConfig,
+): { code: 'validation-failed' | 'name-conflict' | 'port-conflict'; message: string } | undefined {
+  const parsed = ipcChannels['gateways:save'].request.safeParse(arriving);
+
+  return parsed.success
+    ? conflictIn(stored, parsed.data)
+    : { code: 'validation-failed', message: parsed.error.message };
+}
+
 function gatewayHandlers(
   seededGateways: readonly GatewayConfig[],
   seededStates: EngineStates,
@@ -130,7 +141,7 @@ function gatewayHandlers(
   return {
     'gateways:list': async () => Promise.resolve({ ok: true, value: stored }),
     'gateways:save': async (gateway) => {
-      const refused = conflictIn(stored, gateway);
+      const refused = refusalSaving(stored, gateway);
 
       if (refused !== undefined) {
         return Promise.resolve({ ok: false, error: refused });
