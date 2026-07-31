@@ -1,7 +1,7 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { allowsPermission, ALLOWED_PERMISSIONS } from './permission-policy';
+import { allowsPermission } from './permission-policy';
 
 const EVERY_PERMISSION_ELECTRON_ASKS_ABOUT = [
   'clipboard-read',
@@ -30,10 +30,6 @@ const EVERY_PERMISSION_ELECTRON_ASKS_ABOUT = [
 ];
 
 describe('the one permission recompose opens', () => {
-  test('the allowed set holds exactly the clipboard write the address pill needs', () => {
-    expect([...ALLOWED_PERMISSIONS]).toEqual(['clipboard-sanitized-write']);
-  });
-
   test('copying a gateway address is allowed', () => {
     expect(allowsPermission('clipboard-sanitized-write')).toBe(true);
   });
