@@ -78,6 +78,8 @@
   --spacing-track-height: 22px;
   --spacing-segment: 24px;
   --spacing-control: 24px;
+  --spacing-glyph-ink-inset: 3.2px;
+  --spacing-glyph-trailing: calc(var(--spacing) * 2 - var(--spacing-glyph-ink-inset));
   --spacing-button: 28px;
   --spacing-chip: 18px;
   --spacing-thumb: 18px;

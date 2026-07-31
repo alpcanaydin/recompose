@@ -52,8 +52,9 @@ export const NewGatewayMarkOnTheHeading = meta.story({
  * The plus and the state marks under it standing on one vertical line.
  *
  * @summary They are the only ink in that column, so a ragged trailing edge reads immediately.
- * The glyph sits flush with the end of its own box, which keeps the ink aligned as well as the
- * boxes: a centred glyph would leave the plus three pixels inside the line the dots hold.
+ * The mark is a filled shape that reaches its own box edge, while the plus is a stroked path
+ * that stops short of one, so aligning the boxes leaves the ink ragged. The button carries the
+ * difference, and this holds the two inks on one line rather than the two boxes.
  */
 export const TrailingEdgeHoldsOneLine = meta.story({
   parameters: { bridge: { gateways: [codex] } },
@@ -61,8 +62,9 @@ export const TrailingEdgeHoldsOneLine = meta.story({
     const next = await canvas.findByRole('button', { name: 'New Gateway…' });
     const mark = await canvas.findByRole('img', { name: 'Stopped' });
 
-    await expect(paintedBox(next).right).toBe(paintedBox(mark).right);
-    await expect(paintedBox(next.querySelector('svg')).right).toBe(paintedBox(mark).right);
+    const gap = paintedBox(next.querySelector('svg path')).right - paintedBox(mark).right;
+
+    await expect(Math.abs(gap)).toBeLessThan(0.5);
   },
 });
 

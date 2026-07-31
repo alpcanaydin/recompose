@@ -40,7 +40,7 @@ function NewGatewayMark({ onNewGateway }: GatewaySidebarProps) {
   return (
     <button
       aria-label={NEW_GATEWAY}
-      className="me-2 mb-0.5 flex size-5 items-center justify-end text-accent-ink focus-ring"
+      className="me-glyph-trailing mb-0.5 flex size-5 items-center justify-end text-accent-ink focus-ring"
       onClick={onNewGateway}
       type="button"
     >
