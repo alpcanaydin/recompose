@@ -186,7 +186,7 @@ describe('when the engine child dies on its own', () => {
     expect(complaint.mock.calls.flat().join(' ')).toContain('9');
   });
 
-  test('a directive still waiting settles on stopped rather than hanging', async () => {
+  test('a directive still waiting fails naming the exit, rather than reading as a clean stop', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const scripted = scriptedChild(nothing);
     const { host } = hostOver(scripted, ['codex']);
@@ -196,7 +196,7 @@ describe('when the engine child dies on its own', () => {
     await Promise.resolve();
     scripted.exit(1);
 
-    await expect(starting).resolves.toEqual({ status: 'stopped' });
+    await expect(starting).rejects.toThrow('exit code 1');
   });
 
   test('the next start spawns a fresh child', async () => {
@@ -209,6 +209,27 @@ describe('when the engine child dies on its own', () => {
     await host.start(codex);
 
     expect(spawns).toEqual([0, 1]);
+  });
+});
+
+describe('when the engine child cannot load at all', () => {
+  test('every start fails rather than answering, however often it is asked', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const scripted = scriptedChild(nothing);
+    const { host } = hostOver(scripted, ['codex']);
+
+    const starting = host.start(codex);
+
+    await Promise.resolve();
+    scripted.exit(1);
+    await expect(starting).rejects.toThrow();
+
+    const again = host.start(codex);
+
+    await Promise.resolve();
+    scripted.exit(1);
+
+    await expect(again).rejects.toThrow('exit code 1');
   });
 });
 

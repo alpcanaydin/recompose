@@ -34,12 +34,17 @@ export type EngineHost = {
 
 type StateListener = (states: EngineStates) => void;
 
+type Waiter = {
+  answer: (state: GatewayEngineState) => void;
+  refuse: (reason: Error) => void;
+};
+
 type Resident = {
   states: EngineStates;
   child: EngineChild | null;
   spawnChild: () => EngineChild;
   subscribers: Set<StateListener>;
-  awaitingReport: Map<string, (state: GatewayEngineState) => void>;
+  awaitingReport: Map<string, Waiter>;
 };
 
 function publish(resident: Resident, next: EngineStates): void {
@@ -50,11 +55,21 @@ function publish(resident: Resident, next: EngineStates): void {
   }
 }
 
-function settleWaiter(resident: Resident, slug: string, state: GatewayEngineState): void {
+function answerWaiter(resident: Resident, slug: string, state: GatewayEngineState): void {
   const waiting = resident.awaitingReport.get(slug);
 
   resident.awaitingReport.delete(slug);
-  waiting?.(state);
+  waiting?.answer(state);
+}
+
+function refuseEveryWaiter(resident: Resident, reason: Error): void {
+  const waiting = [...resident.awaitingReport.values()];
+
+  resident.awaitingReport.clear();
+
+  for (const waiter of waiting) {
+    waiter.refuse(reason);
+  }
 }
 
 function receiveReport(resident: Resident, message: unknown): void {
@@ -67,20 +82,19 @@ function receiveReport(resident: Resident, message: unknown): void {
   }
 
   publish(resident, foldEngineReport(resident.states, report.data));
-  settleWaiter(resident, report.data.slug, report.data.state);
+  answerWaiter(resident, report.data.slug, report.data.state);
 }
 
 function receiveExit(resident: Resident, code: number): void {
-  console.error(
-    `The engine stopped on its own with exit code ${String(code)}, so every gateway now reads stopped.`,
+  const death = new Error(
+    `The engine stopped on its own with exit code ${String(code)}, so no gateway is serving.`,
   );
+
+  console.error(death.message);
 
   resident.child = null;
   publish(resident, allStopped(Object.keys(resident.states)));
-
-  for (const slug of resident.awaitingReport.keys()) {
-    settleWaiter(resident, slug, { status: 'stopped' });
-  }
+  refuseEveryWaiter(resident, death);
 }
 
 function runningChild(resident: Resident): EngineChild {
@@ -118,9 +132,15 @@ async function sendDirective(
       );
     }, DIRECTIVE_TIMEOUT_MS);
 
-    resident.awaitingReport.set(slug, (state) => {
-      clearTimeout(giveUp);
-      answer(state);
+    resident.awaitingReport.set(slug, {
+      answer: (state) => {
+        clearTimeout(giveUp);
+        answer(state);
+      },
+      refuse: (reason) => {
+        clearTimeout(giveUp);
+        refuse(reason);
+      },
     });
 
     engine.postMessage(directive);
