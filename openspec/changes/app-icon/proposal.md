@@ -77,7 +77,7 @@ The maintainer left tooling to the design. The laziest deterministic pipeline co
 
 ### One script renders every raster
 
-A committed script, `apps/desktop/scripts/generate-icons.mts`, renders every raster the change ships from two inputs. `build/mark.svg` supplies the tile renditions, and `build/mark-small.svg` supplies the small and standalone glyphs. Per-target geometry transforms bake the concentric rounding: the script rewrites the corner radii of the tile and both bands per rendition before rasterizing. One module, `apps/desktop/scripts/brand-palette.mts`, records the seven flattened solid values. The script imports it, and the hand-authored `.icon` layers copy their values from it.
+A committed script, `apps/desktop/scripts/generate-icons.mts`, renders every raster the change ships from two inputs. `build/mark.svg` supplies the tile renditions, and `build/mark-small.svg` supplies the small and standalone glyphs. Per-target geometry transforms bake the concentric rounding: the script rewrites the corner radii of the tile and both bands per rendition before rasterizing. One module, `apps/desktop/scripts/brand-palette.mts`, records the seven anchors, and `icon-geometry.mts` derives the flattened fills from them. The script imports both, and the hand-authored `.icon` layers copy their values from the derived set.
 
 Regeneration runs on demand through a pnpm script, never at build time. Outputs land committed, matching the pattern `build/` already follows. Every packaging target then resolves a source matching its output format, so release builds skip the icons-toolset download entirely (`discovery/research.md` section 2).
 

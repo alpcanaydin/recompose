@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -267,7 +268,7 @@ describe('the committed rasters and containers', () => {
   it('covers exactly the icon files the packaging targets resolve', () => {
     expect(
       iconOutputs()
-        .map(([path]) => path.split('/').slice(-2).join('/'))
+        .map(([path]) => `${basename(dirname(path))}/${basename(path)}`)
         .toSorted(),
     ).toEqual([
       'build/icon.ico',

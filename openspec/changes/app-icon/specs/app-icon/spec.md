@@ -27,7 +27,7 @@ Every packaged artifact MUST present the recompose mark as its application icon 
 
 ### Requirement: macOS 26 renders the icon as Liquid Glass
 
-On macOS 26 and later, the system MUST render the icon from a native Icon Composer asset. The mark then takes part in the Liquid Glass appearance instead of sitting inside the fallback container the system wraps around legacy icons. On macOS 15 and earlier, the legacy bitmap icon MUST keep serving unchanged.
+On macOS 26 and later, the system MUST render the icon from a native Icon Composer asset. The mark then takes part in the Liquid Glass appearance instead of sitting inside the fallback container the system wraps around legacy icons. On macOS 15 and earlier, the compatibility bitmap icon generated from the same asset MUST serve the mark without Liquid Glass.
 
 #### Scenario: the app sits in the dock on macOS 26
 

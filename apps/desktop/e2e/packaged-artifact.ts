@@ -91,6 +91,12 @@ export function entryAtSize(entries: readonly IcoEntry[], size: number): IcoEntr
 }
 
 export function fullyTransparentSamples({ size, payload }: IcoEntry): number {
+  if (size >= ICO_PNG_ENTRY_SIZE) {
+    throw new Error(
+      `fullyTransparentSamples reads raw bitmap entries and the ${String(size)} entry is a png`,
+    );
+  }
+
   const pixels = payload.subarray(ICO_BITMAP_HEADER_BYTES);
 
   return Array.from({ length: size * size }, (_unused, sample) =>

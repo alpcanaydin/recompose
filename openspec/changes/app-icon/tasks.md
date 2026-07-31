@@ -8,7 +8,7 @@
 
 **Blockers:** none.
 
-- [ ] **Step 1: The palette record.** `apps/desktop/scripts/brand-palette.mts` holds the seven anchors and a pure `flattenOver`. A spec pins every derived fill in `flattenedMarkFills` to the design's composited values.
+- [ ] **Step 1: The palette record.** `apps/desktop/scripts/brand-palette.mts` holds the seven anchors, and the pure `flattenOver` derivation landed beside the geometry in `icon-geometry.mts`. A spec pins every derived fill in `flattenedMarkFills` to the design's composited values.
 - [ ] **Step 2: The geometry transforms.** Pure functions rewrite the tile and band radii per rendition through the concentric rule. A fast-check property pins the invariant: inner radius equals outer minus inset, floored at zero.
 - [ ] **Step 3: The two masters.** `build/mark.svg` lands flattened: a 1024 canvas, no clip path, solid fills copied from `flattenedMarkFills`. `build/mark-small.svg` lands per the design's weight rules: the cream note, the dark contour, and stroke floors that survive 16 pixels.
 - [ ] **Step 4: The container writers.** Pure functions write the `.ico` and `.icns` containers from rendered bytes. Round-trip specs pin the entry layouts the design names.

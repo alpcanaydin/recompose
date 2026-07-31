@@ -114,7 +114,7 @@ The locked flatten rule composites each 0.8-opacity stop against its actual back
 - outer band stops flatten over the flattened dark band beneath them: `flattenOver(brandWhite, frameTopFill, 0.8)` and `flattenOver(bandFade, frameBottomFill, 0.8)`.
 - note stops flatten over the tile gradient sampled at the note gradient's span: `flattenOver(noteCream, tileSampleAt(46 / 256), 0.8)` and `flattenOver(brandWhite, tileSampleAt(210 / 256), 0.8)`.
 
-`flattenedMarkFills` exports the six derived solids. A unit spec parses `build/mark.svg` and asserts its fills equal the anchors plus the derived set, so the master and the record can't drift. The same spec parses the `.icon` layer sources, closing the third copy.
+`flattenedMarkFills` exports the ten derived solids, the light set plus the dark-appearance values, from `icon-geometry.mts`. A unit spec parses `build/mark.svg` and asserts its fills equal the anchors plus the derived set, so the master and the record can't drift. The same spec parses the `.icon` layer sources, closing the third copy.
 
 ### The geometry transforms
 
@@ -305,7 +305,7 @@ Every path sits outside Feature-Sliced Design, matching the code map.
   - `fluentOuterRadius(size: number): number`
   - `flattenOver(foreground: string, backdrop: string, alpha: number): string`
   - `tileSampleAt(position: number): string`
-  - `export const flattenedMarkFills: Readonly<Record<FlattenedStop, string>>` with `FlattenedStop` covering the six composited stops
+  - `export const flattenedMarkFills: Readonly<Record<FlattenedStop, string>>` with `FlattenedStop` covering the ten composited stops
   - `export const icoPlan: readonly number[]` as `[16, 24, 32, 48, 256]`
   - `export const linuxLadder: readonly number[]` as `[16, 24, 32, 48, 64, 96, 128, 256, 512]`
   - `usesSmallGlyph(points: number): boolean`
