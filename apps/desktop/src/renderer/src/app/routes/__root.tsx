@@ -121,6 +121,9 @@ function RootLayout() {
         <StatusBar />
       </main>
       <CreateGatewaySheet
+        onCreated={(slug) => {
+          void navigate({ to: '/gateways/$slug', params: { slug }, search: {} });
+        }}
         onOpenChange={(open) => {
           if (!open) {
             void navigate({ to: '.', search: withoutSheet, replace: true });

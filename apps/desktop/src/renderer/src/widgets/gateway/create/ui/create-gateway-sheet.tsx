@@ -14,6 +14,8 @@ type CreateGatewaySheetProps = {
   open: boolean;
   /** Receives the state the person asked for, including a dismissal and a finished save. */
   onOpenChange: (open: boolean) => void;
+  /** Receives the slug a finished save stored, so the screen can follow the new gateway. */
+  onCreated: (slug: string) => void;
 };
 
 const SLUG_TAKEN_REFUSAL = 'Another gateway holds this slug.';
@@ -150,7 +152,7 @@ function gatewayFrom(displayName: string, slug: string, port: string): GatewayCo
   };
 }
 
-function useGatewayDraft(onOpenChange: (open: boolean) => void) {
+function useGatewayDraft(onOpenChange: (open: boolean) => void, onCreated: (slug: string) => void) {
   const [displayName, setDisplayName] = useState('');
   const [slug, setSlug] = useState('');
   const [port, setPort] = useOfferedPort();
@@ -169,6 +171,7 @@ function useGatewayDraft(onOpenChange: (open: boolean) => void) {
     saveGateway.mutate(gatewayFrom(displayName, slug, port), {
       onSuccess: () => {
         onOpenChange(false);
+        onCreated(slug);
       },
       onError: (failure) => {
         setRefusals(refusalFromMain(failure));
@@ -240,8 +243,8 @@ type GatewayDraftProps = CreateGatewaySheetProps & {
   nameField: RefObject<HTMLInputElement | null>;
 };
 
-function GatewayDraft({ open, onOpenChange, nameField }: GatewayDraftProps) {
-  const draft = useGatewayDraft(onOpenChange);
+function GatewayDraft({ open, onOpenChange, onCreated, nameField }: GatewayDraftProps) {
+  const draft = useGatewayDraft(onOpenChange, onCreated);
   const footer = (
     <SheetFooter
       onCancel={() => {
@@ -275,13 +278,14 @@ function GatewayDraft({ open, onOpenChange, nameField }: GatewayDraftProps) {
  * port already filled in, previews the address live, and stays open carrying the sentence that
  * explains any refusal rather than throwing the draft away.
  */
-export function CreateGatewaySheet({ open, onOpenChange }: CreateGatewaySheetProps) {
+export function CreateGatewaySheet({ open, onOpenChange, onCreated }: CreateGatewaySheetProps) {
   const nameField = useRef<HTMLInputElement>(null);
 
   return (
     <GatewayDraft
       key={String(open)}
       nameField={nameField}
+      onCreated={onCreated}
       onOpenChange={onOpenChange}
       open={open}
     />

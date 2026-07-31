@@ -9,7 +9,7 @@ const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
 const meta = preview.meta({
   component: CreateGatewaySheet,
-  args: { open: true, onOpenChange: () => {} },
+  args: { open: true, onOpenChange: () => {}, onCreated: () => {} },
 });
 
 /** The sheet as it arrives: three empty fields, a free port already filled, a live preview. */

@@ -34,5 +34,7 @@ approvals:
   - the frozen set took a second amendment, taking the two settings sentences the contracts cluster had already reworded on disk, because both read more precisely than the frozen text and both assert the same behavior
   - saving a gateway moves the screen to it, because the toolbar carrying its address, its start control, and its copy button renders on the gateway route, so a person who just read an address in the sheet would otherwise have to hunt for it
   - the visual aligns to the design reference's own stylesheet rather than to the nearest token the file already held, which restores the second empty-state button, the shortcut hint, the sidebar icons, and the status bar
+  - the sheet stops asking for a slug and derives it from the display name, which amends the frozen creation requirement a third time, because the port decision left the slug naming only a file and a route that a person never sees
+  - the slug rules stay exactly as they are, the length bound and the Windows device-name refusal included, because they now guard a value the app derives rather than one a person types
 branch: worktree-first-gateway-and-engine
 ---

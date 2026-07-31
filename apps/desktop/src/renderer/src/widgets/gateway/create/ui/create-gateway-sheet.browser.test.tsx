@@ -11,13 +11,16 @@ import { CreateGatewaySheet } from './create-gateway-sheet';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
-function SheetHarness() {
+function SheetHarness({ onCreated }: { onCreated: (slug: string) => void }) {
   const [open, setOpen] = useState(true);
 
-  return <CreateGatewaySheet onOpenChange={setOpen} open={open} />;
+  return <CreateGatewaySheet onCreated={onCreated} onOpenChange={setOpen} open={open} />;
 }
 
-async function openSheet(parameters: BridgeParameters = {}) {
+async function openSheet(
+  parameters: BridgeParameters = {},
+  onCreated: (slug: string) => void = () => {},
+) {
   installFakeBridge(parameters);
 
   const queryClient = new QueryClient({
@@ -26,7 +29,7 @@ async function openSheet(parameters: BridgeParameters = {}) {
 
   await render(
     <QueryClientProvider client={queryClient}>
-      <SheetHarness />
+      <SheetHarness onCreated={onCreated} />
     </QueryClientProvider>,
   );
 
@@ -257,4 +260,34 @@ test('cancelling hands the screen back without storing anything', async () => {
 
   await expect.element(sheet()).not.toBeInTheDocument();
   expect(await storedGateways()).toEqual([]);
+});
+
+test('a stored gateway hands its slug back so the screen can follow it', async () => {
+  const followed: string[] = [];
+
+  await openSheet({}, (slug) => {
+    followed.push(slug);
+  });
+
+  await page.getByRole('textbox', { name: 'Name' }).fill('Codex');
+  await page.getByRole('textbox', { name: 'Slug' }).fill('codex');
+  await press('Create Gateway');
+
+  await expect.element(sheet()).not.toBeInTheDocument();
+  expect(followed).toEqual(['codex']);
+});
+
+test('a refused save hands no slug back, because nothing was stored', async () => {
+  const followed: string[] = [];
+
+  await openSheet({ gateways: [codex] }, (slug) => {
+    followed.push(slug);
+  });
+
+  await page.getByRole('textbox', { name: 'Name' }).fill('Codex');
+  await page.getByRole('textbox', { name: 'Slug' }).fill('codex');
+  await press('Create Gateway');
+
+  await expect.element(sheet()).toBeVisible();
+  expect(followed).toEqual([]);
 });
