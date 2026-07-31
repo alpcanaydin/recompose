@@ -244,11 +244,11 @@ const smallMaster =
   '<path d="M0 0" fill="#F2EBD1" stroke="#0C1341" stroke-width="64" stroke-linejoin="round"/>';
 
 describe('the tray template silhouette', () => {
-  it('flattens the cream note and its contour into one opaque black shape', () => {
+  it('paints the note black and drops the contour that only the app tile needs', () => {
     const silhouette = silhouetteOf(smallMaster);
 
     expect(silhouette).toContain('fill="#000000"');
-    expect(silhouette).toContain('stroke="#000000"');
+    expect(silhouette).toContain('stroke="none"');
     expect(silhouette).not.toContain('#F2EBD1');
     expect(silhouette).not.toContain('#0C1341');
   });
