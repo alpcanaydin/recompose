@@ -40,17 +40,8 @@ async function storedGateways(ctx: EngineIpcContext): Promise<GatewayConfig[]> {
 async function portFreeOf(
   ctx: EngineIpcContext,
   stored: readonly GatewayConfig[],
-  besides?: string,
 ): Promise<number> {
-  const taken = new Set<number>();
-
-  for (const config of stored) {
-    if (config.slug !== besides) {
-      taken.add(config.port);
-    }
-  }
-
-  return offerFreePort(taken, ctx.probeFreePort);
+  return offerFreePort(new Set(stored.map((config) => config.port)), ctx.probeFreePort);
 }
 
 async function offerPort(ctx: EngineIpcContext) {
@@ -70,7 +61,7 @@ async function movePort(ctx: EngineIpcContext, slug: string) {
       return noSuchGateway(slug);
     }
 
-    const moved = { ...moving, port: await portFreeOf(ctx, stored, slug) };
+    const moved = { ...moving, port: await portFreeOf(ctx, stored) };
 
     await saveGatewayConfig(storagePathsFor(ctx.userDataPath).gatewaysDir, moved);
     await ctx.host.restart(asEngineGateway(moved));

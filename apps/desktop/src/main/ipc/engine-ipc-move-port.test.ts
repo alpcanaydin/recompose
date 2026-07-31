@@ -127,6 +127,18 @@ describe('moving a gateway off a port another process took', () => {
     expect(recorded.restarted).toEqual([{ slug: 'codex', displayName: 'codex', port: 51234 }]);
   });
 
+  test('the port being abandoned is the one port the move never lands back on', async () => {
+    const context = await freshContext(
+      [gatewayNamed('codex', 8397)],
+      hostAnswering().host,
+      portsInTurn([8397, 51234]),
+    );
+
+    const answer = await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
+
+    expect(answer).toEqual({ ok: true, value: [gatewayNamed('codex', 51234)] });
+  });
+
   test('the move never lands on a port a sibling gateway holds', async () => {
     const context = await freshContext(
       [gatewayNamed('codex', 8397), gatewayNamed('gemini', 8398)],
@@ -166,18 +178,6 @@ describe('a move the app cannot carry out', () => {
     expect(await storedGateway(context.userDataPath, 'gemini')).toEqual(
       gatewayNamed('gemini', 51234),
     );
-  });
-
-  test('the port a gateway already holds is free for that same gateway to take again', async () => {
-    const context = await freshContext(
-      [gatewayNamed('codex', 8397)],
-      hostAnswering().host,
-      portsInTurn([8397]),
-    );
-
-    const answer = await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
-
-    expect(answer).toEqual({ ok: true, value: [gatewayNamed('codex', 8397)] });
   });
 
   test('an engine that refuses the restart reports it rather than claiming the move landed', async () => {
