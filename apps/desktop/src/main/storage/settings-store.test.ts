@@ -43,6 +43,19 @@ describe('settings store', () => {
 
     expect(entries).toEqual([expect.stringMatching(/^settings\.json\.corrupt-/)]);
   });
+});
+
+describe('a settings document this build already reads', () => {
+  test('a document that needs no carrying forward is left exactly as it lies', async () => {
+    const file = join(await mkdtemp(join(tmpdir(), 'recompose-settings-')), 'settings.json');
+    const asStored = JSON.stringify(defaultSettings());
+
+    await writeFile(file, asStored, 'utf8');
+
+    await loadSettingsFile(file, () => undefined);
+
+    expect(await readFile(file, 'utf8')).toBe(asStored);
+  });
 
   test('a document that migrated reaches the disk without waiting for the next save', async () => {
     const file = join(await mkdtemp(join(tmpdir(), 'recompose-settings-')), 'settings.json');

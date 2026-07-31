@@ -46,13 +46,17 @@ export async function loadSettingsFile(
     throw new SettingsNewerSchemaError(newer);
   }
 
+  let loaded: Settings;
+
   try {
-    return await settledOnDisk(filePath, raw, loadSettings(raw));
+    loaded = loadSettings(raw);
   } catch {
     await quarantineFile(filePath, onCorrupt);
 
     return defaultSettings();
   }
+
+  return settledOnDisk(filePath, raw, loaded);
 }
 
 /**
@@ -62,10 +66,23 @@ export async function loadSettingsFile(
  * save, so the file claims one version while carrying another version's fields. That is the shape
  * that made a mid-development document unreadable: strict parsing refused the extra field, and the
  * migration never ran because the version already matched.
+ *
+ * A disk that refuses the write leaves the document exactly as it was, which is where it stood
+ * before this step existed. The person keeps every setting, so the refusal is written down rather
+ * than carried out to the caller as damage.
  */
 async function settledOnDisk(filePath: string, raw: unknown, loaded: Settings): Promise<Settings> {
-  if (JSON.stringify(raw) !== JSON.stringify(loaded)) {
+  if (JSON.stringify(raw) === JSON.stringify(loaded)) {
+    return loaded;
+  }
+
+  try {
     await writeJsonAtomic(filePath, loaded);
+  } catch (refusal: unknown) {
+    console.error(
+      `recompose carried the settings document at ${filePath} forward but could not write it back, so its retired fields stay on disk until the next save.`,
+      refusal,
+    );
   }
 
   return loaded;
