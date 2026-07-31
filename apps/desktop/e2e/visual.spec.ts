@@ -63,7 +63,7 @@ test('the providers screen matches its baseline before any account exists', asyn
 }) => {
   await pinLightScheme(electronApp);
   await openProviders(page);
-  await expect(page.getByRole('listitem')).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(0);
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-empty.png', capture);
 });
@@ -79,7 +79,9 @@ test('the providers screen matches its baseline with a connected account', async
   await page.getByRole('textbox', { name: 'Label' }).fill('Claude Max');
   await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
   await page.getByRole('button', { name: 'Connect' }).click();
-  await expect(page.getByRole('listitem').filter({ hasText: 'Claude Max' })).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Claude Max' }),
+  ).toBeVisible();
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-connected.png', capture);
 });

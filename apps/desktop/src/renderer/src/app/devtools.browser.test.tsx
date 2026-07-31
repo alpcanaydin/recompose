@@ -54,7 +54,7 @@ test('a surface painted over the whole window still leaves the trigger pressable
   expect(trigger.element().contains(pressed)).toBe(true);
 });
 
-test('the one trigger opens on a press and reaches both the router and the cache', async () => {
+test('the one trigger opens on a press and offers both the router and the cache', async () => {
   const screen = await renderDevtools();
 
   await screen.getByRole('button', { name: 'Open TanStack Devtools' }).click();

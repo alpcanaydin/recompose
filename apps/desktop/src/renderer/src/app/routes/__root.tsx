@@ -13,6 +13,7 @@ import {
 import { Suspense, lazy, useEffect } from 'react';
 
 import {
+  accountsQueryOptions,
   bindEngineStatesToCache,
   engineStatesQueryOptions,
   gatewaysQueryOptions,
@@ -89,6 +90,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     await Promise.all([
       context.queryClient.ensureQueryData(gatewaysQueryOptions),
       context.queryClient.ensureQueryData(engineStatesQueryOptions),
+      context.queryClient.ensureQueryData(accountsQueryOptions),
     ]);
   },
   component: RootLayout,
@@ -99,7 +101,7 @@ function RootLayout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const router = useRouter();
-  const { create } = Route.useSearch();
+  const { create, getStarted, at } = Route.useSearch();
   const { slug } = useParams({ strict: false });
 
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
@@ -110,6 +112,7 @@ function RootLayout() {
         onNewGateway={() => {
           void navigate({ to: '.', search: withSheet });
         }}
+        restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
       />
       <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
         <AppToolbar slug={slug} />

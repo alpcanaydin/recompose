@@ -14,7 +14,9 @@ type AppDevtoolsProps = {
  *
  * @summary Reach for it from the root layout, inside the guard that keeps devtools out of any
  * build a person runs. Each library ships a trigger of its own, and the shell has no free
- * corner for a second one, so the panels mount as plugins of a single host instead.
+ * corner for a second one, so the panels mount as plugins of a single host instead. The host
+ * activates no plugin on its own, which paints the rail over an empty body until one is named
+ * with `defaultOpen`.
  */
 export function AppDevtools({ router }: AppDevtoolsProps) {
   return (
@@ -24,6 +26,7 @@ export function AppDevtools({ router }: AppDevtoolsProps) {
         {
           id: 'router',
           name: 'Router',
+          defaultOpen: true,
           render: () => <TanStackRouterDevtoolsPanel router={router} />,
         },
         {

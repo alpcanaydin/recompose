@@ -1,53 +1,26 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { useEffect, useSyncExternalStore } from 'react';
 
 import { gatewaysQueryOptions } from '../../../shared/api';
-import {
-  dismissGetStarted,
-  getStartedDismissed,
-  restoreGetStarted,
-  subscribeToGetStartedDismissal,
-} from '../lib/get-started-dismissal';
 import { EmptyState } from './empty-state';
-import { GetStartedCard } from './get-started-card';
 
 type HomePageProps = {
-  /** Whether the app already holds a connected account, which the checklist reads. */
-  providerConnected: boolean;
   /** Asked for when the person wants the creation sheet. */
   onCreateGateway: () => void;
-  /** Names a fresh ask for the coaching card, which clears any earlier dismissal. */
-  restoreRequest?: string | undefined;
 };
 
 /**
- * The gateways surface: an invitation while nothing exists, and coaching until it is unwanted.
+ * The surface behind no gateway at all, carrying the invitation to make the first one.
  *
- * @summary Reach for it from the root route. It reads what the app holds rather than keeping a
- * record of its own, so a gateway made anywhere moves the checklist here.
+ * @summary Reach for it from the root route. Nothing sends a person here once a gateway exists,
+ * because a launch opens the one they were last looking at, so this is a first session's surface
+ * and the way back when the last gateway has gone.
  */
-export function HomePage({ providerConnected, onCreateGateway, restoreRequest }: HomePageProps) {
+export function HomePage({ onCreateGateway }: HomePageProps) {
   const { data: gateways } = useSuspenseQuery(gatewaysQueryOptions);
-  const dismissed = useSyncExternalStore(subscribeToGetStartedDismissal, getStartedDismissed);
-
-  useEffect(() => {
-    if (restoreRequest !== undefined) {
-      restoreGetStarted();
-    }
-  }, [restoreRequest]);
 
   return (
     <div className="relative h-full dot-grid">
       {gateways.length === 0 && <EmptyState onCreateGateway={onCreateGateway} />}
-      {!dismissed && (
-        <div className="absolute inset-e-4 bottom-4">
-          <GetStartedCard
-            gatewayExists={gateways.length > 0}
-            onSkip={dismissGetStarted}
-            providerConnected={providerConnected}
-          />
-        </div>
-      )}
     </div>
   );
 }
