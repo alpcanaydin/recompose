@@ -40,6 +40,8 @@ export function attachEngineChild(parentPort: ParentPort, openListeners: OpenLis
       return;
     }
 
-    void reportBack(parentPort, runtime, directive.data);
+    reportBack(parentPort, runtime, directive.data).catch((failure: unknown) => {
+      console.error('The engine child could not answer a directive.', failure);
+    });
   });
 }

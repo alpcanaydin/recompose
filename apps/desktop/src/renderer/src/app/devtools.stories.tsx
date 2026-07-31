@@ -6,7 +6,9 @@ import { createAppRouter } from './router';
 
 /** The devtools host wired to a router of its own, so no router rides in through the args. */
 function DevtoolsHarness() {
-  return <AppDevtools router={createAppRouter({ queryClient: createQueryClient() })} />;
+  const queryClient = createQueryClient();
+
+  return <AppDevtools queryClient={queryClient} router={createAppRouter({ queryClient })} />;
 }
 
 const meta = preview.meta({ component: DevtoolsHarness, parameters: { a11y: { test: 'off' } } });

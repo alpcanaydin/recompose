@@ -9,7 +9,11 @@ import { createAppRouter } from './router';
 async function renderDevtools() {
   installFakeBridge();
 
-  return render(<AppDevtools router={createAppRouter({ queryClient: createQueryClient() })} />);
+  const queryClient = createQueryClient();
+
+  return render(
+    <AppDevtools queryClient={queryClient} router={createAppRouter({ queryClient })} />,
+  );
 }
 
 test('every devtools panel answers to one trigger rather than one each', async () => {
@@ -37,10 +41,11 @@ test('the trigger keeps clear of the sidebar, the toolbar, and the foot of the s
 test('a surface painted over the whole window still leaves the trigger pressable', async () => {
   installFakeBridge();
 
+  const queryClient = createQueryClient();
   const screen = await render(
     <>
       <div className="fixed inset-0" />
-      <AppDevtools router={createAppRouter({ queryClient: createQueryClient() })} />
+      <AppDevtools queryClient={queryClient} router={createAppRouter({ queryClient })} />
     </>,
   );
 

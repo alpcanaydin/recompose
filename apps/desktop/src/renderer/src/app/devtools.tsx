@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 
 import { TanStackDevtools } from '@tanstack/react-devtools';
@@ -5,6 +6,8 @@ import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools';
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
 
 type AppDevtoolsProps = {
+  /** The cache the query panel reads, named rather than taken from wherever this mounts. */
+  queryClient: QueryClient;
   /** The router whose matches, loaders, and search the router panel reads. */
   router: AnyRouter;
 };
@@ -18,7 +21,7 @@ type AppDevtoolsProps = {
  * activates no plugin on its own, which paints the rail over an empty body until one is named
  * with `defaultOpen`.
  */
-export function AppDevtools({ router }: AppDevtoolsProps) {
+export function AppDevtools({ queryClient, router }: AppDevtoolsProps) {
   return (
     <TanStackDevtools
       config={{ position: 'middle-right' }}
@@ -32,7 +35,7 @@ export function AppDevtools({ router }: AppDevtoolsProps) {
         {
           id: 'react-query',
           name: 'React Query',
-          render: () => <ReactQueryDevtoolsPanel />,
+          render: () => <ReactQueryDevtoolsPanel client={queryClient} />,
         },
       ]}
     />

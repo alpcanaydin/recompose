@@ -7,6 +7,19 @@ import { GatewayToolbar } from './gateway-toolbar';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
+const ENGINE_SILENT = 'The engine never answered.';
+
+/** An engine that answers nothing at all, which is a refusal rather than a stopped gateway. */
+function engineRefuses(act: 'engine:start' | 'engine:stop') {
+  return {
+    [act]: async () =>
+      Promise.resolve({
+        ok: false as const,
+        error: { code: 'storage-failed' as const, message: ENGINE_SILENT },
+      }),
+  };
+}
+
 const portTaken = {
   'engine:start': async () =>
     Promise.resolve({
@@ -124,19 +137,38 @@ export const StartRefused = meta.story({
     bridge: {
       engineStates: {},
       gateways: [codex],
-      overrides: {
-        'engine:start': async () =>
-          Promise.resolve({
-            ok: false as const,
-            error: { code: 'storage-failed' as const, message: 'The engine never answered.' },
-          }),
-      },
+      overrides: engineRefuses('engine:start'),
     },
   },
   play: async ({ canvas, userEvent }) => {
     await expect(await lineLeftByStarting(canvas, userEvent)).toHaveTextContent(
       'The engine never answered.',
     );
+  },
+});
+
+/**
+ * A refusal that belongs to an action the person has already moved on from.
+ *
+ * @summary Three controls share one line. Each attempt clears what the last one left, so the
+ * line never stacks a second sentence or reads back one belonging to an action already over.
+ */
+export const RefusalLeavesWithItsAction = meta.story({
+  parameters: {
+    bridge: {
+      engineStates: { codex: { status: 'running' } },
+      gateways: [codex],
+      overrides: engineRefuses('engine:stop'),
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Stop' }));
+
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(ENGINE_SILENT);
+
+    await userEvent.click(await canvas.findByRole('button', { name: 'Stop' }));
+
+    await expect(canvas.getAllByRole('alert')).toHaveLength(1);
   },
 });
 

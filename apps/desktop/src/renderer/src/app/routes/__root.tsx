@@ -26,7 +26,7 @@ import { surfaceRequest, withSheet, withoutSheet } from './-surface-request';
 
 const noDevtools = () => null;
 
-const Devtools: ComponentType<{ router: AnyRouter }> =
+const Devtools: ComponentType<{ queryClient: QueryClient; router: AnyRouter }> =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
     ? lazy(async () => import('../devtools').then((module) => ({ default: module.AppDevtools })))
     : noDevtools;
@@ -91,7 +91,7 @@ function RootLayout() {
         open={create === true}
       />
       <Suspense>
-        <Devtools router={router} />
+        <Devtools queryClient={queryClient} router={router} />
       </Suspense>
     </div>
   );

@@ -1,7 +1,7 @@
 import type { GatewayEngineState } from '@recompose/contracts';
 
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import type { IconName } from '../../../../shared/ui';
 
@@ -9,12 +9,10 @@ import {
   engineStatesQueryOptions,
   gatewayStateIn,
   gatewaysQueryOptions,
-  useMoveGatewayPort,
-  useStartGateway,
-  useStopGateway,
 } from '../../../../shared/api';
 import { sidebarHidden, subscribeToSidebarVisibility } from '../../../../shared/lib';
 import { CopyButton, Icon, SidebarToggle, stateMark, stateWord } from '../../../../shared/ui';
+import { useGatewayLifecycle } from '../lib/use-gateway-lifecycle';
 import { FailedStartLine } from './failed-start-line';
 
 type GatewayToolbarProps = {
@@ -209,50 +207,32 @@ function ToolbarStrip({ address, name, onRun, port, running, status }: ToolbarSt
 export function GatewayToolbar({ slug }: GatewayToolbarProps) {
   const { data: gateways } = useSuspenseQuery(gatewaysQueryOptions);
   const { data: states } = useSuspenseQuery(engineStatesQueryOptions);
-  const startGateway = useStartGateway();
-  const stopGateway = useStopGateway();
-  const moveGatewayPort = useMoveGatewayPort();
-  const [attempt, setAttempt] = useState(0);
+  const lifecycle = useGatewayLifecycle(slug);
   const gateway = gateways.find((held) => held.slug === slug);
 
   if (gateway === undefined) {
     return null;
   }
 
+  const { moveToFreePort: onMoveToFreePort } = lifecycle;
   const state = gatewayStateIn(states, slug);
   const running = state.status === 'running';
-  const address = `http://localhost:${String(gateway.port)}`;
-  const failure = failedStartIn(state);
-  const refusal = startGateway.refusal ?? stopGateway.refusal ?? moveGatewayPort.refusal;
-
-  function start() {
-    setAttempt((made) => made + 1);
-    startGateway.mutate({ slug });
-  }
-
-  function stop() {
-    stopGateway.mutate({ slug });
-  }
-
-  function moveToFreePort() {
-    moveGatewayPort.mutate({ slug });
-  }
 
   return (
     <div className="flex flex-col gap-2">
       <ToolbarStrip
-        address={address}
+        address={`http://localhost:${String(gateway.port)}`}
         name={gateway.displayName}
-        onRun={running ? stop : start}
+        onRun={running ? lifecycle.stop : lifecycle.start}
         port={gateway.port}
         running={running}
         status={state.status}
       />
       <ToolbarFooter
-        attempt={attempt}
-        failure={failure}
-        onMoveToFreePort={moveToFreePort}
-        refusal={refusal}
+        attempt={lifecycle.attempt}
+        failure={failedStartIn(state)}
+        onMoveToFreePort={onMoveToFreePort}
+        refusal={lifecycle.refusal}
       />
     </div>
   );
