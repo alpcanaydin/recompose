@@ -1,6 +1,6 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { defaultSettings, type EngineStates, type Settings } from '@recompose/contracts';
-import { app, BrowserWindow, clipboard, nativeTheme, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, safeStorage, session, shell } from 'electron';
 import { join } from 'path';
 
 import type { EngineHost } from './engine-host/engine-host';
@@ -130,9 +130,6 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       getCodec: () => createSafeStorageCodec(),
       isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
       onCorrupt: onStorageCorrupt,
-      writeClipboard: (text) => {
-        clipboard.writeText(text);
-      },
       homeFolder: app.getPath('home'),
       readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,

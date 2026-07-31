@@ -26,7 +26,6 @@ async function contextHoldingAFutureDocument(): Promise<StorageIpcContext> {
     getCodec: () => ({ encrypt: (p) => p, decrypt: (p) => p, isPlaintextFallback: false }),
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
-    writeClipboard: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
     applySettings: () => undefined,

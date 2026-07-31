@@ -39,5 +39,7 @@ approvals:
   - the api token and its requirement leave the settings screen for the gateway settings feature, because a token guards one gateway's origin now that each gateway owns its port, and a leaked one should be replaceable without breaking every other client
   - the reduced wire motion row is deleted outright rather than left waiting, because it names something the project will never build, while the autostart and log retention rows stay inert, because they name something it will
   - the settings document drops requireGatewayToken alongside the port, in the same version 3 migration, since neither version has shipped
+  - the settings delta carries the gateway token requirement as removed rather than modified, because every sentence it holds describes rows the screen no longer offers, and the gateway settings feature restates it where the token lands
+  - the channel roster falls from seventeen to fourteen and the error codes from nine to eight, because the three token channels and the token-missing code they alone raised leave with the rows they served
 branch: worktree-first-gateway-and-engine
 ---

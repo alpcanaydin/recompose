@@ -10,15 +10,11 @@ const meta = preview.meta({
   decorators: [inSettingsColumn],
 });
 
-/** Theme choice beside the wire motion the canvas has yet to answer for. */
+/** The theme choice standing on its own, the only appearance recompose decides. */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('radiogroup', { name: 'Theme' })).toBeVisible();
-    await expect(await canvas.findByRole('switch', { name: 'Reduce wire motion' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await expect(await canvas.findByText('Waiting on the canvas.')).toBeVisible();
+    await expect(canvas.queryByRole('switch', { name: 'Reduce wire motion' })).toBeNull();
   },
 });
 

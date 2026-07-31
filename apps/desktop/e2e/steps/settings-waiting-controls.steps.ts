@@ -4,6 +4,7 @@ import { expect } from '@playwright/test';
 import { readdir } from 'node:fs/promises';
 
 import { Then, When } from '../fixtures';
+import { storedSettingsFields } from '../settings-document';
 
 type WaitingRow = {
   label: string;
@@ -18,12 +19,6 @@ const waitingRows: readonly WaitingRow[] = [
     role: 'switch',
     awaits: 'Waits on launch-time start.',
     settingField: 'startGatewaysOnLaunch',
-  },
-  {
-    label: 'Reduce wire motion',
-    role: 'switch',
-    awaits: 'Waiting on the canvas.',
-    settingField: 'reduceWireMotion',
   },
   {
     label: 'Keep request logs',
@@ -112,16 +107,6 @@ async function tabUntilFocused(page: Page, target: Locator): Promise<boolean> {
   return false;
 }
 
-async function storedSettingsFields(page: Page): Promise<readonly string[]> {
-  const stored = await page.evaluate(async () => window.recompose['settings:get']());
-
-  if (!stored.ok) {
-    throw new Error('The app could not read the stored settings document.');
-  }
-
-  return Object.keys(stored.value);
-}
-
 async function userDataEntries(electronApp: ElectronApplication): Promise<readonly string[]> {
   const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'));
 
@@ -149,12 +134,6 @@ Then('the row names request logging as what it waits for', async ({ page }) => {
 Then('the row names launch-time start as what it waits for', async ({ page }) => {
   await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
     containing('Waits on launch-time start.'),
-  );
-});
-
-Then('the row names the canvas as what it waits for', async ({ page }) => {
-  await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
-    containing('Waiting on the canvas.'),
   );
 });
 

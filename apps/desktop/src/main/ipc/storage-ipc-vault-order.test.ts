@@ -38,7 +38,6 @@ function context(): StorageIpcContext {
     getCodec: plainCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
-    writeClipboard: () => undefined,
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
@@ -54,39 +53,39 @@ afterEach(async () => {
 });
 
 describe('two people writing the vault at once', () => {
-  test('a token minted beside a connecting account loses neither secret', async () => {
+  test('two accounts connecting together lose neither secret', async () => {
     const handlers = createStorageIpcHandlers(context());
 
-    const [connected, minted] = await Promise.all([
+    const [first, second] = await Promise.all([
       handlers['accounts:connect']({
         provider: 'anthropic',
         kind: 'subscription',
         label: 'Claude Max',
         secret: 'not-a-real-secret',
       }),
-      handlers['gateway-token:mint'](),
+      handlers['accounts:connect']({
+        provider: 'anthropic',
+        kind: 'api-key',
+        label: 'Work',
+        secret: 'also-not-a-real-secret',
+      }),
     ]);
 
-    expect(connected.ok).toBe(true);
-    expect(minted.ok).toBe(true);
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
 
-    const token = await handlers['gateway-token:status']();
     const accounts = await handlers['accounts:list']();
 
-    if (!token.ok || !accounts.ok || !connected.ok) {
+    if (!accounts.ok) {
       throw new Error('the vault could not report what it holds');
     }
 
-    expect(token.value.masked).not.toBeNull();
+    const refs = accounts.value.accounts.map((stored) => stored.credentialRef);
 
-    const stored = accounts.value.accounts.at(0);
-
-    if (stored === undefined) {
-      throw new Error('the account never landed');
-    }
+    expect(refs).toHaveLength(2);
 
     const vault: unknown = JSON.parse(await readFile(join(userDataPath, 'vault.bin'), 'utf8'));
 
-    expect(refsHeldIn(vault)).toEqual(['gateway-token', stored.credentialRef].toSorted());
+    expect(refsHeldIn(vault)).toEqual(refs.toSorted());
   });
 });

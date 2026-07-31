@@ -98,13 +98,14 @@ test('the bind address states its value rather than offering a control', async (
   expect(screen.container.querySelectorAll('[aria-label="Bind address"]')).toHaveLength(0);
 });
 
-test('the reduced wire motion row stays reachable and names the canvas', async () => {
+test('the Appearance group offers the theme alone, and nothing names wire motion', async () => {
   const screen = await renderSettings();
 
-  const row = screen.getByRole('switch', { name: 'Reduce wire motion' });
+  await expect.element(screen.getByRole('group', { name: 'Appearance' })).toBeVisible();
 
-  await expect.element(row).toHaveAttribute('aria-disabled', 'true');
-  await expect.element(row).toHaveAccessibleDescription(/canvas/i);
+  expect(screen.getByRole('radiogroup', { name: 'Theme' }).elements()).toHaveLength(1);
+  expect(screen.getByRole('switch', { name: 'Reduce wire motion' }).elements()).toHaveLength(0);
+  expect(screen.getByText(/wire/iu).elements()).toHaveLength(0);
 });
 
 test('no waiting row owns a field in the settings document', async () => {
@@ -112,11 +113,19 @@ test('no waiting row owns a field in the settings document', async () => {
 
   expect(Object.keys(await storedSettings()).sort()).toEqual([
     'launchAtLogin',
-    'requireGatewayToken',
     'schemaVersion',
     'showInMenuBar',
     'theme',
   ]);
+});
+
+test('the Server group offers no token and no switch demanding one', async () => {
+  const screen = await renderSettings();
+
+  await expect.element(screen.getByRole('group', { name: 'Server' })).toBeVisible();
+
+  expect(screen.getByRole('switch', { name: 'Require API token' }).elements()).toHaveLength(0);
+  expect(screen.getByText(/token/iu).elements()).toHaveLength(0);
 });
 
 test('the telemetry row states a value rather than offering a control', async () => {

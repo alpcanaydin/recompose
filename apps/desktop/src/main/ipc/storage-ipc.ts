@@ -20,11 +20,6 @@ import {
 import { deleteSecret, saveVaultFile, setSecret } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
 import {
-  copyGatewayTokenToClipboard,
-  getGatewayTokenStatus,
-  mintGatewayTokenIntoVault,
-} from './gateway-token-ipc';
-import {
   openVaultForWrite,
   storagePathsFor,
   type StorageIpcContext,
@@ -224,9 +219,6 @@ export type StorageIpcHandlers = Pick<
   | 'accounts:list'
   | 'accounts:connect'
   | 'accounts:remove'
-  | 'gateway-token:status'
-  | 'gateway-token:mint'
-  | 'gateway-token:copy'
 >;
 
 export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHandlers {
@@ -242,9 +234,5 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHand
       inVaultOrder(async () => connectAccount(ctx, paths, request)),
     'accounts:remove': async (request) =>
       inVaultOrder(async () => removeAccount(ctx, paths, request)),
-    'gateway-token:status': async () => getGatewayTokenStatus(ctx, paths),
-    'gateway-token:mint': async () =>
-      inVaultOrder(async () => mintGatewayTokenIntoVault(ctx, paths)),
-    'gateway-token:copy': async () => copyGatewayTokenToClipboard(ctx, paths),
   };
 }

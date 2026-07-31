@@ -6,11 +6,7 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
-import {
-  gatewayTokenQueryOptions,
-  settingsQueryOptions,
-  systemQueryOptions,
-} from '../pages/settings';
+import { settingsQueryOptions, systemQueryOptions } from '../pages/settings';
 import { accountsQueryOptions } from '../shared/api';
 import { installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
@@ -118,7 +114,7 @@ test('arriving at settings through the shortcut lands focus on the first control
   await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
 });
 
-test('the /settings route loader warms the settings, system, and token caches before any component renders', async () => {
+test('the /settings route loader warms the settings and system caches before any component renders', async () => {
   installFakeBridge();
 
   const queryClient = createQueryClient();
@@ -134,10 +130,6 @@ test('the /settings route loader warms the settings, system, and token caches be
   });
   expect(queryClient.getQueryData(systemQueryOptions.queryKey)).toMatchObject({
     fileBrowser: 'finder',
-  });
-  expect(queryClient.getQueryData(gatewayTokenQueryOptions.queryKey)).toEqual({
-    ok: true,
-    value: { masked: null, storage: 'available' },
   });
 });
 

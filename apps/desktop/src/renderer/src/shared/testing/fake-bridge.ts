@@ -52,10 +52,6 @@ export type BridgeParameters = {
 type SettingsHandlers = Pick<RecomposeIpc, 'settings:get' | 'settings:save'>;
 type AccountHandlers = Pick<RecomposeIpc, 'accounts:list' | 'accounts:connect' | 'accounts:remove'>;
 type SystemHandlers = Pick<RecomposeIpc, 'system:get' | 'system:open-config-folder'>;
-type GatewayTokenHandlers = Pick<
-  RecomposeIpc,
-  'gateway-token:status' | 'gateway-token:mint' | 'gateway-token:copy'
->;
 type GatewayHandlers = Pick<
   RecomposeIpc,
   | 'gateways:list'
@@ -228,28 +224,6 @@ function systemHandlers(): SystemHandlers {
   };
 }
 
-function gatewayTokenHandlers(): GatewayTokenHandlers {
-  let masked: string | null = null;
-  let mints = 0;
-
-  return {
-    'gateway-token:status': async () =>
-      Promise.resolve({ ok: true, value: { masked, storage: 'available' } }),
-    'gateway-token:mint': async () => {
-      mints += 1;
-      masked = `rc-local-••••••••tok${mints}`;
-
-      return Promise.resolve({ ok: true, value: { masked, storage: 'available' } });
-    },
-    'gateway-token:copy': async () =>
-      Promise.resolve(
-        masked === null
-          ? { ok: false, error: { code: 'token-missing', message: 'no token to copy' } }
-          : { ok: true, value: undefined },
-      ),
-  };
-}
-
 function eventBridge(): RecomposeIpcEvents {
   return {
     'engine:state': (listener) => {
@@ -283,7 +257,6 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
     ...settingsHandlers(seeds.settings),
     ...accountHandlers(seeds.accounts),
     ...systemHandlers(),
-    ...gatewayTokenHandlers(),
     ...gatewayHandlers(seeds.gateways, seeds.engineStates),
     ...parameters.overrides,
   };

@@ -15,7 +15,6 @@ export type StorageIpcContext = {
   getCodec: () => SecretCodec;
   isEncryptionAvailable: () => boolean;
   onCorrupt: (quarantinedPath: string) => void;
-  writeClipboard: (text: string) => void;
   applySettings: (settings: Settings, askedLoginItem: boolean | undefined) => void;
   /** A stored gateway serves at once, and the outcome reaches the screen by push rather than here. */
   startGateway: (gateway: EngineGateway) => void;

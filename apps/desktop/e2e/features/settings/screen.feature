@@ -31,6 +31,13 @@ Feature: The settings screen
     Then the Server group offers no port control
     And the stored settings document holds no port
 
+  Scenario: The Server group offers no token
+    Then the Server group offers no token control and no switch demanding one
+    And the stored settings document holds no token requirement
+
+  Scenario: The Appearance group offers the theme alone
+    Then the Appearance group offers the theme and nothing beside it
+
   Scenario: The bind address states a value rather than offering a control
     Then the bind address row reads "127.0.0.1"
     And the row states that recompose never serves the network

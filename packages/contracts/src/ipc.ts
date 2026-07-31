@@ -14,7 +14,6 @@ export const ipcErrorSchema = z.strictObject({
     'validation-failed',
     'storage-failed',
     'folder-open-failed',
-    'token-missing',
     'name-conflict',
     'port-conflict',
   ]),
@@ -47,13 +46,6 @@ export const systemStateSchema = z.strictObject({
 
 export type SystemState = z.infer<typeof systemStateSchema>;
 
-export const gatewayTokenStatusSchema = z.strictObject({
-  masked: z.string().min(1).nullable(),
-  storage: z.enum(['available', 'plaintext-fallback', 'unavailable']),
-});
-
-export type GatewayTokenStatus = z.infer<typeof gatewayTokenStatusSchema>;
-
 export const ipcChannels = {
   'gateways:list': { request: z.void(), response: ipcResult(z.array(gatewayConfigSchema)) },
   'gateways:save': {
@@ -73,9 +65,6 @@ export const ipcChannels = {
   },
   'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
   'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },
-  'gateway-token:status': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
-  'gateway-token:mint': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
-  'gateway-token:copy': { request: z.void(), response: ipcResult(z.void()) },
   'gateways:offer-port': { request: z.void(), response: ipcResult(gatewayPortSchema) },
   'gateways:move-port': {
     request: z.strictObject({ slug: gatewaySlugSchema }),

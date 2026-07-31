@@ -13,11 +13,6 @@ Feature: Controls that wait on machinery
     And the row names launch-time start as what it waits for
     And the stored settings document holds no field for it
 
-  Scenario: The reduced wire motion row names the canvas
-    Then the "Reduce wire motion" control cannot be moved
-    And the row names the canvas as what it waits for
-    And the stored settings document holds no field for it
-
   Scenario: A waiting row stays reachable from the keyboard
     When the maintainer tabs through the settings screen
     Then every waiting row takes focus in turn
