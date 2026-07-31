@@ -84,6 +84,12 @@ const glyphs = {
       <path d="M14.6 4.75v14.5M17 8.1h1.3M17 11.1h1.3" />
     </>
   ),
+  'panel-left': (
+    <>
+      <rect height="14.5" rx="3.4" width="18" x="3" y="4.75" />
+      <path d="M9.6 4.75v14.5M5.9 8.1h1.3M5.9 11.1h1.3" />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof glyphs;

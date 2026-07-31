@@ -11,3 +11,4 @@ export { Switch } from './switch';
 export { LabelledTextField } from './labelled-text-field';
 export { TextField } from './text-field';
 export { PageError } from './page-error';
+export { SidebarToggle } from './sidebar-toggle';

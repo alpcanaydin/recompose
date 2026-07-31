@@ -10,7 +10,7 @@ import {
   useParams,
   useRouter,
 } from '@tanstack/react-router';
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useSyncExternalStore } from 'react';
 
 import {
   accountsQueryOptions,
@@ -18,6 +18,7 @@ import {
   engineStatesQueryOptions,
   gatewaysQueryOptions,
 } from '../../shared/api';
+import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
 import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
@@ -103,17 +104,20 @@ function RootLayout() {
   const router = useRouter();
   const { create, getStarted, at } = Route.useSearch();
   const { slug } = useParams({ strict: false });
+  const sidebarAway = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
 
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
 
   return (
     <div className="flex h-full overflow-hidden">
-      <AppSidebar
-        onNewGateway={() => {
-          void navigate({ to: '/', search: withSheet });
-        }}
-        restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
-      />
+      {!sidebarAway && (
+        <AppSidebar
+          onNewGateway={() => {
+            void navigate({ to: '/', search: withSheet });
+          }}
+          restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
+        />
+      )}
       <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
         <AppToolbar slug={slug} />
         <AppContent>

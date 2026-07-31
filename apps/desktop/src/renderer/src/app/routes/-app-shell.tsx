@@ -1,17 +1,16 @@
 import type { ReactNode } from 'react';
 
 import { Link } from '@tanstack/react-router';
-import { Suspense, useId } from 'react';
+import { Suspense, useId, useSyncExternalStore } from 'react';
 
-import { Icon } from '../../shared/ui';
+import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
+import { Icon, SidebarToggle } from '../../shared/ui';
 import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GatewayToolbar } from '../../widgets/gateway/toolbar';
 import { GetStartedPanel } from '../../widgets/get-started';
 import { ProviderSidebar } from '../../widgets/provider/sidebar';
 
 const emptyChrome = <div aria-hidden className="h-toolbar" />;
-
-const dragRegion = <div aria-hidden className="app-drag absolute inset-x-0 top-0 z-10 h-toolbar" />;
 
 type AppSidebarProps = {
   /** Asked for when a person wants a gateway beyond the ones already listed. */
@@ -69,8 +68,18 @@ type AppToolbarProps = {
  * whole box rather than starting under a band that reports nothing.
  */
 export function AppToolbar({ slug }: AppToolbarProps) {
+  const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+
   if (slug === undefined) {
-    return dragRegion;
+    return (
+      <div
+        className={`app-drag absolute inset-x-0 top-0 z-10 flex h-toolbar items-center ${away ? 'ps-window-controls-width' : 'ps-3.5'}`}
+      >
+        <span className="app-no-drag flex">
+          <SidebarToggle />
+        </span>
+      </div>
+    );
   }
 
   return (

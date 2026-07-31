@@ -1,7 +1,7 @@
 import type { GatewayEngineState } from '@recompose/contracts';
 
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import type { IconName } from '../../../../shared/ui';
 
@@ -13,7 +13,8 @@ import {
   useStartGateway,
   useStopGateway,
 } from '../../../../shared/api';
-import { CopyButton, Icon } from '../../../../shared/ui';
+import { sidebarHidden, subscribeToSidebarVisibility } from '../../../../shared/lib';
+import { CopyButton, Icon, SidebarToggle } from '../../../../shared/ui';
 import { FailedStartLine } from './failed-start-line';
 
 type GatewayToolbarProps = {
@@ -107,28 +108,6 @@ function ToolbarButton({
   );
 }
 
-type RunGroupProps = {
-  onRun: () => void;
-  running: boolean;
-};
-
-/** The run control and the two the reference groups beside it. */
-function RunGroup({ onRun, running }: RunGroupProps) {
-  return (
-    <span className={GROUP}>
-      <ToolbarButton
-        glyph={running ? 'stop' : 'play'}
-        label={running ? 'Stop' : 'Start'}
-        onPress={onRun}
-        tone={running ? 'text-stopped' : 'text-running'}
-        where="grouped"
-      />
-      <ToolbarButton glyph="book" label="Docs" waitsFor="the guide" where="grouped" />
-      <ToolbarButton glyph="more" label="More" waitsFor="the gateway menu" where="grouped" />
-    </span>
-  );
-}
-
 /** The two panel toggles the reference stands at the trailing edge. */
 function PanelGroup() {
   return (
@@ -161,13 +140,23 @@ type ToolbarStripProps = {
 
 /** The strip itself, holding the run control, the address, and the four the reference draws. */
 function ToolbarStrip({ address, name, onRun, port, running, status }: ToolbarStripProps) {
+  const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+
   return (
     <div
       aria-label={name}
-      className="app-no-drag flex h-toolbar items-center gap-2.5 px-3.5"
+      className={`app-no-drag flex h-toolbar items-center gap-2.5 pe-3.5 ${away ? 'ps-window-controls-width' : 'ps-3.5'}`}
       role="toolbar"
     >
-      <RunGroup onRun={onRun} running={running} />
+      <SidebarToggle />
+      <ToolbarButton
+        glyph={running ? 'stop' : 'play'}
+        label={running ? 'Stop' : 'Start'}
+        onPress={onRun}
+        tone={running ? 'text-stopped' : 'text-running'}
+        where="standing"
+      />
+      <ToolbarButton glyph="book" label="Docs" waitsFor="the guide" where="standing" />
       <AddressPill address={address} port={port} status={status} />
       <ToolbarButton glyph="tidy" label="Tidy the canvas" waitsFor="the canvas" where="standing" />
       <ToolbarButton
