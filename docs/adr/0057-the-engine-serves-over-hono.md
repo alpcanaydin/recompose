@@ -17,7 +17,7 @@ Hono's `app.request()` runs every routing, guard, and refusal behavior against a
 
 The engine child stays resident across every start and stop. It holds a registry of open listeners and nothing else, and main posts each gateway to it as data. One child holds every listener, so ten gateways cost ten sockets and one process.
 
-`requireGatewayToken` stays unread this round, as a named deferral. The switch exists in settings and the vault holds the token, and the engine ignores both until the token feature wires them together.
+Nothing enforces a token this round, as a named deferral. The settings screen no longer carries the switch, and the vault still holds the token, so the gateway settings feature wires the two together when it lands.
 
 ## Alternatives
 
@@ -31,4 +31,4 @@ The engine child stays resident across every start and stop. It holds a registry
 
 **Good**: every refusal and guard behavior is a pure function over Request and Response, testable at unit speed and mutation depth. The dependency surface stays two allowlisted packages.
 
-**Bad**: the isolation package now holds outside dependencies. The adapter's streaming behavior under Node lacks first-party documentation, so a spike precedes any streaming promise in a later change. A reader who meets `requireGatewayToken` in settings finds nothing enforcing it yet.
+**Bad**: the isolation package now holds outside dependencies. The adapter's streaming behavior under Node lacks first-party documentation, so a spike precedes any streaming promise in a later change. A gateway serves without a token until the gateway settings feature lands, so anyone who reaches the loopback port reaches the quota behind it.

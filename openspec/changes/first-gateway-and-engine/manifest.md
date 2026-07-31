@@ -41,5 +41,7 @@ approvals:
   - the settings document drops requireGatewayToken alongside the port, in the same version 3 migration, since neither version has shipped
   - the settings delta carries the gateway token requirement as removed rather than modified, because every sentence it holds describes rows the screen no longer offers, and the gateway settings feature restates it where the token lands
   - the channel roster falls from seventeen to fourteen and the error codes from nine to eight, because the three token channels and the token-missing code they alone raised leave with the rows they served
+  - ADR-0057 and the design document lose the sentence placing the token switch in settings, because the same change that wrote it deletes the switch, and a record that describes a row nobody can reach misleads the next reader
+  - ADR-0047 keeps its accepted status, because the vault half of it still stands and the gateway settings feature is what supersedes the clipboard half, so the pointer waits for the record that replaces it
 branch: worktree-first-gateway-and-engine
 ---
