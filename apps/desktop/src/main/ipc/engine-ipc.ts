@@ -63,8 +63,8 @@ async function movePort(ctx: EngineIpcContext, slug: string) {
 
     const moved = { ...moving, port: await portFreeOf(ctx, stored) };
 
-    await saveGatewayConfig(storagePathsFor(ctx.userDataPath).gatewaysDir, moved);
     await ctx.host.restart(asEngineGateway(moved));
+    await saveGatewayConfig(storagePathsFor(ctx.userDataPath).gatewaysDir, moved);
 
     return { ok: true as const, value: await storedGateways(ctx) };
   } catch (error) {

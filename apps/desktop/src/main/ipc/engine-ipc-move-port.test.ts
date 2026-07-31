@@ -192,4 +192,16 @@ describe('a move the app cannot carry out', () => {
     expect(refusalIn(answer).code).toBe('storage-failed');
     expect(refusalIn(answer).message).toContain('the engine did not report');
   });
+
+  test('a refused restart leaves the stored port where the gateway still answers', async () => {
+    const context = await freshContext(
+      [gatewayNamed('codex', 8397)],
+      hostAnswering(new Error('the engine did not report on the start')).host,
+      portsInTurn([51234]),
+    );
+
+    await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
+
+    expect(await storedGateway(context.userDataPath, 'codex')).toEqual(gatewayNamed('codex', 8397));
+  });
 });

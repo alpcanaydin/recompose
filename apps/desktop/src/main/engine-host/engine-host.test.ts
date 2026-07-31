@@ -8,11 +8,11 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import type { EngineChild } from './engine-host';
 
-import { createEngineHost } from './engine-host';
+import { createEngineHost, DIRECTIVE_TIMEOUT_MS } from './engine-host';
 
 const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397 };
 
-type Answer = (directive: EngineDirective) => GatewayEngineState;
+type Answer = (directive: EngineDirective) => GatewayEngineState | null;
 
 function scriptedChild(answer: Answer) {
   const directives: EngineDirective[] = [];
@@ -31,7 +31,11 @@ function scriptedChild(answer: Answer) {
       const slug = directive.kind === 'start' ? directive.gateway.slug : directive.slug;
 
       void Promise.resolve().then(() => {
-        send({ kind: 'state', slug, state: answer(directive) });
+        const state = answer(directive);
+
+        if (state !== null) {
+          send({ kind: 'state', slug, state });
+        }
       });
     },
     onMessage: (listener) => {
@@ -51,7 +55,11 @@ function hostOver(scripted: { child: EngineChild }, knownSlugs: readonly string[
 const asAsked: Answer = (directive) =>
   directive.kind === 'start' ? { status: 'running' } : { status: 'stopped' };
 
+const silentOnStop: Answer = (directive) =>
+  directive.kind === 'start' ? { status: 'running' } : null;
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -91,6 +99,32 @@ describe('what the engine host answers a lifecycle request', () => {
       'stop',
       'start',
     ]);
+  });
+
+  test('a restart whose stop is never reported still starts the gateway', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.useFakeTimers();
+    const { host } = hostOver(scriptedChild(silentOnStop));
+
+    const restarting = host.restart(codex);
+
+    await vi.advanceTimersByTimeAsync(DIRECTIVE_TIMEOUT_MS);
+
+    await expect(restarting).resolves.toEqual({ status: 'running' });
+  });
+
+  test('a stop that goes unreported is written down rather than passed over', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    vi.useFakeTimers();
+    const { host } = hostOver(scriptedChild(silentOnStop));
+
+    const restarting = host.restart(codex);
+
+    await vi.advanceTimersByTimeAsync(DIRECTIVE_TIMEOUT_MS);
+    await restarting;
+
+    expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('codex');
   });
 });
 

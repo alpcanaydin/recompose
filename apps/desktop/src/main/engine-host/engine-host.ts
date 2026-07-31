@@ -146,7 +146,15 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
       inGatewayOrder(slug, async () => sendDirective(resident, slug, { kind: 'stop', slug })),
     restart: async (gateway) =>
       inGatewayOrder(gateway.slug, async () => {
-        await sendDirective(resident, gateway.slug, { kind: 'stop', slug: gateway.slug });
+        await sendDirective(resident, gateway.slug, {
+          kind: 'stop',
+          slug: gateway.slug,
+        }).catch((error: unknown) => {
+          console.error(
+            `recompose never heard the stop of the gateway "${gateway.slug}" back, and is starting it again regardless.`,
+            error,
+          );
+        });
 
         return sendDirective(resident, gateway.slug, { kind: 'start', gateway });
       }),
