@@ -33,7 +33,7 @@ The app MUST offer a way to create a gateway once one exists, because the empty-
 
 ### Requirement: The creation sheet takes a name and a port
 
-The creation sheet MUST collect a display name and a port. It MUST derive the slug from the name rather than asking for one, because the slug names only a file and a route that a person never sees. The port field MUST arrive filled with a free port, so a person who has no opinion never picks one. The derivation MUST answer every name with a slug the gateway contract accepts, falling back to a stand-in slug for a name that derives nothing. The sheet MUST reject a name that a stored gateway already holds and a name that derives a device name Windows reserves. It MUST also reject a port outside the accepted range and a port that a stored gateway already holds.
+The creation sheet MUST collect a display name and a port. It MUST derive the slug from the name rather than asking for one, because the slug names only a file and a route that a person never sees. The port field MUST arrive filled with a free port, so a person who has no opinion never picks one. The derivation MUST answer every name with a slug the gateway contract accepts, falling back to a stand-in slug for a name that derives nothing. The sheet MUST reject a name that a stored gateway already holds and a name that derives a device name Windows reserves. It MUST also reject a port outside 1024 through 65535 and a port that a stored gateway already holds.
 
 #### Scenario: a person accepts what the sheet offers
 

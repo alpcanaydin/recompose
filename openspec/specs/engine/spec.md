@@ -8,7 +8,7 @@ The behavioral contract of the process that answers for a gateway. It covers whe
 
 ### Requirement: A gateway owns its listener and its port
 
-Each gateway MUST answer on its own port rather than sharing one with its siblings. Every listener MUST bind the loopback interface and MUST NOT bind any other interface, because recompose fronts paid accounts and a wider bind exposes them. Two gateways MUST NOT hold the same port.
+Each gateway MUST answer on its own port rather than sharing one with its siblings. It MUST answer at `http://localhost:<port>`, the origin a person pastes into a client without adding a path. Every listener MUST bind the loopback interface and MUST NOT bind any other interface, because recompose fronts paid accounts and a wider bind exposes them. Two gateways MUST NOT hold the same port.
 
 #### Scenario: a person starts one gateway
 
