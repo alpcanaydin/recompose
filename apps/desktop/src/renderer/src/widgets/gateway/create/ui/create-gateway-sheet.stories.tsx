@@ -99,6 +99,40 @@ export const NameRefused = meta.story({
   },
 });
 
+/** A gateway nobody named, which asks for a name rather than storing one under the fallback. */
+export const NameMissing = meta.story({
+  play: async ({ userEvent }) => {
+    await userEvent.click(await screen.findByRole('button', { name: 'Create Gateway' }));
+
+    await expect(await screen.findByRole('alert')).toHaveTextContent('Give the gateway a name.');
+  },
+});
+
+/** A refusal neither field owns, which stands in the sheet under the address it could not serve. */
+export const SaveRefused = meta.story({
+  parameters: {
+    bridge: {
+      overrides: {
+        'gateways:save': async () =>
+          Promise.resolve({
+            ok: false,
+            error: { code: 'storage-failed', message: 'EACCES: permission denied, open gateways' },
+          }),
+      },
+    },
+  },
+  play: async ({ userEvent }) => {
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Name' }), 'Codex');
+    await userEvent.click(await screen.findByRole('button', { name: 'Create Gateway' }));
+
+    const refusal = await screen.findByRole('alert');
+    const preview = await screen.findByText('Serves at');
+
+    await expect(refusal).toHaveTextContent('EACCES: permission denied, open gateways');
+    await expect(paintedBox(refusal).top).toBeGreaterThanOrEqual(paintedBox(preview).bottom);
+  },
+});
+
 /** The offer routes around a port a stored gateway already holds. */
 export const PortAroundAStoredGateway = meta.story({
   parameters: { bridge: { gateways: [codex] } },

@@ -5,9 +5,11 @@ import { Field } from '@base-ui/react/field';
 import { GATEWAY_CONFIG_VERSION, slugFromName } from '@recompose/contracts';
 import { useEffect, useRef, useState } from 'react';
 
-import { IpcResultError, fetchOfferedPort, useSaveGateway } from '../../../../shared/api';
+import type { DraftRefusals } from '../lib/gateway-draft';
+
+import { fetchOfferedPort, useSaveGateway } from '../../../../shared/api';
 import { Sheet } from '../../../../shared/ui';
-import { nameRefusal, portRefusal, previewAddressFor } from '../lib/gateway-draft';
+import { previewAddressFor, refusalFromMain, refusalsBeforeSaving } from '../lib/gateway-draft';
 
 type CreateGatewaySheetProps = {
   /** Whether the sheet stands on screen. */
@@ -17,29 +19,6 @@ type CreateGatewaySheetProps = {
   /** Receives the slug a finished save stored, so the screen can follow the new gateway. */
   onCreated: (slug: string) => void;
 };
-
-const NAME_TAKEN_REFUSAL = 'Another gateway holds this name.';
-
-type FieldRefusals = {
-  name?: string | undefined;
-  port?: string | undefined;
-};
-
-function refusalsBeforeSaving(displayName: string, port: string): FieldRefusals {
-  return { name: nameRefusal(displayName), port: portRefusal(port) };
-}
-
-function refusalFromMain(failure: unknown): FieldRefusals {
-  if (!(failure instanceof IpcResultError)) {
-    return {};
-  }
-
-  if (failure.code === 'name-conflict') {
-    return { name: NAME_TAKEN_REFUSAL };
-  }
-
-  return failure.code === 'port-conflict' ? { port: failure.message } : {};
-}
 
 function FieldMessage({ refusal }: { refusal: string | undefined }) {
   if (refusal === undefined) {
@@ -82,6 +61,18 @@ function DraftRow({ label, value, onChangeValue, refusal, controlClasses, ref }:
       />
       <FieldMessage refusal={refusal} />
     </Field.Root>
+  );
+}
+
+function SheetRefusal({ refusal }: { refusal: string | undefined }) {
+  if (refusal === undefined) {
+    return null;
+  }
+
+  return (
+    <p className="mt-2.5 px-0.5 text-caption text-danger-ink" role="alert">
+      {refusal}
+    </p>
   );
 }
 
@@ -155,7 +146,7 @@ function gatewayFrom(displayName: string, slug: string, port: string): GatewayCo
 function useGatewayDraft(onOpenChange: (open: boolean) => void, onCreated: (slug: string) => void) {
   const [displayName, setDisplayName] = useState('');
   const [port, setPort] = useOfferedPort();
-  const [refusals, setRefusals] = useState<FieldRefusals>({});
+  const [refusals, setRefusals] = useState<DraftRefusals>({});
   const saveGateway = useSaveGateway();
 
   function save() {
@@ -258,6 +249,7 @@ function GatewayDraft({ open, onOpenChange, onCreated, nameField }: GatewayDraft
     >
       <DraftFields draft={draft} nameField={nameField} />
       <PreviewLine port={draft.port} />
+      <SheetRefusal refusal={draft.refusals.sheet} />
     </Sheet>
   );
 }
