@@ -8,6 +8,7 @@ const sprite: IconName[] = [
   'plus',
   'book',
   'check',
+  'chevron',
   'network',
   'spark',
   'person',

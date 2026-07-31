@@ -1,8 +1,7 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 
 import { HomePage } from '../../pages/home';
-import { accountsQueryOptions, gatewaysQueryOptions } from '../../shared/api';
+import { gatewaysQueryOptions } from '../../shared/api';
 import { rememberedGateway } from '../../shared/lib';
 import { PageError } from '../../shared/ui';
 import { type RootSearch } from './__root';
@@ -20,25 +19,18 @@ export const Route = createFileRoute('/')({
       throw redirect({ to: '/gateways/$slug', params: { slug }, search });
     }
   },
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(accountsQueryOptions);
-  },
   component: HomeRoute,
   errorComponent: PageError,
 });
 
 function HomeRoute() {
   const navigate = useNavigate();
-  const { getStarted, at } = Route.useSearch();
-  const { data: registry } = useSuspenseQuery(accountsQueryOptions);
 
   return (
     <HomePage
       onCreateGateway={() => {
         void navigate({ to: '.', search: withSheet });
       }}
-      providerConnected={registry.accounts.length > 0}
-      restoreRequest={getStarted === true ? (at ?? 'asked') : undefined}
     />
   );
 }

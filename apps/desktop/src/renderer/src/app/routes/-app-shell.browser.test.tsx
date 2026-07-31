@@ -67,7 +67,7 @@ test('a selected gateway puts its address and its control in the toolbar', async
   const screen = await renderAt('/gateways/codex', { gateways: [codex] });
 
   await expect.element(screen.getByText('localhost:51234')).toBeVisible();
-  await expect.element(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
   await expect.element(screen.getByRole('button', { name: 'Copy address' })).toBeVisible();
 });
 

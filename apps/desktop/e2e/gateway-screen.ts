@@ -55,7 +55,7 @@ export async function openGateway(page: Page, name: string): Promise<void> {
 
 export async function pressToolbarControl(page: Page, name: string, action: string): Promise<void> {
   await openGateway(page, name);
-  await page.getByRole('button', { name: action }).click();
+  await page.getByRole('button', { name: action, exact: true }).click();
 }
 
 /** The address a person copies out of the toolbar, read off the pill rather than computed. */

@@ -6,6 +6,7 @@ import { Suspense, useId } from 'react';
 import { Icon } from '../../shared/ui';
 import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GatewayToolbar } from '../../widgets/gateway/toolbar';
+import { GetStartedPanel } from '../../widgets/get-started';
 import { ProviderSidebar } from '../../widgets/provider/sidebar';
 
 const emptyChrome = <div aria-hidden className="h-toolbar" />;
@@ -15,15 +16,17 @@ const dragRegion = <div aria-hidden className="app-drag absolute inset-x-0 top-0
 type AppSidebarProps = {
   /** Asked for when a person wants a gateway beyond the ones already listed. */
   onNewGateway: () => void;
+  /** Names a fresh ask for the checklist, which the View menu raises. */
+  restoreGetStarted?: string | undefined;
 };
 
-/** The shell's standing navigation, with the stored gateways sitting between its two groups. */
-export function AppSidebar({ onNewGateway }: AppSidebarProps) {
+/** The shell's standing navigation, with the coaching checklist standing under it. */
+export function AppSidebar({ onNewGateway, restoreGetStarted }: AppSidebarProps) {
   const systemId = useId();
 
   return (
-    <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-2.5 pt-toolbar pb-2.5 text-body text-ink-secondary">
-      <nav className="app-no-drag flex flex-col">
+    <aside className="app-drag flex w-60 flex-col border-e border-line-subtle bg-surface-sidebar px-2.5 pt-toolbar pb-2.5 text-body text-ink-secondary">
+      <nav className="app-no-drag flex flex-1 flex-col overflow-y-auto">
         <Suspense fallback={null}>
           <GatewaySidebar onNewGateway={onNewGateway} />
         </Suspense>
@@ -44,6 +47,11 @@ export function AppSidebar({ onNewGateway }: AppSidebarProps) {
           </Link>
         </div>
       </nav>
+      <div className="app-no-drag pt-2.5">
+        <Suspense fallback={null}>
+          <GetStartedPanel restoreRequest={restoreGetStarted} />
+        </Suspense>
+      </div>
     </aside>
   );
 }
