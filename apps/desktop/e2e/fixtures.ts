@@ -1,7 +1,7 @@
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { type Server } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -79,8 +79,11 @@ async function restoreLoginItem(
 }
 
 export const test = base.extend<ElectronFixtures>({
-  electronApp: async ({}, use) => {
-    const userDataDir = await mkdtemp(join(homedir(), '.recompose-e2e-'));
+  electronApp: async ({}, use, testInfo) => {
+    const userDataDir = join(homedir(), `.recompose-e2e-w${String(testInfo.parallelIndex)}`);
+
+    await rm(userDataDir, { force: true, recursive: true });
+    await mkdir(userDataDir, { recursive: true });
     const app = await electron.launch({
       args: [appRoot],
       env: {

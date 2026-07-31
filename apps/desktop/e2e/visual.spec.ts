@@ -90,8 +90,5 @@ test('the settings screen matches its baseline', async ({ electronApp, page }) =
   await pinLightScheme(electronApp);
   await openSettings(page);
   await settleFonts(electronApp, page);
-  await expect(page).toHaveScreenshot('settings.png', {
-    ...capture,
-    mask: [page.getByText(/\.recompose-e2e-/u)],
-  });
+  await expect(page).toHaveScreenshot('settings.png', capture);
 });

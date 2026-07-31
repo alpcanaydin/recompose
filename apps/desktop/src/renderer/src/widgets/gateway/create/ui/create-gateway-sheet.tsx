@@ -91,15 +91,17 @@ type SheetFooterProps = {
   onCancel: () => void;
   /** Tries the save, which either stores the gateway or explains why it did not. */
   onCreate: () => void;
+  /** Whether a save is already on its way, so a second press cannot start another. */
+  saving: boolean;
 };
 
-function SheetFooter({ onCancel, onCreate }: SheetFooterProps) {
+function SheetFooter({ onCancel, onCreate, saving }: SheetFooterProps) {
   return (
     <>
       <button className="push-button" onClick={onCancel} type="button">
         Cancel
       </button>
-      <button className="push-button-primary" onClick={onCreate} type="button">
+      <button className="push-button-primary" disabled={saving} onClick={onCreate} type="button">
         Create Gateway
       </button>
     </>
@@ -177,6 +179,7 @@ function useGatewayDraft(onOpenChange: (open: boolean) => void, onCreated: (slug
     port,
     refusals: { ...refusals, sheet: refusals.sheet ?? offerRefusal },
     save,
+    saving: saveGateway.isPending,
     changeName: (typed: string) => {
       setDisplayName(typed);
       setRefusals((held) => ({ ...held, name: undefined }));
@@ -236,6 +239,7 @@ function GatewayDraft({ open, onOpenChange, onCreated, nameField }: GatewayDraft
       onCreate={() => {
         draft.save();
       }}
+      saving={draft.saving}
     />
   );
 

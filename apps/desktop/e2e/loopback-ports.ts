@@ -1,3 +1,5 @@
+import type { AddressInfo } from 'node:net';
+
 import { createServer, type Server } from 'node:net';
 
 export const LOOPBACK_HOSTS = ['127.0.0.1', '::1'];
@@ -26,8 +28,8 @@ export async function dropServer(server: Server): Promise<void> {
 
 /** A loopback port nothing holds, taken and let go so a scenario can type it into a field. */
 export async function freePort(): Promise<number> {
-  const [host = ''] = LOOPBACK_HOSTS;
-  const probe = await holdPort(host, 0);
+  const [first = ''] = LOOPBACK_HOSTS;
+  const probe = await holdPort(first, 0);
 
   if (probe === null) {
     throw new Error('the scenario found no loopback port to offer');
@@ -37,8 +39,18 @@ export async function freePort(): Promise<number> {
 
   await dropServer(probe);
 
+  return portNothingHolds(bound);
+}
+
+async function portNothingHolds(bound: AddressInfo | string | null): Promise<number> {
   if (bound === null || typeof bound === 'string') {
     throw new Error('the probe bound no port the scenario could read');
+  }
+
+  if (!(await portIsFree(bound.port))) {
+    throw new Error(
+      `the scenario found port ${String(bound.port)} free on one loopback family and held on another`,
+    );
   }
 
   return bound.port;
@@ -46,13 +58,12 @@ export async function freePort(): Promise<number> {
 
 /** Whether a port is genuinely there for the taking, proved by taking it and letting go. */
 export async function portIsFree(port: number): Promise<boolean> {
-  const probe = await holdPort('127.0.0.1', port);
+  const probes = await Promise.all(LOOPBACK_HOSTS.map(async (host) => holdPort(host, port)));
+  const taken = probes.some((probe) => probe === null);
 
-  if (probe === null) {
-    return false;
-  }
+  await Promise.all(
+    probes.filter((probe) => probe !== null).map(async (probe) => dropServer(probe)),
+  );
 
-  await dropServer(probe);
-
-  return true;
+  return !taken;
 }
