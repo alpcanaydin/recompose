@@ -24,6 +24,21 @@ export function refusalSentence(failure: unknown): string {
   return written === '' ? UNEXPLAINED_REFUSAL : written;
 }
 
+/**
+ * A request with the sentence its refusal left behind, ready for the screen to read.
+ *
+ * @summary Wrap a mutation in it so the control that asked can say why it was refused. The
+ * request travels on untouched, so calling it reads the same as it did before.
+ */
+export function withRefusal<Request extends { error: Error | null }>(
+  request: Request,
+): Request & { refusal: string | undefined } {
+  return {
+    ...request,
+    refusal: request.error === null ? undefined : refusalSentence(request.error),
+  };
+}
+
 export function unwrapIpcResult<Value>(
   result: { ok: true; value: Value } | { ok: false; error: IpcError },
 ): Value {

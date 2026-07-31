@@ -3,7 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { unwrapIpcResult } from './ipc-result';
+import { unwrapIpcResult, withRefusal } from './ipc-result';
 
 const STOPPED: GatewayEngineState = { status: 'stopped' };
 
@@ -39,25 +39,27 @@ function useLifecycleMutation(
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: reach,
-    onSuccess: (state, request) => {
-      queryClient.setQueryData(engineStatesQueryOptions.queryKey, (states?: EngineStates) => ({
-        ...states,
-        [request.slug]: state,
-      }));
-    },
-  });
+  return withRefusal(
+    useMutation({
+      mutationFn: reach,
+      onSuccess: (state, request) => {
+        queryClient.setQueryData(engineStatesQueryOptions.queryKey, (states?: EngineStates) => ({
+          ...states,
+          [request.slug]: state,
+        }));
+      },
+    }),
+  );
 }
 
-/** Starts one gateway and nothing else. */
+/** Starts one gateway, and carries the sentence explaining a refusal in `refusal`. */
 export function useStartGateway() {
   return useLifecycleMutation(async (request) =>
     unwrapIpcResult(await window.recompose['engine:start'](request)),
   );
 }
 
-/** Stops one gateway and nothing else. */
+/** Stops one gateway, and carries the sentence explaining a refusal in `refusal`. */
 export function useStopGateway() {
   return useLifecycleMutation(async (request) =>
     unwrapIpcResult(await window.recompose['engine:stop'](request)),
