@@ -67,3 +67,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0059](0059-the-slug-rule-tightens-to-a-device-safe-identifier.md)          | The Slug Rule Tightens to a Bounded, Device-Safe Identifier                         | Accepted   | 2026-07-31 |
 | [0060](0060-the-permission-policy-allows-one-clipboard-write.md)            | The Permission Policy Allows One Clipboard Write                                    | Accepted   | 2026-07-31 |
 | [0061](0061-the-slug-comes-from-the-name.md)                                | The Slug Comes From the Name, Folded by Hand                                        | Accepted   | 2026-07-31 |
+| [0062](0062-a-schema-version-names-one-shape.md)                            | A Schema Version Names One Shape, and Every Store Reads It First                    | Accepted   | 2026-07-31 |
