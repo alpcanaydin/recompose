@@ -1,4 +1,4 @@
-# 0057: Lifecycle state pushes over a typed event map
+# 0058: Lifecycle state pushes over a typed event map
 
 **Status**: Accepted
 **Date**: 2026-07-31

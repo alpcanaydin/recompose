@@ -1,4 +1,4 @@
-# 0056: The engine serves over Hono
+# 0057: The engine serves over Hono
 
 **Status**: Accepted
 **Date**: 2026-07-31

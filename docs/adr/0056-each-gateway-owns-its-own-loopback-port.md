@@ -1,4 +1,4 @@
-# 0055: Each gateway owns its own loopback port
+# 0056: Each gateway owns its own loopback port
 
 **Status**: Accepted
 **Date**: 2026-07-31

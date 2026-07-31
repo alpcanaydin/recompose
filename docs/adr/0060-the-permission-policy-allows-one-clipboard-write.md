@@ -1,4 +1,4 @@
-# 0059: The permission policy allows one clipboard write
+# 0060: The permission policy allows one clipboard write
 
 **Status**: Accepted
 **Date**: 2026-07-31

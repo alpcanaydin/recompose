@@ -1,4 +1,4 @@
-# 0058: The slug rule tightens to a bounded, device-safe identifier
+# 0059: The slug rule tightens to a bounded, device-safe identifier
 
 **Status**: Accepted
 **Date**: 2026-07-31
