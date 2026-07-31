@@ -1,5 +1,6 @@
 import { useId } from 'react';
 
+import { Icon } from '../../../shared/ui';
 import { type GetStartedStep, getStartedSteps } from '../lib/get-started-steps';
 
 type GetStartedCardProps = {
@@ -11,24 +12,26 @@ type GetStartedCardProps = {
   onSkip: () => void;
 };
 
-const marker = {
-  done: 'border-running bg-running',
-  current: 'border-accent',
-  pending: 'border-line-strong',
+const ring = {
+  done: 'border-running bg-running text-surface-thumb',
+  current: 'checklist-ring-current',
+  pending: '',
+} as const;
+
+const stepInk = {
+  done: 'text-ink-secondary',
+  current: 'text-ink font-medium',
+  pending: 'text-ink-secondary',
 } as const;
 
 function StepRow({ step }: { step: GetStartedStep }) {
   return (
-    <li className="flex items-start gap-2">
-      <span
-        aria-hidden
-        className={`mt-1 inline-block size-2.5 shrink-0 rounded-pill border ${marker[step.state]}`}
-      />
-      <span className="flex flex-col">
-        <span
-          aria-current={step.state === 'current' ? 'step' : undefined}
-          className="text-body text-ink"
-        >
+    <li className="flex min-h-7.5 items-center gap-2.25 px-0.5">
+      <span aria-hidden className={`checklist-ring ${ring[step.state]}`}>
+        {step.state === 'done' && <Icon className="size-2.25 stroke-3" name="check" />}
+      </span>
+      <span className={`flex flex-col ${stepInk[step.state]}`}>
+        <span aria-current={step.state === 'current' ? 'step' : undefined} className="text-note">
           {step.title}
         </span>
         {step.reason !== undefined && (
@@ -48,23 +51,28 @@ function StepRow({ step }: { step: GetStartedStep }) {
  */
 export function GetStartedCard({ gatewayExists, providerConnected, onSkip }: GetStartedCardProps) {
   const headingId = useId();
+  const steps = getStartedSteps({ gatewayExists, providerConnected });
+  const done = steps.filter((step) => step.state === 'done').length;
 
   return (
     <section
       aria-labelledby={headingId}
-      className="flex w-62.5 flex-col gap-3 rounded-card border border-line-subtle bg-surface-card p-4 shadow-raised"
+      className="w-62.5 rounded-panel border border-line-subtle bg-surface-card px-3 pt-3 pb-1.5 shadow-raised"
     >
-      <h2 className="text-heading text-ink" id={headingId}>
-        Get started
-      </h2>
-      <ul className="flex flex-col gap-2">
-        {getStartedSteps({ gatewayExists, providerConnected }).map((step) => (
+      <header className="mb-1.5 flex items-baseline justify-between px-0.5">
+        <h2 className="text-card-title text-ink" id={headingId}>
+          Get started
+        </h2>
+        <span className="font-mono text-mono-value text-ink-secondary">{`${String(done)} of ${String(steps.length)}`}</span>
+      </header>
+      <ul className="list-none">
+        {steps.map((step) => (
           <StepRow key={step.title} step={step} />
         ))}
       </ul>
-      <footer className="flex justify-end">
+      <footer className="mt-1.25 flex justify-end border-t border-line-faint px-0.5 py-1.75">
         <button
-          className="text-caption text-ink-secondary focus-ring hover:text-ink"
+          className="text-quiet text-ink-secondary focus-ring hover:text-ink"
           onClick={onSkip}
           type="button"
         >

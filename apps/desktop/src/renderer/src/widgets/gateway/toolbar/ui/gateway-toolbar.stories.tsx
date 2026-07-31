@@ -2,7 +2,7 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { gatewaySeed } from '../../../../shared/testing';
+import { gatewaySeed, paintedStyle } from '../../../../shared/testing';
 import { GatewayToolbar } from './gateway-toolbar';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
@@ -44,6 +44,25 @@ export const Stopped = meta.story({
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('button', { name: 'Start' })).toBeVisible();
     await expect(await canvas.findByText('localhost:51234')).toBeVisible();
+  },
+});
+
+/** The strip at the height and rhythm the reference fixes, with its address pill. */
+export const StripShape = meta.story({
+  parameters: { bridge: { gateways: [codex], engineStates: {} } },
+  play: async ({ canvas }) => {
+    const start = await canvas.findByRole('button', { name: 'Start' });
+    const strip = start.parentElement;
+    const pill = (await canvas.findByRole('button', { name: 'Copy address' })).parentElement;
+
+    await expect(paintedStyle(strip).height).toBe('54px');
+    await expect(paintedStyle(strip).columnGap).toBe('10px');
+    await expect(paintedStyle(strip).paddingLeft).toBe('14px');
+
+    await expect(paintedStyle(pill).height).toBe('30px');
+    await expect(paintedStyle(pill).borderRadius).toBe('6px');
+    await expect(paintedStyle(pill).fontSize).toBe('12.5px');
+    await expect(paintedStyle(pill).fontFamily).toContain('Mono');
   },
 });
 

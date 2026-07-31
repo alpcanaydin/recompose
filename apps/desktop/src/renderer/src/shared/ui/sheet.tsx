@@ -39,15 +39,15 @@ export function Sheet({
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
       <Dialog.Portal>
         <Dialog.Backdrop className="sheet-scrim" />
-        <Dialog.Popup className="sheet-surface flex flex-col gap-4" initialFocus={initialFocus}>
-          <header className="flex flex-col gap-1">
-            <Dialog.Title className="text-heading text-ink">{title}</Dialog.Title>
-            <Dialog.Description className="text-body text-ink-secondary">
+        <Dialog.Popup className="sheet-surface" initialFocus={initialFocus}>
+          <header className="px-4.5 pt-4.5 pb-3.25">
+            <Dialog.Title className="block text-sheet-title text-ink">{title}</Dialog.Title>
+            <Dialog.Description className="mt-1.25 text-detail text-ink-secondary">
               {description}
             </Dialog.Description>
           </header>
-          {children}
-          <footer className="flex justify-end gap-2">{footer}</footer>
+          <div className="px-4.5 pb-3.75">{children}</div>
+          <footer className="sheet-actions">{footer}</footer>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

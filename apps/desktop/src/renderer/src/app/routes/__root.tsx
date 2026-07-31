@@ -10,6 +10,7 @@ import {
   gatewaysQueryOptions,
 } from '../../shared/api';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
+import { StatusBar } from '../../widgets/status-bar';
 import { AppSidebar, AppToolbar } from './-app-shell';
 
 const RouterDevtools =
@@ -114,9 +115,10 @@ function RootLayout() {
       />
       <main className="flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
         <AppToolbar slug={slug} />
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="relative flex-1 overflow-y-auto">
           <Outlet />
         </div>
+        <StatusBar />
       </main>
       <CreateGatewaySheet
         onOpenChange={(open) => {

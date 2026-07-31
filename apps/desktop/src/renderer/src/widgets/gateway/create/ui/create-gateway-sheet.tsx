@@ -1,11 +1,12 @@
 import type { GatewayConfig } from '@recompose/contracts';
-import type { RefObject } from 'react';
+import type { Ref, RefObject } from 'react';
 
+import { Field } from '@base-ui/react/field';
 import { GATEWAY_CONFIG_VERSION } from '@recompose/contracts';
 import { useEffect, useRef, useState } from 'react';
 
 import { IpcResultError, fetchOfferedPort, useSaveGateway } from '../../../../shared/api';
-import { LabelledTextField, Sheet, StatusIndicator } from '../../../../shared/ui';
+import { Sheet } from '../../../../shared/ui';
 import { portRefusal, previewAddressFor, slugRefusal } from '../lib/gateway-draft';
 
 type CreateGatewaySheetProps = {
@@ -44,42 +45,50 @@ function FieldMessage({ refusal }: { refusal: string | undefined }) {
   }
 
   return (
-    <p className="text-caption text-danger-ink" role="alert">
+    <Field.Error className="w-full text-caption text-danger-ink" match role="alert">
       {refusal}
-    </p>
+    </Field.Error>
   );
 }
 
-type MonoFieldProps = {
-  /** Name of the field, shown above its control. */
+type DraftRowProps = {
+  /** Name of the field, leading its row and carried as the control's accessible name. */
   label: string;
   /** Controlled value of the control. */
   value: string;
   /** Receives every keystroke, which also clears any refusal standing under the field. */
   onChangeValue: (value: string) => void;
   /** Sentence explaining why the last save refused this field. */
-  refusal: string | undefined;
-  /** Extra classes for the control, which is how the port field takes its narrower width. */
-  controlWidth?: string;
+  refusal?: string | undefined;
+  /** Width and family classes for the control, which the three fields do not share. */
+  controlClasses: string;
+  /** Reaches the input itself, so the sheet can land opening focus on this row. */
+  ref?: Ref<HTMLInputElement> | undefined;
 };
 
-function MonoField({ label, value, onChangeValue, refusal, controlWidth = '' }: MonoFieldProps) {
+function DraftRow({ label, value, onChangeValue, refusal, controlClasses, ref }: DraftRowProps) {
   return (
-    <div className={`flex flex-col gap-1 [&_input]:font-mono ${controlWidth}`}>
-      <LabelledTextField label={label} onChangeValue={onChangeValue} value={value} />
+    <Field.Root className="field-box-row">
+      <Field.Label>{label}</Field.Label>
+      <Field.Control
+        className={`ms-auto sheet-field focus-ring ${controlClasses}`}
+        onChange={(event) => {
+          onChangeValue(event.currentTarget.value);
+        }}
+        ref={ref}
+        value={value}
+      />
       <FieldMessage refusal={refusal} />
-    </div>
+    </Field.Root>
   );
 }
 
 function PreviewLine({ port }: { port: string }) {
   return (
-    <p className="flex items-center gap-2 font-mono text-mono-value">
-      <span aria-hidden>
-        <StatusIndicator status="stopped" />
-      </span>
-      <span className="text-ink-secondary">Serves at</span>
-      <span className="font-semibold text-ink">{previewAddressFor(port)}</span>
+    <p className="mt-2.5 flex items-center gap-1.75 px-0.5 font-mono text-quiet text-ink-secondary">
+      <span aria-hidden className="size-1.75 shrink-0 rounded-pill bg-ink-tertiary" />
+      <span>Serves at</span>
+      <span className="font-medium text-ink">{previewAddressFor(port)}</span>
     </p>
   );
 }
@@ -194,8 +203,9 @@ type DraftFieldsProps = {
 
 function DraftFields({ draft, nameField }: DraftFieldsProps) {
   return (
-    <div className="flex flex-col gap-3">
-      <LabelledTextField
+    <div className="field-box">
+      <DraftRow
+        controlClasses="w-sheet-field"
         label="Name"
         onChangeValue={(typed) => {
           draft.setDisplayName(typed);
@@ -203,7 +213,8 @@ function DraftFields({ draft, nameField }: DraftFieldsProps) {
         ref={nameField}
         value={draft.displayName}
       />
-      <MonoField
+      <DraftRow
+        controlClasses="w-sheet-field text-end font-mono"
         label="Slug"
         onChangeValue={(typed) => {
           draft.changeSlug(typed);
@@ -211,8 +222,8 @@ function DraftFields({ draft, nameField }: DraftFieldsProps) {
         refusal={draft.refusals.slug}
         value={draft.slug}
       />
-      <MonoField
-        controlWidth="[&_input]:w-port"
+      <DraftRow
+        controlClasses="w-sheet-port text-end font-mono"
         label="Port"
         onChangeValue={(typed) => {
           draft.changePort(typed);
