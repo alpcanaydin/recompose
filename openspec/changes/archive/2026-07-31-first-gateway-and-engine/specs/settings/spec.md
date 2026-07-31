@@ -1,8 +1,8 @@
 # settings
 
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: One settings screen
+### Requirement: One settings screen, and the rows it refuses
 
 The app MUST present every stored setting on a single screen inside the main window, grouped into General, Server, Appearance, and Data. A change MUST persist without a save action, because a preference that needs confirming reads as a form rather than a preference. The screen MUST NOT carry a port, because a port belongs to one gateway rather than to the app. The screen MUST NOT carry a token or a switch that demands one. A token guards one gateway's origin rather than the app, so replacing a leaked one belongs beside the gateway it guards.
 
@@ -29,7 +29,7 @@ The app MUST present every stored setting on a single screen inside the main win
 - When a person opens the Appearance group
 - Then the group offers the theme and nothing beside it
 
-### Requirement: Controls that wait on machinery
+### Requirement: Controls that wait, controls that decided, and controls that never arrive
 
 The app MUST NOT offer a working control for a setting nothing reads. A setting whose machinery the repository lacks MUST render as unavailable and MUST name what it waits for. A reason MUST name a surface a person can picture rather than a subsystem, so it stays true as the machinery arrives. A setting the app has decided rather than deferred MUST state its value instead of rendering as an unavailable control. An inert control implies a choice that nobody will offer. A setting the project has decided never to build MUST be absent rather than waiting, because a row that names what will never arrive promises work nobody plans to do.
 
@@ -56,3 +56,11 @@ The app MUST NOT offer a working control for a setting nothing reads. A setting 
 ### Requirement: Gateway token
 
 **Reason**: A token guards one gateway's origin now that each gateway owns its port, so it belongs to the gateway settings feature rather than to the app-wide screen. The stored secret stays in the vault where ADR-0047 put it, and nothing here deletes it.
+
+### Requirement: One settings screen
+
+**Reason**: The screen keeps its shape and loses two rows, so the requirement returns under a name that says what it refuses to carry. The port scenario leaves with the port, whose range now belongs to the gateway creation sheet.
+
+### Requirement: Controls that wait on machinery
+
+**Reason**: The requirement now separates three fates rather than one. A row whose machinery is coming still waits and names the surface it waits for. A row the app has decided states its value instead. A row the project will never build is absent. Its two old scenarios lumped the first two together and covered a row this change deletes outright, so they retire with the name.

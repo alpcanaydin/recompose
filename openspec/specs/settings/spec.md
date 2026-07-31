@@ -6,22 +6,6 @@ The behavioral contract of the settings a person can change from inside recompos
 
 ## Requirements
 
-### Requirement: One settings screen
-
-The app MUST present every stored setting on a single screen inside the main window, grouped into General, Server, Appearance, and Data. A change MUST persist without a save action, because a preference that needs confirming reads as a form rather than a preference.
-
-#### Scenario: a person changes a setting
-
-- When a person switches the theme to dark
-- Then the app repaints in dark at once
-- And the stored settings document holds the new theme after a restart
-
-#### Scenario: a person enters a port outside the allowed range
-
-- When a person types a port below 1024 or above 65535
-- Then the app keeps the stored port
-- And the field states the range it accepts
-
 ### Requirement: The settings shortcut
 
 The app MUST answer the settings shortcut even when no window stands open, because the tray keeps the app alive after the last window closes. The shortcut MUST reach the settings surface inside the main window rather than opening a second window.
@@ -88,31 +72,6 @@ The app MUST read the schema version a settings document names before parsing it
 - When the settings document names a supported version but fails its schema
 - Then the app moves it aside and carries on with the defaults
 
-### Requirement: Gateway token
-
-The app MUST hold the gateway token in the vault rather than in the settings document, because the settings document sits on disk in plain text. The screen MUST show a masked token, copy the full value on request, and mint a replacement on request. Turning the token requirement off MUST NOT destroy the stored token.
-
-#### Scenario: a person turns the token requirement on for the first time
-
-- When a person turns the requirement on and no token exists
-- Then the app mints a token, stores it in the vault, and shows it masked
-
-#### Scenario: a person regenerates the token
-
-- When a person asks for a new token
-- Then the app replaces the stored token and shows the new value masked
-
-#### Scenario: a person turns the token requirement off
-
-- When a person turns the requirement off
-- Then the stored token survives
-- And turning the requirement on again shows the same token
-
-#### Scenario: the settings document never carries the token
-
-- When the app writes the settings document
-- Then the document holds no token
-
 ### Requirement: Config folder access
 
 The app MUST name the folder that holds its data and MUST open that folder in the operating system file browser on request. The action label MUST name the file browser the running platform ships, because a label naming another platform's browser misleads the reader.
@@ -132,18 +91,51 @@ The app MUST name the folder that holds its data and MUST open that folder in th
 - When the operating system reports a failure opening the folder
 - Then the row states that the folder didn't open
 
-### Requirement: Controls that wait on machinery
+### Requirement: One settings screen, and the rows it refuses
 
-The app MUST NOT offer a working control for a setting nothing reads. A setting whose machinery the repository lacks MUST render as unavailable and MUST name what it waits for.
+The app MUST present every stored setting on a single screen inside the main window, grouped into General, Server, Appearance, and Data. A change MUST persist without a save action, because a preference that needs confirming reads as a form rather than a preference. The screen MUST NOT carry a port, because a port belongs to one gateway rather than to the app. The screen MUST NOT carry a token or a switch that demands one. A token guards one gateway's origin rather than the app, so replacing a leaked one belongs beside the gateway it guards.
 
-#### Scenario: a person meets a setting that waits on the engine
+#### Scenario: a person changes a setting
 
-- When a person reaches the bind address, gateway autostart, or log retention row
-- Then the control renders as unavailable and names the engine as what it waits for
+- When a person switches the theme to dark
+- Then the app repaints in dark at once
+- And the stored settings document holds the new theme after a restart
+
+#### Scenario: a person looks for the gateway port
+
+- When a person opens the settings screen
+- Then the Server group offers no port
+- And the stored settings document holds no port
+
+#### Scenario: a person looks for the gateway token
+
+- When a person opens the settings screen
+- Then the Server group offers no token and no switch demanding one
+- And the stored settings document holds no token requirement
+
+#### Scenario: a person opens the group that lost a row
+
+- When a person opens the Appearance group
+- Then the group offers the theme and nothing beside it
+
+### Requirement: Controls that wait, controls that decided, and controls that never arrive
+
+The app MUST NOT offer a working control for a setting nothing reads. A setting whose machinery the repository lacks MUST render as unavailable and MUST name what it waits for. A reason MUST name a surface a person can picture rather than a subsystem, so it stays true as the machinery arrives. A setting the app has decided rather than deferred MUST state its value instead of rendering as an unavailable control. An inert control implies a choice that nobody will offer. A setting the project has decided never to build MUST be absent rather than waiting, because a row that names what will never arrive promises work nobody plans to do.
+
+#### Scenario: a person meets a setting that waits on launch-time start
+
+- When a person reaches the gateway autostart row
+- Then the control renders as unavailable and names launch-time start as what it waits for
 - And the settings document holds no field for it
 
-#### Scenario: a person meets a setting that waits on the canvas
+#### Scenario: a person meets a setting that waits on request logging
 
-- When a person reaches the reduced wire motion row
-- Then the control renders as unavailable and names the canvas as what it waits for
+- When a person reaches the log retention row
+- Then the control renders as unavailable and names request logging as what it waits for
 - And the settings document holds no field for it
+
+#### Scenario: a person looks for the bind address
+
+- When a person reaches the bind address row
+- Then the row states the loopback address as a value rather than offering a control
+- And the row states that recompose never serves the network
