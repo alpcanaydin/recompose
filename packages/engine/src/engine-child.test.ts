@@ -57,11 +57,11 @@ describe('a directive the parent sends', () => {
     const parent = aParent();
 
     attachEngineChild(parent.port, aLoopbackHolding([]));
-    parent.send({ kind: 'start', gateway: codex });
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
     await reportsReach(parent, 1);
 
     expect(parent.reports).toEqual([
-      { kind: 'state', slug: 'codex', state: { status: 'running' } },
+      { kind: 'state', answers: 'd1', slug: 'codex', state: { status: 'running' } },
     ]);
   });
 
@@ -69,13 +69,14 @@ describe('a directive the parent sends', () => {
     const parent = aParent();
 
     attachEngineChild(parent.port, aLoopbackHolding([]));
-    parent.send({ kind: 'start', gateway: codex });
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
     await reportsReach(parent, 1);
-    parent.send({ kind: 'stop', slug: 'codex' });
+    parent.send({ kind: 'stop', id: 'd2', slug: 'codex' });
     await reportsReach(parent, 2);
 
     expect(parent.reports[1]).toEqual({
       kind: 'state',
+      answers: 'd2',
       slug: 'codex',
       state: { status: 'stopped' },
     });
@@ -85,11 +86,16 @@ describe('a directive the parent sends', () => {
     const parent = aParent();
 
     attachEngineChild(parent.port, aLoopbackHolding([codex.port]));
-    parent.send({ kind: 'start', gateway: codex });
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
     await reportsReach(parent, 1);
 
     expect(parent.reports).toEqual([
-      { kind: 'state', slug: 'codex', state: { status: 'stopped', failure: { port: 8397 } } },
+      {
+        kind: 'state',
+        answers: 'd1',
+        slug: 'codex',
+        state: { status: 'stopped', failure: { port: 8397 } },
+      },
     ]);
   });
 });
@@ -99,12 +105,12 @@ describe('a directive the child cannot read', () => {
     const parent = aParent();
 
     attachEngineChild(parent.port, aLoopbackHolding([]));
-    parent.send({ kind: 'launch', gateway: codex });
-    parent.send({ kind: 'start', gateway: codex });
+    parent.send({ kind: 'launch', id: 'd0', gateway: codex });
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
     await reportsReach(parent, 1);
 
     expect(parent.reports).toEqual([
-      { kind: 'state', slug: 'codex', state: { status: 'running' } },
+      { kind: 'state', answers: 'd1', slug: 'codex', state: { status: 'running' } },
     ]);
   });
 
@@ -112,12 +118,12 @@ describe('a directive the child cannot read', () => {
     const parent = aParent();
 
     attachEngineChild(parent.port, aLoopbackHolding([]));
-    parent.send({ kind: 'start', gateway: { ...codex, slug: 'con' } });
-    parent.send({ kind: 'start', gateway: codex });
+    parent.send({ kind: 'start', id: 'd0', gateway: { ...codex, slug: 'con' } });
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
     await reportsReach(parent, 1);
 
     expect(parent.reports).toEqual([
-      { kind: 'state', slug: 'codex', state: { status: 'running' } },
+      { kind: 'state', answers: 'd1', slug: 'codex', state: { status: 'running' } },
     ]);
   });
 

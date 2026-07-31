@@ -14,12 +14,13 @@ const anyState: fc.Arbitrary<GatewayEngineState> = fc.oneof(
 );
 const anyReport: fc.Arbitrary<EngineReport> = fc.record({
   kind: fc.constant('state' as const),
+  answers: fc.stringMatching(/^d[0-9]{1,4}$/),
   slug: anySlug,
   state: anyState,
 });
 
 function report(slug: string, state: GatewayEngineState): EngineReport {
-  return { kind: 'state', slug, state };
+  return { kind: 'state', answers: 'd1', slug, state };
 }
 
 describe('the ledger a boot starts from', () => {

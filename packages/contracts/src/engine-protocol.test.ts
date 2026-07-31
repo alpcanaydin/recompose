@@ -25,33 +25,49 @@ describe('the gateway the parent hands the child', () => {
 
 describe('a directive the parent sends the child', () => {
   test('a start directive carries the whole gateway the child must serve', () => {
-    const start = { kind: 'start', gateway };
+    const start = { kind: 'start', id: 'd1', gateway };
 
     expect(engineDirectiveSchema.parse(start)).toEqual(start);
   });
 
   test('a stop directive names one gateway and nothing more', () => {
-    const stop = { kind: 'stop', slug: 'personal' };
+    const stop = { kind: 'stop', id: 'd1', slug: 'personal' };
 
     expect(engineDirectiveSchema.parse(stop)).toEqual(stop);
   });
 
   test('a stop directive cannot carry a gateway it has no business restating', () => {
     expect(() =>
-      engineDirectiveSchema.parse({ kind: 'stop', slug: 'personal', gateway }),
+      engineDirectiveSchema.parse({ kind: 'stop', id: 'd1', slug: 'personal', gateway }),
     ).toThrow();
   });
 
   test('a directive the child does not know is refused', () => {
     for (const kind of ['restart', 'shutdown', 'state']) {
-      expect(() => engineDirectiveSchema.parse({ kind, slug: 'personal' })).toThrow();
+      expect(() => engineDirectiveSchema.parse({ kind, id: 'd1', slug: 'personal' })).toThrow();
     }
+  });
+
+  test('a directive carrying no identifier is refused, because its report would answer nobody', () => {
+    expect(() => engineDirectiveSchema.parse({ kind: 'start', gateway })).toThrow();
+    expect(() => engineDirectiveSchema.parse({ kind: 'stop', slug: 'personal' })).toThrow();
+  });
+
+  test('a directive carrying a blank identifier is refused', () => {
+    expect(() =>
+      engineDirectiveSchema.parse({ kind: 'stop', id: '   ', slug: 'personal' }),
+    ).toThrow();
   });
 });
 
 describe('a report the child sends the parent', () => {
   test('a report carries the state of exactly one gateway', () => {
-    const report = { kind: 'state', slug: 'personal', state: { status: 'running' } };
+    const report = {
+      kind: 'state',
+      answers: 'd1',
+      slug: 'personal',
+      state: { status: 'running' },
+    };
 
     expect(engineReportSchema.parse(report)).toEqual(report);
   });
@@ -59,6 +75,7 @@ describe('a report the child sends the parent', () => {
   test('a report carries a failed start inside the state it reports', () => {
     const report = {
       kind: 'state',
+      answers: 'd1',
       slug: 'personal',
       state: { status: 'stopped', failure: { port: 8397 } },
     };
@@ -69,14 +86,25 @@ describe('a report the child sends the parent', () => {
   test('a report the parent does not know is refused', () => {
     for (const kind of ['start', 'stop', 'log']) {
       expect(() =>
-        engineReportSchema.parse({ kind, slug: 'personal', state: { status: 'running' } }),
+        engineReportSchema.parse({
+          kind,
+          answers: 'd1',
+          slug: 'personal',
+          state: { status: 'running' },
+        }),
       ).toThrow();
     }
   });
 
   test('a report about no gateway in particular is refused', () => {
     expect(() =>
-      engineReportSchema.parse({ kind: 'state', state: { status: 'running' } }),
+      engineReportSchema.parse({ kind: 'state', answers: 'd1', state: { status: 'running' } }),
+    ).toThrow();
+  });
+
+  test('a report naming no directive is refused, because the parent could not place it', () => {
+    expect(() =>
+      engineReportSchema.parse({ kind: 'state', slug: 'personal', state: { status: 'running' } }),
     ).toThrow();
   });
 });
@@ -90,16 +118,19 @@ const trimmedDisplayNameArb = fc
   .map((value) => value.trim())
   .filter((value) => value.length > 0);
 
+const directiveIdArb = fc.stringMatching(/^[a-z0-9-]{1,12}$/);
+
 const directiveArb = fc.oneof(
   fc.record({
     kind: fc.constant('start' as const),
+    id: directiveIdArb,
     gateway: fc.record({
       slug: slugArb,
       displayName: trimmedDisplayNameArb,
       port: fc.integer({ min: 1024, max: 65535 }),
     }),
   }),
-  fc.record({ kind: fc.constant('stop' as const), slug: slugArb }),
+  fc.record({ kind: fc.constant('stop' as const), id: directiveIdArb, slug: slugArb }),
 );
 
 describe('the wire between the two processes', () => {

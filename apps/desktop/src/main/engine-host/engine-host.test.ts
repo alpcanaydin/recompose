@@ -34,7 +34,7 @@ function scriptedChild(answer: Answer) {
         const state = answer(directive);
 
         if (state !== null) {
-          send({ kind: 'state', slug, state });
+          send({ kind: 'state', answers: directive.id, slug, state });
         }
       });
     },
@@ -159,14 +159,26 @@ describe('the ledger the engine host keeps', () => {
 });
 
 describe('reports the engine host did not ask for', () => {
-  test('a report naming a gateway nobody asked about still lands in the ledger', async () => {
+  test('a report answering a directive nobody waits on any more leaves the ledger alone', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const scripted = scriptedChild(asAsked);
     const { host } = hostOver(scripted, ['codex']);
 
     await host.start(codex);
-    scripted.send({ kind: 'state', slug: 'gemini', state: { status: 'running' } });
+    scripted.send({ kind: 'state', answers: 'd404', slug: 'codex', state: { status: 'stopped' } });
 
-    expect(host.states()['gemini']).toEqual({ status: 'running' });
+    expect(host.states()).toEqual({ codex: { status: 'running' } });
+  });
+
+  test('a report nobody waits on is written down rather than passed over in silence', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const scripted = scriptedChild(asAsked);
+    const { host } = hostOver(scripted, ['codex']);
+
+    await host.start(codex);
+    scripted.send({ kind: 'state', answers: 'd404', slug: 'codex', state: { status: 'stopped' } });
+
+    expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('codex');
   });
 
   test('a report the schema rejects leaves the ledger alone', async () => {
@@ -175,7 +187,7 @@ describe('reports the engine host did not ask for', () => {
     const { host } = hostOver(scripted, ['codex']);
 
     await host.start(codex);
-    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'nonsense' } });
+    scripted.send({ kind: 'state', answers: 'd1', slug: 'codex', state: { status: 'nonsense' } });
 
     expect(host.states()).toEqual({ codex: { status: 'running' } });
   });
@@ -186,7 +198,7 @@ describe('reports the engine host did not ask for', () => {
     const { host } = hostOver(scripted, ['codex']);
 
     await host.start(codex);
-    scripted.send({ kind: 'state', slug: 'codex', state: { status: 'nonsense' } });
+    scripted.send({ kind: 'state', answers: 'd1', slug: 'codex', state: { status: 'nonsense' } });
 
     expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('engine');
   });

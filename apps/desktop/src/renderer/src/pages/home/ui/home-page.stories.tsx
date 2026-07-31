@@ -47,8 +47,8 @@ export const GatewayMade = meta.story({
  * The surface a person meets when gateways exist but the one they last opened has gone.
  *
  * @summary A launch opens the last gateway, so reaching here with gateways stored means that one
- * is no longer there. Painting nothing would leave a person guessing that the sidebar row is
- * pressable, and would leave a screen reader with nothing at all to announce.
+ * is no longer there. What the surface says is the block's own story. This one only proves the
+ * page reaches for it rather than for the invitation.
  */
 export const NoGatewayChosen = meta.story({
   parameters: { bridge: { gateways: [codex] } },
@@ -56,7 +56,6 @@ export const NoGatewayChosen = meta.story({
     await expect(
       await canvas.findByRole('heading', { name: 'Pick a gateway', level: 1 }),
     ).toBeVisible();
-    await expect(await canvas.findByText('Choose one from the sidebar to see it.')).toBeVisible();
   },
 });
 

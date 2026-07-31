@@ -91,7 +91,7 @@ test('a waiting row stays reachable and names what it waits for', async () => {
 test('the bind address states its value rather than offering a control', async () => {
   const screen = await renderSettings();
 
-  await expect.element(screen.getByText('127.0.0.1', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('127.0.0.1 and [::1]', { exact: true })).toBeVisible();
   await expect
     .element(screen.getByText('Fixed at loopback. recompose never serves the network.'))
     .toBeVisible();

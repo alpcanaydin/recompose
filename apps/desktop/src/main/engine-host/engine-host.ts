@@ -5,6 +5,7 @@ import {
   type EngineStates,
   type GatewayEngineState,
 } from '@recompose/contracts';
+import { randomUUID } from 'node:crypto';
 
 import { allStopped, foldEngineReport } from './engine-state-ledger';
 import { createGatewayOrder } from './gateway-order';
@@ -55,13 +56,6 @@ function publish(resident: Resident, next: EngineStates): void {
   }
 }
 
-function answerWaiter(resident: Resident, slug: string, state: GatewayEngineState): void {
-  const waiting = resident.awaitingReport.get(slug);
-
-  resident.awaitingReport.delete(slug);
-  waiting?.answer(state);
-}
-
 function refuseEveryWaiter(resident: Resident, reason: Error): void {
   const waiting = [...resident.awaitingReport.values()];
 
@@ -81,8 +75,19 @@ function receiveReport(resident: Resident, message: unknown): void {
     return;
   }
 
+  const waiting = resident.awaitingReport.get(report.data.answers);
+
+  if (waiting === undefined) {
+    console.error(
+      `recompose dropped a report on the gateway "${report.data.slug}", because the directive it answers had already been given up on.`,
+    );
+
+    return;
+  }
+
+  resident.awaitingReport.delete(report.data.answers);
   publish(resident, foldEngineReport(resident.states, report.data));
-  answerWaiter(resident, report.data.slug, report.data.state);
+  waiting.answer(report.data.state);
 }
 
 function receiveExit(resident: Resident, code: number): void {
@@ -115,16 +120,20 @@ function runningChild(resident: Resident): EngineChild {
   return spawned;
 }
 
+function gatewayOf(directive: EngineDirective): string {
+  return directive.kind === 'start' ? directive.gateway.slug : directive.slug;
+}
+
 async function sendDirective(
   resident: Resident,
-  slug: string,
   directive: EngineDirective,
 ): Promise<GatewayEngineState> {
   const engine = runningChild(resident);
+  const slug = gatewayOf(directive);
 
   return new Promise<GatewayEngineState>((answer, refuse) => {
     const giveUp = setTimeout(() => {
-      resident.awaitingReport.delete(slug);
+      resident.awaitingReport.delete(directive.id);
       refuse(
         new Error(
           `The engine did not report on the ${directive.kind} of the gateway "${slug}" within ${String(DIRECTIVE_TIMEOUT_MS)}ms.`,
@@ -132,7 +141,7 @@ async function sendDirective(
       );
     }, DIRECTIVE_TIMEOUT_MS);
 
-    resident.awaitingReport.set(slug, {
+    resident.awaitingReport.set(directive.id, {
       answer: (state) => {
         clearTimeout(giveUp);
         answer(state);
@@ -160,14 +169,17 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
   return {
     start: async (gateway) =>
       inGatewayOrder(gateway.slug, async () =>
-        sendDirective(resident, gateway.slug, { kind: 'start', gateway }),
+        sendDirective(resident, { kind: 'start', id: randomUUID(), gateway }),
       ),
     stop: async (slug) =>
-      inGatewayOrder(slug, async () => sendDirective(resident, slug, { kind: 'stop', slug })),
+      inGatewayOrder(slug, async () =>
+        sendDirective(resident, { kind: 'stop', id: randomUUID(), slug }),
+      ),
     restart: async (gateway) =>
       inGatewayOrder(gateway.slug, async () => {
-        await sendDirective(resident, gateway.slug, {
+        await sendDirective(resident, {
           kind: 'stop',
+          id: randomUUID(),
           slug: gateway.slug,
         }).catch((error: unknown) => {
           console.error(
@@ -176,7 +188,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
           );
         });
 
-        return sendDirective(resident, gateway.slug, { kind: 'start', gateway });
+        return sendDirective(resident, { kind: 'start', id: randomUUID(), gateway });
       }),
     states: () => resident.states,
     onStatesChanged: (listener) => {
