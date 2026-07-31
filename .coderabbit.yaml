@@ -6,6 +6,8 @@ reviews:
     - '!skills-lock.json'
     - '!**/routeTree.gen.ts'
     - '!pnpm-lock.yaml'
+    - '!openspec/changes/**'
+    - '!**/*-snapshots/**'
   tools:
     biome:
       enabled: false
