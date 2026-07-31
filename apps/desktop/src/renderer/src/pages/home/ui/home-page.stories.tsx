@@ -1,4 +1,4 @@
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { withShellSurface } from '#.storybook/shell-surface';
@@ -28,7 +28,15 @@ export const FirstLaunch = meta.story({
 export const GatewayMade = meta.story({
   parameters: { bridge: { gateways: [codex] } },
   play: async ({ canvas, canvasElement }) => {
-    const surface = canvasElement.firstElementChild?.firstElementChild;
+    const surface = await waitFor(() => {
+      const painted = canvasElement.firstElementChild?.firstElementChild;
+
+      if (painted === null || painted === undefined) {
+        throw new Error('the surface has not finished loading its gateways');
+      }
+
+      return painted;
+    });
 
     await expect(paintedStyle(surface).backgroundSize).toBe('22px 22px');
     await expect(canvas.queryByRole('heading', { name: 'Create your first gateway' })).toBeNull();
