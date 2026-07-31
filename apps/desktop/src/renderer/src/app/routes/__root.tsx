@@ -11,7 +11,7 @@ import {
 } from '../../shared/api';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
-import { AppSidebar, AppToolbar } from './-app-shell';
+import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
 
 const RouterDevtools =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
@@ -113,12 +113,12 @@ function RootLayout() {
           void navigate({ to: '.', search: withSheet });
         }}
       />
-      <main className="flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
+      <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
         <AppToolbar slug={slug} />
-        <div className="relative flex-1 overflow-y-auto">
+        <AppContent>
           <Outlet />
-        </div>
-        <StatusBar />
+        </AppContent>
+        {slug !== undefined && <StatusBar />}
       </main>
       <CreateGatewaySheet
         onOpenChange={(open) => {
