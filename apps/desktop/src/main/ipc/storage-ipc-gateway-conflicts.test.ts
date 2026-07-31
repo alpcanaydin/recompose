@@ -4,7 +4,7 @@ import {
   type GatewayConfig,
   type IpcError,
 } from '@recompose/contracts';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -116,6 +116,34 @@ describe('a save that collides with a stored gateway', () => {
       ok: true,
       value: [codex],
     });
+  });
+});
+
+describe('two saves arriving at once', () => {
+  test('a port only one of them can have is refused for the other', async () => {
+    const ctx = await freshContext([]);
+    const handlers = createStorageIpcHandlers(ctx);
+
+    const [first, second] = await Promise.all([
+      handlers['gateways:save'](gatewayNamed('codex', 'Codex', 8397)),
+      handlers['gateways:save'](gatewayNamed('claude', 'Claude', 8397)),
+    ]);
+
+    expect([first.ok, second.ok].filter(Boolean)).toHaveLength(1);
+  });
+
+  test('only one document reaches the disk, so no port is handed out twice', async () => {
+    const ctx = await freshContext([]);
+    const handlers = createStorageIpcHandlers(ctx);
+
+    await Promise.all([
+      handlers['gateways:save'](gatewayNamed('codex', 'Codex', 8397)),
+      handlers['gateways:save'](gatewayNamed('claude', 'Claude', 8397)),
+    ]);
+
+    const stored = await readdir(join(ctx.userDataPath, 'gateways'));
+
+    expect(stored).toHaveLength(1);
   });
 });
 

@@ -12,6 +12,7 @@ import type { IpcHandlers } from './dispatch';
 
 import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
+import { oneAtATime } from '../storage/one-at-a-time';
 import {
   loadSettingsFile,
   saveSettingsFile,
@@ -223,10 +224,11 @@ export type StorageIpcHandlers = Pick<
 
 export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHandlers {
   const paths = storagePathsFor(ctx.userDataPath);
+  const inSaveOrder = oneAtATime();
 
   return {
     'gateways:list': async () => listGateways(ctx, paths),
-    'gateways:save': async (config) => saveGateway(ctx, paths, config),
+    'gateways:save': async (config) => inSaveOrder(async () => saveGateway(ctx, paths, config)),
     'settings:get': async () => getSettings(ctx, paths),
     'settings:save': async (settings) => saveSettings(ctx, paths, settings),
     'accounts:list': async () => listAccounts(ctx, paths),
