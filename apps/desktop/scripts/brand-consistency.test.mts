@@ -109,11 +109,11 @@ describe('the Icon Composer bundle', () => {
     );
   });
 
-  it('paints the dark tile layer from the frame anchors and the composited dark band', () => {
+  it('paints the dark tile layer from the deepened tile stops and the composited dark band', () => {
     expect(colorsDeclaredIn(readIconBundle('Assets/tile-dark.svg'))).toEqual(
       sortedUpperCase([
-        brandPalette.frameTop,
-        brandPalette.frameBottom,
+        flattenedMarkFills.darkTileTop,
+        flattenedMarkFills.darkTileBottom,
         flattenedMarkFills.darkBandTop,
         flattenedMarkFills.darkBandBottom,
       ]),
@@ -151,17 +151,24 @@ describe('the flattened mark fills', () => {
     expect(flattenedMarkFills.noteBottom).toBe('#D1D4E7');
   });
 
-  it('composites the note over the deepened tile for the dark appearance', () => {
-    expect(flattenedMarkFills.darkNoteTop).toBe('#C4BFB2');
-    expect(flattenedMarkFills.darkNoteBottom).toBe('#CDCDD0');
+  it('carries the tile stops halfway toward the frame anchors, so the dark tile stays blue', () => {
+    expect(flattenedMarkFills.darkTileTop).toBe('#192A8D');
+    expect(flattenedMarkFills.darkTileBottom).toBe('#0B133E');
   });
 
-  it('derives exactly the eight composited stops', () => {
+  it('composites the note over the deepened tile for the dark appearance', () => {
+    expect(flattenedMarkFills.darkNoteTop).toBe('#C6C4C1');
+    expect(flattenedMarkFills.darkNoteBottom).toBe('#CFD1DB');
+  });
+
+  it('derives exactly the ten solids the mark paints beyond its anchors', () => {
     expect(Object.keys(flattenedMarkFills).toSorted()).toEqual([
       'darkBandBottom',
       'darkBandTop',
       'darkNoteBottom',
       'darkNoteTop',
+      'darkTileBottom',
+      'darkTileTop',
       'noteBottom',
       'noteTop',
       'outerBandBottom',

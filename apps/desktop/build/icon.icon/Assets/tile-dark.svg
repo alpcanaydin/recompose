@@ -4,8 +4,8 @@
 <rect x="96" y="96" width="832" height="832" rx="135.165" fill="url(#deepTile)"/>
 <defs>
 <linearGradient id="deepTile" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
-<stop stop-color="#0C1341"/>
-<stop offset="1" stop-color="#020309"/>
+<stop stop-color="#192A8D"/>
+<stop offset="1" stop-color="#0B133E"/>
 </linearGradient>
 <linearGradient id="darkBand" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
 <stop stop-color="#111C5F"/>

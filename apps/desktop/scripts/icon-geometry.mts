@@ -7,6 +7,8 @@ export type FlattenedStop =
   | 'outerBandBottom'
   | 'noteTop'
   | 'noteBottom'
+  | 'darkTileTop'
+  | 'darkTileBottom'
   | 'darkNoteTop'
   | 'darkNoteBottom';
 
@@ -15,6 +17,7 @@ type ColorChannels = readonly [number, number, number];
 const HEX_TRIPLET = /^#[0-9a-f]{6}$/i;
 
 const MARK_STOP_OPACITY = 0.8;
+const DARK_TILE_DEPTH = 0.5;
 const NOTE_SPAN_TOP = 46 / 256;
 const NOTE_SPAN_BOTTOM = 210 / 256;
 const FLUENT_RADIUS_ON_48 = 2;
@@ -139,16 +142,23 @@ export function flattenOver(foreground: string, backdrop: string, alpha: number)
   return colorOf(mixChannels(channelsOf(foreground), channelsOf(backdrop), alpha));
 }
 
-function gradientSampleAt(top: string, bottom: string, position: number): string {
-  return colorOf(mixChannels(channelsOf(bottom), channelsOf(top), position));
+function blendToward(from: string, to: string, factor: number): string {
+  return colorOf(mixChannels(channelsOf(to), channelsOf(from), factor));
 }
 
 export function tileSampleAt(position: number): string {
-  return gradientSampleAt(brandPalette.tileTop, brandPalette.tileBottom, position);
+  return blendToward(brandPalette.tileTop, brandPalette.tileBottom, position);
 }
 
-function deepenedTileSampleAt(position: number): string {
-  return gradientSampleAt(brandPalette.frameTop, brandPalette.frameBottom, position);
+const darkTileTop = blendToward(brandPalette.tileTop, brandPalette.frameTop, DARK_TILE_DEPTH);
+const darkTileBottom = blendToward(
+  brandPalette.tileBottom,
+  brandPalette.frameBottom,
+  DARK_TILE_DEPTH,
+);
+
+function darkTileSampleAt(position: number): string {
+  return blendToward(darkTileTop, darkTileBottom, position);
 }
 
 const darkBandTop = flattenOver(brandPalette.frameTop, brandPalette.tileTop, MARK_STOP_OPACITY);
@@ -169,14 +179,16 @@ export const flattenedMarkFills: Readonly<Record<FlattenedStop, string>> = Objec
     tileSampleAt(NOTE_SPAN_BOTTOM),
     MARK_STOP_OPACITY,
   ),
+  darkTileTop,
+  darkTileBottom,
   darkNoteTop: flattenOver(
     brandPalette.noteCream,
-    deepenedTileSampleAt(NOTE_SPAN_TOP),
+    darkTileSampleAt(NOTE_SPAN_TOP),
     MARK_STOP_OPACITY,
   ),
   darkNoteBottom: flattenOver(
     brandPalette.brandWhite,
-    deepenedTileSampleAt(NOTE_SPAN_BOTTOM),
+    darkTileSampleAt(NOTE_SPAN_BOTTOM),
     MARK_STOP_OPACITY,
   ),
 });
