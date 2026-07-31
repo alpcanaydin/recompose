@@ -8,7 +8,7 @@ export function GhostGraph() {
   return (
     <svg
       aria-hidden
-      className="h-auto w-full max-w-109 opacity-75"
+      className="mb-6.5 h-ghost-height w-ghost-width shrink-0 opacity-75"
       fill="none"
       viewBox="0 0 436 96"
     >

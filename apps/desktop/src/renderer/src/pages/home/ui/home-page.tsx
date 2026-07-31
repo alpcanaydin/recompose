@@ -37,10 +37,10 @@ export function HomePage({ providerConnected, onCreateGateway, restoreRequest }:
   }, [restoreRequest]);
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="relative h-full">
       {gateways.length === 0 && <EmptyState onCreateGateway={onCreateGateway} />}
       {!dismissed && (
-        <div className="ms-auto mt-auto">
+        <div className="absolute inset-e-4 bottom-4">
           <GetStartedCard
             gatewayExists={gateways.length > 0}
             onSkip={dismissGetStarted}
