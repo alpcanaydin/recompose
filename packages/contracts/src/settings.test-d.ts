@@ -3,8 +3,8 @@ import { describe, expectTypeOf, test } from 'vitest';
 import type { Settings } from './index';
 
 describe('the settings document contract', () => {
-  test('the document pins itself to schema version 3', () => {
-    expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<3>();
+  test('the document pins itself to schema version 4', () => {
+    expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<4>();
   });
 
   test('the two switches the screen writes are plain booleans', () => {
