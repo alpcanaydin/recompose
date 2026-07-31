@@ -75,7 +75,7 @@ function gatewaySubmenu(input: TrayMenuInput, gateway: TrayGateway): TrayMenuIte
 
 function gatewaySection(input: TrayMenuInput): TrayMenuItem[] {
   if (input.gateways.length === 0) {
-    return [];
+    return [{ label: 'No gateways yet', enabled: false }, { type: 'separator' as const }];
   }
 
   return [

@@ -36,5 +36,8 @@ approvals:
   - the visual aligns to the design reference's own stylesheet rather than to the nearest token the file already held, which restores the second empty-state button, the shortcut hint, the sidebar icons, and the status bar
   - the sheet stops asking for a slug and derives it from the display name, which amends the frozen creation requirement a third time, because the port decision left the slug naming only a file and a route that a person never sees
   - the slug rules stay exactly as they are, the length bound and the Windows device-name refusal included, because they now guard a value the app derives rather than one a person types
+  - the api token and its requirement leave the settings screen for the gateway settings feature, because a token guards one gateway's origin now that each gateway owns its port, and a leaked one should be replaceable without breaking every other client
+  - the reduced wire motion row is deleted outright rather than left waiting, because it names something the project will never build, while the autostart and log retention rows stay inert, because they name something it will
+  - the settings document drops requireGatewayToken alongside the port, in the same version 3 migration, since neither version has shipped
 branch: worktree-first-gateway-and-engine
 ---

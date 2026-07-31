@@ -78,8 +78,22 @@ describe('the menu behind the tray icon, with no gateway stored', () => {
       'Open recompose',
       'Settings…',
       'separator',
+      'No gateways yet',
+      'separator',
       'Quit recompose',
     ]);
+  });
+
+  test('names the absence rather than leaving the menu to imply it', () => {
+    const empty = buildTrayMenuTemplate({
+      handlers: recordingHandlers([]),
+      icons,
+      gateways: [],
+      states: {},
+    });
+
+    expect(itemLabelled(empty, 'No gateways yet')?.enabled).toBe(false);
+    expect(itemLabelled(empty, 'No gateways yet')?.click).toBeUndefined();
   });
 
   test('always offers a way out of the app, because a tray can outlive every window', () => {
