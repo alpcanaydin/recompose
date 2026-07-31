@@ -43,6 +43,23 @@ export const GatewayMade = meta.story({
   },
 });
 
+/**
+ * The surface a person meets when gateways exist but the one they last opened has gone.
+ *
+ * @summary A launch opens the last gateway, so reaching here with gateways stored means that one
+ * is no longer there. Painting nothing would leave a person guessing that the sidebar row is
+ * pressable, and would leave a screen reader with nothing at all to announce.
+ */
+export const NoGatewayChosen = meta.story({
+  parameters: { bridge: { gateways: [codex] } },
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'Pick a gateway', level: 1 }),
+    ).toBeVisible();
+    await expect(await canvas.findByText('Choose one from the sidebar to see it.')).toBeVisible();
+  },
+});
+
 /** The home surface is a canvas, so it carries the dot grid at the reference's tint and pitch. */
 export const DottedCanvas = meta.story({
   parameters: { bridge: { gateways: [] } },

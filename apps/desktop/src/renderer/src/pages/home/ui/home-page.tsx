@@ -2,6 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 
 import { gatewaysQueryOptions } from '../../../shared/api';
 import { EmptyState } from './empty-state';
+import { NoGatewayChosen } from './no-gateway-chosen';
 
 type HomePageProps = {
   /** Asked for when the person wants the creation sheet. */
@@ -20,7 +21,11 @@ export function HomePage({ onCreateGateway }: HomePageProps) {
 
   return (
     <div className="relative h-full dot-grid">
-      {gateways.length === 0 && <EmptyState onCreateGateway={onCreateGateway} />}
+      {gateways.length === 0 ? (
+        <EmptyState onCreateGateway={onCreateGateway} />
+      ) : (
+        <NoGatewayChosen />
+      )}
     </div>
   );
 }
