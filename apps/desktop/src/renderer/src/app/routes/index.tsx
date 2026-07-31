@@ -4,11 +4,7 @@ import { HomePage } from '../../pages/home';
 import { gatewaysQueryOptions } from '../../shared/api';
 import { rememberedGateway } from '../../shared/lib';
 import { PageError } from '../../shared/ui';
-import { type RootSearch } from './__root';
-
-function withSheet(previous: RootSearch): RootSearch {
-  return { ...previous, create: true };
-}
+import { withSheet } from './-surface-request';
 
 export const Route = createFileRoute('/')({
   beforeLoad: async ({ context, search }) => {

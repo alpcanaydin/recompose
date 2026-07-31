@@ -14,18 +14,13 @@ import {
   useStopGateway,
 } from '../../../../shared/api';
 import { sidebarHidden, subscribeToSidebarVisibility } from '../../../../shared/lib';
-import { CopyButton, Icon, SidebarToggle } from '../../../../shared/ui';
+import { CopyButton, Icon, SidebarToggle, stateMark, stateWord } from '../../../../shared/ui';
 import { FailedStartLine } from './failed-start-line';
 
 type GatewayToolbarProps = {
   /** Which gateway the toolbar acts on, which is always the selected one. */
   slug: string;
 };
-
-const stateWord = {
-  running: 'Running',
-  stopped: 'Stopped',
-} as const;
 
 function failedStartIn(state: GatewayEngineState): { port: number } | undefined {
   return state.status === 'stopped' ? state.failure : undefined;
@@ -40,15 +35,13 @@ type AddressPillProps = {
 
 /** The address the gateway answers on, filling the strip the way the reference draws it. */
 function AddressPill({ address, port, status }: AddressPillProps) {
-  const mark = status === 'running' ? 'bg-running' : 'bg-stopped';
-
   return (
     <span className="relative flex h-7.5 min-w-0 flex-1 items-center justify-center gap-2.25 overflow-hidden rounded-control border border-line-subtle bg-surface-raised px-8 font-mono text-note whitespace-nowrap">
       <Icon
         className="absolute inset-s-2.5 top-1/2 size-3.5 -translate-y-1/2 text-accent-ink"
         name="network"
       />
-      <span className={`size-1.75 shrink-0 rounded-pill ${mark}`} />
+      <span className={`size-1.75 shrink-0 rounded-pill ${stateMark[status]}`} />
       <span>
         <span className="text-ink-secondary">http://</span>
         <span className="text-ink">{`localhost:${String(port)}`}</span>

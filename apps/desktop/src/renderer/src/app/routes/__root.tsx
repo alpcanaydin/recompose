@@ -22,6 +22,7 @@ import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
 import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
+import { surfaceRequest, withSheet, withoutSheet } from './-surface-request';
 
 const noDevtools = () => null;
 
@@ -33,57 +34,6 @@ const Devtools: ComponentType<{ router: AnyRouter }> =
 export type RouterAppContext = {
   queryClient: QueryClient;
 };
-
-export type RootSearch = {
-  create?: true;
-  getStarted?: true;
-  at?: string;
-};
-
-function pressMark(at: unknown): string | undefined {
-  return typeof at === 'string' || typeof at === 'number' ? String(at) : undefined;
-}
-
-function asked(value: unknown): boolean {
-  return value === true || value === 'true';
-}
-
-function surfaceRequest(search: Record<string, unknown>): RootSearch {
-  const request: RootSearch = {};
-  const at = pressMark(search['at']);
-
-  if (asked(search['create'])) {
-    request.create = true;
-  }
-
-  if (asked(search['getStarted'])) {
-    request.getStarted = true;
-  }
-
-  if (at !== undefined) {
-    request.at = at;
-  }
-
-  return request;
-}
-
-function withSheet(previous: RootSearch): RootSearch {
-  return { ...previous, create: true };
-}
-
-function withoutSheet(previous: RootSearch): RootSearch {
-  const remaining: RootSearch = {};
-
-  if (previous.getStarted === true) {
-    remaining.getStarted = true;
-  }
-
-  if (previous.at !== undefined) {
-    remaining.at = previous.at;
-  }
-
-  return remaining;
-}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   validateSearch: surfaceRequest,

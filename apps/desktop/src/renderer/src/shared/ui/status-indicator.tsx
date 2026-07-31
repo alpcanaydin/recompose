@@ -3,15 +3,7 @@ type StatusIndicatorProps = {
   status: 'running' | 'stopped';
 };
 
-const stateWord = {
-  running: 'Running',
-  stopped: 'Stopped',
-} as const;
-
-const mark = {
-  running: 'bg-running',
-  stopped: 'bg-stopped',
-} as const;
+import { stateMark, stateWord } from './gateway-state';
 
 /**
  * Six pixel mark carrying a serving state as a filled dot, green when it serves and red when it
@@ -25,7 +17,7 @@ export function StatusIndicator({ status }: StatusIndicatorProps) {
   return (
     <span
       aria-label={stateWord[status]}
-      className={`inline-block size-1.5 shrink-0 rounded-pill ${mark[status]}`}
+      className={`inline-block size-1.5 shrink-0 rounded-pill ${stateMark[status]}`}
       role="img"
     />
   );

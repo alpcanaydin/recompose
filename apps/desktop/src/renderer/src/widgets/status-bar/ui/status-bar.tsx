@@ -21,7 +21,7 @@ export function StatusBar() {
         <Reading>0</Reading> req/min
       </Meter>
       <Meter>
-        p95 <Reading>—</Reading>
+        p95 <Reading>0ms</Reading>
       </Meter>
       <Meter>
         <Reading>0</Reading> clients

@@ -6,6 +6,7 @@ export { FieldRow } from './field-row';
 export { NumericField } from './numeric-field';
 export { SegmentedControl } from './segmented-control';
 export { Sheet } from './sheet';
+export { stateMark, stateWord } from './gateway-state';
 export { StatusIndicator } from './status-indicator';
 export { Switch } from './switch';
 export { LabelledTextField } from './labelled-text-field';
