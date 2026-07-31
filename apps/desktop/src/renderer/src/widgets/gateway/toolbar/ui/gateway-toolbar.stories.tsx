@@ -51,9 +51,9 @@ export const Stopped = meta.story({
 export const StripShape = meta.story({
   parameters: { bridge: { gateways: [codex], engineStates: {} } },
   play: async ({ canvas }) => {
-    const start = await canvas.findByRole('button', { name: 'Start' });
-    const strip = start.parentElement;
-    const pill = strip?.firstElementChild;
+    const strip = await canvas.findByRole('toolbar');
+    const copy = await canvas.findByRole('button', { name: 'Copy address' });
+    const pill = [...strip.children].find((child) => child.contains(copy));
 
     await expect(paintedStyle(strip).height).toBe('54px');
     await expect(paintedStyle(strip).columnGap).toBe('10px');
@@ -64,6 +64,43 @@ export const StripShape = meta.story({
     await expect(paintedStyle(pill).borderRadius).toBe('6px');
     await expect(paintedStyle(pill).fontSize).toBe('12.5px');
     await expect(paintedStyle(pill).fontFamily).toContain('Mono');
+  },
+});
+
+/**
+ * Every control the reference draws, in the order it draws them.
+ *
+ * @summary The run control leads, the address fills the middle, and the four the reference draws
+ * to its right stand where it puts them. Each one comes from a single control component, so a
+ * hover or a size proven here is the one every other control in the strip takes.
+ */
+export const EveryControl = meta.story({
+  parameters: { bridge: { gateways: [codex], engineStates: {} } },
+  play: async ({ canvas }) => {
+    const strip = await canvas.findByRole('toolbar');
+    const controls = [...strip.querySelectorAll('button')];
+
+    await expect(controls.map((control) => control.getAttribute('aria-label'))).toEqual([
+      'Start',
+      'Docs',
+      'More',
+      'Copy address',
+      'Tidy the canvas',
+      'View as JSON',
+      'Request log',
+      'Inspector',
+    ]);
+
+    const waiting = controls.filter((control) => control.title.includes('Waits on'));
+
+    await expect(waiting.map((control) => control.title)).toEqual([
+      'Docs. Waits on the guide.',
+      'More. Waits on the gateway menu.',
+      'Tidy the canvas. Waits on the canvas.',
+      'View as JSON. Waits on the config view.',
+      'Request log. Waits on request logging.',
+      'Inspector. Waits on the inspector.',
+    ]);
   },
 });
 

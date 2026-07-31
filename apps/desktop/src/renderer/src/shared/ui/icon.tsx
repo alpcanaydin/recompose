@@ -54,6 +54,36 @@ const glyphs = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  play: <path d="M8.6 5.6 18.4 12l-9.8 6.4Z" fill="currentColor" stroke="none" />,
+  stop: <rect fill="currentColor" height="14" rx="3" stroke="none" width="14" x="5" y="5" />,
+  more: (
+    <>
+      <circle cx="5.5" cy="12" fill="currentColor" r="1.7" stroke="none" />
+      <circle cx="12" cy="12" fill="currentColor" r="1.7" stroke="none" />
+      <circle cx="18.5" cy="12" fill="currentColor" r="1.7" stroke="none" />
+    </>
+  ),
+  tidy: (
+    <path d="M13.2 10.8 4.6 19.4M15.9 4.6l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7ZM20 12.1l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5ZM8.8 3.8l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5Z" />
+  ),
+  json: (
+    <path d="M9.2 4.5c-2 0-2.7 1-2.7 2.5v2.2c0 1.4-.7 2.3-2.1 2.8 1.4.5 2.1 1.4 2.1 2.8v2.2c0 1.5.7 2.5 2.7 2.5M14.8 4.5c2 0 2.7 1 2.7 2.5v2.2c0 1.4.7 2.3 2.1 2.8-1.4.5-2.1 1.4-2.1 2.8v2.2c0 1.5-.7 2.5-2.7 2.5" />
+  ),
+  'panel-bottom': (
+    <>
+      <rect height="14.5" rx="3.4" width="18" x="3" y="4.75" />
+      <path d="M3 14.4h18" />
+      <circle cx="8.4" cy="17" fill="currentColor" r=".95" stroke="none" />
+      <circle cx="12" cy="17" fill="currentColor" r=".95" stroke="none" />
+      <circle cx="15.6" cy="17" fill="currentColor" r=".95" stroke="none" />
+    </>
+  ),
+  'panel-right': (
+    <>
+      <rect height="14.5" rx="3.4" width="18" x="3" y="4.75" />
+      <path d="M14.6 4.75v14.5M17 8.1h1.3M17 11.1h1.3" />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof glyphs;
