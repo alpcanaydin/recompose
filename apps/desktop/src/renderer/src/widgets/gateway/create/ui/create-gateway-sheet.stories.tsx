@@ -108,19 +108,20 @@ export const NameMissing = meta.story({
   },
 });
 
-/** A refusal neither field owns, which stands in the sheet under the address it could not serve. */
-export const SaveRefused = meta.story({
-  parameters: {
+function refusing(channel: 'gateways:save' | 'gateways:offer-port', message: string) {
+  return {
     bridge: {
       overrides: {
-        'gateways:save': async () =>
-          Promise.resolve({
-            ok: false,
-            error: { code: 'storage-failed', message: 'EACCES: permission denied, open gateways' },
-          }),
+        [channel]: async () =>
+          Promise.resolve({ ok: false, error: { code: 'storage-failed', message } }),
       },
     },
-  },
+  };
+}
+
+/** A refusal neither field owns, which stands in the sheet under the address it could not serve. */
+export const SaveRefused = meta.story({
+  parameters: refusing('gateways:save', 'EACCES: permission denied, open gateways'),
   play: async ({ userEvent }) => {
     await userEvent.type(await screen.findByRole('textbox', { name: 'Name' }), 'Codex');
     await userEvent.click(await screen.findByRole('button', { name: 'Create Gateway' }));
@@ -130,6 +131,15 @@ export const SaveRefused = meta.story({
 
     await expect(refusal).toHaveTextContent('EACCES: permission denied, open gateways');
     await expect(paintedBox(refusal).top).toBeGreaterThanOrEqual(paintedBox(preview).bottom);
+  },
+});
+
+/** A probe that found no free port, which leaves the field empty and says whose fault that was. */
+export const PortOfferRefused = meta.story({
+  parameters: refusing('gateways:offer-port', 'the free-port probe failed'),
+  play: async () => {
+    await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('');
+    await expect(await screen.findByRole('alert')).toHaveTextContent('the free-port probe failed');
   },
 });
 

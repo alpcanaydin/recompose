@@ -200,7 +200,7 @@ test('a refusal clears once the person changes the field it concerns', async () 
   await expect.element(page.getByText('Windows reserves this name.')).not.toBeInTheDocument();
 });
 
-test('a probe that cannot find a free port leaves the field empty rather than guessing', async () => {
+test('a probe that cannot find a free port leaves the field empty and says whose fault it was', async () => {
   await openSheet({
     overrides: {
       'gateways:offer-port': async () =>
@@ -212,4 +212,23 @@ test('a probe that cannot find a free port leaves the field empty rather than gu
   });
 
   await expect.element(page.getByRole('textbox', { name: 'Port' })).toHaveValue('');
+  await expect.element(page.getByRole('alert')).toHaveTextContent('the free-port probe failed');
+});
+
+test('a port the person types after a failed offer draws the range refusal, not the probe one', async () => {
+  await openSheet({
+    overrides: {
+      'gateways:offer-port': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'the free-port probe failed' },
+        }),
+    },
+  });
+
+  await nameField().fill('Codex');
+  await page.getByRole('textbox', { name: 'Port' }).fill('80');
+  await press('Create Gateway');
+
+  await expect.element(page.getByText('Accepts 1024 through 65535.')).toBeVisible();
 });

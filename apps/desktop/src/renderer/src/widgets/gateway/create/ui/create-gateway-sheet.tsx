@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { DraftRefusals } from '../lib/gateway-draft';
 
-import { fetchOfferedPort, useSaveGateway } from '../../../../shared/api';
+import { fetchOfferedPort, refusalSentence, useSaveGateway } from '../../../../shared/api';
 import { Sheet } from '../../../../shared/ui';
 import { previewAddressFor, refusalFromMain, refusalsBeforeSaving } from '../lib/gateway-draft';
 
@@ -106,8 +106,9 @@ function SheetFooter({ onCancel, onCreate }: SheetFooterProps) {
   );
 }
 
-function useOfferedPort(): [string, (port: string) => void] {
+function useOfferedPort() {
   const [port, setPort] = useState('');
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let awaited = true;
@@ -118,9 +119,9 @@ function useOfferedPort(): [string, (port: string) => void] {
           setPort(String(offered));
         }
       })
-      .catch(() => {
+      .catch((failure: unknown) => {
         if (awaited) {
-          setPort('');
+          setRefusal(refusalSentence(failure));
         }
       });
 
@@ -129,7 +130,7 @@ function useOfferedPort(): [string, (port: string) => void] {
     };
   }, []);
 
-  return [port, setPort];
+  return { port, setPort, refusal };
 }
 
 function gatewayFrom(displayName: string, slug: string, port: string): GatewayConfig {
@@ -145,7 +146,7 @@ function gatewayFrom(displayName: string, slug: string, port: string): GatewayCo
 
 function useGatewayDraft(onOpenChange: (open: boolean) => void, onCreated: (slug: string) => void) {
   const [displayName, setDisplayName] = useState('');
-  const [port, setPort] = useOfferedPort();
+  const { port, setPort, refusal: offerRefusal } = useOfferedPort();
   const [refusals, setRefusals] = useState<DraftRefusals>({});
   const saveGateway = useSaveGateway();
 
@@ -174,7 +175,7 @@ function useGatewayDraft(onOpenChange: (open: boolean) => void, onCreated: (slug
   return {
     displayName,
     port,
-    refusals,
+    refusals: { ...refusals, sheet: refusals.sheet ?? offerRefusal },
     save,
     changeName: (typed: string) => {
       setDisplayName(typed);
