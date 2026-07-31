@@ -43,5 +43,9 @@ approvals:
   - the channel roster falls from seventeen to fourteen and the error codes from nine to eight, because the three token channels and the token-missing code they alone raised leave with the rows they served
   - ADR-0057 and the design document lose the sentence placing the token switch in settings, because the same change that wrote it deletes the switch, and a record that describes a row nobody can reach misleads the next reader
   - ADR-0047 keeps its accepted status, because the vault half of it still stands and the gateway settings feature is what supersedes the clipboard half, so the pointer waits for the record that replaces it
+  - the duplicate-name scenario states that the field names the gateway holding the name, rather than quoting one sentence, because the sheet now passes main's message through and a scenario that quotes copy breaks on every rewording
+  - the toolbar carries the sidebar control, the run control, docs, tidy, json, and the two panel toggles, which the reference draws and this build had not
+  - the window controls move as the sidebar opens and closes, recorded in ADR-0064, because no single position centres them in both the sidebar band and the toolbar row
+  - the four renderer keys stay out of the settings document, recorded in ADR-0065, because losing one costs a keystroke rather than a decision
 branch: worktree-first-gateway-and-engine
 ---

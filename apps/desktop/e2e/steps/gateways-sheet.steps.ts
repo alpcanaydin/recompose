@@ -87,6 +87,13 @@ Then('the name field reads {string}', async ({ page }, refusal: string) => {
   await expect(fieldRefusal(page, 'Name')).toHaveText(refusal);
 });
 
+Then(
+  'the name field names the gateway {string} as the one holding it',
+  async ({ page }, held: string) => {
+    await expect(fieldRefusal(page, 'Name')).toContainText(held);
+  },
+);
+
 Then('the port field reads {string}', async ({ page }, refusal: string) => {
   await expect(fieldRefusal(page, 'Port')).toHaveText(refusal);
 });

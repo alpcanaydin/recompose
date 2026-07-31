@@ -60,8 +60,7 @@ export async function pressToolbarControl(page: Page, name: string, action: stri
 
 /** The address a person copies out of the toolbar, read off the pill rather than computed. */
 export async function shownAddress(page: Page): Promise<string> {
-  const pill = page.getByRole('button', { name: COPY_ADDRESS }).locator('xpath=..');
-  const shown = await pill.innerText();
+  const shown = await page.getByRole('toolbar').innerText();
   const [address] = /http:\/\/\S+/u.exec(shown) ?? [];
 
   if (address === undefined) {

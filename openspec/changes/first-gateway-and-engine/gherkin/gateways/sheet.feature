@@ -28,7 +28,7 @@ Feature: The creation sheet
     And the creation sheet is open
     When the maintainer tries the name "codex"
     Then the sheet stays open
-    And the name field reads "Another gateway holds this name."
+    And the name field names the gateway "codex" as the one holding it
 
   Scenario Outline: A port outside the accepted range keeps the sheet open
     Given the creation sheet is open
