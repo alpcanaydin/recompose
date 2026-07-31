@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { migrateDocument, type Migration } from './migration';
 
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 
 export const settingsSchema = z.strictObject({
   schemaVersion: z.literal(SETTINGS_VERSION),
@@ -40,17 +40,26 @@ const addVersionTwoSwitches: Migration = {
   }),
 };
 
-const dropWhatBelongsToOneGateway: Migration = {
+const retireTheAppWidePort: Migration = {
   from: 2,
-  migrate: ({ enginePort: _port, requireGatewayToken: _requirement, ...whatSurvives }) => ({
+  migrate: ({ enginePort: _retired, ...whatSurvives }) => ({
     ...whatSurvives,
     schemaVersion: 3,
   }),
 };
 
+const retireTheAppWideTokenRequirement: Migration = {
+  from: 3,
+  migrate: ({ requireGatewayToken: _retired, ...whatSurvives }) => ({
+    ...whatSurvives,
+    schemaVersion: 4,
+  }),
+};
+
 const settingsMigrations: readonly Migration[] = [
   addVersionTwoSwitches,
-  dropWhatBelongsToOneGateway,
+  retireTheAppWidePort,
+  retireTheAppWideTokenRequirement,
 ];
 
 export function loadSettings(doc: unknown): Settings {

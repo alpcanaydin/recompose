@@ -1,12 +1,18 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { defaultSettings, loadSettings, settingsPatchSchema, withSettingsPatch } from './settings';
+import {
+  defaultSettings,
+  loadSettings,
+  SETTINGS_VERSION,
+  settingsPatchSchema,
+  withSettingsPatch,
+} from './settings';
 
 describe('app settings', () => {
   test('defaults: system theme and every switch off', () => {
     expect(defaultSettings()).toEqual({
-      schemaVersion: 3,
+      schemaVersion: SETTINGS_VERSION,
       theme: 'system',
       launchAtLogin: false,
       showInMenuBar: false,
@@ -15,7 +21,7 @@ describe('app settings', () => {
 
   test('a stored settings file parses and keeps its shape', () => {
     const stored = {
-      schemaVersion: 3,
+      schemaVersion: SETTINGS_VERSION,
       theme: 'dark',
       launchAtLogin: true,
       showInMenuBar: true,
@@ -44,6 +50,46 @@ describe('app settings', () => {
   });
 });
 
+describe('a stored version 3 document, the shape written while the token switch existed', () => {
+  test('the retired switch is dropped rather than reported as damage', () => {
+    const storedUnderVersionThree = {
+      schemaVersion: 3,
+      theme: 'dark',
+      launchAtLogin: true,
+      showInMenuBar: true,
+      requireGatewayToken: false,
+    };
+
+    expect(loadSettings(storedUnderVersionThree)).toEqual({
+      schemaVersion: SETTINGS_VERSION,
+      theme: 'dark',
+      launchAtLogin: true,
+      showInMenuBar: true,
+    });
+  });
+
+  const versionThreeDocuments = fc.record({
+    schemaVersion: fc.constant(3),
+    theme: fc.constantFrom('system', 'light', 'dark'),
+    launchAtLogin: fc.boolean(),
+    showInMenuBar: fc.boolean(),
+    requireGatewayToken: fc.boolean(),
+  });
+
+  test.prop([versionThreeDocuments])(
+    'every version 3 document keeps its choices and loses only the retired switch',
+    (storedUnderVersionThree) => {
+      const { requireGatewayToken, ...whatSurvives } = storedUnderVersionThree;
+
+      expect(typeof requireGatewayToken).toBe('boolean');
+      expect(loadSettings(storedUnderVersionThree)).toEqual({
+        ...whatSurvives,
+        schemaVersion: SETTINGS_VERSION,
+      });
+    },
+  );
+});
+
 describe('a stored version 2 document, the shape a real profile holds', () => {
   test('the port and the token requirement are dropped rather than reported as damage', () => {
     const storedUnderVersionTwo = {
@@ -56,7 +102,7 @@ describe('a stored version 2 document, the shape a real profile holds', () => {
     };
 
     expect(loadSettings(storedUnderVersionTwo)).toEqual({
-      schemaVersion: 3,
+      schemaVersion: SETTINGS_VERSION,
       theme: 'system',
       launchAtLogin: false,
       showInMenuBar: true,
@@ -73,7 +119,7 @@ describe('a stored version 2 document, the shape a real profile holds', () => {
   });
 
   test.prop([versionTwoDocuments])(
-    'every version 2 document reaches version 3 keeping its choices and losing both retired fields',
+    'every version 2 document reaches the current version keeping its choices and losing both retired fields',
     (storedUnderVersionTwo) => {
       const { enginePort, requireGatewayToken, ...whatSurvives } = storedUnderVersionTwo;
 
@@ -81,18 +127,18 @@ describe('a stored version 2 document, the shape a real profile holds', () => {
       expect(typeof requireGatewayToken).toBe('boolean');
       expect(loadSettings(storedUnderVersionTwo)).toEqual({
         ...whatSurvives,
-        schemaVersion: 3,
+        schemaVersion: SETTINGS_VERSION,
       });
     },
   );
 });
 
 describe('a stored version 1 document', () => {
-  test('it migrates through both steps, keeping the theme and losing the port', () => {
+  test('it migrates through every step, keeping the theme and losing the port', () => {
     const storedUnderVersionOne = { schemaVersion: 1, theme: 'dark', enginePort: 9000 };
 
     expect(loadSettings(storedUnderVersionOne)).toEqual({
-      schemaVersion: 3,
+      schemaVersion: SETTINGS_VERSION,
       theme: 'dark',
       launchAtLogin: false,
       showInMenuBar: false,
@@ -106,10 +152,10 @@ describe('a stored version 1 document', () => {
   });
 
   test.prop([versionOneDocuments])(
-    'every version 1 document reaches version 3 with its theme intact and its switches off',
+    'every version 1 document reaches the current version with its theme intact and its switches off',
     (storedUnderVersionOne) => {
       expect(loadSettings(storedUnderVersionOne)).toEqual({
-        schemaVersion: 3,
+        schemaVersion: SETTINGS_VERSION,
         theme: storedUnderVersionOne.theme,
         launchAtLogin: false,
         showInMenuBar: false,
@@ -145,7 +191,7 @@ describe('a save that names only the fields it changes', () => {
 
   test('a patch cannot name the schema version, because only a migration moves it', () => {
     expect(settingsPatchSchema.safeParse({ theme: 'dark' }).success).toBe(true);
-    expect(settingsPatchSchema.safeParse({ schemaVersion: 3 }).success).toBe(false);
+    expect(settingsPatchSchema.safeParse({ schemaVersion: SETTINGS_VERSION }).success).toBe(false);
   });
 
   test('the schema version a patch can never name survives every merge', () => {
