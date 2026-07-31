@@ -137,5 +137,5 @@ The app MUST NOT offer a working control for a setting nothing reads. A setting 
 #### Scenario: a person looks for the bind address
 
 - When a person reaches the bind address row
-- Then the row states the loopback address as a value rather than offering a control
+- Then the row states both loopback addresses as a value rather than offering a control
 - And the row states that recompose never serves the network

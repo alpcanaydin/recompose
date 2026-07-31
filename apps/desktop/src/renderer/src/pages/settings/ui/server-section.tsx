@@ -5,7 +5,7 @@ export function ServerSection() {
   return (
     <FieldGroup heading="Server">
       <FieldRow
-        control={<span className="text-control text-ink-secondary">127.0.0.1</span>}
+        control={<span className="text-control text-ink-secondary">127.0.0.1 and [::1]</span>}
         description="Fixed at loopback. recompose never serves the network."
         label="Bind address"
       />
