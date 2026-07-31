@@ -19,6 +19,10 @@
       "entry": ["src/**/*.test-d.ts", "vitest.mutation.config.ts"],
       "ignoreDependencies": ["fast-check"]
     },
+    "packages/engine": {
+      "entry": ["vitest.mutation.config.ts"],
+      "ignoreDependencies": ["fast-check"]
+    },
     ".": {
       "entry": ["steiger.config.ts", "probity.config.ts"],
       "ignore": [".claude/workflows/**"],

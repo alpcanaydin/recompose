@@ -15,7 +15,7 @@ describe('settings store', () => {
 
   test('saved settings load back identically', async () => {
     const file = join(await mkdtemp(join(tmpdir(), 'recompose-settings-')), 'settings.json');
-    const custom = { ...defaultSettings(), theme: 'dark' as const, enginePort: 9001 };
+    const custom = { ...defaultSettings(), theme: 'dark' as const, launchAtLogin: true };
 
     await saveSettingsFile(file, custom);
 

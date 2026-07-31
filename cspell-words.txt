@@ -23,6 +23,7 @@ chromaui
 cliproxyapi
 Codechecks
 codegen
+Commvault
 coderabbit
 componentwise
 cooldown
@@ -38,6 +39,7 @@ dmgbuild
 docblocks
 domcontentloaded
 dorny
+dotless
 DPAPI
 dyld
 Electrobun
@@ -58,6 +60,8 @@ IDAT
 idempotently
 IHDR
 inspectable
+kapi
+Kapı
 karpathy
 Kimi
 Langdock
@@ -117,6 +121,7 @@ Scriptable
 scrollview
 semgrep
 servernum
+Shadowsocks
 setstate
 shellcheck
 snapcraft
@@ -137,6 +142,7 @@ textboxes
 textnodes
 Toggl
 toggleable
+togglefullscreen
 tokenless
 topsecret
 tosorted

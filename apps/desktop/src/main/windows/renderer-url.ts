@@ -23,3 +23,17 @@ export function rendererUrlFor(base: string, route: string): string {
 export function settingsShortcutRouteFor(press: number): string {
   return `${SETTINGS_SHORTCUT_ROUTE}&at=${String(press)}`;
 }
+
+/**
+ * The creation sheet opened over the canvas, whatever surface a person stands on.
+ *
+ * @summary A gateway is born on the canvas, so the sheet asks its questions over the surface the
+ * answer lands on rather than over a settings list the new gateway has nothing to do with.
+ */
+export function newGatewayRouteFor(press: number): string {
+  return `/?create=true&at=${String(press)}`;
+}
+
+export function getStartedRouteFor(press: number): string {
+  return `/?getStarted=true&at=${String(press)}`;
+}

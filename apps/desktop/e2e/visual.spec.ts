@@ -39,8 +39,8 @@ async function settleFonts(app: ElectronApplication, page: Page): Promise<void> 
 }
 
 async function openProviders(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Providers' }).click();
-  await expect(page.getByRole('heading', { name: 'Providers' })).toBeVisible();
+  await page.getByRole('link', { name: 'API Keys' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
 }
 
 async function openSettings(page: Page): Promise<void> {
@@ -50,7 +50,9 @@ async function openSettings(page: Page): Promise<void> {
 
 test('the home screen matches its baseline', async ({ electronApp, page }) => {
   await pinLightScheme(electronApp);
-  await expect(page.getByText('Select a gateway or create one to get started.')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Create your first gateway' }),
+  ).toBeVisible();
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('home-empty.png', capture);
 });
@@ -61,7 +63,7 @@ test('the providers screen matches its baseline before any account exists', asyn
 }) => {
   await pinLightScheme(electronApp);
   await openProviders(page);
-  await expect(page.getByRole('listitem')).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(0);
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-empty.png', capture);
 });
@@ -77,7 +79,9 @@ test('the providers screen matches its baseline with a connected account', async
   await page.getByRole('textbox', { name: 'Label' }).fill('Claude Max');
   await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
   await page.getByRole('button', { name: 'Connect' }).click();
-  await expect(page.getByRole('listitem').filter({ hasText: 'Claude Max' })).toBeVisible();
+  await expect(
+    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Claude Max' }),
+  ).toBeVisible();
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-connected.png', capture);
 });

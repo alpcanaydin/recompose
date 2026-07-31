@@ -1,7 +1,12 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { GATEWAY_CONFIG_VERSION, gatewayConfigSchema, loadGatewayConfig } from './gateway-config';
+import {
+  GATEWAY_CONFIG_VERSION,
+  GATEWAY_PORT_RANGE,
+  gatewayConfigSchema,
+  loadGatewayConfig,
+} from './gateway-config';
 
 const validTarget = {
   kind: 'target' as const,
@@ -15,6 +20,7 @@ const validConfig = {
   schemaVersion: GATEWAY_CONFIG_VERSION,
   slug: 'my-gateway',
   displayName: 'My Gateway',
+  port: 8397,
   virtualModels: [
     {
       id: 'vm1',
@@ -47,6 +53,14 @@ describe('gateway config schema: valid shapes', () => {
     };
 
     expect(gatewayConfigSchema.parse(direct).virtualModels[0]?.routing.kind).toBe('target');
+  });
+});
+
+describe('a gateway that holds no virtual model yet', () => {
+  test('a gateway stores before any provider connects', () => {
+    const bare = { ...validConfig, virtualModels: [] };
+
+    expect(gatewayConfigSchema.parse(bare).virtualModels).toEqual([]);
   });
 });
 
@@ -191,7 +205,8 @@ describe('gateway config schema: migration', () => {
 const slugSegmentArb = fc.stringMatching(/^[a-z0-9]{1,6}$/);
 const slugArb = fc
   .array(slugSegmentArb, { minLength: 1, maxLength: 4 })
-  .map((segments) => segments.join('-'));
+  .map((segments) => segments.join('-'))
+  .filter((slug) => !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(slug));
 
 const targetArb = fc.record({
   kind: fc.constant('target' as const),
@@ -223,6 +238,7 @@ const configArb = fc.record({
   schemaVersion: fc.constant(GATEWAY_CONFIG_VERSION),
   slug: slugArb,
   displayName: trimmedDisplayNameArb,
+  port: fc.integer({ min: GATEWAY_PORT_RANGE.min, max: GATEWAY_PORT_RANGE.max }),
   virtualModels: fc.array(
     fc.record({
       id: fc.uuid(),
@@ -230,7 +246,7 @@ const configArb = fc.record({
       displayName: trimmedDisplayNameArb,
       routing: routingArb,
     }),
-    { minLength: 1, maxLength: 4 },
+    { minLength: 0, maxLength: 4 },
   ),
   layout: fc.record({
     nodes: fc.dictionary(

@@ -1,8 +1,9 @@
-import type { RecomposeIpc } from '@recompose/contracts';
+import type { RecomposeIpc, RecomposeIpcEvents } from '@recompose/contracts';
 
 declare global {
   interface Window {
     recompose: RecomposeIpc;
+    recomposeEvents: RecomposeIpcEvents;
   }
 }
 

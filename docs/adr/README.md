@@ -10,7 +10,7 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0002](0002-engine-in-electron-utilityprocess.md)                           | Gateway Engine Runs in Electron's utilityProcess                                    | Accepted   | 2026-07-21 |
 | [0003](0003-scaffold-with-electron-vite.md)                                 | Scaffold with electron-vite                                                         | Accepted   | 2026-07-21 |
 | [0004](0004-pnpm-workspaces-turborepo.md)                                   | pnpm Workspaces + Turborepo                                                         | Accepted   | 2026-07-21 |
-| [0005](0005-single-port-path-per-gateway.md)                                | Single Port, Path per Gateway, Both Dialects Always                                 | Accepted   | 2026-07-21 |
+| [0005](0005-single-port-path-per-gateway.md)                                | Single Port, Path per Gateway, Both Dialects Always                                 | Superseded | 2026-07-21 |
 | [0006](0006-local-quality-gate-layer.md)                                    | Local Quality Gate Layer                                                            | Accepted   | 2026-07-21 |
 | [0007](0007-ci-layer.md)                                                    | CI Layer                                                                            | Accepted   | 2026-07-22 |
 | [0008](0008-liquid-glass-window-chrome.md)                                  | Liquid Glass Window Chrome via electron-liquid-glass                                | Accepted   | 2026-07-22 |
@@ -61,3 +61,13 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0053](0053-flow-green-is-a-canvas-token-the-palette-does-not-carry-yet.md) | Flow Green Is a Canvas Token the Palette Doesn't Carry Yet                          | Accepted   | 2026-07-30 |
 | [0054](0054-a-newer-settings-document-is-a-typed-failure.md)                | A Newer Settings Document Is a Typed Failure, Not Damage                            | Accepted   | 2026-07-30 |
 | [0055](0055-app-icon-identity-and-recompose-presentation.md)                | The App Icon Identity and the Recompose Presentation                                | Accepted   | 2026-07-30 |
+| [0056](0056-each-gateway-owns-its-own-loopback-port.md)                     | Each Gateway Owns Its Own Loopback Port                                             | Accepted   | 2026-07-31 |
+| [0057](0057-the-engine-serves-over-hono.md)                                 | The Engine Serves Over Hono                                                         | Accepted   | 2026-07-31 |
+| [0058](0058-lifecycle-state-pushes-over-a-typed-event-map.md)               | Lifecycle State Pushes Over a Typed Event Map                                       | Accepted   | 2026-07-31 |
+| [0059](0059-the-slug-rule-tightens-to-a-device-safe-identifier.md)          | The Slug Rule Tightens to a Bounded, Device-Safe Identifier                         | Accepted   | 2026-07-31 |
+| [0060](0060-the-permission-policy-allows-one-clipboard-write.md)            | The Permission Policy Allows One Clipboard Write                                    | Accepted   | 2026-07-31 |
+| [0061](0061-the-slug-comes-from-the-name.md)                                | The Slug Comes From the Name, Folded by Hand                                        | Accepted   | 2026-07-31 |
+| [0062](0062-a-schema-version-names-one-shape.md)                            | A Schema Version Names One Shape, and Every Store Reads It First                    | Accepted   | 2026-07-31 |
+| [0063](0063-gateway-ports-come-from-a-recompose-band.md)                    | Gateway Ports Come From a recompose Band, Not the Ephemeral Pool                    | Accepted   | 2026-07-31 |
+| [0064](0064-the-window-controls-follow-the-sidebar.md)                      | The Window Controls Follow the Sidebar                                              | Accepted   | 2026-07-31 |
+| [0065](0065-view-state-stays-in-the-renderer.md)                            | View State Stays in the Renderer, Apart From the Settings Document                  | Accepted   | 2026-07-31 |

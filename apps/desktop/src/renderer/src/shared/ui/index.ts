@@ -1,9 +1,15 @@
+export { CopyButton } from './copy-button';
 export { FieldGroup } from './field-group';
+export { type IconName, Icon } from './icon';
 export { placeFocus } from './place-focus';
 export { FieldRow } from './field-row';
 export { NumericField } from './numeric-field';
 export { SegmentedControl } from './segmented-control';
+export { Sheet } from './sheet';
+export { stateMark, stateWord } from './gateway-state';
+export { StatusIndicator } from './status-indicator';
 export { Switch } from './switch';
 export { LabelledTextField } from './labelled-text-field';
 export { TextField } from './text-field';
 export { PageError } from './page-error';
+export { SidebarToggle } from './sidebar-toggle';

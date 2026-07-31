@@ -1,69 +1,97 @@
 import type { QueryClient } from '@tanstack/react-query';
+import type { AnyRouter } from '@tanstack/react-router';
+import type { ComponentType } from 'react';
 
-import { Link, Outlet, createRootRouteWithContext } from '@tanstack/react-router';
-import { Suspense, lazy, useId } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  Outlet,
+  createRootRouteWithContext,
+  useNavigate,
+  useParams,
+  useRouter,
+} from '@tanstack/react-router';
+import { Suspense, lazy, useEffect, useSyncExternalStore } from 'react';
 
-const RouterDevtools =
+import {
+  accountsQueryOptions,
+  bindEngineStatesToCache,
+  engineStatesQueryOptions,
+  gatewaysQueryOptions,
+} from '../../shared/api';
+import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
+import { CreateGatewaySheet } from '../../widgets/gateway/create';
+import { StatusBar } from '../../widgets/status-bar';
+import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
+import { surfaceRequest, withSheet, withoutSheet } from './-surface-request';
+
+const noDevtools = () => null;
+
+const Devtools: ComponentType<{ queryClient: QueryClient; router: AnyRouter }> =
   import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? lazy(async () =>
-        import('@tanstack/react-router-devtools').then((module) => ({
-          default: module.TanStackRouterDevtools,
-        })),
-      )
-    : () => null;
-
-const QueryDevtools =
-  import.meta.env.DEV && import.meta.env.MODE !== 'test'
-    ? lazy(async () =>
-        import('@tanstack/react-query-devtools').then((module) => ({
-          default: module.ReactQueryDevtools,
-        })),
-      )
-    : () => null;
+    ? lazy(async () => import('../devtools').then((module) => ({ default: module.AppDevtools })))
+    : noDevtools;
 
 export type RouterAppContext = {
   queryClient: QueryClient;
 };
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
+  validateSearch: surfaceRequest,
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(gatewaysQueryOptions),
+      context.queryClient.ensureQueryData(engineStatesQueryOptions),
+      context.queryClient.ensureQueryData(accountsQueryOptions),
+    ]);
+  },
   component: RootLayout,
   notFoundComponent: NotFound,
 });
 
 function RootLayout() {
-  const systemId = useId();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const { create, getStarted, at } = Route.useSearch();
+  const { slug } = useParams({ strict: false });
+  const sidebarAway = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+
+  useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
+
+  useEffect(() => {
+    void window.recompose['system:sidebar-shown'](!sidebarAway);
+  }, [sidebarAway]);
 
   return (
     <div className="flex h-full overflow-hidden">
-      <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-4 pt-13 pb-4 text-body text-ink-secondary">
-        <nav className="app-no-drag flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <Link className="nav-item" to="/">
-              Gateways
-            </Link>
-            <Link className="nav-item" to="/providers">
-              Providers
-            </Link>
-          </div>
-          <div aria-labelledby={systemId} className="flex flex-col gap-2" role="group">
-            <h2 className="text-overline text-ink uppercase" id={systemId}>
-              System
-            </h2>
-            <Link className="nav-item" to="/settings">
-              Settings
-            </Link>
-          </div>
-        </nav>
-      </aside>
-      <main className="relative flex-1 bg-surface-content text-body">
-        <div aria-hidden className="app-drag absolute inset-x-0 top-0 h-13" />
-        <div className="h-full overflow-y-auto px-6 pt-13 pb-6">
+      {!sidebarAway && (
+        <AppSidebar
+          onNewGateway={() => {
+            void navigate({ to: '/', search: withSheet });
+          }}
+          restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
+        />
+      )}
+      <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
+        <AppToolbar slug={slug} />
+        <AppContent>
           <Outlet />
-        </div>
+        </AppContent>
+        {slug !== undefined && <StatusBar />}
       </main>
+      <CreateGatewaySheet
+        onCreated={(slug) => {
+          void navigate({ to: '/gateways/$slug', params: { slug }, search: {} });
+        }}
+        onOpenChange={(open) => {
+          if (!open) {
+            void navigate({ to: '.', search: withoutSheet, replace: true });
+          }
+        }}
+        open={create === true}
+      />
       <Suspense>
-        <RouterDevtools />
-        <QueryDevtools />
+        <Devtools queryClient={queryClient} router={router} />
       </Suspense>
     </div>
   );

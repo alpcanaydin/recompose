@@ -9,17 +9,27 @@ export type AppMenuItem = {
   submenu?: AppMenuItem[];
 };
 
-function settingsItem(onOpenSettings: () => void): AppMenuItem {
-  return { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: onOpenSettings };
+export type AppMenuHandlers = {
+  onOpenSettings: () => void;
+  onNewGateway: () => void;
+  onShowGetStarted: () => void;
+};
+
+function settingsItem(handlers: AppMenuHandlers): AppMenuItem {
+  return { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: handlers.onOpenSettings };
 }
 
-function macApplicationMenu(onOpenSettings: () => void): AppMenuItem {
+function newGatewayItem(handlers: AppMenuHandlers): AppMenuItem {
+  return { label: 'New Gateway…', accelerator: 'CmdOrCtrl+N', click: handlers.onNewGateway };
+}
+
+function macApplicationMenu(handlers: AppMenuHandlers): AppMenuItem {
   return {
     label: 'Recompose',
     submenu: [
       { role: 'about' },
       { type: 'separator' },
-      settingsItem(onOpenSettings),
+      settingsItem(handlers),
       { type: 'separator' },
       { role: 'services' },
       { type: 'separator' },
@@ -32,21 +42,61 @@ function macApplicationMenu(onOpenSettings: () => void): AppMenuItem {
   };
 }
 
-function fileMenu(onOpenSettings: () => void): AppMenuItem {
+function macFileMenu(handlers: AppMenuHandlers): AppMenuItem {
   return {
     label: 'File',
-    submenu: [settingsItem(onOpenSettings), { type: 'separator' }, { role: 'quit' }],
+    submenu: [newGatewayItem(handlers), { type: 'separator' }, { role: 'close' }],
   };
+}
+
+function fileMenu(handlers: AppMenuHandlers): AppMenuItem {
+  return {
+    label: 'File',
+    submenu: [
+      newGatewayItem(handlers),
+      { type: 'separator' },
+      settingsItem(handlers),
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  };
+}
+
+function viewMenu(handlers: AppMenuHandlers): AppMenuItem {
+  return {
+    label: 'View',
+    submenu: [
+      { label: 'Show Get Started', click: handlers.onShowGetStarted },
+      { type: 'separator' },
+      { role: 'reload' },
+      { role: 'forceReload' },
+      { role: 'toggleDevTools' },
+      { type: 'separator' },
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
+    ],
+  };
+}
+
+function leadingMenus(platform: NodeJS.Platform, handlers: AppMenuHandlers): AppMenuItem[] {
+  if (platform === 'darwin') {
+    return [macApplicationMenu(handlers), macFileMenu(handlers)];
+  }
+
+  return [fileMenu(handlers)];
 }
 
 export function buildAppMenuTemplate(
   platform: NodeJS.Platform,
-  onOpenSettings: () => void,
+  handlers: AppMenuHandlers,
 ): AppMenuItem[] {
   return [
-    platform === 'darwin' ? macApplicationMenu(onOpenSettings) : fileMenu(onOpenSettings),
+    ...leadingMenus(platform, handlers),
     { role: 'editMenu' },
-    { role: 'viewMenu' },
+    viewMenu(handlers),
     { role: 'windowMenu' },
   ];
 }

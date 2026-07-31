@@ -1,5 +1,7 @@
 import type { BrowserWindowConstructorOptions } from 'electron';
 
+import { windowButtonsFor } from './window-buttons';
+
 export function windowOptionsFor(
   platform: NodeJS.Platform,
   preloadPath: string,
@@ -15,7 +17,8 @@ export function windowOptionsFor(
     ...(platform === 'darwin'
       ? {
           transparent: true,
-          titleBarStyle: 'hiddenInset' as const,
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: windowButtonsFor(true),
         }
       : {}),
     ...(platform === 'linux' ? { icon: iconPath } : {}),

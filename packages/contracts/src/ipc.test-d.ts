@@ -2,14 +2,21 @@ import { describe, expectTypeOf, test } from 'vitest';
 
 import type {
   AccountsDocument,
+  EngineDirective,
+  EngineGateway,
+  EngineReport,
+  EngineStates,
   GatewayConfig,
-  GatewayTokenStatus,
+  GatewayEngineState,
   IpcChannel,
   IpcError,
+  IpcEvent,
+  IpcEventPayload,
   IpcRequest,
   IpcResponse,
   Migration,
   RecomposeIpc,
+  RecomposeIpcEvents,
   Settings,
   SettingsPatch,
   SystemState,
@@ -44,12 +51,9 @@ describe('ipc request contracts', () => {
     expectTypeOf<IpcRequest<'gateways:save'>>().not.toHaveProperty('secret');
   });
 
-  test('the system and token channels act on the whole app, so none takes a payload', () => {
+  test('the system channels act on the whole app, so neither takes a payload', () => {
     expectTypeOf<IpcRequest<'system:get'>>().toEqualTypeOf<void>();
     expectTypeOf<IpcRequest<'system:open-config-folder'>>().toEqualTypeOf<void>();
-    expectTypeOf<IpcRequest<'gateway-token:status'>>().toEqualTypeOf<void>();
-    expectTypeOf<IpcRequest<'gateway-token:mint'>>().toEqualTypeOf<void>();
-    expectTypeOf<IpcRequest<'gateway-token:copy'>>().toEqualTypeOf<void>();
   });
 });
 
@@ -71,25 +75,15 @@ describe('ipc response contracts', () => {
       | 'validation-failed'
       | 'storage-failed'
       | 'folder-open-failed'
-      | 'token-missing'
+      | 'name-conflict'
+      | 'port-conflict'
     >();
   });
 
-  test('the observed system state and the token status ride the same envelope', () => {
+  test('the observed system state rides the result envelope', () => {
     expectTypeOf<IpcResponse<'system:get'>>().toEqualTypeOf<
       { ok: true; value: SystemState } | { ok: false; error: IpcError }
     >();
-    expectTypeOf<IpcResponse<'gateway-token:status'>>().toEqualTypeOf<
-      { ok: true; value: GatewayTokenStatus } | { ok: false; error: IpcError }
-    >();
-    expectTypeOf<IpcResponse<'gateway-token:mint'>>().toEqualTypeOf<
-      { ok: true; value: GatewayTokenStatus } | { ok: false; error: IpcError }
-    >();
-  });
-
-  test('the token status carries a mask or nothing, and never the plaintext', () => {
-    expectTypeOf<GatewayTokenStatus['masked']>().toEqualTypeOf<string | null>();
-    expectTypeOf<GatewayTokenStatus>().not.toHaveProperty('token');
     expectTypeOf<SystemState>().not.toHaveProperty('platform');
   });
 
@@ -100,11 +94,8 @@ describe('ipc response contracts', () => {
 });
 
 describe('the channels that act rather than read', () => {
-  test('opening the config folder and copying the token answer with nothing', () => {
+  test('opening the config folder answers with nothing', () => {
     expectTypeOf<IpcResponse<'system:open-config-folder'>>().toEqualTypeOf<
-      { ok: true; value: void } | { ok: false; error: IpcError }
-    >();
-    expectTypeOf<IpcResponse<'gateway-token:copy'>>().toEqualTypeOf<
       { ok: true; value: void } | { ok: false; error: IpcError }
     >();
   });
@@ -115,10 +106,73 @@ describe('bridge surface totality', () => {
     expectTypeOf<keyof RecomposeIpc>().toEqualTypeOf<IpcChannel>();
   });
 
+  test('no channel on the bridge serves a gateway token', () => {
+    expectTypeOf<IpcChannel>().not.toEqualTypeOf<'gateway-token:status'>();
+    expectTypeOf<Extract<IpcChannel, `gateway-token:${string}`>>().toEqualTypeOf<never>();
+  });
+
   test('each bridge entry maps its channel request to a promised response', () => {
     expectTypeOf<RecomposeIpc['accounts:connect']>().toEqualTypeOf<
       (request: IpcRequest<'accounts:connect'>) => Promise<IpcResponse<'accounts:connect'>>
     >();
+  });
+});
+
+describe('push surface totality', () => {
+  test('the event bridge covers every contract event and nothing else', () => {
+    expectTypeOf<keyof RecomposeIpcEvents>().toEqualTypeOf<IpcEvent>();
+  });
+
+  test('one event exists, and it is the state push', () => {
+    expectTypeOf<IpcEvent>().toEqualTypeOf<'engine:state'>();
+  });
+
+  test('the push carries the whole snapshot rather than one gateway', () => {
+    expectTypeOf<IpcEventPayload<'engine:state'>>().toEqualTypeOf<EngineStates>();
+  });
+
+  test('subscribing answers a disposer, so no listener outlives its subscriber', () => {
+    expectTypeOf<RecomposeIpcEvents['engine:state']>().toEqualTypeOf<
+      (listener: (payload: EngineStates) => void) => () => void
+    >();
+  });
+});
+
+describe('the state one gateway reports', () => {
+  test('a gateway is either serving or stopped, and never a third thing', () => {
+    expectTypeOf<GatewayEngineState['status']>().toEqualTypeOf<'running' | 'stopped'>();
+  });
+
+  test('only a stopped gateway can name the port its start lost', () => {
+    expectTypeOf<Extract<GatewayEngineState, { status: 'running' }>>().not.toHaveProperty(
+      'failure',
+    );
+    expectTypeOf<Extract<GatewayEngineState, { status: 'stopped' }>>().toHaveProperty('failure');
+  });
+
+  test('a failed start names a port and nothing a screen would have to interpret', () => {
+    expectTypeOf<
+      NonNullable<Extract<GatewayEngineState, { status: 'stopped' }>['failure']>
+    >().toEqualTypeOf<{ port: number }>();
+  });
+});
+
+describe('the protocol the two processes speak', () => {
+  test('a directive is exactly a start or a stop', () => {
+    expectTypeOf<EngineDirective['kind']>().toEqualTypeOf<'start' | 'stop'>();
+  });
+
+  test('the child hears only what serving needs, so no secret can reach it', () => {
+    expectTypeOf<EngineGateway>().toEqualTypeOf<{
+      slug: string;
+      displayName: string;
+      port: number;
+    }>();
+  });
+
+  test('a report carries one gateway and the same state every surface reads', () => {
+    expectTypeOf<EngineReport['state']>().toEqualTypeOf<GatewayEngineState>();
+    expectTypeOf<EngineReport['kind']>().toEqualTypeOf<'state'>();
   });
 });
 

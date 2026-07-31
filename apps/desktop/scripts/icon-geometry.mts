@@ -104,7 +104,7 @@ export function volumeRendition(master: string): string {
 export function silhouetteOf(smallMaster: string): string {
   return smallMaster
     .replaceAll(brandPalette.noteCream, '#000000')
-    .replaceAll(brandPalette.frameTop, '#000000');
+    .replaceAll(`stroke="${brandPalette.frameTop}"`, 'stroke="none"');
 }
 
 function channelsOf(color: string): ColorChannels {

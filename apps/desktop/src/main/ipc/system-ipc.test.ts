@@ -15,6 +15,7 @@ function systemContext(overrides: Partial<SystemIpcContext> = {}): SystemIpcCont
     readLoginItem: () => false,
     isMenuBarVisible: () => false,
     openFolder: async () => Promise.resolve(''),
+    placeWindowButtons: () => undefined,
     ...overrides,
   };
 }

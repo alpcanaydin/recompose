@@ -1,3 +1,5 @@
+import type { Ref } from 'react';
+
 import { Field } from '@base-ui/react/field';
 
 type LabelledTextFieldProps = {
@@ -9,6 +11,8 @@ type LabelledTextFieldProps = {
   type?: 'password' | 'text' | undefined;
   /** Receives the raw input value on every keystroke. */
   onChangeValue: (value: string) => void;
+  /** Reaches the input itself, so a sheet can land opening focus on this field. */
+  ref?: Ref<HTMLInputElement> | undefined;
 };
 
 /**
@@ -22,6 +26,7 @@ export function LabelledTextField({
   value,
   type = 'text',
   onChangeValue,
+  ref,
 }: LabelledTextFieldProps) {
   return (
     <Field.Root className="flex flex-col gap-1">
@@ -31,6 +36,7 @@ export function LabelledTextField({
         onChange={(event) => {
           onChangeValue(event.currentTarget.value);
         }}
+        ref={ref}
         type={type}
         value={value}
       />

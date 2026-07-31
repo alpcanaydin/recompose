@@ -3,8 +3,8 @@ import type { SubmitEvent } from 'react';
 
 import { useState } from 'react';
 
+import { useConnectAccount } from '../../../shared/api';
 import { LabelledTextField } from '../../../shared/ui';
-import { useConnectAccount } from '../api/accounts';
 import { AccountKindField } from './account-kind-field';
 
 type Draft = IpcRequest<'accounts:connect'>;

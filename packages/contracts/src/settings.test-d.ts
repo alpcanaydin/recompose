@@ -3,35 +3,34 @@ import { describe, expectTypeOf, test } from 'vitest';
 import type { Settings } from './index';
 
 describe('the settings document contract', () => {
-  test('the document pins itself to schema version 2', () => {
-    expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<2>();
+  test('the document pins itself to schema version 4', () => {
+    expectTypeOf<Settings['schemaVersion']>().toEqualTypeOf<4>();
   });
 
-  test('the three switches the screen writes are plain booleans', () => {
+  test('the two switches the screen writes are plain booleans', () => {
     expectTypeOf<Settings['launchAtLogin']>().toEqualTypeOf<boolean>();
     expectTypeOf<Settings['showInMenuBar']>().toEqualTypeOf<boolean>();
-    expectTypeOf<Settings['requireGatewayToken']>().toEqualTypeOf<boolean>();
   });
 
-  test('the theme and the port keep the shape version 1 gave them', () => {
+  test('the theme keeps the shape version 1 gave it', () => {
     expectTypeOf<Settings['theme']>().toEqualTypeOf<'system' | 'light' | 'dark'>();
-    expectTypeOf<Settings['enginePort']>().toEqualTypeOf<number>();
   });
 
-  test('the document holds exactly six fields, so nothing can name a token', () => {
+  test('the document holds exactly four fields, so nothing can name a port', () => {
     expectTypeOf<keyof Settings>().toEqualTypeOf<
-      | 'schemaVersion'
-      | 'theme'
-      | 'enginePort'
-      | 'launchAtLogin'
-      | 'showInMenuBar'
-      | 'requireGatewayToken'
+      'schemaVersion' | 'theme' | 'launchAtLogin' | 'showInMenuBar'
     >();
   });
 
-  test('no field on the document names a token', () => {
+  test('no field names a port, because a port belongs to one gateway', () => {
+    expectTypeOf<Settings>().not.toHaveProperty('enginePort');
+    expectTypeOf<Settings>().not.toHaveProperty('port');
+  });
+
+  test('no field on the document names a token, because a token belongs to one gateway', () => {
     expectTypeOf<Settings>().not.toHaveProperty('token');
     expectTypeOf<Settings>().not.toHaveProperty('gatewayToken');
+    expectTypeOf<Settings>().not.toHaveProperty('requireGatewayToken');
     expectTypeOf<Settings>().not.toHaveProperty('secret');
   });
 });

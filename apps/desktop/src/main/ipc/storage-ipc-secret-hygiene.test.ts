@@ -11,8 +11,6 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import type { StorageIpcContext } from './storage-context';
 import type { StorageIpcHandlers } from './storage-ipc';
 
-import { GATEWAY_TOKEN_REF } from '../settings/gateway-token';
-import { getSecret, loadVaultFile } from '../storage/vault';
 import { dispatchIpc } from './dispatch';
 import { createStorageIpcHandlers } from './storage-ipc';
 
@@ -33,9 +31,9 @@ async function freshContext(
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
-    writeClipboard: () => undefined,
     applySettings: () => undefined,
     readLoginItem: () => false,
+    startGateway: () => undefined,
     ...overrides,
   };
 }
@@ -43,7 +41,17 @@ async function freshContext(
 function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
   const absent = async (): Promise<never> => Promise.reject(new Error('not under test'));
 
-  return { ...storage, 'system:get': absent, 'system:open-config-folder': absent };
+  return {
+    ...storage,
+    'system:get': absent,
+    'system:open-config-folder': absent,
+    'system:sidebar-shown': absent,
+    'gateways:offer-port': absent,
+    'gateways:move-port': absent,
+    'engine:start': absent,
+    'engine:stop': absent,
+    'engine:states': absent,
+  };
 }
 
 const connectRequest = {
@@ -141,16 +149,8 @@ describe('storage ipc handlers: accounts connect logs nothing', () => {
   });
 });
 
-const tokenAct = fc.constantFrom('require-on', 'require-off', 'regenerate');
-
 async function readSettingsDocument(userDataPath: string): Promise<string> {
   return readFile(join(userDataPath, 'settings.json'), 'utf8').catch(() => '');
-}
-
-async function readStoredToken(userDataPath: string): Promise<string> {
-  const vault = await loadVaultFile(join(userDataPath, 'vault.bin'), () => undefined);
-
-  return getSecret(vault, fakeCodec, GATEWAY_TOKEN_REF) ?? '';
 }
 
 function windowsOf(value: string, size: number): string[] {
@@ -159,29 +159,23 @@ function windowsOf(value: string, size: number): string[] {
   );
 }
 
-describe('storage ipc handlers: the settings document and the token', () => {
-  test.prop([fc.array(tokenAct, { minLength: 1, maxLength: 8 })])(
-    'no sequence of requirement toggles and regenerations writes a token fragment to disk',
-    async (acts) => {
+describe('storage ipc handlers: the settings document holds no secret', () => {
+  test.prop([fc.array(fc.constantFrom('dark', 'light', 'system'), { minLength: 1, maxLength: 8 })])(
+    'no sequence of saves beside a connected account writes a secret fragment to disk',
+    async (themes) => {
       const ctx = await freshContext();
       const handlers = createStorageIpcHandlers(ctx);
 
-      for (const act of acts) {
-        if (act === 'regenerate') {
-          await handlers['gateway-token:mint'](undefined);
-        } else {
-          await handlers['settings:save']({
-            ...defaultSettings(),
-            requireGatewayToken: act === 'require-on',
-          });
-        }
+      await handlers['accounts:connect'](connectRequest);
+
+      for (const theme of themes) {
+        await handlers['settings:save']({ ...defaultSettings(), theme });
       }
 
       const document = await readSettingsDocument(ctx.userDataPath);
-      const token = await readStoredToken(ctx.userDataPath);
 
-      expect(document).not.toContain('rc-local-');
-      expect(windowsOf(token, 8).some((window) => document.includes(window))).toBe(false);
+      expect(document).not.toContain(secretFragment);
+      expect(windowsOf(secretFragment, 8).some((window) => document.includes(window))).toBe(false);
     },
   );
 });

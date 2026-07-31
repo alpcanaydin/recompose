@@ -32,9 +32,9 @@ async function freshContext(
     getCodec: () => fakeCodec,
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
-    writeClipboard: () => undefined,
     applySettings: () => undefined,
     readLoginItem: () => false,
+    startGateway: () => undefined,
     ...overrides,
   };
 }
@@ -43,6 +43,7 @@ const gateway: GatewayConfig = {
   schemaVersion: GATEWAY_CONFIG_VERSION,
   slug: 'personal',
   displayName: 'Personal',
+  port: 8397,
   virtualModels: [
     {
       id: 'vm1',
@@ -60,7 +61,7 @@ const gateway: GatewayConfig = {
   layout: { nodes: {} },
 };
 
-const changedSettings: Settings = { ...defaultSettings(), theme: 'dark', enginePort: 9000 };
+const changedSettings: Settings = { ...defaultSettings(), theme: 'dark', showInMenuBar: true };
 
 const connectRequest = {
   provider: 'anthropic',
@@ -89,7 +90,7 @@ describe('storage ipc handlers: settings', () => {
     const written = await handlers['settings:save'](changedSettings);
     const second = await handlers['settings:get'](undefined);
 
-    expect(first).toMatchObject({ ok: true, value: { theme: 'system', enginePort: 8397 } });
+    expect(first).toMatchObject({ ok: true, value: { theme: 'system', showInMenuBar: false } });
     expect(written).toEqual(second);
   });
 

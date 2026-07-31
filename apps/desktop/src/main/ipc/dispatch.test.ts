@@ -1,9 +1,9 @@
 import { fc, test } from '@fast-check/vitest';
 import {
   defaultSettings,
+  GATEWAY_CONFIG_VERSION,
   ipcChannels,
   type AccountsDocument,
-  type GatewayTokenStatus,
   type IpcChannel,
   type Settings,
   type SettingsPatch,
@@ -15,7 +15,7 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
-const settings: Settings = { ...defaultSettings(), theme: 'dark', enginePort: 9000 };
+const settings: Settings = { ...defaultSettings(), theme: 'dark' };
 const emptyAccounts: AccountsDocument = { schemaVersion: 1, accounts: [] };
 const systemState: SystemState = {
   fileBrowser: 'finder',
@@ -24,8 +24,6 @@ const systemState: SystemState = {
   menuBarVisible: false,
   configFolder: '/tmp/recompose',
 };
-const tokenStatus: GatewayTokenStatus = { masked: 'rc-local-••••••••tail', storage: 'available' };
-
 const trustedSender: TrustedSender = {
   frameUrl: 'app://renderer/index.html',
   isMainFrame: true,
@@ -44,9 +42,12 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'accounts:remove': reject,
     'system:get': reject,
     'system:open-config-folder': reject,
-    'gateway-token:status': reject,
-    'gateway-token:mint': reject,
-    'gateway-token:copy': reject,
+    'system:sidebar-shown': reject,
+    'gateways:offer-port': reject,
+    'gateways:move-port': reject,
+    'engine:start': reject,
+    'engine:stop': reject,
+    'engine:states': reject,
   };
 
   return { ...base, ...overrides };
@@ -63,9 +64,12 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'system:get': async () => Promise.resolve({ ok: true, value: systemState }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
-    'gateway-token:status': async () => Promise.resolve({ ok: true, value: tokenStatus }),
-    'gateway-token:mint': async () => Promise.resolve({ ok: true, value: tokenStatus }),
-    'gateway-token:copy': async () => Promise.resolve({ ok: true, value: undefined }),
+    'system:sidebar-shown': async () => Promise.resolve({ ok: true, value: undefined }),
+    'gateways:offer-port': async () => Promise.resolve({ ok: true, value: 51234 }),
+    'gateways:move-port': async () => Promise.resolve({ ok: true, value: [] }),
+    'engine:start': async () => Promise.resolve({ ok: true, value: { status: 'running' } }),
+    'engine:stop': async () => Promise.resolve({ ok: true, value: { status: 'stopped' } }),
+    'engine:states': async () => Promise.resolve({ ok: true, value: {} }),
   };
 }
 
@@ -76,9 +80,8 @@ const voidRequestChannel = fc.constantFrom<IpcChannel>(
   'accounts:list',
   'system:get',
   'system:open-config-folder',
-  'gateway-token:status',
-  'gateway-token:mint',
-  'gateway-token:copy',
+  'gateways:offer-port',
+  'engine:states',
 );
 const nonUndefinedJunk = fc.anything().filter((value) => value !== undefined);
 
@@ -136,14 +139,25 @@ describe('ipc dispatch: the settings patch', () => {
   });
 
   test('a handler result that violates the response contract is rejected loudly', async () => {
-    const outOfRangePort = 70000;
     const handlers = handlersWith({
-      'settings:get': async () =>
-        Promise.resolve({ ok: true, value: { ...settings, enginePort: outOfRangePort } }),
+      'gateways:list': async () =>
+        Promise.resolve({
+          ok: true,
+          value: [
+            {
+              schemaVersion: GATEWAY_CONFIG_VERSION,
+              slug: 'Not A Slug',
+              displayName: 'Personal',
+              port: 8397,
+              virtualModels: [],
+              layout: { nodes: {} },
+            },
+          ],
+        }),
     });
 
     await expect(
-      dispatchIpc(handlers, 'settings:get', undefined, trustedSender, allowedOrigins),
+      dispatchIpc(handlers, 'gateways:list', undefined, trustedSender, allowedOrigins),
     ).rejects.toThrow();
   });
 });

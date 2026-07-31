@@ -4,44 +4,32 @@ import { expect } from '@playwright/test';
 import { readdir } from 'node:fs/promises';
 
 import { Then, When } from '../fixtures';
+import { storedSettingsFields } from '../settings-document';
 
 type WaitingRow = {
   label: string;
-  role: 'radiogroup' | 'switch' | 'textbox';
+  role: 'radiogroup' | 'switch';
   awaits: string;
   settingField: string;
 };
 
 const waitingRows: readonly WaitingRow[] = [
   {
-    label: 'Bind address',
-    role: 'textbox',
-    awaits: 'Waiting on the engine.',
-    settingField: 'bindAddress',
-  },
-  {
     label: 'Start gateways on launch',
     role: 'switch',
-    awaits: 'Waiting on the engine.',
+    awaits: 'Waits on launch-time start.',
     settingField: 'startGatewaysOnLaunch',
-  },
-  {
-    label: 'Reduce wire motion',
-    role: 'switch',
-    awaits: 'Waiting on the canvas.',
-    settingField: 'reduceWireMotion',
   },
   {
     label: 'Keep request logs',
     role: 'radiogroup',
-    awaits: 'Waiting on the engine.',
+    awaits: 'Waits on request logging.',
     settingField: 'keepRequestLogs',
   },
 ];
 
 const tabPressesPerRow = 12;
 const settingsDocumentName = 'settings.json';
-const rejectedBindAddress = '0.0.0.0';
 
 let namedRow: WaitingRow | undefined;
 let positionBeforeAttempt: string | undefined;
@@ -82,10 +70,6 @@ function keyboardTargetOf(page: Page, row: WaitingRow): Locator {
 async function positionOf(page: Page, row: WaitingRow): Promise<string> {
   const control = controlOf(page, row);
 
-  if (row.role === 'textbox') {
-    return control.inputValue();
-  }
-
   if (row.role === 'radiogroup') {
     return control.getByRole('radio', { checked: true }).innerText();
   }
@@ -95,12 +79,6 @@ async function positionOf(page: Page, row: WaitingRow): Promise<string> {
 
 async function attemptToMove(page: Page, row: WaitingRow): Promise<void> {
   await keyboardTargetOf(page, row).focus();
-
-  if (row.role === 'textbox') {
-    await page.keyboard.type(rejectedBindAddress);
-
-    return;
-  }
 
   await page.keyboard.press(row.role === 'switch' ? 'Space' : 'ArrowRight');
 }
@@ -129,16 +107,6 @@ async function tabUntilFocused(page: Page, target: Locator): Promise<boolean> {
   return false;
 }
 
-async function storedSettingsFields(page: Page): Promise<readonly string[]> {
-  const stored = await page.evaluate(async () => window.recompose['settings:get']());
-
-  if (!stored.ok) {
-    throw new Error('The app could not read the stored settings document.');
-  }
-
-  return Object.keys(stored.value);
-}
-
 async function userDataEntries(electronApp: ElectronApplication): Promise<readonly string[]> {
   const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'));
 
@@ -157,15 +125,15 @@ Then('the {string} control cannot be moved', async ({ page }, label: string) => 
   await expect.poll(async () => keepsFocusWithin(controlOf(page, row))).toBe(true);
 });
 
-Then('the row names the engine as what it waits for', async ({ page }) => {
+Then('the row names request logging as what it waits for', async ({ page }) => {
   await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
-    containing('Waiting on the engine.'),
+    containing('Waits on request logging.'),
   );
 });
 
-Then('the row names the canvas as what it waits for', async ({ page }) => {
+Then('the row names launch-time start as what it waits for', async ({ page }) => {
   await expect(controlOf(page, rowUnderDiscussion())).toHaveAccessibleDescription(
-    containing('Waiting on the canvas.'),
+    containing('Waits on launch-time start.'),
   );
 });
 
@@ -197,8 +165,8 @@ Then('each one states what it waits for while focused', async ({ page }) => {
   }
 });
 
-When('the maintainer tries to change the bind address', async ({ page }) => {
-  const row = rowNamed('Bind address');
+When('the maintainer tries to start gateways on launch', async ({ page }) => {
+  const row = rowNamed('Start gateways on launch');
 
   namedRow = row;
   positionBeforeAttempt = await positionOf(page, row);

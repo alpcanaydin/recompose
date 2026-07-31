@@ -15,6 +15,8 @@
   --color-surface-inert: light-dark(var(--gray-100), var(--gray-850));
   --color-surface-hover: light-dark(var(--black-a06), var(--white-a08));
   --color-surface-thumb: var(--white);
+  --color-scrim: light-dark(var(--black-a18), var(--black-a42));
+  --color-dot-grid: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 6%));
   --color-surface-track: light-dark(var(--gray-200), var(--gray-800));
   --color-surface-chip: light-dark(var(--white), var(--gray-700));
   --color-track-off: light-dark(var(--gray-200), var(--gray-800));
@@ -32,6 +34,13 @@
 
   --color-accent: light-dark(var(--blue-600), var(--blue-500));
   --color-accent-hover: light-dark(var(--blue-700), var(--blue-400));
+  --color-accent-fill: var(--blue-700);
+  --color-accent-ink: light-dark(var(--blue-700), var(--blue-400));
+  --color-subscription: light-dark(var(--blue-600), var(--blue-500));
+  --color-api-key: light-dark(var(--yellow-700), var(--yellow-500));
+  --color-aggregator: light-dark(var(--purple-600), var(--purple-500));
+  --color-running: light-dark(var(--green-700), var(--green-500));
+  --color-stopped: light-dark(var(--red-700), var(--red-500));
   --color-warning: light-dark(var(--orange-600), var(--orange-500));
   --color-danger: light-dark(var(--red-700), var(--red-500));
   --color-danger-ink: light-dark(var(--red-700), var(--red-400));
@@ -39,11 +48,23 @@
   --text-title: 22px;
   --text-title--font-weight: 600;
   --text-title--letter-spacing: -0.4px;
+  --text-invitation: 17px;
+  --text-invitation--font-weight: 600;
+  --text-invitation--letter-spacing: -0.3px;
+  --text-sheet-title: 16px;
+  --text-sheet-title--font-weight: 700;
+  --text-sheet-title--letter-spacing: -0.2px;
   --text-heading: 15px;
+  --text-card-title: 13px;
+  --text-card-title--font-weight: 600;
   --text-heading--font-weight: 600;
   --text-body: 13px;
   --text-body--line-height: 1.45;
+  --text-note: 12.5px;
   --text-control: 12px;
+  --text-detail: 12px;
+  --text-detail--line-height: 1.5;
+  --text-quiet: 11.5px;
   --text-caption: 11px;
   --text-overline: 10px;
   --text-overline--font-weight: 700;
@@ -57,17 +78,35 @@
   --spacing-track-height: 22px;
   --spacing-segment: 24px;
   --spacing-control: 24px;
+  --spacing-glyph-ink-inset: 3.2px;
+  --spacing-glyph-trailing: calc(var(--spacing) * 2 - var(--spacing-glyph-ink-inset));
+  --spacing-button: 28px;
   --spacing-chip: 18px;
   --spacing-thumb: 18px;
   --spacing-port: 76px;
+  --spacing-sheet: 404px;
+  --spacing-sheet-row: 38px;
+  --spacing-sheet-field: 170px;
+  --spacing-sheet-port: 74px;
+  --spacing-toolbar: 54px;
+  --spacing-window-controls: 36px;
+  --spacing-window-controls-width: 76px;
+  --spacing-page-top: 78px;
+  --spacing-status-bar: 38px;
+  --spacing-ghost-width: 436px;
+  --spacing-ghost-height: 114px;
   --spacing-hairline: 2px;
 
   --radius-chip: 4px;
   --radius-control: 6px;
+  --radius-field-group: 9px;
   --radius-card: 10px;
+  --radius-panel: 11px;
+  --radius-sheet: 13px;
   --radius-pill: 999px;
 
   --shadow-thumb: 0 1px 2px rgb(0 0 0 / 22%), 0 0 0 0.5px rgb(0 0 0 / 8%);
+  --shadow-raised: 0 12px 32px rgb(0 0 0 / 18%), 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 @utility focus-ring {
@@ -102,24 +141,145 @@
 }
 
 @utility push-button {
-  height: var(--spacing-control);
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  height: var(--spacing-button);
   border: 1px solid var(--color-line-subtle);
   border-radius: var(--radius-control);
-  background-color: var(--color-surface-card);
-  padding-inline: calc(var(--spacing) * 2.5);
-  font-size: var(--text-control);
+  background-color: var(--color-surface-raised);
+  padding-inline: 13px;
+  font-size: var(--text-note);
+  font-weight: 500;
   color: var(--color-ink);
-  box-shadow: 0 1px 1.5px rgb(0 0 0 / 10%);
 
   &:hover {
-    background-color: var(--color-surface-raised);
     border-color: var(--color-line-strong);
   }
 
   &:active {
     background-color: var(--color-surface-inert);
-    box-shadow: none;
   }
+}
+
+@utility sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-scrim);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 150ms;
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+    }
+  }
+}
+
+@utility sheet-surface {
+  position: fixed;
+  top: 47%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
+  width: var(--spacing-sheet);
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sheet);
+  background-color: var(--color-surface-card);
+  box-shadow: var(--shadow-raised);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      opacity 150ms,
+      scale 150ms;
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+}
+
+@utility sheet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--spacing) * 2);
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-line-faint);
+  background-color: color-mix(in srgb, var(--color-ink) 3%, transparent);
+}
+
+@utility field-box {
+  overflow: hidden;
+  border: 1px solid var(--color-line-faint);
+  border-radius: var(--radius-field-group);
+  background-color: var(--color-surface-raised);
+}
+
+@utility field-box-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: calc(var(--spacing) * 2.5);
+  row-gap: calc(var(--spacing) * 1);
+  min-height: var(--spacing-sheet-row);
+  padding: 5px 12px;
+  font-size: var(--text-note);
+  color: var(--color-ink);
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--color-line-faint);
+  }
+}
+
+@utility sheet-field {
+  border: 1px solid var(--color-line-field);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface-card);
+  padding: 4.5px 9px;
+  font-size: var(--text-note);
+  color: var(--color-ink);
+
+  &:hover {
+    border-color: var(--color-line-strong);
+  }
+}
+
+@utility push-button-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  height: var(--spacing-button);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background-color: var(--color-accent-fill);
+  padding-inline: 13px;
+  font-size: var(--text-note);
+  font-weight: 500;
+  color: var(--white);
+
+  &:hover {
+    background-color: color-mix(in oklab, var(--color-accent-fill), black 14%);
+  }
+}
+
+@utility checklist-ring {
+  display: inline-flex;
+  height: calc(var(--spacing) * 3.75);
+  width: calc(var(--spacing) * 3.75);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+}
+
+@utility checklist-ring-current {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
 @utility chip-selected {
@@ -152,14 +312,31 @@
 }
 
 @utility nav-item {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.75);
+  height: calc(var(--spacing) * 7);
   border-radius: var(--radius-control);
-  padding-block: 3px;
-  padding-inline: 8px;
-  margin-inline: -8px;
+  padding-inline: calc(var(--spacing) * 2);
 
   &:hover {
     background: var(--color-surface-hover);
   }
+}
+
+@utility dot-grid {
+  background: radial-gradient(circle, var(--color-dot-grid) 1px, transparent 1px) 0 0 / 22px 22px;
+}
+
+@utility nav-group {
+  padding: 14px 8px 3px;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+}
+
+@utility icon-emphasis {
+  stroke-width: 2.1;
 }
 
 @utility row-hover {

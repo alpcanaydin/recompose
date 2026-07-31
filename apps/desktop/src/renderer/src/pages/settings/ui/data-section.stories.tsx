@@ -20,7 +20,7 @@ export const Basic = meta.story({
     await expect(
       await canvas.findByRole('radiogroup', { name: 'Keep request logs' }),
     ).toHaveAttribute('aria-disabled', 'true');
-    await expect(await canvas.findByText('Waiting on the engine.')).toBeVisible();
+    await expect(await canvas.findByText('Waits on request logging.')).toBeVisible();
   },
 });
 

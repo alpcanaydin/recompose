@@ -1,10 +1,13 @@
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
+import { type Server } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createBdd, test as base } from 'playwright-bdd';
+
+import { dropServer, holdPort, LOOPBACK_HOSTS } from './loopback-ports';
 
 const appRoot = join(__dirname, '..');
 
@@ -16,10 +19,36 @@ export function inheritedEnv(): Record<string, string> {
   );
 }
 
+/** Holds loopback ports away from recompose, the way a rival process on the machine would. */
+export type PortSquatter = {
+  take: (port: number) => Promise<void>;
+  release: (port: number) => Promise<void>;
+};
+
 type ElectronFixtures = {
   electronApp: ElectronApplication;
   page: Page;
+  portSquatter: PortSquatter;
 };
+
+async function takePort(held: Map<number, Server[]>, port: number): Promise<void> {
+  const holders = await Promise.all(LOOPBACK_HOSTS.map(async (host) => holdPort(host, port)));
+  const bound = holders.filter((holder): holder is Server => holder !== null);
+
+  if (bound.length === 0) {
+    throw new Error(`the scenario could not take port ${String(port)} away from recompose`);
+  }
+
+  held.set(port, bound);
+}
+
+async function releasePort(held: Map<number, Server[]>, port: number): Promise<void> {
+  const bound = held.get(port) ?? [];
+
+  held.delete(port);
+
+  await Promise.all(bound.map(dropServer));
+}
 
 function platformHoldsLoginItem(): boolean {
   return process.platform === 'darwin' || process.platform === 'win32';
@@ -49,37 +78,12 @@ async function restoreLoginItem(
   }, openAtLogin);
 }
 
-const clipboardIsSafeToTouch = process.platform !== 'linux';
-
-async function readClipboard(app: ElectronApplication): Promise<string | null> {
-  if (!clipboardIsSafeToTouch) {
-    return null;
-  }
-
-  try {
-    return await app.evaluate(({ clipboard }) => clipboard.readText());
-  } catch {
-    return null;
-  }
-}
-
-async function restoreClipboard(app: ElectronApplication, text: string | null): Promise<void> {
-  if (text === null) {
-    return;
-  }
-
-  try {
-    await app.evaluate(({ clipboard }, held) => {
-      clipboard.writeText(held);
-    }, text);
-  } catch {
-    return;
-  }
-}
-
 export const test = base.extend<ElectronFixtures>({
-  electronApp: async ({}, use) => {
-    const userDataDir = await mkdtemp(join(homedir(), '.recompose-e2e-'));
+  electronApp: async ({}, use, testInfo) => {
+    const userDataDir = join(homedir(), `.recompose-e2e-w${String(testInfo.parallelIndex)}`);
+
+    await rm(userDataDir, { force: true, recursive: true });
+    await mkdir(userDataDir, { recursive: true });
     const app = await electron.launch({
       args: [appRoot],
       env: {
@@ -96,13 +100,11 @@ export const test = base.extend<ElectronFixtures>({
 
     try {
       const priorLoginItem = await readLoginItem(app);
-      const priorClipboard = await readClipboard(app);
 
       try {
         await use(app);
       } finally {
         await restoreLoginItem(app, priorLoginItem);
-        await restoreClipboard(app, priorClipboard);
       }
     } finally {
       await app.close();
@@ -116,6 +118,18 @@ export const test = base.extend<ElectronFixtures>({
 
     await page.waitForLoadState('domcontentloaded');
     await use(page);
+  },
+  portSquatter: async ({}, use) => {
+    const held = new Map<number, Server[]>();
+
+    try {
+      await use({
+        take: async (port) => takePort(held, port),
+        release: async (port) => releasePort(held, port),
+      });
+    } finally {
+      await Promise.all([...held.keys()].map(async (port) => releasePort(held, port)));
+    }
   },
 });
 

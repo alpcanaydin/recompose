@@ -1,4 +1,3 @@
-import { defaultSettings } from '@recompose/contracts';
 import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -14,33 +13,7 @@ export const Basic = meta.story({
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     await expect(await canvas.findByRole('group', { name: 'Appearance' })).toBeInTheDocument();
-  },
-});
-
-/**
- * The column with the token requirement already on, so the credential row stands under its switch.
- *
- * @summary The tallest the screen gets, and the one arrangement where a row appears mid-section.
- */
-export const WithTokenRequired = meta.story({
-  parameters: {
-    bridge: {
-      settings: { ...defaultSettings(), requireGatewayToken: true },
-      overrides: {
-        'gateway-token:status': async () =>
-          Promise.resolve({
-            ok: true,
-            value: { masked: 'rc-local-••••••••9a3d', storage: 'available' },
-          }),
-      },
-    },
-  },
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByText('rc-local-••••••••9a3d')).toBeInTheDocument();
-    await expect(await canvas.findByRole('switch', { name: 'Require API token' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
+    await expect(canvas.queryByRole('switch', { name: 'Require API token' })).toBeNull();
   },
 });
 

@@ -25,7 +25,8 @@ describe('window chrome per platform', () => {
     const options = windowOptionsFor('darwin', somePreload, someIcon);
 
     expect(options.transparent).toBe(true);
-    expect(options.titleBarStyle).toBe('hiddenInset');
+    expect(options.titleBarStyle).toBe('hidden');
+    expect(options.trafficLightPosition).toEqual({ x: 14, y: 12 });
     expect(options.icon).toBeUndefined();
   });
 
@@ -88,7 +89,7 @@ describe('window chrome contract across all platforms', () => {
       const options = windowOptionsFor(platform, somePreload, someIcon);
 
       expect(options.transparent).toBe(platform === 'darwin' ? true : undefined);
-      expect(options.titleBarStyle).toBe(platform === 'darwin' ? 'hiddenInset' : undefined);
+      expect(options.titleBarStyle).toBe(platform === 'darwin' ? 'hidden' : undefined);
       expect(options.icon).toBe(platform === 'linux' ? someIcon : undefined);
     },
   );

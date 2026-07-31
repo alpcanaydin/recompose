@@ -25,7 +25,9 @@ Given(
   'a connected {string} api-key account labeled {string}',
   async ({ page }, provider: string, label: string) => {
     await connectAccount(page, provider, label);
-    await expect(page.getByRole('listitem').filter({ hasText: label })).toBeVisible();
+    await expect(
+      page.getByRole('main').getByRole('listitem').filter({ hasText: label }),
+    ).toBeVisible();
   },
 );
 
@@ -36,7 +38,7 @@ When('the maintainer removes the {string} account', async ({ page }, label: stri
 Then(
   'the providers list shows the {string} account for {string}',
   async ({ page }, label: string, provider: string) => {
-    const item = page.getByRole('listitem').filter({ hasText: label });
+    const item = page.getByRole('main').getByRole('listitem').filter({ hasText: label });
 
     await expect(item).toBeVisible();
     await expect(item).toContainText(provider);
@@ -45,5 +47,5 @@ Then(
 );
 
 Then('the providers list is empty', async ({ page }) => {
-  await expect(page.getByRole('listitem')).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(0);
 });

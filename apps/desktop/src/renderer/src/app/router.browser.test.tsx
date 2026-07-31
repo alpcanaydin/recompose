@@ -2,18 +2,23 @@ import type { AccountsDocument } from '@recompose/contracts';
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { userEvent } from 'vitest/browser';
 
-import { accountsQueryOptions } from '../pages/providers';
-import {
-  gatewayTokenQueryOptions,
-  settingsQueryOptions,
-  systemQueryOptions,
-} from '../pages/settings';
-import { installFakeBridge } from '../shared/testing';
+import { settingsQueryOptions, systemQueryOptions } from '../pages/settings';
+import { accountsQueryOptions } from '../shared/api';
+import { gatewaySeed, installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
+import { renderAt } from './testing/render-app';
+
+const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
+const claude = gatewaySeed({ slug: 'claude', displayName: 'Claude', port: 51235 });
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 function seededAccounts(): AccountsDocument {
   return {
@@ -30,50 +35,52 @@ function seededAccounts(): AccountsDocument {
   };
 }
 
-async function renderAt(path: string, initial?: AccountsDocument) {
-  installFakeBridge(initial === undefined ? {} : { accounts: initial });
-
-  const queryClient = createQueryClient();
-  const router = createAppRouter({
-    queryClient,
-    history: createMemoryHistory({ initialEntries: [path] }),
-  });
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  );
-}
-
-test('the shell shows the sidebar and the empty state at the root', async () => {
+test('the call to action opens the creation sheet with focus in the name field', async () => {
   const screen = await renderAt('/');
 
-  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Providers' })).toBeVisible();
+  await screen.getByRole('button', { name: 'Create Gateway' }).click();
+
+  await expect.element(screen.getByRole('dialog', { name: 'Create a gateway' })).toBeVisible();
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+});
+
+test('the keyboard path opens the sheet over any surface and hands that surface back', async () => {
+  const screen = await renderAt('/settings?create=true&at=1');
+
+  await expect.element(screen.getByRole('dialog', { name: 'Create a gateway' })).toBeVisible();
+
+  await userEvent.keyboard('{Escape}');
+
   await expect
-    .element(screen.getByText('Select a gateway or create one to get started.'))
-    .toBeVisible();
+    .element(screen.getByRole('dialog', { name: 'Create a gateway' }))
+    .not.toBeInTheDocument();
+  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
 });
 
 test('an unknown path shows the not-found state inside the shell', async () => {
   const screen = await renderAt('/no-such-page');
 
   await expect.element(screen.getByText('Not found')).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Providers' })).toBeVisible();
-});
-
-test('clicking the providers link navigates to the providers screen', async () => {
-  const screen = await renderAt('/');
-
-  await screen.getByRole('link', { name: 'Providers' }).click();
-
-  await expect.element(screen.getByRole('heading', { name: 'Providers' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
 });
 
 test('navigating to providers loads and renders the registry from the bridge', async () => {
-  const screen = await renderAt('/providers', seededAccounts());
+  const screen = await renderAt('/providers', { accounts: seededAccounts() });
 
+  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
+});
+
+test('a request narrowed to a kind lands on the surface for that kind', async () => {
+  const screen = await renderAt('/providers?kind=api-key', { accounts: seededAccounts() });
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
+  await expect.element(screen.getByText('Claude Max', { exact: true })).not.toBeInTheDocument();
+});
+
+test('a request naming no kind the contract knows lists every account instead', async () => {
+  const screen = await renderAt('/providers?kind=not-a-kind', { accounts: seededAccounts() });
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeVisible();
   await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
 });
 
@@ -93,13 +100,11 @@ test('the /providers route loader warms the query cache before any component ren
   expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
 });
 
-test('the sidebar carries a System group holding Settings', async () => {
-  const screen = await renderAt('/');
+test('a request for the usage path lands on the usage screen inside the shell', async () => {
+  const screen = await renderAt('/usage');
 
-  const system = screen.getByRole('group', { name: 'System' });
-
-  await expect.element(system).toBeVisible();
-  await expect.element(system.getByRole('link', { name: 'Settings' })).toBeVisible();
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Usage' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
 });
 
 test('clicking the settings link navigates to the settings screen', async () => {
@@ -116,19 +121,7 @@ test('arriving at settings through the shortcut lands focus on the first control
   await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).toHaveFocus();
 });
 
-test('arriving at settings through the sidebar leaves focus where the person put it', async () => {
-  const screen = await renderAt('/');
-
-  const settings = screen.getByRole('link', { name: 'Settings' });
-
-  await settings.click();
-
-  await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
-  await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
-  await expect.element(settings).toHaveFocus();
-});
-
-test('the /settings route loader warms the settings, system, and token caches before any component renders', async () => {
+test('the /settings route loader warms the settings and system caches before any component renders', async () => {
   installFakeBridge();
 
   const queryClient = createQueryClient();
@@ -145,10 +138,6 @@ test('the /settings route loader warms the settings, system, and token caches be
   expect(queryClient.getQueryData(systemQueryOptions.queryKey)).toMatchObject({
     fileBrowser: 'finder',
   });
-  expect(queryClient.getQueryData(gatewayTokenQueryOptions.queryKey)).toEqual({
-    ok: true,
-    value: { masked: null, storage: 'available' },
-  });
 });
 
 test('a valid gateway slug shows the canvas placeholder for that gateway', async () => {
@@ -162,6 +151,47 @@ test('an invalid gateway slug lands on the not-found state', async () => {
   const screen = await renderAt('/gateways/Not%20A%20Slug');
 
   await expect.element(screen.getByText('Not found')).toBeVisible();
+});
+
+test('the sidebar offers no way home, because home is no longer a place', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Gateways' })).not.toBeInTheDocument();
+});
+
+test('a launch opens the gateway the last session was looking at', async () => {
+  const first = await renderAt('/gateways/claude', { gateways: [codex, claude] });
+
+  await expect.element(first.getByRole('heading', { name: 'claude' })).toBeVisible();
+
+  await first.unmount();
+
+  const second = await renderAt('/', { gateways: [codex, claude] });
+
+  await expect.element(second.getByRole('heading', { name: 'claude' })).toBeVisible();
+});
+
+test('a launch whose remembered gateway has gone invites a new one instead', async () => {
+  const first = await renderAt('/gateways/claude', { gateways: [codex, claude] });
+
+  await expect.element(first.getByRole('heading', { name: 'claude' })).toBeVisible();
+
+  await first.unmount();
+
+  const second = await renderAt('/', { gateways: [] });
+
+  await expect
+    .element(second.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
+    .toBeVisible();
+});
+
+test('a launch remembering nothing lands on the invitation', async () => {
+  const screen = await renderAt('/', { gateways: [] });
+
+  await expect
+    .element(screen.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
+    .toBeVisible();
 });
 
 test('every build defaults to hash-based history, so one url shape reaches the window', () => {
@@ -194,7 +224,7 @@ test('pressing the shortcut again brings focus back to the first control', async
 
   await expect.element(launch).toHaveFocus();
 
-  screen.getByRole('link', { name: 'Providers' }).element().focus();
+  screen.getByRole('link', { name: 'Usage' }).element().focus();
 
   await expect.element(launch).not.toHaveFocus();
 

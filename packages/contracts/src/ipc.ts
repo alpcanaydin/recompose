@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { accountKindSchema, accountsDocumentSchema } from './accounts';
-import { gatewayConfigSchema } from './gateway-config';
+import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
+import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { nonBlankString } from './non-blank';
 import { settingsPatchSchema, settingsSchema } from './settings';
 
@@ -13,7 +14,8 @@ export const ipcErrorSchema = z.strictObject({
     'validation-failed',
     'storage-failed',
     'folder-open-failed',
-    'token-missing',
+    'name-conflict',
+    'port-conflict',
   ]),
   message: z.string().min(1),
 });
@@ -44,13 +46,6 @@ export const systemStateSchema = z.strictObject({
 
 export type SystemState = z.infer<typeof systemStateSchema>;
 
-export const gatewayTokenStatusSchema = z.strictObject({
-  masked: z.string().min(1).nullable(),
-  storage: z.enum(['available', 'plaintext-fallback', 'unavailable']),
-});
-
-export type GatewayTokenStatus = z.infer<typeof gatewayTokenStatusSchema>;
-
 export const ipcChannels = {
   'gateways:list': { request: z.void(), response: ipcResult(z.array(gatewayConfigSchema)) },
   'gateways:save': {
@@ -70,9 +65,21 @@ export const ipcChannels = {
   },
   'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
   'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },
-  'gateway-token:status': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
-  'gateway-token:mint': { request: z.void(), response: ipcResult(gatewayTokenStatusSchema) },
-  'gateway-token:copy': { request: z.void(), response: ipcResult(z.void()) },
+  'system:sidebar-shown': { request: z.boolean(), response: ipcResult(z.void()) },
+  'gateways:offer-port': { request: z.void(), response: ipcResult(gatewayPortSchema) },
+  'gateways:move-port': {
+    request: z.strictObject({ slug: gatewaySlugSchema }),
+    response: ipcResult(z.array(gatewayConfigSchema)),
+  },
+  'engine:start': {
+    request: z.strictObject({ slug: gatewaySlugSchema }),
+    response: ipcResult(gatewayEngineStateSchema),
+  },
+  'engine:stop': {
+    request: z.strictObject({ slug: gatewaySlugSchema }),
+    response: ipcResult(gatewayEngineStateSchema),
+  },
+  'engine:states': { request: z.void(), response: ipcResult(engineStatesSchema) },
 } as const;
 
 export type IpcChannel = keyof typeof ipcChannels;
@@ -85,4 +92,15 @@ export type IpcResponse<Channel extends IpcChannel> = z.infer<
 
 export type RecomposeIpc = {
   [Channel in IpcChannel]: (request: IpcRequest<Channel>) => Promise<IpcResponse<Channel>>;
+};
+
+export const ipcEvents = {
+  'engine:state': { payload: engineStatesSchema },
+} as const;
+
+export type IpcEvent = keyof typeof ipcEvents;
+export type IpcEventPayload<Event extends IpcEvent> = z.infer<(typeof ipcEvents)[Event]['payload']>;
+
+export type RecomposeIpcEvents = {
+  [Event in IpcEvent]: (listener: (payload: IpcEventPayload<Event>) => void) => () => void;
 };

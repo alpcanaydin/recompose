@@ -7,6 +7,7 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { Given, Then, When } from '../fixtures';
+import { storedSettingsFields } from '../settings-document';
 
 const sectionHeadings = ['General', 'Server', 'Appearance', 'Data'];
 
@@ -32,9 +33,9 @@ function isMissingFile(failure: unknown): boolean {
   return failure instanceof Error && 'code' in failure && failure.code === 'ENOENT';
 }
 
-async function storedThemeAndPort(
+async function storedThemeAndMenuBar(
   settingsFile: string,
-): Promise<Pick<Settings, 'enginePort' | 'theme'>> {
+): Promise<Pick<Settings, 'showInMenuBar' | 'theme'>> {
   const document = await readFile(settingsFile, 'utf8').catch((failure: unknown) => {
     if (isMissingFile(failure)) {
       return null;
@@ -44,15 +45,15 @@ async function storedThemeAndPort(
   });
 
   if (document === null) {
-    const { enginePort, theme } = defaultSettings();
+    const { showInMenuBar, theme } = defaultSettings();
 
-    return { enginePort, theme };
+    return { showInMenuBar, theme };
   }
 
   const stored: unknown = JSON.parse(document);
-  const { enginePort, theme } = loadSettings(stored);
+  const { showInMenuBar, theme } = loadSettings(stored);
 
-  return { enginePort, theme };
+  return { showInMenuBar, theme };
 }
 
 Given('the settings document cannot be written', async ({ electronApp }) => {
@@ -62,11 +63,8 @@ Given('the settings document cannot be written', async ({ electronApp }) => {
   await mkdir(settingsFile);
 });
 
-When('commits port {int} straight after', async ({ page }, port: number) => {
-  const field = section(page, 'Server').getByRole('textbox', { name: 'Port' });
-
-  await field.fill(String(port));
-  await field.press('Enter');
+When('shows recompose in the menu bar straight after', async ({ page }) => {
+  await section(page, 'General').getByRole('switch', { name: 'Show in menu bar' }).click();
 });
 
 Then(
@@ -116,15 +114,56 @@ Then('the row states that the change was not saved', async ({ page }) => {
 });
 
 Then(
-  'the stored settings hold the dark theme and port {int}',
-  async ({ electronApp }, port: number) => {
+  'the stored settings hold the dark theme and the menu bar presence',
+  async ({ electronApp }) => {
     const settingsFile = join(await userDataPath(electronApp), 'settings.json');
 
     await expect
-      .poll(async () => storedThemeAndPort(settingsFile))
-      .toEqual({ enginePort: port, theme: 'dark' });
+      .poll(async () => storedThemeAndMenuBar(settingsFile))
+      .toEqual({ showInMenuBar: true, theme: 'dark' });
   },
 );
+
+Then('the Server group offers no port control', async ({ page }) => {
+  await expect(section(page, 'Server').getByRole('textbox', { name: 'Port' })).toHaveCount(0);
+  await expect(section(page, 'Server').getByText('Port', { exact: true })).toHaveCount(0);
+});
+
+Then('the stored settings document holds no port', async ({ page }) => {
+  expect(await storedSettingsFields(page)).not.toContain('enginePort');
+});
+
+Then('the Server group offers no token control and no switch demanding one', async ({ page }) => {
+  await expect(
+    section(page, 'Server').getByRole('switch', { name: 'Require API token' }),
+  ).toHaveCount(0);
+  await expect(section(page, 'Server').getByText(/token/iu)).toHaveCount(0);
+});
+
+Then('the stored settings document holds no token requirement', async ({ page }) => {
+  expect(await storedSettingsFields(page)).not.toContain('requireGatewayToken');
+});
+
+Then('the Appearance group offers the theme and nothing beside it', async ({ page }) => {
+  await expect(section(page, 'Appearance').getByRole('radiogroup')).toHaveCount(1);
+  await expect(
+    section(page, 'Appearance').getByRole('radiogroup', { name: 'Theme' }),
+  ).toBeVisible();
+  await expect(section(page, 'Appearance').getByRole('switch')).toHaveCount(0);
+});
+
+Then('the bind address row reads {string}', async ({ page }, value: string) => {
+  await expect(section(page, 'Server').getByText(value, { exact: true })).toBeVisible();
+  await expect(section(page, 'Server').getByRole('textbox', { name: 'Bind address' })).toHaveCount(
+    0,
+  );
+});
+
+Then('the row states that recompose never serves the network', async ({ page }) => {
+  await expect(
+    section(page, 'Server').getByText('Fixed at loopback. recompose never serves the network.'),
+  ).toBeVisible();
+});
 
 Then('the telemetry row reads {string}', async ({ page }, value: string) => {
   await expect(section(page, 'General').getByText(value, { exact: true })).toBeVisible();

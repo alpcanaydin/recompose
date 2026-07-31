@@ -35,8 +35,6 @@ const anySettings = fc.record({
   theme: fc.constantFrom<Settings['theme']>('system', 'light', 'dark'),
   launchAtLogin: fc.boolean(),
   showInMenuBar: fc.boolean(),
-  requireGatewayToken: fc.boolean(),
-  enginePort: fc.integer({ min: 1024, max: 65535 }),
 });
 
 describe('what a settings document changes outside the window', () => {

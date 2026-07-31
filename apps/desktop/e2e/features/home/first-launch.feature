@@ -1,5 +1,5 @@
 Feature: First launch
 
-  Scenario: A fresh install greets with the gateway empty state
+  Scenario: A fresh install offers the first gateway
     Given the app is on the gateways screen
-    Then it offers to select a gateway or create one
+    Then the app offers "Create Gateway"

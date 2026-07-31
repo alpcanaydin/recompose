@@ -5,6 +5,15 @@ import { defaultExclude, defineConfig } from 'vitest/config';
 
 import { coverageDefaults } from '../../vitest.shared';
 
+const chromium = () => ({
+  enabled: true,
+  headless: true,
+  provider: playwright({
+    contextOptions: { permissions: ['clipboard-read', 'clipboard-write'] },
+  }),
+  instances: [{ browser: 'chromium' as const }],
+});
+
 export default defineConfig({
   test: {
     coverage: {
@@ -18,6 +27,7 @@ export default defineConfig({
         'src/renderer/src/shared/testing/**',
         'src/**/*.d.ts',
         'src/main/index.ts',
+        'src/main/engine-host/spawn-engine.ts',
         'src/main/ipc/register-ipc.ts',
         'src/main/menu/app-menu.ts',
         'src/main/protocol/app-protocol.ts',
@@ -43,24 +53,21 @@ export default defineConfig({
         test: {
           name: 'browser',
           include: ['src/renderer/**/*.browser.test.{ts,tsx}'],
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright(),
-            instances: [{ browser: 'chromium' }],
-          },
+          browser: chromium(),
         },
       },
       {
         plugins: [storybookTest({ configDir: '.storybook' })],
         test: {
           name: 'storybook',
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright(),
-            instances: [{ browser: 'chromium' }],
-          },
+          browser: chromium(),
+        },
+      },
+      {
+        plugins: [storybookTest({ configDir: '.storybook', initialGlobals: { theme: 'dark' } })],
+        test: {
+          name: 'storybook-dark',
+          browser: chromium(),
         },
       },
     ],
