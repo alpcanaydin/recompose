@@ -44,6 +44,38 @@ function aLoopback(): Loopback {
   };
 }
 
+function aLoopbackThatClosesSlowly() {
+  const serving = new Set<number>();
+  const waiting: (() => void)[] = [];
+
+  return {
+    finishClosing: () => {
+      for (const release of waiting.splice(0)) {
+        release();
+      }
+    },
+    openListeners: (async (_app, port) => {
+      if (serving.has(port)) {
+        return Promise.resolve({ failed: { port } });
+      }
+
+      serving.add(port);
+
+      return Promise.resolve({
+        opened: {
+          close: async () =>
+            new Promise<void>((settle) => {
+              waiting.push(() => {
+                serving.delete(port);
+                settle();
+              });
+            }),
+        },
+      });
+    }) satisfies OpenListeners,
+  };
+}
+
 function aLoopbackThatOpensSlowly() {
   const serving = new Set<number>();
   const waiting: (() => void)[] = [];
@@ -230,5 +262,25 @@ describe('stopping a gateway', () => {
 
     expect(await runtime.start(codex)).toEqual({ status: 'running' });
     expect(loopback.serving).toEqual(new Set([codex.port]));
+  });
+});
+
+describe('a start arriving while the last stop is still closing', () => {
+  test('it waits for the port to come back rather than reporting it taken', async () => {
+    const loopback = aLoopbackThatClosesSlowly();
+    const runtime = createEngineRuntime(loopback.openListeners);
+
+    await runtime.start(codex);
+
+    const stopping = runtime.stop(codex.slug);
+    const starting = runtime.start(codex);
+
+    await new Promise((settle) => {
+      setTimeout(settle, 0);
+    });
+    loopback.finishClosing();
+
+    expect(await stopping).toEqual({ status: 'stopped' });
+    expect(await starting).toEqual({ status: 'running' });
   });
 });
