@@ -12,29 +12,30 @@ export type EngineRuntime = {
 };
 
 /**
- * Runs one turn per gateway, so a second caller joins the first rather than racing it.
+ * Runs one gateway's directives in the order they arrive, never two at once.
  *
- * @summary The registry entry lands before the work reaches its first await, which is what keeps
- * a start arriving in the same tick as a stop from stepping over it.
+ * @summary The turn lands in the registry before the work reaches its first await, so a directive
+ * arriving in the same tick queues behind rather than stepping over. Joining an earlier turn is
+ * not enough: a stop that joined the halt a start had already waited out would report the gateway
+ * down while that start brought it back up.
  */
-function onlyOnce<Input, Answer>(
-  turns: Map<string, Promise<Answer>>,
-  slugOf: (input: Input) => string,
-  work: (input: Input) => Promise<Answer>,
-): (input: Input) => { joined: Promise<Answer> } {
-  return (input) => {
-    const slug = slugOf(input);
-    const underWay = turns.get(slug);
+function oneTurnPerGateway(): <Answer>(
+  slug: string,
+  work: () => Promise<Answer>,
+) => { joined: Promise<Answer> } {
+  const turns = new Map<string, Promise<unknown>>();
 
-    if (underWay !== undefined) {
-      return { joined: underWay };
-    }
+  return (slug, work) => {
+    const ahead = turns.get(slug);
+    const answered = ahead === undefined ? work() : ahead.then(work, work);
 
-    const answered = work(input).finally(() => {
-      turns.delete(slug);
-    });
-
-    turns.set(slug, answered);
+    turns.set(
+      slug,
+      answered.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
 
     return { joined: answered };
   };
@@ -42,8 +43,7 @@ function onlyOnce<Input, Answer>(
 
 export function createEngineRuntime(openListeners: OpenListeners): EngineRuntime {
   const serving = new Map<string, GatewayListeners>();
-  const opening = new Map<string, Promise<GatewayEngineState>>();
-  const halting = new Map<string, Promise<GatewayEngineState>>();
+  const inTurn = oneTurnPerGateway();
 
   async function openFor(gateway: EngineGateway): Promise<GatewayEngineState> {
     const outcome = await openListeners(createGatewayApp(gateway), gateway.port);
@@ -57,15 +57,7 @@ export function createEngineRuntime(openListeners: OpenListeners): EngineRuntime
     return { status: 'running' };
   }
 
-  const openTurn = onlyOnce(opening, (gateway: EngineGateway) => gateway.slug, openFor);
-
-  async function afterAnyOpening(slug: string): Promise<void> {
-    await opening.get(slug)?.catch(() => undefined);
-  }
-
   async function haltFor(slug: string): Promise<GatewayEngineState> {
-    await afterAnyOpening(slug);
-
     const listeners = serving.get(slug);
 
     if (listeners !== undefined) {
@@ -76,18 +68,11 @@ export function createEngineRuntime(openListeners: OpenListeners): EngineRuntime
     return { status: 'stopped' };
   }
 
-  const haltTurn = onlyOnce(halting, (slug: string) => slug, haltFor);
-
   return {
-    start: async (gateway) => {
-      const halted = halting.get(gateway.slug);
-
-      if (halted !== undefined) {
-        await halted.catch(() => undefined);
-      }
-
-      return serving.has(gateway.slug) ? { status: 'running' } : openTurn(gateway).joined;
-    },
-    stop: async (slug) => haltTurn(slug).joined,
+    start: async (gateway) =>
+      inTurn<GatewayEngineState>(gateway.slug, async () =>
+        serving.has(gateway.slug) ? { status: 'running' } : openFor(gateway),
+      ).joined,
+    stop: async (slug) => inTurn(slug, async () => haltFor(slug)).joined,
   };
 }

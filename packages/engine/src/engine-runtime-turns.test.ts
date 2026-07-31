@@ -9,6 +9,7 @@ function aLoopbackThatClosesSlowly() {
   const waiting: (() => void)[] = [];
 
   return {
+    serving,
     finishClosing: () => {
       for (const release of waiting.splice(0)) {
         release();
@@ -94,5 +95,31 @@ describe('a listener that blows up rather than answering', () => {
     await expect(runtime.stop(codex.slug)).resolves.toEqual({ status: 'stopped' });
     await expect(failing).rejects.toThrow('the loopback gave way');
     await expect(runtime.start(codex)).rejects.toThrow('the loopback gave way');
+  });
+});
+
+describe('a stop that follows a start, both arriving during an older stop', () => {
+  test('the gateway is really down once that stop reports it, rather than coming back up behind it', async () => {
+    const loopback = aLoopbackThatClosesSlowly();
+    const runtime = createEngineRuntime(loopback.openListeners);
+
+    await runtime.start(codex);
+
+    const first = runtime.stop(codex.slug);
+    const restarting = runtime.start(codex);
+    const second = runtime.stop(codex.slug);
+
+    for (let release = 0; release < 4; release += 1) {
+      await new Promise((settle) => {
+        setTimeout(settle, 0);
+      });
+      loopback.finishClosing();
+    }
+
+    await first;
+    await restarting;
+    await second;
+
+    expect(loopback.serving.has(codex.port)).toBe(false);
   });
 });
