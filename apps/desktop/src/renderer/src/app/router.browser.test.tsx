@@ -2,7 +2,7 @@ import type { AccountsDocument } from '@recompose/contracts';
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
@@ -12,10 +12,17 @@ import {
   systemQueryOptions,
 } from '../pages/settings';
 import { accountsQueryOptions } from '../shared/api';
-import { installFakeBridge } from '../shared/testing';
+import { gatewaySeed, installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
 import { renderAt } from './testing/render-app';
+
+const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
+const claude = gatewaySeed({ slug: 'claude', displayName: 'Claude', port: 51235 });
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 function seededAccounts(): AccountsDocument {
   return {
@@ -58,7 +65,7 @@ test('an unknown path shows the not-found state inside the shell', async () => {
   const screen = await renderAt('/no-such-page');
 
   await expect.element(screen.getByText('Not found')).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
 });
 
 test('navigating to providers loads and renders the registry from the bridge', async () => {
@@ -101,7 +108,7 @@ test('a request for the usage path lands on the usage screen inside the shell', 
   const screen = await renderAt('/usage');
 
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Usage' })).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
 });
 
 test('clicking the settings link navigates to the settings screen', async () => {
@@ -154,6 +161,47 @@ test('an invalid gateway slug lands on the not-found state', async () => {
   await expect.element(screen.getByText('Not found')).toBeVisible();
 });
 
+test('the sidebar offers no way home, because home is no longer a place', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
+  await expect.element(screen.getByRole('link', { name: 'Gateways' })).not.toBeInTheDocument();
+});
+
+test('a launch opens the gateway the last session was looking at', async () => {
+  const first = await renderAt('/gateways/claude', { gateways: [codex, claude] });
+
+  await expect.element(first.getByRole('heading', { name: 'claude' })).toBeVisible();
+
+  await first.unmount();
+
+  const second = await renderAt('/', { gateways: [codex, claude] });
+
+  await expect.element(second.getByRole('heading', { name: 'claude' })).toBeVisible();
+});
+
+test('a launch whose remembered gateway has gone invites a new one instead', async () => {
+  const first = await renderAt('/gateways/claude', { gateways: [codex, claude] });
+
+  await expect.element(first.getByRole('heading', { name: 'claude' })).toBeVisible();
+
+  await first.unmount();
+
+  const second = await renderAt('/', { gateways: [] });
+
+  await expect
+    .element(second.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
+    .toBeVisible();
+});
+
+test('a launch remembering nothing lands on the invitation', async () => {
+  const screen = await renderAt('/', { gateways: [] });
+
+  await expect
+    .element(screen.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
+    .toBeVisible();
+});
+
 test('every build defaults to hash-based history, so one url shape reaches the window', () => {
   try {
     const router = createAppRouter({ queryClient: createQueryClient() });
@@ -184,7 +232,7 @@ test('pressing the shortcut again brings focus back to the first control', async
 
   await expect.element(launch).toHaveFocus();
 
-  screen.getByRole('link', { name: 'Gateways' }).element().focus();
+  screen.getByRole('link', { name: 'Usage' }).element().focus();
 
   await expect.element(launch).not.toHaveFocus();
 

@@ -24,10 +24,6 @@ export function AppSidebar({ onNewGateway }: AppSidebarProps) {
   return (
     <aside className="app-drag w-60 border-e border-line-subtle bg-surface-sidebar px-2.5 pt-toolbar pb-2.5 text-body text-ink-secondary">
       <nav className="app-no-drag flex flex-col">
-        <Link className="nav-item" to="/">
-          <Icon name="network" />
-          Gateways
-        </Link>
         <Suspense fallback={null}>
           <GatewaySidebar onNewGateway={onNewGateway} />
         </Suspense>

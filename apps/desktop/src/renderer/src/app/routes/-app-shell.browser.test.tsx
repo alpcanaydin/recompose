@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 
 import { gatewaySeed } from '../../shared/testing';
@@ -6,10 +6,14 @@ import { renderAt } from '../testing/render-app';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 test('the shell shows the sidebar and the invitation at the root', async () => {
   const screen = await renderAt('/');
 
-  await expect.element(screen.getByRole('link', { name: 'Gateways' })).toBeVisible();
+  await expect.element(screen.getByRole('group', { name: 'System' })).toBeVisible();
   await expect
     .element(screen.getByRole('heading', { name: 'Create your first gateway', level: 1 }))
     .toBeVisible();

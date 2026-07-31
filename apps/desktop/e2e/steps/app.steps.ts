@@ -75,7 +75,7 @@ When('the maintainer switches the theme to dark', async ({ electronApp, page }) 
 });
 
 Given('the app is on the gateways screen', async ({ page }) => {
-  await page.getByRole('link', { name: 'Gateways' }).click();
+  await expect(page.getByRole('group', { name: 'Local Gateways' })).toBeVisible();
 });
 
 Given('the app is on the providers screen', async ({ page }) => {
