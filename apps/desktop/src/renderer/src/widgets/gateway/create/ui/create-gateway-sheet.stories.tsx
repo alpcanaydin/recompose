@@ -87,6 +87,22 @@ export const AddressPreview = meta.story({
   },
 });
 
+/** A refused slug, which keeps the sheet open and states the format under the field. */
+export const SlugRefused = meta.story({
+  play: async ({ userEvent }) => {
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Slug' }), 'Codex');
+    await userEvent.click(await screen.findByRole('button', { name: 'Create Gateway' }));
+
+    const refusal = await screen.findByRole('alert');
+    const slug = await screen.findByRole('textbox', { name: 'Slug' });
+
+    await expect(refusal).toHaveTextContent(
+      'Accepts lowercase letters, digits, and single dashes.',
+    );
+    await expect(paintedBox(refusal).top).toBeGreaterThanOrEqual(paintedBox(slug).bottom);
+  },
+});
+
 /** The offer routes around a port a stored gateway already holds. */
 export const PortAroundAStoredGateway = meta.story({
   parameters: { bridge: { gateways: [codex] } },

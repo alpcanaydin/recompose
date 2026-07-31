@@ -136,6 +136,27 @@ test('a slug the format refuses keeps the sheet open and states the format', asy
   expect(await storedGateways()).toEqual([]);
 });
 
+test('a refusal announces itself and stands under the field it concerns', async () => {
+  await openSheet();
+
+  await page.getByRole('textbox', { name: 'Name' }).fill('Codex');
+  await page.getByRole('textbox', { name: 'Slug' }).fill('Codex');
+  await press('Create Gateway');
+
+  const refusal = page.getByRole('alert');
+
+  await expect
+    .element(refusal)
+    .toHaveTextContent('Accepts lowercase letters, digits, and single dashes.');
+
+  const slugField = page.getByRole('textbox', { name: 'Slug' }).element();
+
+  expect(slugField.closest('div')?.contains(refusal.element())).toBe(true);
+  expect(refusal.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    slugField.getBoundingClientRect().bottom,
+  );
+});
+
 test('a slug ending in a dash meets the same refusal', async () => {
   await openSheet();
 
