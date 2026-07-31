@@ -51,6 +51,10 @@ describe('flattening a translucent stop over its backdrop', () => {
     expect(flattenOver('#0C1341', '#2640D9', 0.8)).toBe('#111C5F');
   });
 
+  it('pads a channel below sixteen with its leading zero, so the triplet stays six digits', () => {
+    expect(flattenOver('#020309', '#142273', 0.8)).toBe('#06091E');
+  });
+
   it('rejects a color that is not a six digit hex triplet', () => {
     expect(() => flattenOver('rgb(0,0,0)', '#FFFFFF', 0.8)).toThrow('rgb(0,0,0)');
   });
@@ -186,15 +190,16 @@ const straightMaster = [
 ].join('\n');
 
 describe('the shared Windows and Linux rendition', () => {
-  const rendition = sharedRendition(straightMaster);
-
   it('rounds the outer edge to the Fluent radius on the master canvas', () => {
-    const [, outer] = /rect width="1024" height="1024" rx="([\d.]+)"/.exec(rendition) ?? [];
+    const [, outer] =
+      /rect width="1024" height="1024" rx="([\d.]+)"/.exec(sharedRendition(straightMaster)) ?? [];
 
     expect(Number(outer)).toBeCloseTo(fluentOuterRadius(markCanvas), 3);
   });
 
   it('leaves both bands square, because the Fluent radius never reaches their insets', () => {
+    const rendition = sharedRendition(straightMaster);
+
     expect(rendition).toContain('<rect x="48" y="48" width="928" height="928" rx="0"');
     expect(rendition).toContain('<rect x="96" y="96" width="832" height="832" rx="0"');
   });
@@ -205,21 +210,20 @@ describe('the shared Windows and Linux rendition', () => {
 });
 
 describe('the volume rendition', () => {
-  const rendition = volumeRendition(straightMaster);
-
   it('insets the mark by the transparent margin the legacy grid leaves', () => {
-    expect(rendition).toContain('translate(100 100) scale(0.8046875)');
+    expect(volumeRendition(straightMaster)).toContain('translate(100 100) scale(0.8046875)');
   });
 
   it('rounds the outer corner so it lands at the pinned legacy radius', () => {
     const masterRadius = Number(
-      /rect width="1024" height="1024" rx="([\d.]+)"/.exec(rendition)?.[1],
+      /rect width="1024" height="1024" rx="([\d.]+)"/.exec(volumeRendition(straightMaster))?.[1],
     );
 
     expect(masterRadius * 0.8046875).toBeCloseTo(186, 4);
   });
 
   it('runs both bands concentric to that corner', () => {
+    const rendition = volumeRendition(straightMaster);
     const [, darkBand] = /width="928" height="928" rx="([\d.]+)"/.exec(rendition) ?? [];
     const [, tile] = /width="832" height="832" rx="([\d.]+)"/.exec(rendition) ?? [];
 
@@ -228,16 +232,18 @@ describe('the volume rendition', () => {
   });
 
   it('keeps the whole thing on the 1024 canvas the container renders from', () => {
-    expect(rendition.startsWith('<svg width="1024" height="1024" viewBox="0 0 1024 1024"')).toBe(
-      true,
-    );
+    expect(
+      volumeRendition(straightMaster).startsWith(
+        '<svg width="1024" height="1024" viewBox="0 0 1024 1024"',
+      ),
+    ).toBe(true);
   });
 });
 
-describe('the tray template silhouette', () => {
-  const smallMaster =
-    '<path d="M0 0" fill="#F2EBD1" stroke="#0C1341" stroke-width="64" stroke-linejoin="round"/>';
+const smallMaster =
+  '<path d="M0 0" fill="#F2EBD1" stroke="#0C1341" stroke-width="64" stroke-linejoin="round"/>';
 
+describe('the tray template silhouette', () => {
   it('flattens the cream note and its contour into one opaque black shape', () => {
     const silhouette = silhouetteOf(smallMaster);
 

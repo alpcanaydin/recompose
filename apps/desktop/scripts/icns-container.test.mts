@@ -23,30 +23,35 @@ function readEntries(container: Buffer): readonly { type: string; payload: Buffe
   return entries;
 }
 
-describe('the Apple icon container', () => {
-  const entries: readonly IcnsEntry[] = [
+function twoEntries(): readonly IcnsEntry[] {
+  return [
     { type: 'icp4', png: fakePng(0x01, 12) },
     { type: 'ic09', png: fakePng(0x02, 30) },
   ];
-  const container = encodeIcns(entries);
+}
 
+describe('the Apple icon container', () => {
   it('opens with the magic the format is named for', () => {
-    expect(container.toString('ascii', 0, 4)).toBe('icns');
+    expect(encodeIcns(twoEntries()).toString('ascii', 0, 4)).toBe('icns');
   });
 
   it('declares its own total length, so a reader can trust the file end', () => {
+    const container = encodeIcns(twoEntries());
+
     expect(container.readUInt32BE(4)).toBe(container.byteLength);
   });
 
   it('returns every payload under the type it went in as', () => {
-    expect(readEntries(container)).toEqual([
+    expect(readEntries(encodeIcns(twoEntries()))).toEqual([
       { type: 'icp4', payload: Buffer.from(fakePng(0x01, 12)) },
       { type: 'ic09', payload: Buffer.from(fakePng(0x02, 30)) },
     ]);
   });
 
   it('counts the entry header inside each declared length', () => {
-    expect(container.readUInt32BE(ENTRY_HEADER_BYTES + 4)).toBe(12 + ENTRY_HEADER_BYTES);
+    expect(encodeIcns(twoEntries()).readUInt32BE(ENTRY_HEADER_BYTES + 4)).toBe(
+      12 + ENTRY_HEADER_BYTES,
+    );
   });
 
   it('refuses a type that is not the four characters the format allows', () => {

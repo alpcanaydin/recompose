@@ -16,6 +16,7 @@
     "!scripts/generate-icons.mts"
   ],
   "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
   "incremental": true,
   "incrementalFile": "reports/stryker-incremental.json",
   "reporters": ["html", "clear-text", "progress"],
