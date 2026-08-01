@@ -5,13 +5,13 @@ import { Suspense } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
-import type { AccountKind } from '../../../../entities/account';
-
 import { accountsQueryOptions } from '../../../../shared/api';
 import { installFakeBridge } from '../../../../shared/testing';
 import { ProviderSidebar } from './provider-sidebar';
 
-function stored(kinds: AccountKind[]): AccountsDocument {
+type StoredKind = AccountsDocument['accounts'][number]['kind'];
+
+function stored(kinds: StoredKind[]): AccountsDocument {
   return {
     schemaVersion: 2,
     accounts: kinds.map((kind, index) =>
@@ -54,6 +54,17 @@ test('every kind an account can be held as gets a row of its own', async () => {
   await expect
     .element(screen.getByRole('link', { name: 'Aggregators, 0 connected' }))
     .toBeVisible();
+  await expect
+    .element(screen.getByRole('link', { name: 'Local Runtimes, 0 connected' }))
+    .toBeVisible();
+});
+
+test('the kind that holds nothing yet still reaches a destination of its own', async () => {
+  const screen = await renderSidebar(stored([]));
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Local Runtimes, 0 connected' }))
+    .toHaveAttribute('href', '#/providers?kind=local');
 });
 
 test('a row reports how many accounts are stored under its kind', async () => {
