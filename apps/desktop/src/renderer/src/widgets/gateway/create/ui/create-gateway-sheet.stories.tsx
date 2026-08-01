@@ -1,4 +1,4 @@
-import { expect, screen } from 'storybook/test';
+import { expect, screen, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -18,7 +18,9 @@ export const Open = meta.story({
     const sheet = await screen.findByRole('dialog', { name: 'Create a gateway' });
 
     await expect(sheet).toHaveAccessibleDescription('Name it and pick the port it serves on.');
-    await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('51234');
+    await waitFor(async () => {
+      await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('51234');
+    });
     await expect(sheet).toHaveTextContent('Serves at');
     await expect(sheet).toHaveTextContent('http://localhost:51234');
   },
@@ -138,8 +140,8 @@ export const SaveRefused = meta.story({
 export const PortOfferRefused = meta.story({
   parameters: refusing('gateways:offer-port', 'the free-port probe failed'),
   play: async () => {
-    await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('');
     await expect(await screen.findByRole('alert')).toHaveTextContent('the free-port probe failed');
+    await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('');
   },
 });
 
@@ -147,6 +149,8 @@ export const PortOfferRefused = meta.story({
 export const PortAroundAStoredGateway = meta.story({
   parameters: { bridge: { gateways: [codex] } },
   play: async () => {
-    await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('51235');
+    await waitFor(async () => {
+      await expect(await screen.findByRole('textbox', { name: 'Port' })).toHaveValue('51235');
+    });
   },
 });
