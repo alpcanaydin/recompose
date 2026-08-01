@@ -3,6 +3,7 @@ import type { EngineGateway, Settings } from '@recompose/contracts';
 import { join } from 'node:path';
 
 import type { SecretCodec } from '../storage/safe-storage-codec';
+import type { SubscriptionRelease } from '../subscriptions/subscription-release';
 
 import { ipcFailure, openVault } from './storage-envelope';
 
@@ -18,6 +19,7 @@ export type StorageIpcContext = {
   applySettings: (settings: Settings, askedLoginItem: boolean | undefined) => void;
   /** A stored gateway serves at once, and the outcome reaches the screen by push rather than here. */
   startGateway: (gateway: EngineGateway) => void;
+  releaseSubscription: SubscriptionRelease;
 };
 
 export type StoragePaths = {

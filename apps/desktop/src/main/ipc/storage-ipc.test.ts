@@ -13,6 +13,8 @@ import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { StorageIpcContext } from './storage-context';
 
 import { loadVaultFile } from '../storage/vault';
+import { subscriptionHomes } from '../subscriptions/subscription-homes';
+import { subscriptionRelease } from '../subscriptions/subscription-release';
 import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
@@ -35,6 +37,10 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    releaseSubscription: subscriptionRelease(
+      subscriptionHomes(userDataPath, process.platform),
+      null,
+    ),
     ...overrides,
   };
 }
