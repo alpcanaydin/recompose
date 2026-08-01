@@ -12,7 +12,7 @@ import { wallClock } from './subscription-sign-in';
 const SIGN_IN_BOUND_MS = 5 * 60 * 1000;
 const SIGN_IN_EVERY_MS = 1_000;
 const LOGIN_SHELL_BOUND_MS = 3_000;
-const SECURITY_COMMAND = '/usr/bin/security';
+const SECURITY_COMMAND = process.env['RECOMPOSE_KEYCHAIN_COMMAND'] ?? '/usr/bin/security';
 
 export type SubscriptionsWiring = {
   userDataPath: string;
