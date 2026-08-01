@@ -82,13 +82,28 @@ export function narrowedCatalog(
   );
 }
 
-/** The entries gathered under each way they connect, with the ways nothing stands under dropped. */
-export function catalogGroups(entries: readonly CatalogEntry[]): readonly CatalogGroup[] {
+function leadingWay(entry: CatalogEntry, asked?: ConnectionWay): ConnectionWay | undefined {
+  return groupOrder.find(
+    (way) => entry.ways.includes(way) && (asked === undefined || way === asked),
+  );
+}
+
+/**
+ * The entries gathered under one way each, with the ways nothing stands under dropped.
+ *
+ * @summary A provider that connects two ways stands once, under the first way it offers, because
+ * a second row for the same provider would read as a second provider and both rows would open the
+ * same fork anyway. Asking for a way gathers everyone who offers it under that one heading.
+ */
+export function catalogGroups(
+  entries: readonly CatalogEntry[],
+  asked?: ConnectionWay,
+): readonly CatalogGroup[] {
   return groupOrder
     .map((way) => ({
       way,
       title: accountKindTitle(way),
-      entries: entries.filter((entry) => entry.ways.includes(way)),
+      entries: entries.filter((entry) => leadingWay(entry, asked) === way),
     }))
     .filter((group) => group.entries.length > 0);
 }

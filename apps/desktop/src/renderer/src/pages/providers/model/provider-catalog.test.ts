@@ -62,18 +62,25 @@ test('a provider that takes a key names the kind that key is held under', () => 
 test('the catalog gathers under the name each way goes by on screen', () => {
   expect(catalogGroups(catalogEntries).map((group) => group.title)).toEqual([
     'Subscriptions',
-    'API Keys',
     'Aggregators',
   ]);
 });
 
-test('a provider that connects two ways stands under both of them', () => {
+test('a provider that connects two ways stands once, under the way it leads with', () => {
   const groups = catalogGroups(catalogEntries);
   const under = (way: ConnectionWay) =>
     groups.find((group) => group.way === way)?.entries.map((entry) => entry.id);
 
   expect(under('subscription')).toEqual(['anthropic', 'openai']);
-  expect(under('api-key')).toEqual(['anthropic', 'openai']);
+  expect(under('api-key')).toBeUndefined();
+});
+
+test('a way asked for gathers the providers that lead with another way under it', () => {
+  const narrowed = narrowedCatalog(catalogEntries, { search: '', way: 'api-key' });
+
+  expect(catalogGroups(narrowed, 'api-key')).toEqual([
+    { way: 'api-key', title: 'API Keys', entries: [offered('anthropic'), offered('openai')] },
+  ]);
 });
 
 test('a way nothing is left under drops its heading rather than standing empty', () => {
