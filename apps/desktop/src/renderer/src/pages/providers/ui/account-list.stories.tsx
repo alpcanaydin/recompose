@@ -5,15 +5,9 @@ import preview from '#.storybook/preview';
 import { AccountList } from './account-list';
 
 const seeded: AccountsDocument = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   accounts: [
-    {
-      id: 'a1',
-      provider: 'anthropic',
-      kind: 'subscription',
-      label: 'Claude Max',
-      credentialRef: 'c1',
-    },
+    { id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' },
     {
       id: 'a2',
       provider: 'openrouter',

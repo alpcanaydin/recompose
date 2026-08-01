@@ -190,13 +190,15 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
+    if (row.kind !== 'subscription') {
+      const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 
-    if (!opened.ok) {
-      return opened;
+      if (!opened.ok) {
+        return opened;
+      }
+
+      await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
     }
-
-    await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
 
     const updated = {
       ...accounts,

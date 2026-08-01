@@ -51,6 +51,11 @@ function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
     'engine:start': absent,
     'engine:stop': absent,
     'engine:states': absent,
+    'subscriptions:list': absent,
+    'subscriptions:tools': absent,
+    'subscriptions:sign-in': absent,
+    'subscriptions:restore': absent,
+    'subscriptions:activate': absent,
   };
 }
 
@@ -67,6 +72,24 @@ const trustedSender: TrustedSender = {
   isMainFrame: true,
 };
 const allowedOrigins: AllowedOrigins = { devServerOrigin: undefined };
+
+describe('storage ipc handlers: a subscription never reaches the vault', () => {
+  test('removing a subscription row leaves the vault unopened, because it holds no secret', async () => {
+    const ctx = await freshContext();
+    const stored = { id: 'sub-1', provider: 'anthropic', kind: 'subscription', label: 'Max' };
+
+    await mkdir(join(ctx.userDataPath, 'vault.bin'));
+    await writeFile(
+      join(ctx.userDataPath, 'accounts.json'),
+      JSON.stringify({ schemaVersion: 2, accounts: [stored] }),
+      'utf8',
+    );
+
+    const removed = await createStorageIpcHandlers(ctx)['accounts:remove']({ id: 'sub-1' });
+
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
+  });
+});
 
 describe('storage ipc handlers: accounts connect secret hygiene', () => {
   test('vault-unavailable never leaks the secret', async () => {

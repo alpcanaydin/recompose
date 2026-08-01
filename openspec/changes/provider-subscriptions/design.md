@@ -292,7 +292,7 @@ The vault contract doesn't change, because no subscription path opens it. On mac
 
 ### The type-level specs
 
-`packages/contracts/src/accounts.test-d.ts` opens and pins the guard at compile time: the subscription arm has no `credentialRef` property, the stored row kinds exclude `local`, and `IpcRequest<'accounts:connect'>['kind']` excludes `subscription`. `ipc.test-d.ts` moves its totality assertion to twenty channels and its error-code assertion to ten members.
+`packages/contracts/src/accounts.test-d.ts` opens and pins the guard at compile time: the subscription arm has no `credentialRef` property, the stored row kinds exclude `local`, and `IpcRequest<'accounts:connect'>['kind']` excludes `subscription`. `ipc.test-d.ts` moves its totality assertion to twenty channels and its error-code assertion to eleven members.
 
 ## Error handling
 
@@ -343,6 +343,8 @@ Three rules bind the handlers. No silent failures: an abandoned sign-in logs its
 - `apps/desktop/src/main/ipc/subscriptions-ipc.test.ts`: handler specs against temp storage (create)
 - `apps/desktop/src/main/ipc/storage-ipc.ts`: remove branches by kind, deleting the home and healing the pointer for a subscription row (modify)
 - `apps/desktop/src/main/ipc/storage-ipc.test.ts`: the branch's round trips (modify)
+- `apps/desktop/src/main/ipc/storage-ipc-vault-order.test.ts`: its connect requests narrow to the credentialed kinds (modify)
+- `apps/desktop/src/main/storage/accounts-store.test.ts`: its stored fixture moves to version 2 (modify)
 - `apps/desktop/src/main/ipc/storage-ipc-secret-hygiene.test.ts`: views never carry token material (modify)
 - `apps/desktop/src/main/ipc/dispatch.ts`: `ipcChannelNames` gains five entries (modify)
 - `apps/desktop/src/main/ipc/dispatch.test.ts`: the totality assertion follows (modify)
@@ -407,6 +409,7 @@ Three rules bind the handlers. No silent failures: an abandoned sign-in logs its
   - `subscriptionProviderIdSchema`, `SubscriptionProviderId`, and the `subscriptionProviders` table
   - `subscriptionStandingSchema`, `subscriptionAccountViewSchema`, `SubscriptionAccountView`, `subscriptionToolSchema`, and `SubscriptionTool`
   - `IpcChannel` widened to twenty members and `IpcError['code']` widened to eleven
+- Narrowing the row union: the credentialed arm keys on an enum rather than on two literal arms, so `Extract<Account, { kind: 'api-key' }>` answers `never`. Reach for the exported `CredentialedAccount`, or for `Extract<Account, { kind: CredentialedAccountKind }>`. A runtime check narrows the same way, so `row.kind !== 'subscription'` gives you the credentialed arm.
 
 ### Main
 

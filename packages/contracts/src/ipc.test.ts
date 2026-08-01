@@ -19,10 +19,15 @@ const channelNames: IpcChannel[] = [
   'engine:start',
   'engine:stop',
   'engine:states',
+  'subscriptions:list',
+  'subscriptions:tools',
+  'subscriptions:sign-in',
+  'subscriptions:restore',
+  'subscriptions:activate',
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the fifteen specified channels exist', () => {
+  test('exactly the twenty specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 
@@ -92,15 +97,30 @@ describe('accounts:connect channel', () => {
     ).toThrow();
   });
 
+  test('no secret can be offered for a subscription, because none exists to offer', () => {
+    const connect = ipcChannels['accounts:connect'].request;
+    const offer = { provider: 'anthropic', label: 'Claude Max', secret: 'sk-abc' };
+
+    expect(connect.safeParse({ ...offer, kind: 'subscription' }).success).toBe(false);
+    expect(connect.safeParse({ ...offer, kind: 'local' }).success).toBe(false);
+    expect(connect.safeParse({ ...offer, kind: 'aggregator' }).success).toBe(true);
+  });
+
+  test('a label of nothing but whitespace names no account, so it is refused', () => {
+    const valid = { provider: 'anthropic', kind: 'api-key', label: 'Work', secret: 'sk-abc' };
+
+    expect(() => ipcChannels['accounts:connect'].request.parse({ ...valid, label: ' ' })).toThrow();
+  });
+
   test('responses cannot smuggle the secret back', () => {
     const registry = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       accounts: [
         { id: 'a1', provider: 'anthropic', kind: 'api-key', label: 'Work', credentialRef: 'c1' },
       ],
     };
     const smuggled = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       accounts: [{ ...registry.accounts[0], secret: 'sk-abc' }],
     };
 
@@ -110,6 +130,83 @@ describe('accounts:connect channel', () => {
     expect(() =>
       ipcChannels['accounts:connect'].response.parse({ ok: true, value: smuggled }),
     ).toThrow();
+  });
+});
+
+const connectedView = {
+  id: 'acc-claude-max',
+  provider: 'anthropic',
+  label: 'Claude Max',
+  signedInAs: 'someone@example.com',
+  plan: 'Max',
+  standing: 'connected',
+  active: true,
+};
+
+describe('what the subscription channels ask for', () => {
+  test('signing in names the provider it delegates to, and carries no secret', () => {
+    const signIn = ipcChannels['subscriptions:sign-in'].request;
+
+    expect(signIn.safeParse({ provider: 'anthropic' }).success).toBe(true);
+    expect(signIn.safeParse({ provider: 'openrouter' }).success).toBe(false);
+    expect(signIn.safeParse({ provider: 'anthropic', secret: 'sk' }).success).toBe(false);
+  });
+
+  test('restoring and activating name an existing account rather than a provider', () => {
+    for (const channel of ['subscriptions:restore', 'subscriptions:activate'] as const) {
+      expect(() => ipcChannels[channel].request.parse({ id: 'acc-claude-max' })).not.toThrow();
+      expect(() => ipcChannels[channel].request.parse({ id: '   ' })).toThrow();
+      expect(() => ipcChannels[channel].request.parse({ provider: 'anthropic' })).toThrow();
+    }
+  });
+
+  test('reading the subscriptions and the tools asks for nothing at all', () => {
+    for (const channel of ['subscriptions:list', 'subscriptions:tools'] as const) {
+      expect(ipcChannels[channel].request.safeParse(undefined).success).toBe(true);
+      expect(ipcChannels[channel].request.safeParse({ provider: 'anthropic' }).success).toBe(false);
+    }
+  });
+});
+
+describe('what the subscription channels answer', () => {
+  test('listing answers the views a row renders from, never a stored credential', () => {
+    expect(
+      ipcChannels['subscriptions:list'].response.parse({ ok: true, value: [connectedView] }),
+    ).toEqual({ ok: true, value: [connectedView] });
+    expect(() =>
+      ipcChannels['subscriptions:list'].response.parse({
+        ok: true,
+        value: [{ ...connectedView, credentialRef: 'cred-7f3a' }],
+      }),
+    ).toThrow();
+  });
+
+  test('the tool report says whether a tool is there and what a person would run', () => {
+    const report = {
+      provider: 'openai',
+      toolName: 'Codex',
+      present: false,
+      signInCommand: 'codex login',
+      shellSetupLine: 'export CODEX_HOME="/homes/openai/active"',
+    };
+
+    expect(
+      ipcChannels['subscriptions:tools'].response.parse({ ok: true, value: [report] }),
+    ).toEqual({ ok: true, value: [report] });
+  });
+
+  test('every act on a subscription answers the refreshed views a screen redraws from', () => {
+    for (const channel of [
+      'subscriptions:list',
+      'subscriptions:sign-in',
+      'subscriptions:restore',
+      'subscriptions:activate',
+    ] as const) {
+      expect(ipcChannels[channel].response.parse({ ok: true, value: [connectedView] })).toEqual({
+        ok: true,
+        value: [connectedView],
+      });
+    }
   });
 });
 
@@ -164,6 +261,9 @@ describe('ipc error codes', () => {
     'folder-open-failed',
     'name-conflict',
     'port-conflict',
+    'tool-missing',
+    'sign-in-timed-out',
+    'keychain-denied',
   ];
 
   test('error codes are the closed set', () => {
@@ -174,8 +274,15 @@ describe('ipc error codes', () => {
     expect(() => ipcErrorSchema.parse({ code: 'other', message: 'x' })).toThrow();
   });
 
-  test('the set holds exactly eight codes, so a ninth arrives through a failing test', () => {
+  test('the set holds exactly eleven codes, so a twelfth arrives through a failing test', () => {
     expect(ipcErrorSchema.shape.code.options).toEqual(everyCode);
+  });
+
+  test('a missing tool names the tool and the remedy in its own sentence', () => {
+    const missing = { code: 'tool-missing', message: 'Claude Code is not installed.' };
+
+    expect(ipcErrorSchema.parse(missing)).toEqual(missing);
+    expect(() => ipcErrorSchema.parse({ code: 'tool-missing', message: '' })).toThrow();
   });
 
   test('a conflict refusal carries the sentence the field prints', () => {

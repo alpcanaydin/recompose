@@ -5,16 +5,8 @@ import preview from '#.storybook/preview';
 import { ProvidersPage } from './providers-page';
 
 const seeded: AccountsDocument = {
-  schemaVersion: 1,
-  accounts: [
-    {
-      id: 'a1',
-      provider: 'anthropic',
-      kind: 'subscription',
-      label: 'Claude Max',
-      credentialRef: 'c1',
-    },
-  ],
+  schemaVersion: 2,
+  accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
 };
 
 const meta = preview.meta({

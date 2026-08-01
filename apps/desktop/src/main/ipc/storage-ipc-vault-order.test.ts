@@ -58,9 +58,9 @@ describe('two people writing the vault at once', () => {
 
     const [first, second] = await Promise.all([
       handlers['accounts:connect']({
-        provider: 'anthropic',
-        kind: 'subscription',
-        label: 'Claude Max',
+        provider: 'openrouter',
+        kind: 'aggregator',
+        label: 'Router',
         secret: 'not-a-real-secret',
       }),
       handlers['accounts:connect']({
@@ -80,7 +80,9 @@ describe('two people writing the vault at once', () => {
       throw new Error('the vault could not report what it holds');
     }
 
-    const refs = accounts.value.accounts.map((stored) => stored.credentialRef);
+    const refs = accounts.value.accounts
+      .filter((stored) => stored.kind !== 'subscription')
+      .map((stored) => stored.credentialRef);
 
     expect(refs).toHaveLength(2);
 

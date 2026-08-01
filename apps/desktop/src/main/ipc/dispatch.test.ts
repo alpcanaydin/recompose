@@ -16,7 +16,7 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
 const settings: Settings = { ...defaultSettings(), theme: 'dark' };
-const emptyAccounts: AccountsDocument = { schemaVersion: 1, accounts: [] };
+const emptyAccounts: AccountsDocument = { schemaVersion: 2, accounts: [] };
 const systemState: SystemState = {
   fileBrowser: 'finder',
   loginItem: 'available',
@@ -48,6 +48,11 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'engine:start': reject,
     'engine:stop': reject,
     'engine:states': reject,
+    'subscriptions:list': reject,
+    'subscriptions:tools': reject,
+    'subscriptions:sign-in': reject,
+    'subscriptions:restore': reject,
+    'subscriptions:activate': reject,
   };
 
   return { ...base, ...overrides };
@@ -70,6 +75,11 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'engine:start': async () => Promise.resolve({ ok: true, value: { status: 'running' } }),
     'engine:stop': async () => Promise.resolve({ ok: true, value: { status: 'stopped' } }),
     'engine:states': async () => Promise.resolve({ ok: true, value: {} }),
+    'subscriptions:list': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:tools': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:sign-in': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:restore': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:activate': async () => Promise.resolve({ ok: true, value: [] }),
   };
 }
 

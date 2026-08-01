@@ -1,10 +1,15 @@
 import { z } from 'zod';
 
-import { accountKindSchema, accountsDocumentSchema } from './accounts';
+import { accountsDocumentSchema, credentialedAccountKindSchema } from './accounts';
 import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
 import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { nonBlankString } from './non-blank';
 import { settingsPatchSchema, settingsSchema } from './settings';
+import {
+  subscriptionAccountViewSchema,
+  subscriptionProviderIdSchema,
+  subscriptionToolSchema,
+} from './subscriptions';
 
 export const ipcErrorSchema = z.strictObject({
   code: z.enum([
@@ -16,6 +21,9 @@ export const ipcErrorSchema = z.strictObject({
     'folder-open-failed',
     'name-conflict',
     'port-conflict',
+    'tool-missing',
+    'sign-in-timed-out',
+    'keychain-denied',
   ]),
   message: z.string().min(1),
 });
@@ -31,10 +39,12 @@ export function ipcResult<Value extends z.ZodType>(value: Value) {
 
 export const connectAccountRequestSchema = z.strictObject({
   provider: nonBlankString,
-  kind: accountKindSchema,
+  kind: credentialedAccountKindSchema,
   label: z.string().trim().min(1),
   secret: nonBlankString,
 });
+
+const subscriptionViewsResponse = ipcResult(z.array(subscriptionAccountViewSchema));
 
 export const systemStateSchema = z.strictObject({
   fileBrowser: z.enum(['finder', 'explorer', 'file-manager']),
@@ -80,6 +90,23 @@ export const ipcChannels = {
     response: ipcResult(gatewayEngineStateSchema),
   },
   'engine:states': { request: z.void(), response: ipcResult(engineStatesSchema) },
+  'subscriptions:list': { request: z.void(), response: subscriptionViewsResponse },
+  'subscriptions:tools': {
+    request: z.void(),
+    response: ipcResult(z.array(subscriptionToolSchema)),
+  },
+  'subscriptions:sign-in': {
+    request: z.strictObject({ provider: subscriptionProviderIdSchema }),
+    response: subscriptionViewsResponse,
+  },
+  'subscriptions:restore': {
+    request: z.strictObject({ id: nonBlankString }),
+    response: subscriptionViewsResponse,
+  },
+  'subscriptions:activate': {
+    request: z.strictObject({ id: nonBlankString }),
+    response: subscriptionViewsResponse,
+  },
 } as const;
 
 export type IpcChannel = keyof typeof ipcChannels;

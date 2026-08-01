@@ -13,14 +13,18 @@ import { ProviderSidebar } from './provider-sidebar';
 
 function stored(kinds: AccountKind[]): AccountsDocument {
   return {
-    schemaVersion: 1,
-    accounts: kinds.map((kind, index) => ({
-      id: `a${index}`,
-      provider: 'anthropic',
-      kind,
-      label: `Account ${index}`,
-      credentialRef: `c${index}`,
-    })),
+    schemaVersion: 2,
+    accounts: kinds.map((kind, index) =>
+      kind === 'subscription'
+        ? { id: `a${index}`, provider: 'anthropic' as const, kind, label: `Account ${index}` }
+        : {
+            id: `a${index}`,
+            provider: 'anthropic',
+            kind,
+            label: `Account ${index}`,
+            credentialRef: `c${index}`,
+          },
+    ),
   };
 }
 
