@@ -7,6 +7,7 @@ const glyphs = {
     </>
   ),
   check: <path d="M5 12.5l4.6 4.6L19 7.4" />,
+  close: <path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4" />,
   chevron: <path d="M6 9.5 12 15.5l6-6" />,
   network: (
     <>

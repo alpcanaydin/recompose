@@ -13,11 +13,11 @@ Every task drives a failing test to green before its implementation exists, and 
   - [x] Type-level specs pin the union and the migration. A property spec proves any valid version 1 document migrates to a valid version 2 document with identifiers preserved.
   - [x] The consumers typecheck and pass again: the fixtures move to version 2, removal branches by kind, and the five channels register behind loud placeholders that task 3 replaces.
 
-- [ ] **Task 2: the kit and the tokens.** Owns the six `shared/ui` components with their stories, and both style files. Depends on nothing, and runs beside task 1.
-  - [ ] `Drawer`, on the dialog primitive the sheet already uses, with a heading, a trailing close, and no footer.
-  - [ ] `Chip` with a selected state, `Badge` for the plan, `StatusChip` for the dot beside the word, `OverflowMenu`, and `BrandMark`.
-  - [ ] The attention token pair the amber standing needs.
-  - [ ] Every component ships its stories sibling, and somebody looks at each one in both schemes before the branch leaves the machine.
+- [x] **Task 2: the kit and the tokens.** Owns the six `shared/ui` components with their stories, and both style files. Depends on nothing, and runs beside task 1.
+  - [x] `Drawer`, on the dialog primitive the sheet already uses, with a heading, a trailing close, and no footer.
+  - [x] `Chip` with a selected state, `Badge` for the plan, `StatusChip` for the dot beside the word, `OverflowMenu`, and `BrandMark`.
+  - [x] The attention token pair the amber standing needs.
+  - [x] Every component ships its stories sibling, and somebody looks at each one in both schemes before the branch leaves the machine.
 
 - [ ] **Task 3: main.** Owns `apps/desktop/src/main/subscriptions/`, the handler and dispatch files, the main entry point, both preload touches, and the mutation exclude line. Depends on task 1.
   - [ ] The tool-presence check: a timeout-bounded login-shell path probe with a fallback to the process environment, then per-provider binary resolution.

@@ -1,12 +1,18 @@
+export { Badge } from './badge';
+export { type BrandMarkName, BrandMark } from './brand-mark';
+export { Chip } from './chip';
 export { CopyButton } from './copy-button';
+export { Drawer } from './drawer';
 export { FieldGroup } from './field-group';
 export { type IconName, Icon } from './icon';
 export { placeFocus } from './place-focus';
 export { FieldRow } from './field-row';
 export { NumericField } from './numeric-field';
+export { OverflowMenu } from './overflow-menu';
 export { SegmentedControl } from './segmented-control';
 export { Sheet } from './sheet';
 export { stateMark, stateWord } from './gateway-state';
+export { StatusChip } from './status-chip';
 export { StatusIndicator } from './status-indicator';
 export { Switch } from './switch';
 export { LabelledTextField } from './labelled-text-field';

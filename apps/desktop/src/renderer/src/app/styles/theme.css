@@ -43,6 +43,8 @@
   --color-running: light-dark(var(--green-700), var(--green-500));
   --color-stopped: light-dark(var(--red-700), var(--red-500));
   --color-warning: light-dark(var(--orange-600), var(--orange-500));
+  --color-attention: light-dark(var(--amber-600), var(--amber-500));
+  --color-attention-ink: light-dark(var(--amber-700), var(--amber-400));
   --color-danger: light-dark(var(--red-700), var(--red-500));
   --color-danger-ink: light-dark(var(--red-700), var(--red-400));
 
@@ -86,6 +88,7 @@
   --spacing-thumb: 18px;
   --spacing-port: 76px;
   --spacing-sheet: 404px;
+  --spacing-drawer: 380px;
   --spacing-sheet-row: 38px;
   --spacing-sheet-field: 170px;
   --spacing-sheet-port: 74px;
@@ -214,6 +217,64 @@
       opacity: 0;
       scale: 0.97;
     }
+  }
+}
+
+@utility drawer-surface {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: flex;
+  max-width: 100%;
+  flex-direction: column;
+  border-inline-start: 1px solid var(--color-line-strong);
+  background-color: var(--color-surface-card);
+  width: var(--spacing-drawer);
+  box-shadow: var(--shadow-raised);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: translate 220ms cubic-bezier(0.32, 0.72, 0, 1);
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      translate: 100% 0;
+    }
+  }
+}
+
+@utility menu-surface {
+  min-width: calc(var(--spacing) * 44);
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface-raised);
+  padding-block: calc(var(--spacing) * 1);
+  box-shadow: var(--shadow-raised);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      opacity 120ms,
+      scale 120ms;
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+}
+
+@utility menu-action {
+  display: flex;
+  align-items: center;
+  height: var(--spacing-sheet-row);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-note);
+  color: var(--color-ink);
+
+  &[data-highlighted] {
+    background-color: var(--color-accent-fill);
+    color: var(--white);
   }
 }
 
