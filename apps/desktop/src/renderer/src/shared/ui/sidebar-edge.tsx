@@ -17,8 +17,12 @@ const asked = {
   shown: showSidebar,
 };
 
-function watchTheDrag(from: number): void {
+function watchTheDrag(pointer: number, from: number): void {
   const onMove = (moved: globalThis.PointerEvent): void => {
+    if (moved.pointerId !== pointer) {
+      return;
+    }
+
     const gesture = sidebarGestureFrom(moved.clientX - from);
 
     if (gesture === 'unchanged') {
@@ -29,15 +33,21 @@ function watchTheDrag(from: number): void {
     asked[gesture]();
   };
 
+  const onEnd = (ended: globalThis.PointerEvent): void => {
+    if (ended.pointerId === pointer) {
+      stopWatching();
+    }
+  };
+
   function stopWatching(): void {
     window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', stopWatching);
-    window.removeEventListener('pointercancel', stopWatching);
+    window.removeEventListener('pointerup', onEnd);
+    window.removeEventListener('pointercancel', onEnd);
   }
 
   window.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', stopWatching);
-  window.addEventListener('pointercancel', stopWatching);
+  window.addEventListener('pointerup', onEnd);
+  window.addEventListener('pointercancel', onEnd);
 }
 
 function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
@@ -54,7 +64,8 @@ function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
  * The sidebar's trailing edge, which a person drags to put the sidebar away or bring it back.
  *
  * @summary Dragging towards the sidebar puts it away and dragging out from it brings it back,
- * each once the pointer has gone far enough to mean it. The edge travels with the sidebar,
+ * each once the pointer has gone far enough to mean it. The drag follows the one pointer that
+ * started it, so a second finger neither drives it nor ends it. The edge travels with the sidebar,
  * so once the sidebar has gone it waits at the window's leading edge for the drag that returns
  * it. Arrow keys do the same thing, because a control only a pointer can reach is out of reach
  * for anyone who does not use one.
@@ -72,7 +83,7 @@ export function SidebarEdge() {
       className="app-no-drag relative z-20 -mx-1 w-2 shrink-0 cursor-ew-resize"
       onKeyDown={onKeyDown}
       onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
-        watchTheDrag(event.clientX);
+        watchTheDrag(event.pointerId, event.clientX);
       }}
       role="separator"
       tabIndex={0}

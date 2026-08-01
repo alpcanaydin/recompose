@@ -102,3 +102,32 @@ export const EdgeShowsTheResizeCursor = meta.story({
     await expect(getComputedStyle(edge).cursor).toBe('ew-resize');
   },
 });
+
+/**
+ * A second pointer arriving mid-drag, which the gesture ignores.
+ *
+ * @summary A trackpad or a touch screen can report more than one pointer at a time. The drag
+ * follows the one that started it, so another one moving across the window neither carries the
+ * sidebar away nor ends the gesture that is under way.
+ */
+export const ASecondPointerIsNotTheDrag = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    const edge = await canvas.findByRole('separator', { name: 'Sidebar edge' });
+    const box = edge.getBoundingClientRect();
+    const from = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 };
+
+    await userEvent.pointer([{ keys: '[MouseLeft>]', target: edge, coords: from }]);
+
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: from.clientX - 400,
+        pointerId: 99,
+      }),
+    );
+
+    await expect(sidebarHidden()).toBe(false);
+
+    await userEvent.pointer([{ keys: '[/MouseLeft]' }]);
+  },
+});
