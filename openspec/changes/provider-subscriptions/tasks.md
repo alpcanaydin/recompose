@@ -36,7 +36,7 @@ Every task drives a failing test to green before its implementation exists, and 
 
 - [ ] **Task 5: acceptance and records.** Owns the end-to-end directory, the visual baselines, the readme, the dictionary, and the record with its index row. Depends on tasks 3 and 4.
   - [ ] The four approved feature files graduate, driven against fake tool binaries on a prepended path.
-  - [ ] `README.md` stops promising OAuth sign-in for Claude subscriptions.
+  - [x] `README.md` stops promising OAuth sign-in for Claude subscriptions.
   - [ ] The guard that keeps the prohibition checkable: no screen offers a provider login for gateway use, and no vault entry holds a subscription token.
-  - [ ] Architecture Decision Record (ADR) 0069 records the custody decision, the platform split, and the alternatives the platform rules out.
+  - [x] Architecture Decision Record (ADR) 0069 records the custody decision, the platform split, and the alternatives the platform rules out.
   - [ ] The visual baselines regenerate from the label rather than from this machine.
