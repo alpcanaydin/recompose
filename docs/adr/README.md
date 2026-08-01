@@ -72,3 +72,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0064](0064-the-window-controls-follow-the-sidebar.md)                      | The Window Controls Follow the Sidebar                                              | Accepted   | 2026-07-31 |
 | [0065](0065-view-state-stays-in-the-renderer.md)                            | View State Stays in the Renderer, Apart From the Settings Document                  | Accepted   | 2026-07-31 |
 | [0066](0066-a-report-names-the-directive-it-answers.md)                     | A Report Names the Directive It Answers                                             | Accepted   | 2026-08-01 |
+| [0067](0067-paperwork-events-run-in-their-own-lane.md)                      | Title and Label Events Run in Their Own Concurrency Lane                            | Accepted   | 2026-08-01 |
