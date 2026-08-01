@@ -15,7 +15,6 @@ const SIDEBAR_WIDTH = 240;
 const asked = {
   hidden: hideSidebar,
   shown: showSidebar,
-  unchanged: () => undefined,
 };
 
 function watchTheDrag(from: number): void {

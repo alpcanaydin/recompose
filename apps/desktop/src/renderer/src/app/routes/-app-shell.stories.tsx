@@ -13,6 +13,9 @@ import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
 const meta = preview.meta({
+  beforeEach: () => {
+    showSidebar();
+  },
   component: AppToolbar,
   args: { slug: undefined },
   decorators: [
