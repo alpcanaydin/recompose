@@ -148,6 +148,7 @@ togglefullscreen
 tokenless
 topsecret
 tosorted
+trackpad
 triaging
 tsgolint
 typecheckable
