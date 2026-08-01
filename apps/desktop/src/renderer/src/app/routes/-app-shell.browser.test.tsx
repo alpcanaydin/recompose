@@ -6,6 +6,13 @@ import { renderAt } from '../testing/render-app';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
+/** The sidebar controls a person can actually press, which excludes any the shell put out of reach. */
+function reachableSidebarControls(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll('[aria-label="Sidebar"]')].filter(
+    (control) => control.closest('[inert]') === null,
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -119,4 +126,71 @@ test('arriving at settings through the sidebar leaves focus where the person put
   await expect.element(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
   await expect.element(screen.getByRole('switch', { name: 'Launch at login' })).not.toHaveFocus();
   await expect.element(settings).toHaveFocus();
+});
+
+test('the standing sidebar carries the control that puts it away', async () => {
+  const screen = await renderAt('/');
+
+  await expect.element(screen.getByRole('button', { name: 'Sidebar' })).toBeVisible();
+  expect(screen.container.querySelector('aside [aria-label="Sidebar"]')).not.toBeNull();
+});
+
+test('a surface holding no gateway draws no strip of its own while the sidebar stands', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await expect.element(screen.getByRole('group', { name: 'System' })).toBeVisible();
+  expect(screen.container.querySelector('main [aria-label="Sidebar"]')).toBeNull();
+});
+
+test('the way back stays in reach once the sidebar has gone', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await screen.getByRole('button', { name: 'Sidebar' }).click();
+
+  const settings = screen.getByRole('link', { name: 'Settings' }).element();
+
+  settings.focus();
+
+  expect(document.activeElement).not.toBe(settings);
+  expect(reachableSidebarControls(screen.container)).toHaveLength(1);
+});
+
+test('one control puts the sidebar away, wherever the person stands', async () => {
+  const screen = await renderAt('/gateways/codex', { gateways: [codex] });
+
+  await expect.element(screen.getByText('localhost:51234')).toBeVisible();
+  expect(reachableSidebarControls(screen.container)).toHaveLength(1);
+});
+
+test('a gateway surface keeps the way back once the sidebar has gone', async () => {
+  const screen = await renderAt('/gateways/codex', { gateways: [codex] });
+
+  await screen.getByRole('button', { name: 'Sidebar' }).click();
+
+  const settings = screen.getByRole('link', { name: 'Settings' }).element();
+
+  settings.focus();
+
+  expect(document.activeElement).not.toBe(settings);
+  expect(reachableSidebarControls(screen.container)).toHaveLength(1);
+});
+
+test('the edge answers the arrow keys, so a pointer is not the only way', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+  const edge = screen.container.querySelector<HTMLElement>('[aria-label="Sidebar edge"]');
+
+  edge?.focus();
+  await userEvent.keyboard('{ArrowLeft}');
+
+  const settings = screen.getByRole('link', { name: 'Settings' }).element();
+
+  settings.focus();
+  expect(document.activeElement).not.toBe(settings);
+
+  await userEvent.keyboard('{ArrowRight}');
+
+  const back = screen.getByRole('link', { name: 'Settings' }).element();
+
+  back.focus();
+  expect(document.activeElement).toBe(back);
 });

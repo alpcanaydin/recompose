@@ -1,2 +1,7 @@
 export { lookedAtGateway, rememberedGateway } from './last-gateway';
-export { sidebarHidden, subscribeToSidebarVisibility } from './sidebar-visibility';
+export {
+  hideSidebar,
+  showSidebar,
+  sidebarHidden,
+  subscribeToSidebarVisibility,
+} from './sidebar-visibility';

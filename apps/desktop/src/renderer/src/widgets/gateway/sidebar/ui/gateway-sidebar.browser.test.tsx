@@ -78,13 +78,13 @@ test('with nothing listed the way to the next gateway spells itself out as a row
     .toHaveTextContent('New Gateway…');
 });
 
-test('once a gateway is listed the way to the next one keeps its name as a mark', async () => {
+test('the way to the next gateway names itself whether or not one is listed', async () => {
   const { screen } = await renderSidebar({ gateways: [codex] });
 
   const next = screen.getByRole('button', { name: 'New Gateway…' });
 
   await expect.element(next).toBeVisible();
-  await expect.element(next).toHaveTextContent('');
+  await expect.element(next).toHaveTextContent('New Gateway…');
 });
 
 test('before the first gateway exists the group lists no gateway row', async () => {
@@ -105,13 +105,13 @@ test('once a gateway exists the sidebar offers the way to the next one', async (
   expect(onNewGateway).toHaveBeenCalledTimes(1);
 });
 
-test('the way to the next gateway sits above the gateways already stored', async () => {
+test('the way to the next gateway stands at the foot of the ones already stored', async () => {
   const { screen } = await renderSidebar({ gateways: [codex] });
 
   const next = screen.getByRole('button', { name: 'New Gateway…' }).element();
   const stored = screen.getByRole('link', { name: 'Codex Stopped' }).element();
 
-  expect(next.compareDocumentPosition(stored)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(next.compareDocumentPosition(stored)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 });
 
 test('a gateway group gathers the rows under its own heading', async () => {

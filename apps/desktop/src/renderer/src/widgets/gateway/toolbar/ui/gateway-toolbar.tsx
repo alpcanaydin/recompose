@@ -89,7 +89,7 @@ function ToolbarButton({
   return (
     <button
       aria-label={label}
-      className={`flex items-center justify-center focus-ring hover:bg-surface-hover ${shape[where]} ${tone}`}
+      className={`flex items-center justify-center focus-ring hover:bg-surface-hover active:bg-surface-pressed ${shape[where]} ${tone}`}
       onClick={onPress}
       title={waitsFor === undefined ? label : `${label}. Waits on ${waitsFor}.`}
       type="button"
@@ -166,6 +166,24 @@ type ToolbarStripProps = {
   status: GatewayEngineState['status'];
 };
 
+type RunControlProps = {
+  onRun: () => void;
+  running: boolean;
+};
+
+/** The control that starts the gateway or stops it, carrying which of the two it is about to do. */
+function RunControl({ onRun, running }: RunControlProps) {
+  return (
+    <ToolbarButton
+      glyph={running ? 'stop' : 'play'}
+      label={running ? 'Stop' : 'Start'}
+      onPress={onRun}
+      tone={running ? 'text-stopped' : 'text-running'}
+      where="standing"
+    />
+  );
+}
+
 /** The strip itself, holding the run control, the address, and the four the reference draws. */
 function ToolbarStrip({ address, name, onRun, port, running, status }: ToolbarStripProps) {
   const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
@@ -176,14 +194,8 @@ function ToolbarStrip({ address, name, onRun, port, running, status }: ToolbarSt
       className={`app-no-drag flex h-toolbar items-center gap-2.5 pe-3.5 ${away ? 'ps-window-controls-width' : 'ps-3.5'}`}
       role="toolbar"
     >
-      <SidebarToggle />
-      <ToolbarButton
-        glyph={running ? 'stop' : 'play'}
-        label={running ? 'Stop' : 'Start'}
-        onPress={onRun}
-        tone={running ? 'text-stopped' : 'text-running'}
-        where="standing"
-      />
+      <SidebarToggle where="standing" />
+      <RunControl onRun={onRun} running={running} />
       <ToolbarButton glyph="book" label="Docs" waitsFor="the guide" where="standing" />
       <AddressPill address={address} port={port} status={status} />
       <ToolbarButton glyph="tidy" label="Tidy the canvas" waitsFor="the canvas" where="standing" />

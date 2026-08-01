@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -19,6 +19,7 @@ import {
   gatewaysQueryOptions,
 } from '../../shared/api';
 import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
+import { SidebarEdge, SidebarToggle } from '../../shared/ui';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
 import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
@@ -48,6 +49,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   notFoundComponent: NotFound,
 });
 
+/** What the sidebar's band carries, which is nothing while a gateway's toolbar holds the control. */
+function bandFor(slug: string | undefined): ReactNode {
+  return slug === undefined ? <SidebarToggle where="chrome" /> : null;
+}
+
 function RootLayout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -64,14 +70,15 @@ function RootLayout() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {!sidebarAway && (
-        <AppSidebar
-          onNewGateway={() => {
-            void navigate({ to: '/', search: withSheet });
-          }}
-          restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
-        />
-      )}
+      <AppSidebar
+        away={sidebarAway}
+        band={bandFor(slug)}
+        onNewGateway={() => {
+          void navigate({ to: '/', search: withSheet });
+        }}
+        restoreGetStarted={getStarted === true ? (at ?? 'asked') : undefined}
+      />
+      <SidebarEdge />
       <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
         <AppToolbar slug={slug} />
         <AppContent>

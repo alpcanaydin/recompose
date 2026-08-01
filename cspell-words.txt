@@ -16,6 +16,7 @@ bestpractices
 BGRA
 blockmap
 boxshadow
+Braintrust
 BYOK
 Cabe
 ccproxy
@@ -23,8 +24,8 @@ chromaui
 cliproxyapi
 Codechecks
 codegen
-Commvault
 coderabbit
+Commvault
 componentwise
 cooldown
 covguard
@@ -32,8 +33,8 @@ cyclonedx
 dagre
 dbus
 dedup
-değiştir
 depcruise
+değiştir
 diffable
 dmgbuild
 docblocks
@@ -47,6 +48,7 @@ Electrobun's
 Electronegativity
 electronjs
 esac
+Fibery
 Firecrawl
 Flathub
 flatlist
@@ -121,8 +123,8 @@ Scriptable
 scrollview
 semgrep
 servernum
-Shadowsocks
 setstate
+Shadowsocks
 shellcheck
 snapcraft
 spinbuttons
@@ -146,6 +148,7 @@ togglefullscreen
 tokenless
 topsecret
 tosorted
+trackpad
 triaging
 tsgolint
 typecheckable

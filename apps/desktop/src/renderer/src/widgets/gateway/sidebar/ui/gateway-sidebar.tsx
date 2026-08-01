@@ -15,7 +15,7 @@ type GatewaySidebarProps = {
 
 const NEW_GATEWAY = 'New Gateway…';
 
-/** The invitation while the group lists nothing, where a row has the space to name itself. */
+/** The way to the next gateway, standing at the foot of the list whether or not one is listed. */
 function NewGatewayRow({ onNewGateway }: GatewaySidebarProps) {
   return (
     <button
@@ -25,26 +25,6 @@ function NewGatewayRow({ onNewGateway }: GatewaySidebarProps) {
     >
       <Icon className="size-3.5 icon-emphasis" name="plus" />
       {NEW_GATEWAY}
-    </button>
-  );
-}
-
-/**
- * The same act once gateways are listed, drawn on the heading rather than under the list.
- *
- * @summary A row below a list reads as a member of that list, so the act moves to the trailing
- * edge of the heading the way a source list does. It keeps the row's name, so a screen reader
- * and a scenario both hear the same thing in either shape.
- */
-function NewGatewayMark({ onNewGateway }: GatewaySidebarProps) {
-  return (
-    <button
-      aria-label={NEW_GATEWAY}
-      className="me-glyph-trailing mb-0.5 flex size-5 items-center justify-end text-accent-ink focus-ring"
-      onClick={onNewGateway}
-      type="button"
-    >
-      <Icon className="size-3.5 icon-emphasis" name="plus" />
     </button>
   );
 }
@@ -62,13 +42,9 @@ export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
 
   return (
     <div aria-labelledby={groupId} className="flex flex-col" role="group">
-      <div className="flex items-end">
-        <h2 className="flex-1 nav-group" id={groupId}>
-          Local Gateways
-        </h2>
-        {gateways.length > 0 && <NewGatewayMark onNewGateway={onNewGateway} />}
-      </div>
-      {gateways.length === 0 && <NewGatewayRow onNewGateway={onNewGateway} />}
+      <h2 className="nav-group" id={groupId}>
+        Local Gateways
+      </h2>
       {gateways.map((gateway) => (
         <a className="nav-item text-ink" href={`#/gateways/${gateway.slug}`} key={gateway.slug}>
           <Icon name="network" />
@@ -78,6 +54,7 @@ export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
           </span>
         </a>
       ))}
+      <NewGatewayRow onNewGateway={onNewGateway} />
     </div>
   );
 }

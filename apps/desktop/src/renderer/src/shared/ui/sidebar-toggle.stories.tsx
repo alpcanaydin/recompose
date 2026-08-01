@@ -2,9 +2,15 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import { showSidebar } from '../lib/sidebar-visibility';
 import { SidebarToggle } from './sidebar-toggle';
 
-const meta = preview.meta({ component: SidebarToggle });
+const meta = preview.meta({
+  beforeEach: () => {
+    showSidebar();
+  },
+  component: SidebarToggle,
+});
 
 /**
  * The control that puts the sidebar away, which reports the state it is about to leave.
@@ -14,7 +20,7 @@ const meta = preview.meta({ component: SidebarToggle });
  * stays the same thing.
  */
 export const SidebarPutsItselfAway = meta.story({
-  render: () => <SidebarToggle />,
+  render: () => <SidebarToggle where="standing" />,
   play: async ({ canvas, userEvent }) => {
     const toggle = await canvas.findByRole('button', { name: 'Sidebar' });
 
@@ -27,5 +33,23 @@ export const SidebarPutsItselfAway = meta.story({
     await userEvent.click(toggle);
 
     await expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  },
+});
+
+/**
+ * The same control in the sidebar's own band, drawn flat instead of raised.
+ *
+ * @summary Beside the window controls a raised button reads as a stray member of the toolbar
+ * across the divider, which sits on a different centre. Flat, it reads as window chrome, which
+ * is what it is there.
+ */
+export const InTheSidebarBand = meta.story({
+  render: () => <SidebarToggle where="chrome" />,
+  play: async ({ canvas }) => {
+    const toggle = await canvas.findByRole('button', { name: 'Sidebar' });
+    const painted = getComputedStyle(toggle);
+
+    await expect(painted.borderTopWidth).toBe('0px');
+    await expect(painted.backgroundColor).toBe('rgba(0, 0, 0, 0)');
   },
 });
