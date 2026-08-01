@@ -12,8 +12,8 @@ import {
 const TRAVEL_TO_FLIP = 48;
 const SIDEBAR_WIDTH = 240;
 
-function flipTowards(travelled: number): void {
-  if (travelled < 0) {
+function flipTowards(travel: number): void {
+  if (travel < 0) {
     hideSidebar();
 
     return;
@@ -24,14 +24,14 @@ function flipTowards(travelled: number): void {
 
 function watchTheDrag(from: number): void {
   const onMove = (moved: globalThis.PointerEvent): void => {
-    const travelled = moved.clientX - from;
+    const travel = moved.clientX - from;
 
-    if (Math.abs(travelled) < TRAVEL_TO_FLIP) {
+    if (Math.abs(travel) < TRAVEL_TO_FLIP) {
       return;
     }
 
     window.removeEventListener('pointermove', onMove);
-    flipTowards(travelled);
+    flipTowards(travel);
   };
 
   window.addEventListener('pointermove', onMove);
@@ -58,7 +58,7 @@ function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
  * The sidebar's trailing edge, which a person drags to put the sidebar away or bring it back.
  *
  * @summary Dragging towards the sidebar puts it away and dragging out from it brings it back,
- * each once the pointer has travelled far enough to mean it. The edge travels with the sidebar,
+ * each once the pointer has gone far enough to mean it. The edge travels with the sidebar,
  * so once the sidebar has gone it waits at the window's leading edge for the drag that returns
  * it. Arrow keys do the same thing, because a control only a pointer can reach is out of reach
  * for anyone who does not use one.
