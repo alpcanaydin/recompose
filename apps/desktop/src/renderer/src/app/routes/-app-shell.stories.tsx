@@ -3,7 +3,9 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import { hideSidebar, showSidebar } from '../../shared/lib';
 import { gatewaySeed, paintedBox, paintedStyle } from '../../shared/testing';
+import { SidebarToggle } from '../../shared/ui';
 import { createQueryClient } from '../query-client';
 import { createAppRouter } from '../router';
 import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
@@ -45,6 +47,32 @@ export const NoGatewaySelected = meta.story({
     await expect(drawn.top).toBe(surface.top);
     await expect(drawn.width).toBe(surface.width);
     await expect(drawn.height).toBe(54);
+  },
+});
+
+/**
+ * The same surface once the sidebar has gone, where the region becomes a bar of its own.
+ *
+ * @summary It takes the toolbar's surface and hairline so that the control it now carries stands
+ * on something, and so that scrolled content passes under a bar rather than under a control
+ * floating over the page. It keeps its place out of the flow, so nothing below it moves.
+ */
+export const NoGatewaySelectedWithTheSidebarAway = meta.story({
+  beforeEach: () => {
+    hideSidebar();
+
+    return () => {
+      showSidebar();
+    };
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByRole('button', { name: 'Sidebar' });
+
+    const painted = paintedStyle(canvasElement.firstElementChild?.firstElementChild);
+
+    await expect(painted.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    await expect(painted.borderBottomWidth).toBe('1px');
+    await expect(painted.position).toBe('absolute');
   },
 });
 
@@ -90,13 +118,14 @@ export const TopEdgeTakesHoldOfTheWindow = meta.story({
  *
  * @summary macOS draws its own controls over this corner, and clearing them is all the inset owes.
  * Borrowing the toolbar's height reserves eighteen more pixels for a toolbar the sidebar never
- * carries, which pushes the first group heading below where the rest of the shell expects it.
+ * carries, which pushes the first group heading below where the rest of the shell expects it. The
+ * band is where the control that puts the sidebar away stands, on the centre the controls take.
  */
 export const SidebarClearsTheWindowControls = meta.story({
   parameters: { bridge: { engineStates: {}, gateways: [codex] } },
   render: () => (
     <RouterContextProvider router={createAppRouter({ queryClient: createQueryClient() })}>
-      <AppSidebar onNewGateway={() => undefined} />
+      <AppSidebar away={false} onNewGateway={() => undefined} />
     </RouterContextProvider>
   ),
   play: async ({ canvas, canvasElement }) => {
@@ -106,6 +135,35 @@ export const SidebarClearsTheWindowControls = meta.story({
     const heading = sidebar?.querySelector('h2');
 
     await expect(paintedBox(heading).top - paintedBox(sidebar).top).toBe(36);
+  },
+});
+
+/**
+ * The control in the sidebar's band, drawn to the centre macOS gives its own controls.
+ *
+ * @summary The window controls sit centred in a thirty-six pixel band, so anything sharing that
+ * band and drawn to another centre reads as a mistake. The control also stands clear of the
+ * corner they occupy, at the trailing edge, where nothing it could collide with is drawn.
+ */
+export const SidebarControlTakesTheWindowControlCentre = meta.story({
+  parameters: { bridge: { engineStates: {}, gateways: [codex] } },
+  render: () => (
+    <RouterContextProvider router={createAppRouter({ queryClient: createQueryClient() })}>
+      <AppSidebar
+        away={false}
+        band={<SidebarToggle where="chrome" />}
+        onNewGateway={() => undefined}
+      />
+    </RouterContextProvider>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const toggle = await canvas.findByRole('button', { name: 'Sidebar' });
+    const sidebar = canvasElement.firstElementChild?.firstElementChild;
+    const drawn = paintedBox(toggle);
+    const band = paintedBox(sidebar);
+
+    await expect((drawn.top + drawn.bottom) / 2 - band.top).toBe(18);
+    await expect(drawn.left - band.left).toBeGreaterThan(76);
   },
 });
 

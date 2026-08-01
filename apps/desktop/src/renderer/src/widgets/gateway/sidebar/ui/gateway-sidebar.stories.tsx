@@ -30,41 +30,20 @@ export const MixedStates = meta.story({
 });
 
 /**
- * The way to a second gateway, drawn as a mark on the heading once the list has members.
+ * The way to a second gateway, standing at the foot of the list rather than on the heading.
  *
- * @summary A row under a list reads as a member of that list, so the act moves onto the heading
- * the way a macOS source list does. Its name does not change with its shape.
+ * @summary A mark on the heading is easy to miss and hard to hit, so the act keeps the row it
+ * had on a fresh install and simply never leaves. It names itself in every state, and it stands
+ * under the gateways rather than over them, where a list puts the thing that adds to it.
  */
-export const NewGatewayMarkOnTheHeading = meta.story({
+export const NewGatewayRowUnderTheList = meta.story({
   parameters: { bridge: { gateways: [codex] } },
   play: async ({ canvas }) => {
     const next = await canvas.findByRole('button', { name: 'New Gateway…' });
-    const heading = await canvas.findByRole('heading', { name: 'Local Gateways' });
+    const stored = await canvas.findByRole('link', { name: 'Codex Stopped' });
 
-    await expect(next).toHaveTextContent('');
-    await expect(paintedBox(next).top).toBeGreaterThanOrEqual(paintedBox(heading).top);
-    await expect(paintedBox(next).bottom).toBeLessThanOrEqual(paintedBox(heading).bottom);
-    await expect(paintedBox(next).left).toBeGreaterThan(paintedBox(heading).left);
-  },
-});
-
-/**
- * The plus and the state marks under it standing on one vertical line.
- *
- * @summary They are the only ink in that column, so a ragged trailing edge reads immediately.
- * The mark is a filled shape that reaches its own box edge, while the plus is a stroked path
- * that stops short of one, so aligning the boxes leaves the ink ragged. The button carries the
- * difference, and this holds the two inks on one line rather than the two boxes.
- */
-export const TrailingEdgeHoldsOneLine = meta.story({
-  parameters: { bridge: { gateways: [codex] } },
-  play: async ({ canvas }) => {
-    const next = await canvas.findByRole('button', { name: 'New Gateway…' });
-    const mark = await canvas.findByRole('img', { name: 'Stopped' });
-
-    const gap = paintedBox(next.querySelector('svg path')).right - paintedBox(mark).right;
-
-    await expect(Math.abs(gap)).toBeLessThan(0.5);
+    await expect(next).toHaveTextContent('New Gateway…');
+    await expect(paintedBox(next).top).toBeGreaterThan(paintedBox(stored).top);
   },
 });
 

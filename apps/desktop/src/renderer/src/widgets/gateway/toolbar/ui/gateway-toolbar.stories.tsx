@@ -2,6 +2,7 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import { hideSidebar, showSidebar } from '../../../../shared/lib';
 import { gatewaySeed, paintedStyle } from '../../../../shared/testing';
 import { GatewayToolbar } from './gateway-toolbar';
 
@@ -91,11 +92,12 @@ export const StripShape = meta.story({
 });
 
 /**
- * Every control the reference draws, in the order it draws them.
+ * Every control the strip draws, in the order it draws them.
  *
- * @summary The run control leads, the address fills the middle, and the four the reference draws
- * to its right stand where it puts them. Each one comes from a single control component, so a
- * hover or a size proven here is the one every other control in the strip takes.
+ * @summary The sidebar control leads, the run control follows, the address fills the middle, and
+ * the four drawn to its right stand where the reference puts them. A gateway surface always has a
+ * toolbar, so the control lives here rather than in the sidebar's band. Each one comes from a
+ * single control component, so a hover or a size proven here is the one they all take.
  */
 export const EveryControl = meta.story({
   parameters: { bridge: { gateways: [codex], engineStates: {} } },
@@ -182,5 +184,33 @@ export const StartLostThePort = meta.story({
       'Another process holds port 51234.',
     );
     await expect(await canvas.findByRole('button', { name: 'Move to a free port' })).toBeVisible();
+  },
+});
+
+/**
+ * The same strip once the sidebar has gone, which stands clear of the window controls.
+ *
+ * @summary They move onto this row whenever the sidebar is not there to hold them, so the strip
+ * takes an inset that leaves their corner alone. Nothing else about it changes.
+ */
+export const SidebarAwayClearsTheWindowControls = meta.story({
+  parameters: { bridge: { gateways: [codex], engineStates: {} } },
+  beforeEach: () => {
+    hideSidebar();
+
+    return () => {
+      showSidebar();
+    };
+  },
+  play: async ({ canvas }) => {
+    const strip = await canvas.findByRole('toolbar');
+    const control = await canvas.findByRole('button', { name: 'Sidebar' });
+    const cleared = getComputedStyle(document.documentElement).getPropertyValue(
+      '--spacing-window-controls-width',
+    );
+
+    await expect(
+      `${String(control.getBoundingClientRect().left - strip.getBoundingClientRect().left)}px`,
+    ).toBe(cleared.trim());
   },
 });
