@@ -24,7 +24,7 @@ Connecting a subscription MUST record the account and MUST NOT make it reachable
 
 ### Requirement: The provider's own tool performs the sign-in
 
-The app MUST delegate signing in and renewing authorisation to the provider's own command-line tool rather than running an authorization flow of its own. The app MUST NOT store a refresh token it renews itself.
+The app MUST delegate signing in and renewing authorization to the provider's own command-line tool rather than running an authorization flow of its own. The app MUST NOT store a refresh token it renews itself.
 
 #### Scenario: a person connects a subscription
 
@@ -51,21 +51,21 @@ With no subscription connected, the surface MUST present a single call to action
 
 ### Requirement: A row reports the account and where it stands
 
-A row MUST carry the provider's mark, the provider's name, the plan the account holds, the account it signs in as, and its standing. Standing MUST read as a word with a mark beside it rather than as colour alone.
+A row MUST carry the provider's mark, the provider's name, the plan the account holds, the account it signs in as, and its standing. Standing MUST read as a word with a mark beside it rather than as color alone.
 
 #### Scenario: a connected account reads as connected
 
-- When the surface lists an account whose authorisation holds
+- When the surface lists an account whose authorization holds
 - Then the row reports it as connected
 - And the report carries a mark beside the word
 
 ### Requirement: A lapsed account carries its own way back
 
-An account whose authorisation lapsed MUST report that on its own row and MUST offer the way to restore it on that row. The app MUST NOT report a lapse only as a banner over the list, and MUST NOT leave a lapsed account looking connected.
+An account whose authorization lapsed MUST report that on its own row and MUST offer the way to restore it on that row. The app MUST NOT report a lapse only as a banner over the list, and MUST NOT leave a lapsed account looking connected.
 
-#### Scenario: an account loses its authorisation
+#### Scenario: an account loses its authorization
 
-- Given a connected account whose authorisation lapsed
+- Given a connected account whose authorization lapsed
 - When the subscriptions surface lists it
 - Then the row reports the lapse rather than reporting it as connected
 - And the row offers the way to restore the account

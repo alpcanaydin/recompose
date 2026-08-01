@@ -12,7 +12,7 @@ Discovery then reordered the feature before anyone could design it.
 
 So a gateway can't carry a subscription. Reaching upstream with plan credentials is the one act the terms name, and the wire refuses it anyway.
 
-**A neighbouring product shows what stays permitted.** The Claude Code account switchers store each account's credential, swap which one stands active, and hand login and refresh to the official command-line tool. They never make an inference request, so client identity never arises. That pattern is open to recompose, and this change takes it.
+**A neighboring product shows what stays permitted.** The Claude Code account switchers store each account's credential, swap which one stands active, and hand login and refresh to the official command-line tool. They never make an inference request, so client identity never arises. That pattern is open to recompose, and this change takes it.
 
 The inverse direction stays first-class. Anthropic documents pointing Claude Code at a gateway through `ANTHROPIC_AUTH_TOKEN`. What the terms refuse is recompose going the other way.
 
@@ -22,7 +22,7 @@ The inverse direction stays first-class. Anthropic documents pointing Claude Cod
 
 **Login and refresh belong to the official tool.** recompose calls it instead of running an authorization flow of its own. Nothing here holds a rotating refresh token. That shuts out the failure discovery documented, where two holders race, one refreshes with a stale token, and every live session starts failing.
 
-**The Subscriptions screen replaces the flat account list.** It carries a heading, a subtitle, an empty state that says what a subscription is, and one row per account. A row shows the provider's mark, its name and plan, the account it signs in as, what it's good for, and where it stands. An account whose authorisation lapsed carries the way to restore it on the row, where the failure is, rather than in a banner over the list.
+**The Subscriptions screen replaces the flat account list.** It carries a heading, a subtitle, an empty state that says what a subscription is, and one row per account. A row shows the provider's mark, its name and plan, the account it signs in as, what it's good for, and where it stands. An account whose authorization lapsed carries the way to restore it on the row, where the failure is, rather than in a banner over the list.
 
 **Adding one opens the catalog in a drawer.** A search field, category chips, and grouped rows, the way the reference draws it. The drawer takes the container the inspector already uses.
 
@@ -38,7 +38,7 @@ The inverse direction stays first-class. Anthropic documents pointing Claude Cod
 
 - **Take the switcher pattern.** A person grants permission, the credential stays on the machine, and the official tool keeps making every request.
 - **Hand login and refresh to the official tool.** recompose stores, lists, and switches. Building an authorization flow here would carry a rotating refresh token and the split-brain failure that comes with it, for a credential recompose can't use anyway.
-- **Keep the drawer and the chips.** Four of the five references reach for a modal with a category rail, and the reference reaches for a right drawer with chips under the search. The drawer matches the inspector, and the chips arrived because the catalog outgrew one screenful.
+- **Keep the drawer and the chips.** Four of the five references reach for a modal with a category rail, and the reference reaches for a right drawer with chips under the search. The drawer matches the inspector, and the chips arrived because the catalog outgrew one screen.
 
 ### Project-level decisions
 
@@ -54,13 +54,13 @@ The inverse direction stays first-class. Anthropic documents pointing Claude Cod
 
 - The screen keeps the column width, the page inset, and the section rhythm the settings surface already uses.
 - A row reads leading to trailing: mark, name with plan, account, what it serves, standing, and the overflow that holds the rest.
-- The status word carries a mark beside it rather than colour alone, which is what the field settled on and what a person who can't separate the hues needs.
+- The status word carries a mark beside it rather than color alone, which is what the field settled on and what a person who can't separate the hues needs.
 - The drawer takes the inspector's container, its own heading, and a close control at the trailing edge of that heading.
 
 ## Design-system gap analysis
 
 - **Brand marks.** The catalog needs one mark per provider, and the icon set holds none of them. They arrive as a named set rather than as loose files.
-- **The chip.** A filter chip with a selected state has no component yet. The segmented control is the nearest neighbour and answers a different question, because a segment picks one of a closed set while a chip narrows a list.
+- **The chip.** A filter chip with a selected state has no component yet. The segmented control is the nearest neighbor and answers a different question, because a segment picks one of a closed set while a chip narrows a list.
 - **The plan badge.** A small label riding beside a name at a smaller size than the note. Nothing carries it today.
 - **The status chip.** The sidebar's status indicator paints a dot alone. This surface needs the dot beside a word, and the amber attention state has no token pair yet.
 - **The drawer.** The reference names the inspector's container, and this repository holds no such thing. This change either builds it or borrows the sheet, and the solution design settles which.
