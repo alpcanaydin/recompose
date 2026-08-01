@@ -2,6 +2,7 @@ import type { KeyboardEvent, PointerEvent } from 'react';
 
 import { useSyncExternalStore } from 'react';
 
+import { sidebarGestureFrom } from '../lib/sidebar-gesture';
 import {
   hideSidebar,
   showSidebar,
@@ -9,39 +10,35 @@ import {
   subscribeToSidebarVisibility,
 } from '../lib/sidebar-visibility';
 
-const TRAVEL_TO_FLIP = 48;
 const SIDEBAR_WIDTH = 240;
 
-function flipTowards(travel: number): void {
-  if (travel < 0) {
-    hideSidebar();
-
-    return;
-  }
-
-  showSidebar();
-}
+const asked = {
+  hidden: hideSidebar,
+  shown: showSidebar,
+  unchanged: () => undefined,
+};
 
 function watchTheDrag(from: number): void {
   const onMove = (moved: globalThis.PointerEvent): void => {
-    const travel = moved.clientX - from;
+    const gesture = sidebarGestureFrom(moved.clientX - from);
 
-    if (Math.abs(travel) < TRAVEL_TO_FLIP) {
+    if (gesture === 'unchanged') {
       return;
     }
 
-    window.removeEventListener('pointermove', onMove);
-    flipTowards(travel);
+    stopWatching();
+    asked[gesture]();
   };
 
+  function stopWatching(): void {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', stopWatching);
+    window.removeEventListener('pointercancel', stopWatching);
+  }
+
   window.addEventListener('pointermove', onMove);
-  window.addEventListener(
-    'pointerup',
-    () => {
-      window.removeEventListener('pointermove', onMove);
-    },
-    { once: true },
-  );
+  window.addEventListener('pointerup', stopWatching);
+  window.addEventListener('pointercancel', stopWatching);
 }
 
 function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {

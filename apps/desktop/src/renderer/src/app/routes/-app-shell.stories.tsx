@@ -163,7 +163,11 @@ export const SidebarControlTakesTheWindowControlCentre = meta.story({
     const band = paintedBox(sidebar);
 
     await expect((drawn.top + drawn.bottom) / 2 - band.top).toBe(18);
-    await expect(drawn.left - band.left).toBeGreaterThan(76);
+    const cleared = getComputedStyle(document.documentElement).getPropertyValue(
+      '--spacing-window-controls-width',
+    );
+
+    await expect(drawn.left - band.left).toBeGreaterThan(Number.parseInt(cleared, 10));
   },
 });
 
