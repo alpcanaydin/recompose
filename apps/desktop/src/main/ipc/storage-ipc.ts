@@ -3,6 +3,7 @@ import type {
   GatewayConfig,
   IpcRequest,
   SettingsPatch,
+  SubscriptionAccount,
 } from '@recompose/contracts';
 
 import { withSettingsPatch } from '@recompose/contracts';
@@ -177,6 +178,18 @@ async function connectAccount(
   }
 }
 
+function sameProviderIds(accounts: AccountsDocument, provider: SubscriptionAccount['provider']) {
+  const ids: string[] = [];
+
+  for (const candidate of accounts.accounts) {
+    if (candidate.kind === 'subscription' && candidate.provider === provider) {
+      ids.push(candidate.id);
+    }
+  }
+
+  return ids;
+}
+
 async function removeAccount(
   ctx: StorageIpcContext,
   paths: StoragePaths,
@@ -190,7 +203,14 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    if (row.kind !== 'subscription') {
+    const updated = {
+      ...accounts,
+      accounts: accounts.accounts.filter((candidate) => candidate.id !== request.id),
+    };
+
+    if (row.kind === 'subscription') {
+      await ctx.releaseSubscription(row, sameProviderIds(updated, row.provider));
+    } else {
       const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 
       if (!opened.ok) {
@@ -199,11 +219,6 @@ async function removeAccount(
 
       await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
     }
-
-    const updated = {
-      ...accounts,
-      accounts: accounts.accounts.filter((candidate) => candidate.id !== request.id),
-    };
 
     await saveAccountsFile(paths.accountsFile, updated);
 

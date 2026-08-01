@@ -66,6 +66,7 @@ kapi
 Kapı
 karpathy
 Kimi
+konsole
 Langdock
 Laravel
 Lemni
