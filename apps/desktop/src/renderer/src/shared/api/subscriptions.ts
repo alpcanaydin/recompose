@@ -1,7 +1,8 @@
-import type { IpcRequest } from '@recompose/contracts';
+import type { IpcRequest, RecomposeIpc } from '@recompose/contracts';
 
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { accountsQueryOptions } from './accounts';
 import { unwrapIpcResult, withRefusal } from './ipc-result';
 
 const subscriptionsQueryOptions = queryOptions({
@@ -36,6 +37,64 @@ export function useSignInSubscription() {
         unwrapIpcResult(await window.recompose['subscriptions:sign-in'](request)),
       onSuccess: (views) => {
         queryClient.setQueryData(subscriptionsQueryOptions.queryKey, views);
+      },
+    }),
+  );
+}
+
+type SubscriptionAct = RecomposeIpc['subscriptions:restore'];
+
+function useSubscriptionAct(act: SubscriptionAct) {
+  const queryClient = useQueryClient();
+
+  return withRefusal(
+    useMutation({
+      mutationFn: async (request: IpcRequest<'subscriptions:restore'>) =>
+        unwrapIpcResult(await act(request)),
+      onSuccess: (views) => {
+        queryClient.setQueryData(subscriptionsQueryOptions.queryKey, views);
+      },
+    }),
+  );
+}
+
+/**
+ * Sends a lapsed account back through its tool's sign-in.
+ *
+ * @summary The remedy for a lapse is the same act that made the account, so the row offers it
+ * rather than a settings trip, and the answer republishes every row because restoring one account
+ * can move the pointer that says which one a tool runs as.
+ */
+export function useRestoreSubscription() {
+  return useSubscriptionAct(async (request) => window.recompose['subscriptions:restore'](request));
+}
+
+/**
+ * Points a provider's tool at one of its accounts.
+ *
+ * @summary The pointer lives outside the renderer, one per provider, so the answer carries every
+ * row rather than the one that was chosen.
+ */
+export function useActivateSubscription() {
+  return useSubscriptionAct(async (request) => window.recompose['subscriptions:activate'](request));
+}
+
+/**
+ * Takes a subscription account out of the registry it was held in.
+ *
+ * @summary Removal is an act on the account row rather than on the sign-in, so it travels the
+ * accounts channel, and both the registry and the views it feeds are asked again afterwards.
+ */
+export function useForgetSubscription() {
+  const queryClient = useQueryClient();
+
+  return withRefusal(
+    useMutation({
+      mutationFn: async (request: IpcRequest<'accounts:remove'>) =>
+        unwrapIpcResult(await window.recompose['accounts:remove'](request)),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: subscriptionsQueryOptions.queryKey });
+        await queryClient.invalidateQueries({ queryKey: accountsQueryOptions.queryKey });
       },
     }),
   );
