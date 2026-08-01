@@ -5,7 +5,7 @@ import { userEvent } from 'vitest/browser';
 
 import { AccountKindField } from './account-kind-field';
 
-type Kind = 'subscription' | 'api-key' | 'aggregator';
+type Kind = 'api-key' | 'aggregator';
 
 function Harness() {
   const [kind, setKind] = useState<Kind>('api-key');

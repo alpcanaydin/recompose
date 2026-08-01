@@ -22,16 +22,8 @@ beforeEach(() => {
 
 function seededAccounts(): AccountsDocument {
   return {
-    schemaVersion: 1,
-    accounts: [
-      {
-        id: 'a1',
-        provider: 'anthropic',
-        kind: 'subscription',
-        label: 'Claude Max',
-        credentialRef: 'c1',
-      },
-    ],
+    schemaVersion: 2,
+    accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
   };
 }
 

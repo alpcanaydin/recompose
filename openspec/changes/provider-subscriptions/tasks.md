@@ -4,13 +4,14 @@ Five tasks. Tasks 1 and 2 run together on disjoint files. Task 3 waits on task 1
 
 Every task drives a failing test to green before its implementation exists, and every task reports the red run it started from.
 
-- [ ] **Task 1: contracts.** Owns `packages/contracts/src/`. Depends on nothing.
-  - [ ] The account row becomes a kind-discriminated union: the credentialed kinds keep their credential reference, and the subscription arm carries none.
-  - [ ] The kind enum gains `local`, and the document refuses a stored local row.
-  - [ ] The document moves to version 2, and the migration rewrites a version 1 subscription row to a key row so no subscription references the vault.
-  - [ ] The subscriptions module carries the standing, the provider identity, and the catalog entry.
-  - [ ] The channel surface gains the subscription channels with their request and response shapes.
-  - [ ] Type-level specs pin the union and the migration. A property spec proves any valid version 1 document migrates to a valid version 2 document with identifiers preserved.
+- [x] **Task 1: contracts.** Owns `packages/contracts/src/`, and carries the consumer repair the version bump forces. Depends on nothing.
+  - [x] The account row becomes a kind-discriminated union: the credentialed kinds keep their credential reference, and the subscription arm carries none.
+  - [x] The kind enum gains `local`, and the document refuses a stored local row.
+  - [x] The document moves to version 2, and the migration rewrites a version 1 subscription row to a key row so no subscription references the vault.
+  - [x] The subscriptions module carries the standing, the provider identity, and the catalog entry.
+  - [x] The channel surface gains the subscription channels with their request and response shapes.
+  - [x] Type-level specs pin the union and the migration. A property spec proves any valid version 1 document migrates to a valid version 2 document with identifiers preserved.
+  - [x] The consumers typecheck and pass again: the fixtures move to version 2, removal branches by kind, and the five channels register behind loud placeholders that task 3 replaces.
 
 - [ ] **Task 2: the kit and the tokens.** Owns the six `shared/ui` components with their stories, and both style files. Depends on nothing, and runs beside task 1.
   - [ ] `Drawer`, on the dialog primitive the sheet already uses, with a heading, a trailing close, and no footer.

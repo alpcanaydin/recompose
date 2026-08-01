@@ -115,10 +115,19 @@ function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
 
+function subscriptionsHandlerNotBuiltYet(): never {
+  throw new Error('the subscription channels are registered, but no handler serves them yet');
+}
+
 function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
   const userDataPath = app.getPath('userData');
 
   return {
+    'subscriptions:list': subscriptionsHandlerNotBuiltYet,
+    'subscriptions:tools': subscriptionsHandlerNotBuiltYet,
+    'subscriptions:sign-in': subscriptionsHandlerNotBuiltYet,
+    'subscriptions:restore': subscriptionsHandlerNotBuiltYet,
+    'subscriptions:activate': subscriptionsHandlerNotBuiltYet,
     ...createEngineIpcHandlers({
       host: engineHost,
       userDataPath,

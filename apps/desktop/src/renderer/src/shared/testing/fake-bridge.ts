@@ -2,6 +2,7 @@ import type {
   AccountsDocument,
   EngineStates,
   GatewayConfig,
+  IpcChannel,
   RecomposeIpc,
   RecomposeIpcEvents,
   Settings,
@@ -10,7 +11,7 @@ import type {
 
 import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/contracts';
 
-const emptyDocument: AccountsDocument = { schemaVersion: 1, accounts: [] };
+const emptyDocument: AccountsDocument = { schemaVersion: 2, accounts: [] };
 
 const observedSystem: SystemState = {
   fileBrowser: 'finder',
@@ -65,6 +66,8 @@ type GatewayHandlers = Pick<
   | 'engine:stop'
   | 'engine:states'
 >;
+
+type SubscriptionHandlers = Pick<RecomposeIpc, Extract<IpcChannel, `subscriptions:${string}`>>;
 
 const FIRST_OFFERED_PORT = 51234;
 
@@ -239,6 +242,19 @@ function systemHandlers(): SystemHandlers {
   };
 }
 
+function subscriptionHandlers(): SubscriptionHandlers {
+  const nothingActsOnASubscriptionYet = async (): Promise<never> =>
+    Promise.reject(new Error('this fake bridge seeds no subscription, so nothing acts on one'));
+
+  return {
+    'subscriptions:list': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:tools': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:sign-in': nothingActsOnASubscriptionYet,
+    'subscriptions:restore': nothingActsOnASubscriptionYet,
+    'subscriptions:activate': nothingActsOnASubscriptionYet,
+  };
+}
+
 function eventBridge(): RecomposeIpcEvents {
   return {
     'engine:state': (listener) => {
@@ -273,6 +289,7 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
     ...accountHandlers(seeds.accounts),
     ...systemHandlers(),
     ...gatewayHandlers(seeds.gateways, seeds.engineStates),
+    ...subscriptionHandlers(),
     ...parameters.overrides,
   };
   window.recomposeEvents = eventBridge();

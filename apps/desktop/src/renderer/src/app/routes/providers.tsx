@@ -1,8 +1,8 @@
-import { accountKindSchema } from '@recompose/contracts';
 import { createFileRoute } from '@tanstack/react-router';
 
 import type { AccountKind } from '../../entities/account';
 
+import { offeredAccountKind } from '../../entities/account';
 import { ProvidersPage } from '../../pages/providers';
 import { accountsQueryOptions } from '../../shared/api';
 import { PageError } from '../../shared/ui';
@@ -12,9 +12,7 @@ type ProvidersSearch = {
 };
 
 function narrowedKind(search: Record<string, unknown>): ProvidersSearch {
-  const asked = accountKindSchema.safeParse(search['kind']);
-
-  return { kind: asked.success ? asked.data : undefined };
+  return { kind: offeredAccountKind(search['kind']) };
 }
 
 export const Route = createFileRoute('/providers')({

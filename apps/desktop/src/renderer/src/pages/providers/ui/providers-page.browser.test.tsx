@@ -11,20 +11,12 @@ import { installFakeBridge } from '../../../shared/testing';
 import { ProvidersPage } from './providers-page';
 
 const seeded: AccountsDocument = {
-  schemaVersion: 1,
-  accounts: [
-    {
-      id: 'a1',
-      provider: 'anthropic',
-      kind: 'subscription',
-      label: 'Claude Max',
-      credentialRef: 'c1',
-    },
-  ],
+  schemaVersion: 2,
+  accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
 };
 
 const mixed: AccountsDocument = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   accounts: [
     ...seeded.accounts,
     { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
