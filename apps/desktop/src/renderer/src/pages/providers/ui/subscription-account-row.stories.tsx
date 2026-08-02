@@ -1,18 +1,10 @@
-import type { SubscriptionAccountView, SubscriptionTool } from '@recompose/contracts';
+import type { SubscriptionAccountView } from '@recompose/contracts';
 
 import { expect, screen, userEvent } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
 import { SubscriptionAccountRow } from './subscription-account-row';
-
-const claudeCode: SubscriptionTool = {
-  provider: 'anthropic',
-  toolName: 'Claude Code',
-  present: true,
-  signInCommand: 'claude',
-  shellSetupLine: 'export CLAUDE_CONFIG_DIR="/tmp/anthropic/active"',
-};
 
 const connected: SubscriptionAccountView = {
   id: 's1',
@@ -27,7 +19,7 @@ const connected: SubscriptionAccountView = {
 const meta = preview.meta({
   component: SubscriptionAccountRow,
   args: { view: connected },
-  parameters: { bridge: { tools: [claudeCode], subscriptions: [connected] } },
+  parameters: { bridge: { subscriptions: [connected] } },
   decorators: [
     (Story) => (
       <ul className="mx-auto w-full max-w-column p-4">
@@ -38,16 +30,18 @@ const meta = preview.meta({
 });
 
 /**
- * A connected account, reading leading to trailing as who it is, what it serves, and how it stands.
+ * A connected account, reading leading to trailing as who it is and how it stands.
  *
- * @summary The standing is a word with a mark beside it rather than a color alone, so the reading
- * asks for the word. The serves line is the only place the row says where the quota goes, which is
- * what keeps a subscription from being mistaken for something a gateway could route to.
+ * @summary The identity holds two lines, the plan product with its plan and the address it signed
+ * in as, because the connect step already taught what the account serves. The reading asks for the
+ * product name, the plan, the address, and the standing word, and nothing more.
  */
 export const Connected = meta.story({
   play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Claude')).toBeVisible();
+    await expect(await canvas.findByText('Max')).toBeVisible();
+    await expect(await canvas.findByText('dev@example.com')).toBeVisible();
     await expect(await canvas.findByText('Connected')).toBeVisible();
-    await expect(await canvas.findByText(/Serves Claude Code/)).toBeVisible();
   },
 });
 
@@ -74,8 +68,8 @@ export const Lapsed = meta.story({
  * The overflow open on an account a tool does not currently run as.
  *
  * @summary Choosing the account is the act that moves the pointer, so it appears only where it
- * would change something. The shell line is copied rather than shown, because a person pastes it
- * into a terminal and never reads it here.
+ * would change something. The menu holds the three quieter acts and nothing else, because every
+ * setup detail the row once copied now travels with the sign-in itself.
  */
 export const QuieterActions = meta.story({
   args: { view: { ...connected, active: false } },
@@ -87,7 +81,6 @@ export const QuieterActions = meta.story({
     await expect(actions.map((action) => action.textContent)).toEqual([
       'Use this account',
       'Sign in again',
-      'Copy shell setup',
       'Remove',
     ]);
   },

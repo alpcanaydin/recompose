@@ -1,6 +1,6 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
-import { expect, userEvent } from 'storybook/test';
+import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -46,24 +46,9 @@ export const NothingConnected = meta.story({
   },
 });
 
-/** One connected account under the heading, with the catalog reachable above the list. */
+/** One connected account under the heading, read without any control of the screen's own. */
 export const Connected = meta.story({
   parameters: { bridge: { subscriptions: [connected] } },
-});
-
-/**
- * The catalog standing beside the screen it adds to.
- *
- * @summary The reading proves the screen behind is still painted, because a browse surface that
- * replaced the screen would leave a person choosing a provider with no view of what they hold.
- */
-export const CatalogOpen = meta.story({
-  parameters: { bridge: { subscriptions: [connected] } },
-  play: async ({ canvas }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add provider' }));
-
-    await expect(await canvas.findByText('dev@example.com')).toBeVisible();
-  },
 });
 
 /** The keys destination, whose rows are targets a gateway routes to rather than plans. */

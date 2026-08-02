@@ -14,7 +14,7 @@ type BadgeProps = {
  */
 export function Badge({ children }: BadgeProps) {
   return (
-    <span className="inline-flex h-4 items-center rounded-chip bg-surface-inert px-1.25 text-caption font-medium text-ink-secondary">
+    <span className="inline-flex h-4 items-center rounded-chip bg-surface-inert px-1.25 text-caption font-medium text-ink-secondary capitalize">
       {children}
     </span>
   );

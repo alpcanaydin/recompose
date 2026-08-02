@@ -16,21 +16,21 @@ const keys: AccountsDocument = {
 
 const meta = preview.meta({
   component: CredentialedSurface,
-  args: { kind: 'api-key' as const, onAddProvider: () => undefined },
+  args: { kind: 'api-key' as const },
   decorators: [inProvidersColumn],
 });
 
 /**
- * The surface once a key is stored, listing it under the one way to add another.
+ * The surface once a key is stored, standing as the list alone.
  *
- * @summary The reading asks for the row and for the single catalog control above it, because a
- * surface holding rows offers the catalog once rather than beside every row.
+ * @summary The reading asks for the row and refuses a catalog control, because the one act lives
+ * in the window strip rather than above the list.
  */
 export const Connected = meta.story({
   parameters: { bridge: { accounts: keys } },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('Team key')).toBeVisible();
-    await expect(await canvas.findByRole('button', { name: 'Add provider' })).toBeVisible();
+    await expect(canvas.queryByRole('button', { name: 'Add provider' })).toBeNull();
   },
 });
 

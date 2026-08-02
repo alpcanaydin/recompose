@@ -3,6 +3,7 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import { AddProviderAct } from '../../pages/providers';
 import { hideSidebar, showSidebar } from '../../shared/lib';
 import { gatewaySeed, paintedBox, paintedStyle } from '../../shared/testing';
 import { SidebarToggle } from '../../shared/ui';
@@ -79,6 +80,23 @@ export const NoGatewaySelectedWithTheSidebarAway = meta.story({
     await expect(painted.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     await expect(painted.borderBottomWidth).toBe('1px');
     await expect(painted.position).toBe('absolute');
+  },
+});
+
+/**
+ * The strip over a providers screen, carrying the one act at its trailing edge.
+ *
+ * @summary The act stands where macOS keeps a window's own acts, so the reading measures the
+ * control against the strip's end rather than trusting the markup order.
+ */
+export const ProvidersActAtTheTrailingEdge = meta.story({
+  args: { trailing: <AddProviderAct kind="subscription" /> },
+  play: async ({ canvas, canvasElement }) => {
+    const control = await canvas.findByRole('button', { name: 'Add provider' });
+    const strip = paintedBox(canvasElement.firstElementChild?.firstElementChild);
+    const act = paintedBox(control);
+
+    await expect(act.x + act.width).toBeGreaterThan(strip.x + strip.width - 40);
   },
 });
 

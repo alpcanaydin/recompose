@@ -150,7 +150,10 @@ Then('the subscriptions catalog offers no key field', async ({ page }) => {
 });
 
 Then('the screen offers one call to action', async ({ page }) => {
-  await expect(page.getByRole('main').getByRole('button')).toHaveText(['Add provider']);
+  const controls = page.getByRole('main').getByRole('button');
+
+  await expect(controls).toHaveCount(1);
+  await expect(controls).toHaveAccessibleName('Add provider');
 });
 
 Then('a sentence names what a subscription account is', async ({ page }) => {
@@ -164,11 +167,11 @@ Then('no account list renders', async ({ page }) => {
 });
 
 Then(
-  "the row carries the provider's mark, its name, the {string} plan, and {string}",
+  "the row carries the provider's mark, the product name, the {string} plan, and {string}",
   async ({ page }, plan: string, address: string) => {
     const row = accountRow(page, address);
 
-    await expect(row).toContainText('Anthropic');
+    await expect(row).toContainText('Claude');
     await expect(row).toContainText(plan);
     await expect(row).toContainText(address);
     await expect(row.locator('svg[aria-hidden="true"]').first()).toBeAttached();
@@ -193,10 +196,9 @@ Then('the row itself offers the way to restore the account', async ({ page }) =>
   ).toBeVisible();
 });
 
-Then("the row states the account serves the provider's own tool", async ({ page }) => {
-  await expect(accountRows(page).first()).toContainText(
-    `Serves ${toolNameFor('anthropic')} from this account's quota.`,
-  );
+Then('the row names the plan product the account signs into', async ({ page }) => {
+  await expect(accountRows(page).first()).toContainText('Claude');
+  await expect(accountRows(page).first()).not.toContainText('Serves');
 });
 
 Then('nothing on the screen offers the account as a gateway target', async ({ page }) => {

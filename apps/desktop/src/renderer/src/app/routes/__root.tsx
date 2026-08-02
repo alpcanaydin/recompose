@@ -6,12 +6,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   Outlet,
   createRootRouteWithContext,
+  useMatch,
   useNavigate,
   useParams,
   useRouter,
 } from '@tanstack/react-router';
 import { Suspense, lazy, useEffect, useSyncExternalStore } from 'react';
 
+import type { AccountKind } from '../../entities/account';
+
+import { AddProviderAct } from '../../pages/providers';
 import {
   accountsQueryOptions,
   bindEngineStatesToCache,
@@ -56,12 +60,18 @@ function bandFor(slug: string | undefined): ReactNode {
   return slug === undefined ? <SidebarToggle where="chrome" /> : null;
 }
 
+/** The act the window strip carries over a providers screen, and nothing anywhere else. */
+function providersAct(kind: AccountKind | undefined): ReactNode {
+  return kind === undefined ? null : <AddProviderAct kind={kind} />;
+}
+
 function RootLayout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const router = useRouter();
   const { create, getStarted, at } = Route.useSearch();
   const { slug } = useParams({ strict: false });
+  const providers = useMatch({ from: '/providers', shouldThrow: false });
   const sidebarAway = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
 
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
@@ -84,7 +94,7 @@ function RootLayout() {
       />
       <SidebarEdge />
       <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
-        <AppToolbar slug={slug} />
+        <AppToolbar slug={slug} trailing={providersAct(providers?.search.kind)} />
         <div className="relative flex-1 overflow-y-auto">
           <Outlet />
         </div>

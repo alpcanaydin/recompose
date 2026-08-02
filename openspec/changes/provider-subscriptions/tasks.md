@@ -28,7 +28,7 @@ Every task drives a failing test to green before its implementation exists, and 
 
 - [x] **Task 4: the renderer surface.** Owns the providers pages, the account entity, the sidebar widget files, the shared API, the fake bridge, the Storybook decorator, and the providers route. Depends on task 1 for types and task 2 for the kit, and runs beside task 3.
   - [x] The Subscriptions screen: heading, subtitle, the explaining empty state, and one row per account.
-  - [x] The row: mark, name with plan, the address it signs in as, what it serves, its standing, and the overflow.
+  - [x] The row: mark, plan product with plan, the address it signs in as, its standing, and the overflow.
   - [x] A lapsed row reports the lapse and carries the way back on the row.
   - [x] The catalog drawer: search, chips, grouped rows, and narrowing that always answers a subset of its input.
   - [x] The fork, whose arms name what each yields rather than how many steps it takes.

@@ -79,22 +79,19 @@ test('every connected subscription stands as its own row', async () => {
   await expect.poll(() => screen.getByRole('listitem').elements().length).toEqual(2);
 });
 
-test('a screen holding rows offers the catalog once rather than beside every row', async () => {
+test("a screen holding rows offers only each row's own acts", async () => {
   const screen = await renderProviders('subscription', { subscriptions: [anthropic, openai] });
 
-  await expect.element(screen.getByRole('button', { name: 'Add provider' })).toBeVisible();
   await expect
     .poll(() => controlNames(screen.getByRole('button').elements()))
-    .toEqual(['Add provider', 'Actions for Anthropic', 'Actions for OpenAI']);
+    .toEqual(['Actions for Anthropic', 'Actions for OpenAI']);
 });
 
-test('asking to add a provider opens the catalog beside the screen rather than over it', async () => {
+test('a screen with nothing connected offers nothing to press', async () => {
   const screen = await renderProviders('subscription');
 
-  await screen.getByRole('button', { name: 'Add provider' }).click();
-
-  await expect.element(screen.getByRole('dialog', { name: 'Add provider' })).toBeVisible();
   await expect.element(screen.getByText(/A subscription account is/)).toBeVisible();
+  await expect.poll(() => screen.getByRole('button').elements()).toEqual([]);
 });
 
 test('a screen narrowed to keys lists the keys and never a subscription', async () => {
@@ -145,11 +142,9 @@ test('an aggregators screen with nothing connected explains the kind and lists n
   await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
 });
 
-test('the local runtimes destination says its surface follows and still offers the catalog', async () => {
+test('the local runtimes destination says its surface follows rather than standing blank', async () => {
   const screen = await renderProviders('local');
 
   await expect.element(screen.getByText(/A local runtime/)).toBeVisible();
-  await expect
-    .poll(() => controlNames(screen.getByRole('button').elements()))
-    .toEqual(['Add provider']);
+  await expect.poll(() => screen.getByRole('button').elements()).toEqual([]);
 });

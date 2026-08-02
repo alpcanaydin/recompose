@@ -10,6 +10,7 @@ import {
   offerFor,
   offeredUnder,
   signInProviderOf,
+  subscriptionTitleFor,
 } from './provider-catalog';
 
 const anyWay = fc.constantFrom<ConnectionWay[]>('subscription', 'api-key', 'aggregator');
@@ -79,6 +80,12 @@ test('a way keeps the providers that connect by it and drops the rest', () => {
   expect(offeredUnder(catalogEntries, 'aggregator').map((entry) => entry.id)).toEqual([
     'openrouter',
   ]);
+});
+
+test('a stored subscription reads as the plan product its provider sells', () => {
+  expect(subscriptionTitleFor('anthropic')).toBe('Claude');
+  expect(subscriptionTitleFor('openai')).toBe('Codex');
+  expect(subscriptionTitleFor('openrouter')).toBe('OpenRouter');
 });
 
 test('a provider that signs in names the provider identity it signs in under', () => {

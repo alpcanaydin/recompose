@@ -6,7 +6,6 @@ import { LocalRuntimesNote } from './local-runtimes-note';
 
 const meta = preview.meta({
   component: LocalRuntimesNote,
-  args: { onAddProvider: () => undefined },
   decorators: [
     (Story) => (
       <section className="mx-auto flex w-full max-w-column flex-col gap-5 p-6">
@@ -20,15 +19,13 @@ const meta = preview.meta({
 /**
  * The destination the sidebar's fourth row leads to, before anything can run on this machine.
  *
- * @summary The reading asks for the sentence and for the one act, because the destination has to
- * say what will stand here while still offering the same catalog every other kind adds through.
+ * @summary The reading asks for the sentence and refuses any act inside the note, because the
+ * catalog's one act lives in the window strip and the note only says what will stand here.
  */
 export const Awaited = meta.story({
   play: async ({ canvas }) => {
-    const acts = await canvas.findAllByRole('button');
-
     await expect(await canvas.findByText(/A local runtime/)).toBeVisible();
-    await expect(acts.map((act) => act.textContent)).toEqual(['Add provider']);
+    await expect(canvas.queryByRole('button')).toBeNull();
   },
 });
 

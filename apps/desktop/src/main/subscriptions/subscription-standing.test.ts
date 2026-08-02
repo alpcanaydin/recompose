@@ -96,6 +96,40 @@ describe('reading how a Claude Code account stands', () => {
   });
 });
 
+describe('deriving the Claude Code plan when the credential lives outside the home', () => {
+  test.prop([fc.constantFrom('max', 'pro', 'enterprise')])(
+    'given only a rate tier naming the plan, the reading derives it',
+    async (plan) => {
+      const scratch = await mkdtemp(join(tmpdir(), 'recompose-standing-'));
+
+      await writeFile(
+        join(scratch, '.claude.json'),
+        JSON.stringify({
+          oauthAccount: {
+            emailAddress: 'ada@ex.com',
+            userRateLimitTier: `default_claude_${plan}_5x`,
+          },
+        }),
+      );
+
+      const observed = await reading('anthropic', credentialInTheKeychain, scratch);
+
+      expect(observed).toEqual({ standing: 'connected', signedInAs: 'ada@ex.com', plan });
+    },
+  );
+
+  test('given a rate tier that names no known plan, the reading stays silent about it', async () => {
+    await recorded(
+      '.claude.json',
+      JSON.stringify({ oauthAccount: { userRateLimitTier: 'default_raven' } }),
+    );
+
+    const observed = await reading('anthropic', credentialInTheKeychain);
+
+    expect(observed).toEqual({ standing: 'connected' });
+  });
+});
+
 describe('reading how a Codex account stands', () => {
   test('given an untouched home, the account reads as lapsed', async () => {
     const observed = await reading('openai');
@@ -109,6 +143,30 @@ describe('reading how a Codex account stands', () => {
     const observed = await reading('openai');
 
     expect(observed.standing).toBe('connected');
+  });
+
+  test('given the session names the person and the plan, the reading carries both', async () => {
+    const claims = Buffer.from(
+      JSON.stringify({
+        email: 'ada@ex.com',
+        'https://api.openai.com/auth': { chatgpt_plan_type: 'plus' },
+      }),
+      'utf8',
+    ).toString('base64url');
+
+    await recorded('auth.json', JSON.stringify({ tokens: { id_token: `h.${claims}.s` } }));
+
+    const observed = await reading('openai');
+
+    expect(observed).toEqual({ standing: 'connected', signedInAs: 'ada@ex.com', plan: 'plus' });
+  });
+
+  test('given a session token that is not a token at all, the reading stays silent', async () => {
+    await recorded('auth.json', JSON.stringify({ tokens: { id_token: 'not-a-token' } }));
+
+    const observed = await reading('openai');
+
+    expect(observed).toEqual({ standing: 'connected' });
   });
 
   test('given a record holding a key rather than a session, the account reads as connected', async () => {

@@ -2,7 +2,7 @@ import type { SubscriptionAccountView, SubscriptionTool } from '@recompose/contr
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { page, userEvent } from 'vitest/browser';
 
@@ -75,27 +75,25 @@ async function heldSubscriptions() {
   return answer.ok ? answer.value : [];
 }
 
-test('a connected account carries its provider, its plan, and the address it signed in as', async () => {
+test('a connected account carries its plan product, its plan, and the address it signed in as', async () => {
   const screen = await renderRow(connected);
 
-  await expect.element(screen.getByText('Anthropic', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Claude', { exact: true })).toBeVisible();
   await expect.element(screen.getByText('Max', { exact: true })).toBeVisible();
   await expect.element(screen.getByText('dev@example.com')).toBeVisible();
 });
 
-test('an account stored under its address still names the provider, and says the address once', async () => {
+test('an account stored under its address still names the plan product, and says the address once', async () => {
   const screen = await renderRow({ ...connected, label: 'dev@example.com' });
 
-  await expect.element(screen.getByText('Anthropic', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Claude', { exact: true })).toBeVisible();
   await expect.element(screen.getByText('dev@example.com')).toBeVisible();
 });
 
-test('the row states the account serves the provider tool rather than any gateway', async () => {
+test('the row holds who it is and the address alone, because the connect step already taught the rest', async () => {
   const screen = await renderRow(connected);
 
-  await expect
-    .element(screen.getByText(/Serves Claude Code/))
-    .toHaveTextContent("Serves Claude Code from this account's quota");
+  await expect.element(screen.getByText(/Serves/)).not.toBeInTheDocument();
 });
 
 test('a connected account reads as connected in a word rather than in a color alone', async () => {
@@ -148,8 +146,10 @@ test('a connected account keeps its quieter acts behind the overflow', async () 
   await press('Actions for Anthropic');
 
   await expect.element(page.getByRole('menuitem', { name: 'Use this account' })).toBeVisible();
-  await expect.element(page.getByRole('menuitem', { name: 'Copy shell setup' })).toBeVisible();
   await expect.element(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
+  await expect
+    .element(page.getByRole('menuitem', { name: 'Copy shell setup' }))
+    .not.toBeInTheDocument();
 });
 
 test('the account its provider tool already runs as offers no way to be chosen again', async () => {
@@ -173,18 +173,6 @@ test('choosing an account points its provider tool at that account', async () =>
   await expect
     .poll(async () => (await heldSubscriptions()).filter((view) => view.active).map((v) => v.id))
     .toEqual(['s2']);
-});
-
-test('copying the shell setup hands over the line that points a shell at the account', async () => {
-  const clipboard = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
-
-  await renderRow(connected);
-
-  await choose('Copy shell setup');
-
-  await expect.poll(() => clipboard.mock.calls).toEqual([[claudeCode.shellSetupLine]]);
-
-  vi.restoreAllMocks();
 });
 
 test('removing an account takes it out of the registry it was held in', async () => {

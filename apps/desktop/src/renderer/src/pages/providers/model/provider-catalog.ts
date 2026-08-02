@@ -117,6 +117,19 @@ export function offerFor(entry: CatalogEntry, way: ConnectionWay): CatalogOffer 
   return entry.offers.find((offer) => offer.way === way);
 }
 
+/**
+ * The plan product a stored subscription reads as, which is what its catalog card read as.
+ *
+ * @summary A person connected "Claude", so the row that lists the account keeps that word
+ * rather than trading it for the vendor behind it.
+ */
+export function subscriptionTitleFor(id: BrandMarkName): string {
+  const entry = catalogEntries.find((candidate) => candidate.id === id);
+  const title = entry === undefined ? undefined : offerFor(entry, 'subscription')?.title;
+
+  return title ?? providerName(id);
+}
+
 /** The entries that offer one way, in catalog order, which is what a kind-locked list holds. */
 export function offeredUnder(
   entries: readonly CatalogEntry[],

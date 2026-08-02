@@ -1,11 +1,8 @@
-import { useState } from 'react';
-
 import type { AccountKind } from '../../../entities/account';
 
 import { accountKindTitle } from '../../../entities/account';
 import { CredentialedSurface } from './credentialed-surface';
 import { LocalRuntimesNote } from './local-runtimes-note';
-import { ProviderCatalogSheet } from './provider-catalog-sheet';
 import { SubscriptionsSurface } from './subscriptions-surface';
 
 type ProvidersPageProps = {
@@ -20,39 +17,34 @@ const subtitles: Record<AccountKind, string> = {
   local: 'Models this machine serves itself.',
 };
 
-function kindSurface(kind: AccountKind, onAddProvider: () => void) {
+function kindSurface(kind: AccountKind) {
   if (kind === 'local') {
-    return <LocalRuntimesNote onAddProvider={onAddProvider} />;
+    return <LocalRuntimesNote />;
   }
 
   if (kind === 'subscription') {
-    return <SubscriptionsSurface onAddProvider={onAddProvider} />;
+    return <SubscriptionsSurface />;
   }
 
-  return <CredentialedSurface kind={kind} onAddProvider={onAddProvider} />;
+  return <CredentialedSurface kind={kind} />;
 }
 
 /**
- * The accounts held under one kind, over the catalog that adds another.
+ * The accounts held under one kind, read under the window strip that adds another.
  *
  * @summary Reach for it from the providers route. Each kind reads as its own screen because the
  * kinds hold different things: a subscription is spent by a tool, a key is routed to by a
- * gateway, and a local runtime is neither yet. The catalog is the one way in for all of them, so
- * it opens beside whichever screen asked for it rather than replacing it.
+ * gateway, and a local runtime is neither yet. The screen itself offers nothing to press, because
+ * the one way into the catalog stands in the window strip the shell owns.
  */
 export function ProvidersPage({ kind }: ProvidersPageProps) {
-  const [catalogOpen, setCatalogOpen] = useState(false);
-
   return (
     <section className="mx-auto flex w-full max-w-column flex-col gap-5 px-6 pt-page-top pb-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-title text-ink">{accountKindTitle(kind)}</h1>
         <p className="text-body text-ink-secondary">{subtitles[kind]}</p>
       </header>
-      {kindSurface(kind, () => {
-        setCatalogOpen(true);
-      })}
-      <ProviderCatalogSheet kind={kind} onOpenChange={setCatalogOpen} open={catalogOpen} />
+      {kindSurface(kind)}
     </section>
   );
 }

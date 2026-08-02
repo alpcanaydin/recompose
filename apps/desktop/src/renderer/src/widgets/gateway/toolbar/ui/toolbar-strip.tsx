@@ -3,9 +3,8 @@ import type { GatewayEngineState } from '@recompose/contracts';
 import { useSyncExternalStore } from 'react';
 
 import { sidebarHidden, subscribeToSidebarVisibility } from '../../../../shared/lib';
-import { SidebarToggle } from '../../../../shared/ui';
+import { SidebarToggle, ToolbarButton } from '../../../../shared/ui';
 import { AddressPill } from './address-pill';
-import { ToolbarButton } from './toolbar-button';
 
 const GROUP =
   'inline-flex h-7.25 items-center gap-0.5 rounded-control border border-line-subtle bg-surface-raised p-0.5';

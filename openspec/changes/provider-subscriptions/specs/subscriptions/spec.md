@@ -13,7 +13,7 @@ Connecting a subscription MUST record the account and MUST NOT make it reachable
 #### Scenario: a person reads what a subscription account serves
 
 - When the subscriptions surface lists a connected account
-- Then the row states that the account serves the provider's own tool
+- Then the row names the plan product the account signs into
 - And no part of the surface offers the account as a gateway target
 
 #### Scenario: a gateway never lists a subscription among its targets
@@ -51,7 +51,7 @@ With no subscription connected, the surface MUST present a single call to action
 
 ### Requirement: A row reports the account and where it stands
 
-A row MUST carry the provider's mark, the provider's name, the plan the account holds, the account it signs in as, and its standing. Standing MUST read as a word with a mark beside it rather than as color alone.
+A row MUST carry the provider's mark, the plan product's name, the plan the account holds, the address it signs in as, and its standing. The identity MUST hold two lines, the product with its plan and the address, and nothing more. Standing MUST read as a word with a mark beside it rather than as color alone.
 
 #### Scenario: a connected account reads as connected
 
@@ -72,7 +72,7 @@ An account whose authorization lapsed MUST report that on its own row and MUST o
 
 ### Requirement: Adding a provider opens the catalog
 
-The way to another account MUST open a catalog over the surface, holding only the kind that surface holds. Each entry MUST name the plan product and what connecting it gives. A provider the release can't connect yet MUST stand inert rather than hidden.
+The way to another account MUST stand once, at the trailing edge of the window strip. It MUST open a catalog over the surface, holding only the kind that surface holds. Each entry MUST name the plan product and what connecting it gives. A provider the release can't connect yet MUST stand inert rather than hidden.
 
 #### Scenario: a person opens the catalog from the subscriptions surface
 

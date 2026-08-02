@@ -10,7 +10,7 @@ Feature: The subscriptions screen
 
   Scenario: A connected account reads as connected
     Given a connected "anthropic" subscription signed in as "dev@example.com" on the "Max" plan
-    Then the row carries the provider's mark, its name, the "Max" plan, and "dev@example.com"
+    Then the row carries the provider's mark, the product name, the "Max" plan, and "dev@example.com"
     And the standing reads "Connected" with a mark beside the word
 
   Scenario: A lapsed account carries its own way back

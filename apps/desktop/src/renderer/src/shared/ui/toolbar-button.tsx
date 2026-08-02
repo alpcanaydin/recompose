@@ -1,6 +1,6 @@
-import type { IconName } from '../../../../shared/ui';
+import type { IconName } from './icon';
 
-import { Icon } from '../../../../shared/ui';
+import { Icon } from './icon';
 
 const shape = {
   grouped: 'h-5.75 w-7.75 rounded-chip',

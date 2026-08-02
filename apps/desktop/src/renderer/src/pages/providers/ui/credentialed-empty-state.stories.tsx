@@ -7,21 +7,20 @@ import { CredentialedEmptyState } from './credentialed-empty-state';
 
 const meta = preview.meta({
   component: CredentialedEmptyState,
-  args: { kind: 'api-key' as const, onAddProvider: () => undefined },
+  args: { kind: 'api-key' as const },
   decorators: [inProvidersColumn],
 });
 
 /**
- * The keys screen before any key is stored, explaining the kind before it asks for one.
+ * The keys screen before any key is stored, explaining the kind without asking for it.
  *
- * @summary The reading counts the controls, because the scenario this state answers to allows the
- * screen exactly one act, and it asks for the sentence that says what a key is before the act.
+ * @summary The reading asks for the sentence that says what a key is and refuses any control,
+ * because the one act lives in the window strip.
  */
 export const Keys = meta.story({
   play: async ({ canvas }) => {
     await expect(await canvas.findByText(/An API key is/)).toBeVisible();
-    await expect(await canvas.findByRole('button', { name: 'Add provider' })).toBeVisible();
-    await expect(canvas.queryAllByRole('button')).toHaveLength(1);
+    await expect(canvas.queryByRole('button')).toBeNull();
   },
 });
 

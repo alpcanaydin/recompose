@@ -10,21 +10,9 @@ const emptyExplanation: Record<'api-key' | 'aggregator', string> = {
 type CredentialedEmptyStateProps = {
   /** Which kind of credential the empty screen would list. */
   kind: 'api-key' | 'aggregator';
-  /** Asks for the catalog, which the screen owns because it also holds the drawer. */
-  onAddProvider: () => void;
 };
 
 /** What stands where the rows would be when no key or aggregator account is connected yet. */
-export function CredentialedEmptyState({ kind, onAddProvider }: CredentialedEmptyStateProps) {
-  return (
-    <KindEmptyState
-      action={
-        <button className="push-button-primary focus-ring" onClick={onAddProvider} type="button">
-          Add provider
-        </button>
-      }
-      explanation={emptyExplanation[kind]}
-      title="Nothing connected yet"
-    />
-  );
+export function CredentialedEmptyState({ kind }: CredentialedEmptyStateProps) {
+  return <KindEmptyState explanation={emptyExplanation[kind]} title="Nothing connected yet" />;
 }

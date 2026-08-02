@@ -56,29 +56,52 @@ async function recordIn(home: string, file: string): Promise<unknown> {
   }
 }
 
+function planNamedByRateTier(tier: string | undefined): string | undefined {
+  return tier?.match(/claude_(?<plan>max|pro|enterprise)/)?.groups?.['plan'];
+}
+
 async function readClaudeCode(home: string): Promise<Reading> {
   const [credential, identity] = await Promise.all([
     recordIn(home, '.credentials.json'),
     recordIn(home, '.claude.json'),
   ]);
   const oauth = recordAt(credential, 'claudeAiOauth');
+  const account = recordAt(identity, 'oauthAccount');
 
   return {
     evidence: oauth !== null,
-    signedInAs: spokenAt(recordAt(identity, 'oauthAccount'), 'emailAddress'),
-    plan: spokenAt(oauth, 'subscriptionType') ?? spokenAt(identity, 'subscriptionType'),
+    signedInAs: spokenAt(account, 'emailAddress'),
+    plan:
+      spokenAt(oauth, 'subscriptionType') ??
+      spokenAt(identity, 'subscriptionType') ??
+      planNamedByRateTier(spokenAt(account, 'userRateLimitTier')),
   };
+}
+
+function sessionClaims(token: string | undefined): unknown {
+  const payload = token?.split('.')[1];
+
+  if (payload === undefined) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
 }
 
 async function readCodex(home: string): Promise<Reading> {
   const credential = await recordIn(home, 'auth.json');
   const session = recordAt(credential, 'tokens');
   const key = spokenAt(credential, 'OPENAI_API_KEY');
+  const claims = sessionClaims(spokenAt(session, 'id_token'));
 
   return {
     evidence: session !== null || key !== undefined,
-    signedInAs: undefined,
-    plan: undefined,
+    signedInAs: spokenAt(claims, 'email'),
+    plan: spokenAt(recordAt(claims, 'https://api.openai.com/auth'), 'chatgpt_plan_type'),
   };
 }
 

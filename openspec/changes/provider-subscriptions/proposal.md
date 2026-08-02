@@ -53,7 +53,7 @@ The inverse direction stays first-class. Anthropic documents pointing Claude Cod
 ## Layout contract
 
 - The screen keeps the column width, the page inset, and the section rhythm the settings surface already uses.
-- A row reads leading to trailing: mark, name with plan, account, what it serves, standing, and the overflow that holds the rest.
+- A row reads leading to trailing: mark, plan product with plan, the address it signs in as, standing, and the overflow that holds the rest.
 - The status word carries a mark beside it rather than color alone, which is what the field settled on and what a person who can't separate the hues needs.
 - The drawer takes the inspector's container, its own heading, and a close control at the trailing edge of that heading.
 

@@ -55,9 +55,9 @@ The design turns the locked decisions into contracts, files, tests, and task bou
 
 - A person connects a subscription by signing in through the provider's own tool, and the account appears once that tool reports success.
 - The Subscriptions screen replaces the flat account list with a heading, a subtitle, an explaining empty state, and one row per account.
-- A row carries the mark, the name with its plan, the account it signs in as, what it serves, its standing, and an overflow.
+- A row carries the mark, the plan product with its plan, the address it signs in as, its standing, and an overflow.
 - A lapsed account reports the lapse on its own row and offers the way back there.
-- The catalog opens in a right drawer with a search field, category chips, and grouped rows.
+- The catalog opens in a kind-locked modal as a grid of provider cards, each naming its plan product and one benefit.
 - A provider offering both ways presents them together, each naming what it yields.
 - A person chooses which account the official tool runs as, with credential custody following each platform's documented limits.
 - The accounts contract structurally refuses a subscription credential, and the sidebar gains its fourth destination.
@@ -159,19 +159,19 @@ Two states suffice because both remedies are the same sentence: sign in again th
 
 `subscriptions:activate` moves one link per provider: `subscriptions/<provider>/active`, a symlink on macOS and Linux and a junction on Windows, aimed at the chosen account's home. The pointer is the single truth of which account stands active, and views read it rather than storing a second copy. On macOS, for Claude Code, the same act first runs the custody swap above, and the pointer moves last.
 
-The person's own shell follows through one line the surface hands out with a copy affordance:
+The person's own shell follows through one line:
 
 ```
 export CLAUDE_CONFIG_DIR="$(readlink -f "<userData>/subscriptions/anthropic/active")"
 ```
 
-The line resolves the pointer when a shell starts, so a switch reaches new shells only, and a running session keeps its home. Windows gets the PowerShell profile equivalent. The screen shows the line after the first connect and keeps it reachable from the row overflow. macOS differs by one fact: the credential follows the switch even in a shell without the line, because the keychain item moved. The line still matters there, so the tool's state and history follow the same account as its credential.
+The line resolves the pointer when a shell starts, so a switch reaches new shells only, and a running session keeps its home. Windows gets the PowerShell profile equivalent. No screen hands the line out: the sign-in terminal recompose opens carries the variable itself, and the row keeps to identity and standing. macOS differs by one fact: the credential follows the switch even in a shell without the line, because the keychain item moved. The line still matters there, so the tool's state and history follow the same account as its credential.
 
 The platform split is deliberate. On Linux and Windows, recompose writes nothing outside its own user-data tree, because the vendors document per-home isolation there. On macOS it touches exactly one foreign object, the Claude Code keychain item, because the platform documents no other way. One swap mechanism everywhere would be one code path, but it would write foreign stores on platforms that don't need it. The custody module owns the whole difference behind one seam, and ADR-0069's draft carries the comparison.
 
 ### The screen and the drawer
 
-The providers route keeps its kind search parameter and gains `subscription` as its default. The subscriptions surface carries the heading, the subtitle, and either the empty state or the rows. A row reads leading to trailing: brand mark, provider name with the plan badge, the signed-in address, the serves line, the standing chip, and the overflow. The serves line names the tool and whose quota pays. The overflow holds Use this account, Sign in again, Copy shell setup, and Remove. A lapsed row surfaces Sign in again beside the standing rather than only inside the overflow.
+The providers route keeps its kind search parameter and gains `subscription` as its default. The content header carries the heading and the subtitle. The Add provider act stands at the trailing edge of the window strip, where macOS keeps a window's own acts. The surface below holds either the empty state or the rows. A row reads leading to trailing: brand mark, the plan product with the plan badge, the signed-in address under it, the standing chip, and the overflow. The identity holds two lines and no more, because the connect step already taught what the account serves. The overflow holds Use this account, Sign in again, and Remove. A lapsed row surfaces Sign in again beside the standing rather than only inside the overflow.
 
 The Add provider control opens the catalog in a wide `Sheet`, the same centered modal primitive the gateway sheet uses. The catalog is kind-locked: it holds only the kind the screen behind holds, as a two-column grid of cards. Each card carries the provider's mark, the plan product it reads as, and one benefit line, and the plans the release can't connect yet stand inert. Picking a card slides the connect step in over the grid, with a back control leading the sheet's title. The sheet's open state is local component state per ADR-0065, because nothing outside the page opens it.
 
@@ -377,7 +377,7 @@ Three rules bind the handlers. No silent failures: an abandoned sign-in logs its
 - `apps/desktop/src/renderer/src/pages/providers/model/provider-catalog.ts`: the catalog rows, their kinds, their yields copy, and the search and chip narrowing (create)
 - `apps/desktop/src/renderer/src/pages/providers/model/provider-catalog.test.ts`: narrowing behavior (create)
 - `apps/desktop/src/renderer/src/pages/providers/ui/providers-page.tsx`: the kind-scoped composition (modify)
-- `apps/desktop/src/renderer/src/pages/providers/ui/subscriptions-empty-state.tsx`: the call to action and its sentence (create)
+- `apps/desktop/src/renderer/src/pages/providers/ui/subscriptions-empty-state.tsx`: the sentence naming the kind (create)
 - `apps/desktop/src/renderer/src/pages/providers/ui/subscription-account-row.tsx`: the row anatomy with the on-row restore (create)
 - `apps/desktop/src/renderer/src/pages/providers/ui/provider-catalog-drawer.tsx`: search, chips, grouped rows, and the waiting state (create)
 - `apps/desktop/src/renderer/src/pages/providers/ui/provider-connect-fork.tsx`: the two arms with their yield, terms, and quota copy (create)
@@ -550,7 +550,7 @@ Tasks run in parallel by default. A dispatch serializes only for a named blocker
 - [Risk] A crash lands between park and place → Mitigation: park before place, pointer last, single flight, and a retry re-reads the vendor item as the single truth. Unmitigated: the one-step window itself.
 - [Risk] The vendor renames the keychain service or reshapes the blob → Mitigation: custody treats the blob as opaque bytes and fails loud with the custody step named. Unmitigated: a rename breaks switching until a release follows it.
 - [Risk] A switch lands under a live session → Mitigation: the shell line resolves the pointer at shell start, so a running session keeps its home, and the switch copy warns on macOS. Unmitigated: recompose can't see a live session, and a live macOS session meets the swapped credential at its next keychain read.
-- [Risk] A person never wires the shell line and reads the switch as broken → Mitigation: the connect success panel and the row overflow both carry Copy shell setup. Unmitigated: a shell without the line keeps its old account on Linux and Windows, while on macOS the credential follows anyway and the state lags.
+- [Risk] A person never wires the shell line and reads the switch as broken → Mitigation: the sign-in terminal carries the variable itself, and on macOS the credential follows the pointer through the keychain swap. Unmitigated: a shell without the line keeps its old account on Linux and Windows, and no screen hands the line out since the row shed its copy act.
 - [Risk] The login-shell probe hangs on a broken profile → Mitigation: a bounded timeout falls back to the process environment, and the absent report says which lookup failed.
 - [Risk] No terminal opens on an unusual Linux setup → Mitigation: the launch is best effort and the waiting state always shows the command with copy.
 - [Risk] Two sign-in attempts race one pending home → Mitigation: one pending home per provider behind the single-flight queue, reset at each attempt's start.
@@ -582,12 +582,12 @@ Tasks run in parallel by default. A dispatch serializes only for a named blocker
 
 Run the desktop app from `apps/desktop` with `pnpm dev`, with `claude` installed and `codex` absent, then walk the loop.
 
-1. The sidebar shows four destinations. Subscriptions opens as the default providers surface with the heading, the subtitle, and the empty state naming what a subscription is over one call to action.
-2. Add provider opens the drawer beside the screen. The list stays visible behind it, the search field takes focus, and the chips narrow the grouped rows to one kind and back.
-3. Picking Anthropic shows both arms. The sign-in arm names the managed account, the tool it serves, the plan quota, the governing terms, and the without-notice revocation. The key arm names the gateway target. Neither names a step count.
-4. Choosing sign-in raises the keychain prompt the copy announced, then opens the terminal running Claude Code against the account's home, with the drawer waiting and the command showing. Completing the login in the terminal lands the row: mark, name, plan badge, address, Serves Claude Code, and a Connected chip with a dot beside the word.
-5. The success panel offers the shell setup line and says the machine-wide login now follows the active account. In a fresh shell carrying the line, `claude` runs as the connected account, and the pre-existing login sits parked in the reserved item.
-6. Picking OpenAI shows the sign-in arm carrying the missing-tool sentence and its remedy, and no sign-in begins. The key arm still works.
+1. The sidebar shows four destinations. Subscriptions opens as the default providers surface with the heading, the subtitle, the Add provider act at the trailing edge of the window strip, and the empty state naming what a subscription is.
+2. Add provider opens the catalog modal over the screen, holding subscription cards alone, with the plans the release can't connect yet standing inert under a Soon badge.
+3. Picking Claude slides the connect step in: the mark, what the sign-in yields, one sentence naming whose plan and terms carry it, the one-account-at-a-time warning, and the full-width act.
+4. Choosing sign-in raises the keychain prompt the copy announced, then opens the terminal running Claude Code against the account's home, with the sheet waiting and the command showing. Completing the login in the terminal lands the row: mark, Claude with its Max badge, the address, and a Connected chip with a dot beside the word.
+5. The sheet closes on success, and the machine-wide login now follows the active account: `claude` in a fresh terminal runs as the connected account, and the pre-existing login sits parked in the reserved item.
+6. Picking Codex with `codex` absent shows the missing-tool sentence and its remedy, and the act stands inert.
 7. Signing out inside the tool and reopening the screen flips the row to the attention chip with the lapse word, and Sign in again sits on the row itself. Running it restores Connected.
 8. With two Anthropic accounts, Use this account parks the outgoing blob, places the incoming one, and moves the pointer. The rows swap their active marker, and a fresh `claude` anywhere runs as the incoming account.
 9. Remove deletes the row, its home, and its parked item, then heals the pointer. Removing the last account writes the reserved login back, and the machine signs in as it did before recompose. Nothing under `~/.claude` or `~/.codex` changed at any point.

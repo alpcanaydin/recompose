@@ -175,6 +175,31 @@ test('a gateway surface keeps the way back once the sidebar has gone', async () 
   expect(reachableSidebarControls(screen.container)).toHaveLength(1);
 });
 
+test('the providers surface keeps its one act in the window strip rather than the page', async () => {
+  const screen = await renderAt('/providers');
+
+  await expect.element(screen.getByRole('button', { name: 'Add provider' })).toBeVisible();
+  expect(screen.container.querySelector('main section')?.querySelectorAll('button')).toHaveLength(
+    0,
+  );
+});
+
+test('asking to add a provider from the window strip opens the catalog', async () => {
+  const screen = await renderAt('/providers');
+
+  await screen.getByRole('button', { name: 'Add provider' }).click();
+
+  await expect.element(screen.getByRole('dialog', { name: 'Add provider' })).toBeVisible();
+});
+
+test('a surface away from the providers screens offers no way into the catalog', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Add provider' }))
+    .not.toBeInTheDocument();
+});
+
 test('the edge answers the arrow keys, so a pointer is not the only way', async () => {
   const screen = await renderAt('/', { gateways: [codex] });
   const edge = screen.container.querySelector<HTMLElement>('[aria-label="Sidebar edge"]');

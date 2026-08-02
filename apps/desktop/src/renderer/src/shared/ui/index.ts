@@ -19,3 +19,4 @@ export { TextField } from './text-field';
 export { PageError } from './page-error';
 export { SidebarEdge } from './sidebar-edge';
 export { SidebarToggle } from './sidebar-toggle';
+export { ToolbarButton } from './toolbar-button';
