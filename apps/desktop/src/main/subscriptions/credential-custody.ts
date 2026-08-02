@@ -9,6 +9,7 @@ export const RESERVED_SLOT = 'login-before-recompose';
 export type KeychainItem = { service: string; account: string };
 
 export type KeychainSeam = {
+  stands: (item: KeychainItem) => Promise<boolean>;
   read: (item: KeychainItem) => Promise<string | null>;
   write: (item: KeychainItem, blob: string) => Promise<void>;
   remove: (item: KeychainItem) => Promise<void>;
@@ -67,8 +68,8 @@ export function credentialCustody(keychain: KeychainSeam, osUser: string): Crede
   const parkedItem = (slot: string): KeychainItem => ({ service: PARKED_SERVICE, account: slot });
 
   const stands = async (item: KeychainItem): Promise<boolean> =>
-    keychain.read(item).then(
-      (held) => held !== null,
+    keychain.stands(item).then(
+      (held) => held,
       () => false,
     );
 

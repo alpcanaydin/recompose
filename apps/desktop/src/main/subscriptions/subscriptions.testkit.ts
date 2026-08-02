@@ -14,6 +14,7 @@ export type FakeKeychain = {
   put: (service: string, account: string, blob: string) => void;
   writes: () => number;
   denyEverything: () => void;
+  failPresence: () => void;
 };
 
 function shelf(item: KeychainItem): string {
@@ -66,9 +67,17 @@ export function fakeKeychain(seeded: Record<string, string> = {}, refuse?: Refus
   const store = new Map(Object.entries(seeded));
   const gate = refusalGate(refuse);
   let writes = 0;
+  let presenceFails = false;
 
   return {
     seam: {
+      stands: async (item) => {
+        if (presenceFails) {
+          throw new Error('the keychain is locked');
+        }
+
+        return Promise.resolve(store.has(shelf(item)));
+      },
       read: async (item) => {
         gate.pass();
 
@@ -96,6 +105,9 @@ export function fakeKeychain(seeded: Record<string, string> = {}, refuse?: Refus
     },
     writes: () => writes,
     denyEverything: gate.denyEverything,
+    failPresence: () => {
+      presenceFails = true;
+    },
   };
 }
 

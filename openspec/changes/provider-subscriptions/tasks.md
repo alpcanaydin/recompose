@@ -19,12 +19,12 @@ Every task drives a failing test to green before its implementation exists, and 
   - [x] The attention token pair the amber standing needs.
   - [x] Every component ships its stories sibling, and somebody looks at each one in both schemes before the branch leaves the machine.
 
-- [ ] **Task 3: main.** Owns `apps/desktop/src/main/subscriptions/`, the handler and dispatch files, the main entry point, both preload touches, and the mutation exclude line. Depends on task 1.
-  - [ ] The tool-presence check: a timeout-bounded login-shell path probe with a fallback to the process environment, then per-provider binary resolution.
-  - [ ] One config home per account under the app's own user data, and the active pointer with its heal on a removed target.
-  - [ ] The standing observer, which answers from evidence and never answers connected without it.
-  - [ ] Credential custody on macOS: park before place, pointer last, single-flight, blobs opaque and never across the bridge. A denied prompt aborts before any write and answers with its own refusal.
-  - [ ] The five handlers behind the bridge, none of whose responses carry token material.
+- [x] **Task 3: main.** Owns `apps/desktop/src/main/subscriptions/`, the handler and dispatch files, the main entry point, both preload touches, and the mutation exclude line. Depends on task 1.
+  - [x] The tool-presence check: a timeout-bounded login-shell path probe with a fallback to the process environment, then per-provider binary resolution.
+  - [x] One config home per account under the app's own user data, and the active pointer with its heal on a removed target. The heal rides in `accounts:remove`, which is where a target stops existing.
+  - [x] The standing observer, which answers from evidence and never answers connected without it.
+  - [x] Credential custody on macOS: park before place, pointer last, single-flight, blobs opaque and never across the bridge. A denied prompt aborts before any write and answers with its own refusal. A presence check runs `find-generic-password` without `-w`, so watching standing never asks for the secret and never prompts.
+  - [x] The five handlers behind the bridge, none of whose responses carry token material.
 
 - [ ] **Task 4: the renderer surface.** Owns the providers pages, the account entity, the sidebar widget files, the shared API, the fake bridge, the Storybook decorator, and the providers route. Depends on task 1 for types and task 2 for the kit, and runs beside task 3.
   - [ ] The Subscriptions screen: heading, subtitle, the explaining empty state, and one row per account.

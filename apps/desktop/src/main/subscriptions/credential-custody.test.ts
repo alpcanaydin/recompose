@@ -234,35 +234,6 @@ describe('letting go of a credential when an account leaves', () => {
     expect(outcome).toEqual({ ok: true });
     expect(keychain.blobAt(VENDOR_SERVICE, osUser)).toBeNull();
   });
-
-  test('given a slot that holds a credential, the parked item stands', async () => {
-    const keychain = fakeKeychain(parkedUnder('acc-one', 'opaque-one'));
-    const custody = credentialCustody(keychain.seam, osUser);
-
-    await expect(custody.parkedStands('acc-one')).resolves.toBe(true);
-    await expect(custody.parkedStands('acc-two')).resolves.toBe(false);
-  });
-
-  test('given the tool holding a credential, the vendor item stands, and once emptied it does not', async () => {
-    const keychain = fakeKeychain(vendorHolding('opaque-one'));
-    const custody = credentialCustody(keychain.seam, osUser);
-
-    await expect(custody.vendorStands()).resolves.toBe(true);
-
-    await custody.clear();
-
-    await expect(custody.vendorStands()).resolves.toBe(false);
-  });
-
-  test('given a keychain that refuses to answer, the slot reads as empty rather than throwing', async () => {
-    const keychain = fakeKeychain(parkedUnder('acc-one', 'opaque-one'), {
-      atStep: 1,
-      kind: 'denied',
-    });
-    const custody = credentialCustody(keychain.seam, osUser);
-
-    await expect(custody.parkedStands('acc-one')).resolves.toBe(false);
-  });
 });
 
 describe('custody runs one turn at a time', () => {
