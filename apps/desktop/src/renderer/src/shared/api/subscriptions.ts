@@ -5,7 +5,13 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { accountsQueryOptions } from './accounts';
 import { unwrapIpcResult, withRefusal } from './ipc-result';
 
-const subscriptionsQueryOptions = queryOptions({
+/**
+ * Every subscription account as the machine last observed it.
+ *
+ * @summary The list is a reading rather than a store: standing, plan, and which account a tool
+ * currently runs as all live outside the renderer, so every act republishes the whole list.
+ */
+export const subscriptionsQueryOptions = queryOptions({
   queryKey: ['subscriptions'],
   queryFn: async () => unwrapIpcResult(await window.recompose['subscriptions:list']()),
 });

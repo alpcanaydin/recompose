@@ -26,13 +26,13 @@ Every task drives a failing test to green before its implementation exists, and 
   - [ ] Credential custody on macOS: park before place, pointer last, single-flight, blobs opaque and never across the bridge. A denied prompt aborts before any write and answers with its own refusal.
   - [ ] The five handlers behind the bridge, none of whose responses carry token material.
 
-- [ ] **Task 4: the renderer surface.** Owns the providers pages, the account entity, the sidebar widget files, the shared API, the fake bridge, the Storybook decorator, and the providers route. Depends on task 1 for types and task 2 for the kit, and runs beside task 3.
-  - [ ] The Subscriptions screen: heading, subtitle, the explaining empty state, and one row per account.
+- [x] **Task 4: the renderer surface.** Owns the providers pages, the account entity, the sidebar widget files, the shared API, the fake bridge, the Storybook decorator, and the providers route. Depends on task 1 for types and task 2 for the kit, and runs beside task 3.
+  - [x] The Subscriptions screen: heading, subtitle, the explaining empty state, and one row per account.
   - [x] The row: mark, name with plan, the address it signs in as, what it serves, its standing, and the overflow.
   - [x] A lapsed row reports the lapse and carries the way back on the row.
   - [x] The catalog drawer: search, chips, grouped rows, and narrowing that always answers a subset of its input.
   - [x] The fork, whose arms name what each yields rather than how many steps it takes.
-  - [ ] The sidebar gains the fourth kind so the group the reference draws is whole.
+  - [x] The sidebar gains the fourth kind so the group the reference draws is whole.
 
 - [ ] **Task 5: acceptance and records.** Owns the end-to-end directory, the visual baselines, the readme, the dictionary, and the record with its index row. Depends on tasks 3 and 4.
   - [ ] The four approved feature files graduate, driven against fake tool binaries on a prepended path.
