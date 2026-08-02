@@ -5,15 +5,26 @@ import { expect, test } from 'vitest';
 import { accountKindTitle, accountKinds, accountsOfKind } from './account-kind';
 
 function account(id: string, kind: AccountsDocument['accounts'][number]['kind']) {
-  return { id, provider: 'anthropic', kind, label: id, credentialRef: `c-${id}` };
+  return kind === 'subscription'
+    ? { id, provider: 'anthropic' as const, kind, label: id }
+    : { id, provider: 'anthropic', kind, label: id, credentialRef: `c-${id}` };
 }
 
-test('the kinds a person can browse are the kinds an account can be stored as', () => {
-  expect(accountKinds).toEqual(['subscription', 'api-key', 'aggregator']);
+test('the kinds a person can browse are every kind the contract names', () => {
+  expect(accountKinds).toEqual(['subscription', 'api-key', 'aggregator', 'local']);
 });
 
 test('every kind reads as a name rather than as its stored token', () => {
-  expect(accountKinds.map(accountKindTitle)).toEqual(['Subscriptions', 'API Keys', 'Aggregators']);
+  expect(accountKinds.map(accountKindTitle)).toEqual([
+    'Subscriptions',
+    'API Keys',
+    'Aggregators',
+    'Local Runtimes',
+  ]);
+});
+
+test('a kind no account can be stored under gathers nothing rather than refusing', () => {
+  expect(accountsOfKind([account('a1', 'api-key')], 'local')).toEqual([]);
 });
 
 test('a kind gathers the stored accounts of that kind and no others', () => {

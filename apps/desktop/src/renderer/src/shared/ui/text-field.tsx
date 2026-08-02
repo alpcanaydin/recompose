@@ -5,6 +5,8 @@ type TextFieldProps = {
   label: string;
   /** Controlled input value. */
   value: string;
+  /** Standing hint inside an empty field, which never replaces the label. */
+  placeholder?: string;
   /** Switches masking for secret entry. */
   type?: 'password' | 'text';
   /** Receives the raw input value on every keystroke. */
@@ -21,6 +23,7 @@ type TextFieldProps = {
 export function TextField({
   label,
   value,
+  placeholder,
   type = 'text',
   onChangeValue,
   inert = false,
@@ -30,10 +33,11 @@ export function TextField({
       <Field.Control
         aria-disabled={inert || undefined}
         aria-label={label}
-        className="field-control focus-ring aria-disabled:bg-surface-inert"
+        className="field-control focus-ring placeholder:text-ink-tertiary aria-disabled:bg-surface-inert"
         onChange={(event) => {
           onChangeValue(event.currentTarget.value);
         }}
+        placeholder={placeholder}
         readOnly={inert}
         type={type}
         value={value}

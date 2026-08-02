@@ -20,7 +20,7 @@ export function AccountList({ accounts }: AccountListProps) {
           >
             <div className="flex flex-col gap-0.5">
               <span className="text-body text-ink">{account.label}</span>
-              <span className="text-caption text-ink-secondary">
+              <span className="text-detail text-ink-secondary">
                 {account.provider} · {account.kind}
               </span>
             </div>
@@ -37,7 +37,7 @@ export function AccountList({ accounts }: AccountListProps) {
         ))}
       </ul>
       {remove.error === null ? null : (
-        <p className="text-caption text-danger-ink" role="alert">
+        <p className="text-detail text-danger-ink" role="alert">
           {remove.error.message}
         </p>
       )}

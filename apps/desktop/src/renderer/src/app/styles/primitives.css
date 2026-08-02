@@ -12,6 +12,7 @@
   --purple-600: #af52de;
   --teal-500: #40c8e0;
   --teal-600: #30b0c7;
+  --teal-700: #17869b;
   --red-500: #ff453a;
   --red-400: #ff6961;
   --red-600: #ff3b30;
@@ -19,6 +20,10 @@
   --yellow-500: #ffd60a;
   --yellow-600: #c79000;
   --yellow-700: #a37400;
+  --amber-400: #ffc85c;
+  --amber-500: #ffb02e;
+  --amber-600: #c27a00;
+  --amber-700: #946200;
 
   --white: #ffffff;
   --white-a90: rgb(255 255 255 / 90%);

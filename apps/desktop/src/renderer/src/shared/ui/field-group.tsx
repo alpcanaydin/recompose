@@ -19,7 +19,7 @@ export function FieldGroup({ heading, children }: FieldGroupProps) {
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2" role="group">
-      <h2 className="px-3 text-overline text-ink uppercase" id={headingId}>
+      <h2 className="px-4 text-card-title text-ink-secondary" id={headingId}>
         {heading}
       </h2>
       <div className="divide-y divide-line-subtle rounded-card border border-line-subtle bg-surface-card px-4">

@@ -32,6 +32,10 @@ export default defineConfig({
         'src/main/ipc/register-ipc.ts',
         'src/main/menu/app-menu.ts',
         'src/main/protocol/app-protocol.ts',
+        'src/main/subscriptions/macos-keychain.ts',
+        'src/main/subscriptions/run-command.ts',
+        'src/main/subscriptions/sign-in-launch.ts',
+        'src/main/subscriptions/subscriptions-wiring.ts',
         'src/main/tray/menu-bar-tray.ts',
         'src/main/windows/main-window.ts',
         'src/preload/index.ts',
@@ -45,7 +49,11 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
-          include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mts'],
+          include: [
+            'src/**/*.test.{ts,tsx}',
+            'scripts/**/*.test.mts',
+            'e2e/fake-tools/**/*.test.mts',
+          ],
           exclude: [...defaultExclude, '**/*.browser.test.*'],
         },
       },

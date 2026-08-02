@@ -29,6 +29,6 @@ export const BandShape = meta.story({
     await expect(paintedStyle(band).columnGap).toBe('14px');
     await expect(paintedStyle(band).paddingLeft).toBe('14px');
     await expect(paintedStyle(band).borderTopWidth).toBe('1px');
-    await expect(paintedStyle(meter).fontSize).toBe('11px');
+    await expect(paintedStyle(meter).fontSize).toBe('12px');
   },
 });

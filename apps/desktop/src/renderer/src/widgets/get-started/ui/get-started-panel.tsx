@@ -1,77 +1,25 @@
+import type { ReactNode } from 'react';
+
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useEffect, useId, useSyncExternalStore } from 'react';
 
 import { accountsQueryOptions, gatewaysQueryOptions } from '../../../shared/api';
-import { Icon } from '../../../shared/ui';
+import { getStartedCollapsed, subscribeToGetStartedCollapse } from '../lib/get-started-collapse';
 import {
-  collapseGetStarted,
-  expandGetStarted,
-  getStartedCollapsed,
-  subscribeToGetStartedCollapse,
-} from '../lib/get-started-collapse';
-import {
-  dismissGetStarted,
   getStartedDismissed,
   restoreGetStarted,
   subscribeToGetStartedDismissal,
 } from '../lib/get-started-dismissal';
-import { type GetStartedStep, getStartedSteps } from '../lib/get-started-steps';
+import { getStartedSteps } from '../lib/get-started-steps';
+import { ChecklistHeader } from './checklist-header';
+import { ChecklistSteps } from './checklist-steps';
 
 type GetStartedPanelProps = {
   /** Names a fresh ask for the checklist, which clears any earlier dismissal. */
   restoreRequest?: string | undefined;
 };
 
-const ring = {
-  done: 'border-running bg-running text-surface-thumb',
-  current: 'checklist-ring-current',
-  pending: '',
-} as const;
-
-const stepInk = {
-  done: 'text-ink-secondary',
-  current: 'text-ink font-medium',
-  pending: 'text-ink-secondary',
-} as const;
-
-function StepRow({ step }: { step: GetStartedStep }) {
-  return (
-    <li className="flex min-h-7.5 items-center gap-2.25 px-0.5">
-      <span aria-hidden className={`checklist-ring ${ring[step.state]}`}>
-        {step.state === 'done' && <Icon className="size-2.25 stroke-3" name="check" />}
-      </span>
-      <span className={`flex flex-col ${stepInk[step.state]}`}>
-        <span aria-current={step.state === 'current' ? 'step' : undefined} className="text-note">
-          {step.title}
-        </span>
-        {step.reason !== undefined && (
-          <span className="text-caption text-ink-secondary">{step.reason}</span>
-        )}
-      </span>
-    </li>
-  );
-}
-
-function ChecklistHeader({ headingId, collapsed }: { headingId: string; collapsed: boolean }) {
-  return (
-    <h2 className="text-card-title text-ink" id={headingId}>
-      <button
-        aria-expanded={!collapsed}
-        className="flex w-full items-center justify-between px-0.5 focus-ring"
-        onClick={collapsed ? expandGetStarted : collapseGetStarted}
-        type="button"
-      >
-        Get started
-        <Icon
-          className={`size-3.5 text-ink-secondary ${collapsed ? '-rotate-90' : ''}`}
-          name="chevron"
-        />
-      </button>
-    </h2>
-  );
-}
-
-function ProgressLine({ done, total }: { done: number; total: number }) {
+function progressLine(done: number, total: number): ReactNode {
   return (
     <p className="mt-1 flex items-center gap-2 px-0.5">
       <span className="font-mono text-mono-value text-ink-secondary">
@@ -84,27 +32,6 @@ function ProgressLine({ done, total }: { done: number; total: number }) {
         />
       </span>
     </p>
-  );
-}
-
-function ChecklistSteps({ steps }: { steps: readonly GetStartedStep[] }) {
-  return (
-    <>
-      <ul className="mt-1 list-none">
-        {steps.map((step) => (
-          <StepRow key={step.title} step={step} />
-        ))}
-      </ul>
-      <footer className="mt-1.25 flex justify-end border-t border-line-faint px-0.5 py-1.75">
-        <button
-          className="text-quiet text-ink-secondary focus-ring hover:text-ink"
-          onClick={dismissGetStarted}
-          type="button"
-        >
-          Skip setup
-        </button>
-      </footer>
-    </>
   );
 }
 
@@ -145,7 +72,7 @@ export function GetStartedPanel({ restoreRequest }: GetStartedPanelProps) {
       className="rounded-panel border border-line-subtle bg-surface-card px-3 pt-2.5 pb-1.5"
     >
       <ChecklistHeader collapsed={collapsed} headingId={headingId} />
-      <ProgressLine done={done} total={steps.length} />
+      {progressLine(done, steps.length)}
       {!collapsed && <ChecklistSteps steps={steps} />}
     </section>
   );

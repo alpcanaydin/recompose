@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { useId } from 'react';
 
 import type { IconName } from '../../../../shared/ui';
@@ -16,36 +17,15 @@ const glyph: Record<AccountKind, IconName> = {
   subscription: 'person',
   'api-key': 'key',
   aggregator: 'cube',
+  local: 'monitor',
 };
 
 const tint: Record<AccountKind, string> = {
   subscription: 'text-subscription',
   'api-key': 'text-api-key',
   aggregator: 'text-aggregator',
+  local: 'text-local',
 };
-
-type ProviderKindRowProps = {
-  /** Which kind of account the row filters the providers surface down to. */
-  kind: AccountKind;
-  /** How many accounts are stored under that kind right now. */
-  connected: number;
-};
-
-function ProviderKindRow({ kind, connected }: ProviderKindRowProps) {
-  const title = accountKindTitle(kind);
-
-  return (
-    <a
-      aria-label={`${title}, ${connected} connected`}
-      className="nav-item text-ink"
-      href={`#/providers?kind=${kind}`}
-    >
-      <Icon className={`size-4 ${tint[kind]}`} name={glyph[kind]} />
-      <span className="truncate">{title}</span>
-      <span className="ms-auto font-mono text-mono-value text-ink-secondary">{connected}</span>
-    </a>
-  );
-}
 
 /**
  * One row per kind of account, each reporting how many are stored under it.
@@ -59,17 +39,30 @@ export function ProviderSidebar() {
   const { data: registry } = useSuspenseQuery(accountsQueryOptions);
 
   return (
-    <div aria-labelledby={groupId} className="flex flex-col" role="group">
+    <div aria-labelledby={groupId} className="flex flex-col gap-px" role="group">
       <h2 className="nav-group" id={groupId}>
         Providers
       </h2>
-      {accountKinds.map((kind) => (
-        <ProviderKindRow
-          connected={accountsOfKind(registry.accounts, kind).length}
-          key={kind}
-          kind={kind}
-        />
-      ))}
+      {accountKinds.map((kind) => {
+        const connected = accountsOfKind(registry.accounts, kind).length;
+
+        return (
+          <Link
+            activeOptions={{ includeSearch: true }}
+            aria-label={`${accountKindTitle(kind)}, ${String(connected)} connected`}
+            className="nav-item"
+            key={kind}
+            search={{ kind }}
+            to="/providers"
+          >
+            <Icon className={`size-4 ${tint[kind]}`} name={glyph[kind]} />
+            <span className="truncate">{accountKindTitle(kind)}</span>
+            <span className="ms-auto font-mono text-mono-value text-ink-secondary">
+              {connected}
+            </span>
+          </Link>
+        );
+      })}
     </div>
   );
 }

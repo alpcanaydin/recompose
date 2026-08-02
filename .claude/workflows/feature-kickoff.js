@@ -255,8 +255,8 @@ function verdictShapeFault(verdict) {
   const shape = VERDICT_SHAPES[verdict.status]
   const failures = verdict.failures
   const reason = verdict.reason
-  if (shape.failures === 'empty' && (!Array.isArray(failures) || failures.length > 0)) {
-    return 'a passing verdict must carry an empty failure list'
+  if (shape.failures === 'empty' && failures !== undefined && (!Array.isArray(failures) || failures.length > 0)) {
+    return 'a passing verdict must name no failing citation'
   }
   if (shape.failures === 'present' && (!Array.isArray(failures) || failures.length === 0)) {
     return 'a failing verdict must name at least one failing citation'

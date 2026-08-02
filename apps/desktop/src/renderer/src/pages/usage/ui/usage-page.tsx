@@ -10,7 +10,7 @@ export function UsagePage() {
       <h1 className="text-title text-ink">Usage</h1>
       <div className="flex flex-col items-center gap-1.5 rounded-card border border-line-subtle bg-surface-card px-6 py-12 text-center">
         <h2 className="text-heading text-ink">No requests yet</h2>
-        <p className="max-w-102.5 text-note leading-normal text-ink-secondary">
+        <p className="max-w-102.5 text-body leading-normal text-ink-secondary">
           Once a gateway serves its first request, its rate, latency, tokens, and spend collect
           here.
         </p>

@@ -3,4 +3,5 @@ export {
   accountKindTitle,
   accountKinds,
   accountsOfKind,
+  offeredAccountKind,
 } from './model/account-kind';

@@ -2,6 +2,7 @@ import { describe, expectTypeOf, test } from 'vitest';
 
 import type {
   AccountsDocument,
+  CredentialedAccount,
   EngineDirective,
   EngineGateway,
   EngineReport,
@@ -19,6 +20,10 @@ import type {
   RecomposeIpcEvents,
   Settings,
   SettingsPatch,
+  SubscriptionAccount,
+  SubscriptionAccountView,
+  SubscriptionProviderId,
+  SubscriptionTool,
   SystemState,
 } from './index';
 
@@ -77,6 +82,9 @@ describe('ipc response contracts', () => {
       | 'folder-open-failed'
       | 'name-conflict'
       | 'port-conflict'
+      | 'tool-missing'
+      | 'sign-in-timed-out'
+      | 'keychain-denied'
     >();
   });
 
@@ -89,7 +97,57 @@ describe('ipc response contracts', () => {
 
   test('account rows crossing the bridge are structurally secret-free', () => {
     expectTypeOf<AccountsDocument['accounts'][number]>().not.toHaveProperty('secret');
-    expectTypeOf<AccountsDocument['accounts'][number]>().toHaveProperty('credentialRef');
+    expectTypeOf<CredentialedAccount>().toHaveProperty('credentialRef');
+    expectTypeOf<SubscriptionAccount>().not.toHaveProperty('credentialRef');
+  });
+});
+
+describe('the subscription channels', () => {
+  test('reading the subscriptions and the tools takes no payload', () => {
+    expectTypeOf<IpcRequest<'subscriptions:list'>>().toEqualTypeOf<void>();
+    expectTypeOf<IpcRequest<'subscriptions:tools'>>().toEqualTypeOf<void>();
+  });
+
+  test('signing in names a provider, and the two acts on an account name an id', () => {
+    expectTypeOf<IpcRequest<'subscriptions:sign-in'>>().toEqualTypeOf<{
+      provider: SubscriptionProviderId;
+    }>();
+    expectTypeOf<IpcRequest<'subscriptions:restore'>>().toEqualTypeOf<{ id: string }>();
+    expectTypeOf<IpcRequest<'subscriptions:activate'>>().toEqualTypeOf<{ id: string }>();
+  });
+
+  test('no subscription request carries a secret, because the tool holds the credential', () => {
+    expectTypeOf<IpcRequest<'subscriptions:sign-in'>>().not.toHaveProperty('secret');
+    expectTypeOf<IpcRequest<'subscriptions:restore'>>().not.toHaveProperty('secret');
+    expectTypeOf<IpcRequest<'subscriptions:activate'>>().not.toHaveProperty('secret');
+  });
+
+  test('every act on a subscription answers the refreshed views', () => {
+    expectTypeOf<IpcResponse<'subscriptions:list'>>().toEqualTypeOf<
+      { ok: true; value: SubscriptionAccountView[] } | { ok: false; error: IpcError }
+    >();
+    expectTypeOf<IpcResponse<'subscriptions:sign-in'>>().toEqualTypeOf<
+      IpcResponse<'subscriptions:list'>
+    >();
+    expectTypeOf<IpcResponse<'subscriptions:restore'>>().toEqualTypeOf<
+      IpcResponse<'subscriptions:list'>
+    >();
+    expectTypeOf<IpcResponse<'subscriptions:activate'>>().toEqualTypeOf<
+      IpcResponse<'subscriptions:list'>
+    >();
+  });
+
+  test('the tool report says whether the tool is there and what to run', () => {
+    expectTypeOf<IpcResponse<'subscriptions:tools'>>().toEqualTypeOf<
+      { ok: true; value: SubscriptionTool[] } | { ok: false; error: IpcError }
+    >();
+    expectTypeOf<SubscriptionTool['present']>().toEqualTypeOf<boolean>();
+  });
+
+  test('a view reports standing without carrying anything the tool signed in with', () => {
+    expectTypeOf<SubscriptionAccountView['standing']>().toEqualTypeOf<'connected' | 'lapsed'>();
+    expectTypeOf<SubscriptionAccountView>().not.toHaveProperty('credentialRef');
+    expectTypeOf<SubscriptionAccountView>().not.toHaveProperty('secret');
   });
 });
 

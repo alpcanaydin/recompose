@@ -14,6 +14,7 @@ import { spawnEngineChild } from './engine-host/spawn-engine';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
+import { createSubscriptionsIpcHandlers } from './ipc/subscriptions-ipc';
 import { createSystemIpcHandlers } from './ipc/system-ipc';
 import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
@@ -22,6 +23,9 @@ import { applyBootSettings, applyChosenSettings } from './settings/apply-setting
 import { listGatewayConfigs } from './storage/gateway-store';
 import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
+import { subscriptionHomes } from './subscriptions/subscription-homes';
+import { subscriptionRelease } from './subscriptions/subscription-release';
+import { machineCustody, subscriptionsContext } from './subscriptions/subscriptions-wiring';
 import { fileBrowserFor } from './system/file-browser';
 import { createLoginItem, loginItemAvailabilityFor } from './system/login-item';
 import {
@@ -117,12 +121,17 @@ function onStorageCorrupt(quarantinedPath: string): void {
 
 function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
   const userDataPath = app.getPath('userData');
+  const homeFolder = app.getPath('home');
+  const custody = machineCustody();
 
   return {
+    ...createSubscriptionsIpcHandlers(
+      subscriptionsContext({ userDataPath, homeFolder, custody, onCorrupt: onStorageCorrupt }),
+    ),
     ...createEngineIpcHandlers({
       host: engineHost,
       userDataPath,
-      homeFolder: app.getPath('home'),
+      homeFolder,
       onCorrupt: onStorageCorrupt,
       probeFreePort,
     }),
@@ -131,7 +140,7 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       getCodec: () => createSafeStorageCodec(),
       isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
       onCorrupt: onStorageCorrupt,
-      homeFolder: app.getPath('home'),
+      homeFolder,
       readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,
       startGateway: (gateway) => {
@@ -139,12 +148,16 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
           console.error(`recompose stored ${gateway.slug} but could not start it`, error);
         });
       },
+      releaseSubscription: subscriptionRelease(
+        subscriptionHomes(userDataPath, process.platform),
+        custody,
+      ),
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
       loginItem: loginItemAvailability,
       configFolder: userDataPath,
-      homeFolder: app.getPath('home'),
+      homeFolder,
       readLoginItem: () => loginItem.isEnabled(),
       isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),

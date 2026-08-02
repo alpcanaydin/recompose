@@ -1,4 +1,4 @@
-import type { AccountsDocument } from '@recompose/contracts';
+import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
@@ -7,7 +7,11 @@ import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
 import { settingsQueryOptions, systemQueryOptions } from '../pages/settings';
-import { accountsQueryOptions } from '../shared/api';
+import {
+  accountsQueryOptions,
+  subscriptionToolsQueryOptions,
+  subscriptionsQueryOptions,
+} from '../shared/api';
 import { gatewaySeed, installFakeBridge } from '../shared/testing';
 import { createQueryClient } from './query-client';
 import { createAppRouter } from './router';
@@ -20,18 +24,20 @@ beforeEach(() => {
   localStorage.clear();
 });
 
+const seededSubscription: SubscriptionAccountView = {
+  id: 's1',
+  provider: 'anthropic',
+  label: 'Anthropic',
+  signedInAs: 'dev@example.com',
+  plan: 'Max',
+  standing: 'connected',
+  active: true,
+};
+
 function seededAccounts(): AccountsDocument {
   return {
-    schemaVersion: 1,
-    accounts: [
-      {
-        id: 'a1',
-        provider: 'anthropic',
-        kind: 'subscription',
-        label: 'Claude Max',
-        credentialRef: 'c1',
-      },
-    ],
+    schemaVersion: 2,
+    accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
   };
 }
 
@@ -64,10 +70,10 @@ test('an unknown path shows the not-found state inside the shell', async () => {
   await expect.element(screen.getByRole('link', { name: 'Settings' })).toBeVisible();
 });
 
-test('navigating to providers loads and renders the registry from the bridge', async () => {
-  const screen = await renderAt('/providers', { accounts: seededAccounts() });
+test('navigating to providers loads and renders the accounts from the bridge', async () => {
+  const screen = await renderAt('/providers', { subscriptions: [seededSubscription] });
 
-  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('dev@example.com')).toBeVisible();
 });
 
 test('a request narrowed to a kind lands on the surface for that kind', async () => {
@@ -77,17 +83,19 @@ test('a request narrowed to a kind lands on the surface for that kind', async ()
   await expect.element(screen.getByText('Claude Max', { exact: true })).not.toBeInTheDocument();
 });
 
-test('a request naming no kind the contract knows lists every account instead', async () => {
+test('a request naming no kind the contract knows lands on subscriptions', async () => {
   const screen = await renderAt('/providers?kind=not-a-kind', { accounts: seededAccounts() });
 
-  await expect.element(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeVisible();
-  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Subscriptions' }))
+    .toBeVisible();
+  await expect.element(screen.getByText('Claude Max', { exact: true })).not.toBeInTheDocument();
 });
 
 test('the /providers route loader warms the query cache before any component renders', async () => {
   const seeded = seededAccounts();
 
-  installFakeBridge({ accounts: seeded });
+  installFakeBridge({ accounts: seeded, subscriptions: [seededSubscription] });
 
   const queryClient = createQueryClient();
   const router = createAppRouter({
@@ -98,6 +106,10 @@ test('the /providers route loader warms the query cache before any component ren
   await router.load();
 
   expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
+  expect(queryClient.getQueryData(subscriptionsQueryOptions.queryKey)).toEqual([
+    seededSubscription,
+  ]);
+  expect(queryClient.getQueryData(subscriptionToolsQueryOptions.queryKey)).toEqual([]);
 });
 
 test('a request for the usage path lands on the usage screen inside the shell', async () => {

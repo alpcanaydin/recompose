@@ -15,6 +15,6 @@ test-results/
 playwright-report/
 .stryker-tmp/
 reports/
-.claude/agent-memory
+**/.claude/agent-memory/
 .claude/worktrees/
 .playwright-mcp/

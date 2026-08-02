@@ -22,7 +22,7 @@ export type SystemIpcContext = {
 
 export type SystemIpcHandlers = Pick<
   IpcHandlers,
-  'system:get' | 'system:open-config-folder' | 'system:sidebar-shown'
+  'system:get' | 'system:open-config-folder' | 'system:window-band'
 >;
 
 function observeSystem(ctx: SystemIpcContext): SystemState {
@@ -45,8 +45,8 @@ async function openConfigFolder(ctx: SystemIpcContext) {
   return { ok: true as const, value: undefined };
 }
 
-function placedWindowButtons(ctx: SystemIpcContext, shown: boolean) {
-  ctx.placeWindowButtons(windowButtonsFor(shown));
+function placedWindowButtons(ctx: SystemIpcContext, band: 'sidebar' | 'toolbar') {
+  ctx.placeWindowButtons(windowButtonsFor(band));
 
   return { ok: true as const, value: undefined };
 }
@@ -55,6 +55,6 @@ export function createSystemIpcHandlers(ctx: SystemIpcContext): SystemIpcHandler
   return {
     'system:get': async () => Promise.resolve({ ok: true as const, value: observeSystem(ctx) }),
     'system:open-config-folder': async () => openConfigFolder(ctx),
-    'system:sidebar-shown': async (shown) => Promise.resolve(placedWindowButtons(ctx, shown)),
+    'system:window-band': async (band) => Promise.resolve(placedWindowButtons(ctx, band)),
   };
 }

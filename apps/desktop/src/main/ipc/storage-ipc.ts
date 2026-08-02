@@ -3,6 +3,7 @@ import type {
   GatewayConfig,
   IpcRequest,
   SettingsPatch,
+  SubscriptionAccount,
 } from '@recompose/contracts';
 
 import { withSettingsPatch } from '@recompose/contracts';
@@ -10,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
 
-import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
+import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { oneAtATime } from '../storage/one-at-a-time';
 import {
@@ -166,15 +167,57 @@ async function connectAccount(
       setSecret(opened.vault, ctx.getCodec(), credentialRef, request.secret),
     );
 
-    const accounts = await readAccounts(ctx, paths);
-    const updated = { ...accounts, accounts: [...accounts.accounts, account] };
-
-    await saveAccountsFile(paths.accountsFile, updated);
+    const updated = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (accounts) => ({
+      ...accounts,
+      accounts: [...accounts.accounts, account],
+    }));
 
     return { ok: true as const, value: updated };
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);
   }
+}
+
+function sameProviderIds(accounts: AccountsDocument, provider: SubscriptionAccount['provider']) {
+  const ids: string[] = [];
+
+  for (const candidate of accounts.accounts) {
+    if (candidate.kind === 'subscription' && candidate.provider === provider) {
+      ids.push(candidate.id);
+    }
+  }
+
+  return ids;
+}
+
+async function releaseSubscriptionRow(
+  ctx: StorageIpcContext,
+  row: SubscriptionAccount,
+  updated: AccountsDocument,
+): Promise<{ ok: true } | ReturnType<typeof ipcFailure>> {
+  const released = await ctx.releaseSubscription(row, sameProviderIds(updated, row.provider));
+
+  if (!released.ok) {
+    return ipcFailure(released.code, released.message);
+  }
+
+  return { ok: true as const };
+}
+
+async function releaseKeyRow(
+  ctx: StorageIpcContext,
+  paths: StoragePaths,
+  row: { credentialRef: string },
+) {
+  const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
+
+  if (!opened.ok) {
+    return opened;
+  }
+
+  await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
+
+  return { ok: true as const };
 }
 
 async function removeAccount(
@@ -190,20 +233,24 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
-
-    if (!opened.ok) {
-      return opened;
-    }
-
-    await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
-
-    const updated = {
+    const survivors = {
       ...accounts,
       accounts: accounts.accounts.filter((candidate) => candidate.id !== request.id),
     };
 
-    await saveAccountsFile(paths.accountsFile, updated);
+    const released =
+      row.kind === 'subscription'
+        ? await releaseSubscriptionRow(ctx, row, survivors)
+        : await releaseKeyRow(ctx, paths, row);
+
+    if (!released.ok) {
+      return released;
+    }
+
+    const updated = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (fresh) => ({
+      ...fresh,
+      accounts: fresh.accounts.filter((candidate) => candidate.id !== request.id),
+    }));
 
     return { ok: true as const, value: updated };
   } catch (error) {

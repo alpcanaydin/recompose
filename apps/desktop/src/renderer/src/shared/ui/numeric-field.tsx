@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Field } from '@base-ui/react/field';
 import { useId, useState } from 'react';
 
@@ -30,7 +32,7 @@ type NumericFieldProps = {
   description?: string;
 };
 
-function RangeNote({ id, note }: { id: string; note: string | undefined }) {
+function rangeNote(id: string, note: string | undefined): ReactNode {
   if (note === undefined) {
     return null;
   }
@@ -97,7 +99,7 @@ export function NumericField({
         type="text"
         value={draft}
       />
-      <RangeNote id={descriptionId} note={description} />
+      {rangeNote(descriptionId, description)}
     </div>
   );
 }

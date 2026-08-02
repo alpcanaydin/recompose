@@ -9,7 +9,7 @@ export function NoGatewayChosen() {
   return (
     <section className="absolute inset-0 flex flex-col items-center justify-center text-center">
       <h1 className="mb-1.5 text-invitation text-ink">Pick a gateway</h1>
-      <p className="max-w-102.5 text-note leading-normal text-ink-secondary">
+      <p className="max-w-102.5 text-body leading-normal text-ink-secondary">
         Choose one from the sidebar to see it.
       </p>
     </section>

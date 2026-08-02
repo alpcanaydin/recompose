@@ -18,7 +18,7 @@ export function windowOptionsFor(
       ? {
           transparent: true,
           titleBarStyle: 'hidden' as const,
-          trafficLightPosition: windowButtonsFor(true),
+          trafficLightPosition: windowButtonsFor('sidebar'),
         }
       : {}),
     ...(platform === 'linux' ? { icon: iconPath } : {}),

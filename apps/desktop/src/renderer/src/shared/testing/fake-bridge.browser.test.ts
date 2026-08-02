@@ -1,3 +1,5 @@
+import type { SubscriptionAccountView } from '@recompose/contracts';
+
 import { expect, test } from 'vitest';
 
 import { gatewaySeed, installFakeBridge } from './fake-bridge';
@@ -8,6 +10,22 @@ async function saving(gateway: ReturnType<typeof gatewaySeed>) {
 
 async function storedGateways() {
   const answer = await window.recompose['gateways:list']();
+
+  return answer.ok ? answer.value : [];
+}
+
+const claudeMax: SubscriptionAccountView = {
+  id: 's1',
+  provider: 'anthropic',
+  label: 'Anthropic',
+  signedInAs: 'dev@example.com',
+  plan: 'Max',
+  standing: 'connected',
+  active: true,
+};
+
+async function heldSubscriptions() {
+  const answer = await window.recompose['subscriptions:list']();
 
   return answer.ok ? answer.value : [];
 }
@@ -37,4 +55,64 @@ test('a gateway the contract accepts still stores', async () => {
 
   expect(answer.ok).toBe(true);
   expect(await storedGateways()).toMatchObject([{ slug: 'codex', port: 51234 }]);
+});
+
+test('a seeded subscription is the one the surface reads back', async () => {
+  installFakeBridge({ subscriptions: [claudeMax] });
+
+  expect(await heldSubscriptions()).toEqual([claudeMax]);
+});
+
+test('a seeded tool reports whether it is there to sign in with', async () => {
+  installFakeBridge({
+    tools: [
+      {
+        provider: 'anthropic',
+        toolName: 'Claude Code',
+        present: false,
+        signInCommand: 'claude',
+        shellSetupLine: 'export CLAUDE_CONFIG_DIR="/tmp/anthropic/active"',
+      },
+    ],
+  });
+
+  const answer = await window.recompose['subscriptions:tools']();
+
+  expect(answer.ok ? answer.value.map((tool) => tool.present) : 'refused').toEqual([false]);
+});
+
+test('signing in leaves a connected account behind for the provider it signed in with', async () => {
+  installFakeBridge();
+
+  await window.recompose['subscriptions:sign-in']({ provider: 'openai' });
+
+  expect(await heldSubscriptions()).toMatchObject([
+    { provider: 'openai', standing: 'connected', active: true },
+  ]);
+});
+
+test('a second sign-in leaves the account already in use the active one', async () => {
+  installFakeBridge({ subscriptions: [claudeMax] });
+
+  await window.recompose['subscriptions:sign-in']({ provider: 'openai' });
+
+  expect((await heldSubscriptions()).map((view) => view.active)).toEqual([true, false]);
+});
+
+test('restoring a lapsed account puts it back to connected', async () => {
+  installFakeBridge({ subscriptions: [{ ...claudeMax, standing: 'lapsed' }] });
+
+  await window.recompose['subscriptions:restore']({ id: 's1' });
+
+  expect((await heldSubscriptions()).map((view) => view.standing)).toEqual(['connected']);
+});
+
+test('putting an account to use leaves exactly one account in use', async () => {
+  installFakeBridge({
+    subscriptions: [claudeMax, { ...claudeMax, id: 's2', provider: 'openai', active: false }],
+  });
+
+  await window.recompose['subscriptions:activate']({ id: 's2' });
+
+  expect((await heldSubscriptions()).map((view) => view.active)).toEqual([false, true]);
 });

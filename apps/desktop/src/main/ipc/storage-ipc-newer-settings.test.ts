@@ -29,6 +29,7 @@ async function contextHoldingAFutureDocument(): Promise<StorageIpcContext> {
     readLoginItem: () => false,
     startGateway: () => undefined,
     applySettings: () => undefined,
+    releaseSubscription: async () => Promise.resolve({ ok: true }),
   };
 }
 

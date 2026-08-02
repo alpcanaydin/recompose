@@ -16,33 +16,29 @@ const announcements = {
 
 type CopyOutcome = keyof typeof announcements;
 
-function CopyGlyph() {
-  return (
-    <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 12 12" width="12">
-      <rect height="7" rx="1.6" stroke="currentColor" strokeWidth="1.2" width="7" x="4.4" y="4.4" />
-      <path
-        d="M7.6 2.6H3.1A1.5 1.5 0 0 0 1.6 4.1v4.5"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.2"
-      />
-    </svg>
-  );
-}
+const copyGlyph = (
+  <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 12 12" width="12">
+    <rect height="7" rx="1.6" stroke="currentColor" strokeWidth="1.2" width="7" x="4.4" y="4.4" />
+    <path
+      d="M7.6 2.6H3.1A1.5 1.5 0 0 0 1.6 4.1v4.5"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.2"
+    />
+  </svg>
+);
 
-function CheckGlyph() {
-  return (
-    <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 12 12" width="12">
-      <path
-        d="M2.2 6.3 4.7 8.8 9.8 3.2"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
+const checkGlyph = (
+  <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 12 12" width="12">
+    <path
+      d="M2.2 6.3 4.7 8.8 9.8 3.2"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.4"
+    />
+  </svg>
+);
 
 /**
  * Icon-only button that puts a value on the clipboard and says so out loud.
@@ -87,7 +83,7 @@ export function CopyButton({ label, value }: CopyButtonProps) {
         }}
         type="button"
       >
-        {outcome === 'copied' ? <CheckGlyph /> : <CopyGlyph />}
+        {outcome === 'copied' ? checkGlyph : copyGlyph}
       </button>
       <span className="sr-only" role="status">
         {outcome === undefined ? '' : announcements[outcome]}

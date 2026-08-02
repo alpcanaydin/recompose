@@ -3,16 +3,16 @@ import { describe, expect, test } from 'vitest';
 import { windowButtonsFor, windowButtonsMoveOn } from './window-buttons';
 
 describe('where macOS draws the window controls', () => {
-  test('the controls centre in the sidebar band while the sidebar stands', () => {
-    expect(windowButtonsFor(true)).toEqual({ x: 14, y: 12 });
+  test('the controls centre in the compact band whenever that band is under them', () => {
+    expect(windowButtonsFor('sidebar')).toEqual({ x: 14, y: 12 });
   });
 
-  test('the controls centre in the toolbar row once the sidebar is away', () => {
-    expect(windowButtonsFor(false)).toEqual({ x: 14, y: 21 });
+  test('the controls centre in the toolbar row when a toolbar stands under them', () => {
+    expect(windowButtonsFor('toolbar')).toEqual({ x: 14, y: 21 });
   });
 
-  test('the controls keep one leading inset, so nothing shifts sideways as the sidebar moves', () => {
-    expect(windowButtonsFor(true).x).toBe(windowButtonsFor(false).x);
+  test('the controls keep one leading inset, so nothing shifts sideways as the band changes', () => {
+    expect(windowButtonsFor('sidebar').x).toBe(windowButtonsFor('toolbar').x);
   });
 });
 

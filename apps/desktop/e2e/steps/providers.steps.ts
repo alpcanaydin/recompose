@@ -1,35 +1,18 @@
 import { expect } from '@playwright/test';
 
 import { Given, Then, When } from '../fixtures';
+import { connectKeyAccount } from '../provider-screen';
 
-async function connectAccount(
-  page: import('@playwright/test').Page,
-  provider: string,
-  label: string,
-): Promise<void> {
-  await page.getByRole('textbox', { name: 'Provider' }).fill(provider);
-  await page.getByRole('combobox', { name: 'Kind' }).selectOption('api-key');
-  await page.getByRole('textbox', { name: 'Label' }).fill(label);
-  await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
-  await page.getByRole('button', { name: 'Connect' }).click();
-}
+When('the maintainer connects an {string} api-key account', async ({ page }, provider: string) => {
+  await connectKeyAccount(page, provider);
+});
 
-When(
-  'the maintainer connects an {string} api-key account labeled {string}',
-  async ({ page }, provider: string, label: string) => {
-    await connectAccount(page, provider, label);
-  },
-);
-
-Given(
-  'a connected {string} api-key account labeled {string}',
-  async ({ page }, provider: string, label: string) => {
-    await connectAccount(page, provider, label);
-    await expect(
-      page.getByRole('main').getByRole('listitem').filter({ hasText: label }),
-    ).toBeVisible();
-  },
-);
+Given('a connected {string} api-key account', async ({ page }, provider: string) => {
+  await connectKeyAccount(page, provider);
+  await expect(
+    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Anthropic' }),
+  ).toBeVisible();
+});
 
 When('the maintainer removes the {string} account', async ({ page }, label: string) => {
   await page.getByRole('button', { name: `Remove ${label}` }).click();

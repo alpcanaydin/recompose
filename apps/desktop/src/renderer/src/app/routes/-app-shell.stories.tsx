@@ -3,12 +3,14 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import { AddProviderAct } from '../../pages/providers';
 import { hideSidebar, showSidebar } from '../../shared/lib';
 import { gatewaySeed, paintedBox, paintedStyle } from '../../shared/testing';
 import { SidebarToggle } from '../../shared/ui';
 import { createQueryClient } from '../query-client';
 import { createAppRouter } from '../router';
-import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
+import { AppSidebar } from './-app-sidebar';
+import { AppToolbar } from './-app-toolbar';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
@@ -32,6 +34,8 @@ const meta = preview.meta({
  *
  * @summary The window hides its own title bar, so this region is the only place left to take
  * hold of it. It carries no surface and sits out of the flow, leaving the content its full box.
+ * It holds the same height as a gateway's toolbar, so an act it carries breathes instead of
+ * hugging the window's edge and the shell reads as one bar everywhere.
  */
 export const NoGatewaySelected = meta.story({
   play: async ({ canvasElement }) => {
@@ -58,7 +62,9 @@ export const NoGatewaySelected = meta.story({
  *
  * @summary It takes the toolbar's surface and hairline so that the control it now carries stands
  * on something, and so that scrolled content passes under a bar rather than under a control
- * floating over the page. It keeps its place out of the flow, so nothing below it moves.
+ * floating over the page. It holds the same height as a gateway's toolbar, and its control is
+ * the same raised button that toolbar carries, so the shell reads as one bar everywhere. It
+ * keeps its place out of the flow, so nothing below it moves.
  */
 export const NoGatewaySelectedWithTheSidebarAway = meta.story({
   beforeEach: () => {
@@ -69,13 +75,34 @@ export const NoGatewaySelectedWithTheSidebarAway = meta.story({
     };
   },
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByRole('button', { name: 'Sidebar' });
+    const toggle = await canvas.findByRole('button', { name: 'Sidebar' });
 
-    const painted = paintedStyle(canvasElement.firstElementChild?.firstElementChild);
+    const region = canvasElement.firstElementChild?.firstElementChild;
+    const painted = paintedStyle(region);
 
     await expect(painted.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     await expect(painted.borderBottomWidth).toBe('1px');
     await expect(painted.position).toBe('absolute');
+    await expect(paintedBox(region).height).toBe(54);
+    await expect(paintedStyle(toggle).borderTopWidth).toBe('1px');
+    await expect(paintedBox(toggle).height).toBe(29);
+  },
+});
+
+/**
+ * The strip over a providers screen, carrying the one act at its trailing edge.
+ *
+ * @summary The act stands where macOS keeps a window's own acts, so the reading measures the
+ * control against the strip's end rather than trusting the markup order.
+ */
+export const ProvidersActAtTheTrailingEdge = meta.story({
+  args: { trailing: <AddProviderAct kind="subscription" /> },
+  play: async ({ canvas, canvasElement }) => {
+    const control = await canvas.findByRole('button', { name: 'Add provider' });
+    const strip = paintedBox(canvasElement.firstElementChild?.firstElementChild);
+    const act = paintedBox(control);
+
+    await expect(act.x + act.width).toBeGreaterThan(strip.x + strip.width - 40);
   },
 });
 
@@ -103,9 +130,9 @@ export const TopEdgeTakesHoldOfTheWindow = meta.story({
   render: () => (
     <>
       <AppToolbar slug={undefined} />
-      <AppContent>
+      <div className="relative flex-1 overflow-y-auto">
         <section className="absolute inset-0" />
-      </AppContent>
+      </div>
     </>
   ),
   play: async ({ canvasElement }) => {
@@ -182,9 +209,9 @@ export const SidebarControlTakesTheWindowControlCentre = meta.story({
  */
 export const ContentSurface = meta.story({
   render: () => (
-    <AppContent>
-      <p className="p-4 text-note text-ink-secondary">The route paints here.</p>
-    </AppContent>
+    <div className="relative flex-1 overflow-y-auto">
+      <p className="p-4 text-body text-ink-secondary">The route paints here.</p>
+    </div>
   ),
   play: async ({ canvasElement }) => {
     const surface = canvasElement.firstElementChild?.firstElementChild;

@@ -1,32 +1,50 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import type { AccountKind } from '../../../entities/account';
 
-import { type AccountKind, accountKindTitle, accountsOfKind } from '../../../entities/account';
-import { accountsQueryOptions } from '../../../shared/api';
-import { AccountList } from './account-list';
-import { ConnectAccountForm } from './connect-account-form';
+import { accountKindTitle } from '../../../entities/account';
+import { CredentialedSurface } from './credentialed-surface';
+import { LocalRuntimesNote } from './local-runtimes-note';
+import { SubscriptionsSurface } from './subscriptions-surface';
 
 type ProvidersPageProps = {
-  /** The kind a sidebar row narrowed the surface to, absent when every account is listed. */
-  kind?: AccountKind | undefined;
+  /** The kind a sidebar row narrowed the surface to, which the route always supplies. */
+  kind: AccountKind;
 };
 
+const subtitles: Record<AccountKind, string> = {
+  subscription: "Plans each provider's own command-line tool signs in and spends.",
+  'api-key': 'Keys a gateway reaches one provider with, charged request by request.',
+  aggregator: 'One key that reaches many providers through a single endpoint.',
+  local: 'Models this machine serves itself.',
+};
+
+function kindSurface(kind: AccountKind) {
+  if (kind === 'local') {
+    return <LocalRuntimesNote />;
+  }
+
+  if (kind === 'subscription') {
+    return <SubscriptionsSurface />;
+  }
+
+  return <CredentialedSurface kind={kind} />;
+}
+
 /**
- * The connected accounts of one kind, or of every kind, over the form that connects another.
+ * The accounts held under one kind, read under the window strip that adds another.
  *
- * @summary Reach for it from the providers route. The kind rides in the search rather than in
- * the path, so the surface that holds every account stays a route a person can return to.
+ * @summary Reach for it from the providers route. Each kind reads as its own screen because the
+ * kinds hold different things: a subscription is spent by a tool, a key is routed to by a
+ * gateway, and a local runtime is neither yet. The screen itself offers nothing to press, because
+ * the one way into the catalog stands in the window strip the shell owns.
  */
 export function ProvidersPage({ kind }: ProvidersPageProps) {
-  const { data: registry } = useSuspenseQuery(accountsQueryOptions);
-  const listed = kind === undefined ? registry.accounts : accountsOfKind(registry.accounts, kind);
-
   return (
     <section className="mx-auto flex w-full max-w-column flex-col gap-5 px-6 pt-page-top pb-6">
-      <h1 className="text-title text-ink">
-        {kind === undefined ? 'Accounts' : accountKindTitle(kind)}
-      </h1>
-      <AccountList accounts={listed} />
-      <ConnectAccountForm />
+      <header className="flex flex-col gap-1">
+        <h1 className="text-title text-ink">{accountKindTitle(kind)}</h1>
+        <p className="text-body text-ink-secondary">{subtitles[kind]}</p>
+      </header>
+      {kindSurface(kind)}
     </section>
   );
 }

@@ -25,7 +25,7 @@ export function AppearanceSection() {
         }
         description="Follows the system appearance unless you pick one."
         label="Theme"
-        {...saveStatusFor('theme', unsavedFields)}
+        status={saveStatusFor('theme', unsavedFields)}
       />
     </FieldGroup>
   );

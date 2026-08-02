@@ -86,7 +86,7 @@ export const StripShape = meta.story({
     await expect(paintedStyle(pill).height).toBe('30px');
     await expect(paintedStyle(pill).flexGrow).toBe('1');
     await expect(paintedStyle(pill).borderRadius).toBe('6px');
-    await expect(paintedStyle(pill).fontSize).toBe('12.5px');
+    await expect(paintedStyle(pill).fontSize).toBe('12px');
     await expect(paintedStyle(pill).fontFamily).toContain('Mono');
   },
 });

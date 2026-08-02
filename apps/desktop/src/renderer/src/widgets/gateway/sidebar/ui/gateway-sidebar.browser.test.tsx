@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RouterContextProvider, createMemoryHistory } from '@tanstack/react-router';
 import { Suspense } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 
 import type { BridgeParameters } from '../../../../shared/testing';
 
+import { createAppRouter } from '../../../../app/router';
 import {
   bindEngineStatesToCache,
   engineStatesQueryOptions,
@@ -16,7 +18,7 @@ import { GatewaySidebar } from './gateway-sidebar';
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 const gemini = gatewaySeed({ slug: 'gemini', displayName: 'Gemini', port: 51235 });
 
-async function renderSidebar(parameters: BridgeParameters, onNewGateway = () => {}) {
+async function renderSidebar(parameters: BridgeParameters, onNewGateway = () => {}, at = '/') {
   installFakeBridge(parameters);
 
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -26,12 +28,21 @@ async function renderSidebar(parameters: BridgeParameters, onNewGateway = () => 
     queryClient.ensureQueryData(engineStatesQueryOptions),
   ]);
 
+  const router = createAppRouter({
+    queryClient,
+    history: createMemoryHistory({ initialEntries: [at] }),
+  });
+
+  await router.load();
+
   const screen = await render(
-    <QueryClientProvider client={queryClient}>
-      <Suspense fallback={<p>Loading…</p>}>
-        <GatewaySidebar onNewGateway={onNewGateway} />
-      </Suspense>
-    </QueryClientProvider>,
+    <RouterContextProvider router={router}>
+      <QueryClientProvider client={queryClient}>
+        <Suspense fallback={<p>Loading…</p>}>
+          <GatewaySidebar onNewGateway={onNewGateway} />
+        </Suspense>
+      </QueryClientProvider>
+    </RouterContextProvider>,
   );
 
   return { screen, queryClient };
@@ -57,8 +68,8 @@ test('a stored gateway gets a row that reaches its canvas', async () => {
   const { screen } = await renderSidebar({ gateways: [codex] });
 
   await expect
-    .element(screen.getByRole('link', { name: 'Codex Stopped' }))
-    .toHaveAttribute('href', '#/gateways/codex');
+    .poll(() => screen.getByRole('link', { name: 'Codex Stopped' }).element().getAttribute('href'))
+    .toMatch(/\/gateways\/codex$/);
 });
 
 test('before the first gateway exists the group still offers the way to make one', async () => {
@@ -135,4 +146,19 @@ test('a lifecycle push moves a row to running without a reload', async () => {
   await expect.element(screen.getByRole('link', { name: 'Codex Running' })).toBeVisible();
 
   release();
+});
+
+test('the gateway whose canvas the screen shows reads as the current destination', async () => {
+  const { screen } = await renderSidebar(
+    { gateways: [codex, gemini] },
+    () => {},
+    '/gateways/codex',
+  );
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Codex Stopped' }))
+    .toHaveAttribute('aria-current', 'page');
+  await expect
+    .element(screen.getByRole('link', { name: 'Gemini Stopped' }))
+    .not.toHaveAttribute('aria-current');
 });

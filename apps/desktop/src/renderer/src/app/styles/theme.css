@@ -40,9 +40,12 @@
   --color-subscription: light-dark(var(--blue-600), var(--blue-500));
   --color-api-key: light-dark(var(--yellow-700), var(--yellow-500));
   --color-aggregator: light-dark(var(--purple-600), var(--purple-500));
+  --color-local: light-dark(var(--teal-700), var(--teal-500));
   --color-running: light-dark(var(--green-700), var(--green-500));
   --color-stopped: light-dark(var(--red-700), var(--red-500));
   --color-warning: light-dark(var(--orange-600), var(--orange-500));
+  --color-attention: light-dark(var(--amber-600), var(--amber-500));
+  --color-attention-ink: light-dark(var(--amber-700), var(--amber-400));
   --color-danger: light-dark(var(--red-700), var(--red-500));
   --color-danger-ink: light-dark(var(--red-700), var(--red-400));
 
@@ -52,25 +55,17 @@
   --text-invitation: 17px;
   --text-invitation--font-weight: 600;
   --text-invitation--letter-spacing: -0.3px;
-  --text-sheet-title: 16px;
-  --text-sheet-title--font-weight: 700;
-  --text-sheet-title--letter-spacing: -0.2px;
   --text-heading: 15px;
+  --text-heading--font-weight: 600;
   --text-card-title: 13px;
   --text-card-title--font-weight: 600;
-  --text-heading--font-weight: 600;
   --text-body: 13px;
   --text-body--line-height: 1.45;
-  --text-note: 12.5px;
-  --text-control: 12px;
+  --text-control: 13px;
   --text-detail: 12px;
   --text-detail--line-height: 1.5;
-  --text-quiet: 11.5px;
+  --text-mono-value: 12px;
   --text-caption: 11px;
-  --text-overline: 10px;
-  --text-overline--font-weight: 700;
-  --text-overline--letter-spacing: 1.4px;
-  --text-mono-value: 11px;
   --text-footnote: 10px;
 
   --spacing-column: 720px;
@@ -86,13 +81,14 @@
   --spacing-thumb: 18px;
   --spacing-port: 76px;
   --spacing-sheet: 404px;
+  --spacing-sheet-wide: 640px;
   --spacing-sheet-row: 38px;
   --spacing-sheet-field: 170px;
   --spacing-sheet-port: 74px;
   --spacing-toolbar: 54px;
   --spacing-window-controls: 36px;
   --spacing-window-controls-width: 90px;
-  --spacing-page-top: 78px;
+  --spacing-page-top: 68px;
   --spacing-status-bar: 38px;
   --spacing-ghost-width: 436px;
   --spacing-ghost-height: 114px;
@@ -104,6 +100,8 @@
   --radius-card: 10px;
   --radius-panel: 11px;
   --radius-sheet: 13px;
+  /* macOS Tahoe draws standard window corners at 26pt; the strip act matches them. */
+  --radius-window: 26px;
   --radius-pill: 999px;
 
   --shadow-thumb: 0 1px 2px rgb(0 0 0 / 22%), 0 0 0 0.5px rgb(0 0 0 / 8%);
@@ -150,7 +148,7 @@
   border-radius: var(--radius-control);
   background-color: var(--color-surface-raised);
   padding-inline: 13px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   font-weight: 500;
   color: var(--color-ink);
 
@@ -197,7 +195,7 @@
   top: 47%;
   inset-inline-start: 50%;
   translate: -50% -50%;
-  width: var(--spacing-sheet);
+  width: var(--sheet-surface-width, var(--spacing-sheet));
   overflow: hidden;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-sheet);
@@ -214,6 +212,58 @@
       opacity: 0;
       scale: 0.97;
     }
+  }
+}
+
+@utility sheet-wide {
+  --sheet-surface-width: var(--spacing-sheet-wide);
+}
+
+@utility step-enter-forward {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: step-from-end 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@utility step-enter-back {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: step-from-start 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@utility menu-surface {
+  min-width: calc(var(--spacing) * 44);
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-panel);
+  background-color: var(--color-surface-raised);
+  padding-block: calc(var(--spacing) * 1);
+  box-shadow: var(--shadow-raised);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      opacity 120ms,
+      scale 120ms;
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+}
+
+@utility menu-action {
+  display: flex;
+  align-items: center;
+  height: var(--spacing-sheet-row);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-control);
+  color: var(--color-ink);
+
+  &[data-highlighted] {
+    background-color: var(--color-accent-fill);
+    color: var(--white);
   }
 }
 
@@ -242,7 +292,7 @@
   row-gap: calc(var(--spacing) * 1);
   min-height: var(--spacing-sheet-row);
   padding: 5px 12px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   color: var(--color-ink);
 
   &:not(:last-child) {
@@ -255,7 +305,7 @@
   border-radius: var(--radius-control);
   background-color: var(--color-surface-card);
   padding: 4.5px 9px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   color: var(--color-ink);
 
   &:hover {
@@ -269,16 +319,20 @@
   gap: calc(var(--spacing) * 1.5);
   height: var(--spacing-button);
   border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  border-radius: var(--push-button-radius, var(--radius-control));
   background-color: var(--color-accent-fill);
   padding-inline: 13px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   font-weight: 500;
   color: var(--white);
 
   &:hover {
     background-color: color-mix(in oklab, var(--color-accent-fill), black 14%);
   }
+}
+
+@utility push-button-window-corners {
+  --push-button-radius: var(--radius-window);
 }
 
 @utility checklist-ring {
@@ -333,6 +387,30 @@
   height: calc(var(--spacing) * 7);
   border-radius: var(--radius-control);
   padding-inline: calc(var(--spacing) * 2);
+  color: var(--color-ink);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+
+  &:active {
+    background: var(--color-surface-pressed);
+  }
+
+  &[data-status='active'] {
+    background: var(--color-surface-pressed);
+  }
+}
+
+@utility nav-item-action {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.75);
+  height: calc(var(--spacing) * 7);
+  border-radius: var(--radius-control);
+  padding-inline: calc(var(--spacing) * 2);
+  color: var(--color-accent-ink);
+  font-weight: 500;
 
   &:hover {
     background: var(--color-surface-hover);
@@ -361,5 +439,19 @@
 @utility row-hover {
   &:not([aria-disabled='true']):hover {
     background: var(--color-surface-hover);
+  }
+}
+
+@keyframes step-from-end {
+  from {
+    translate: 28px 0;
+    opacity: 0;
+  }
+}
+
+@keyframes step-from-start {
+  from {
+    translate: -28px 0;
+    opacity: 0;
   }
 }

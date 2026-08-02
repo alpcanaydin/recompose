@@ -5,12 +5,17 @@ import type {
   RecomposeIpc,
   RecomposeIpcEvents,
   Settings,
+  SubscriptionAccountView,
+  SubscriptionTool,
   SystemState,
 } from '@recompose/contracts';
 
 import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/contracts';
 
-const emptyDocument: AccountsDocument = { schemaVersion: 1, accounts: [] };
+import { accountHandlers } from './fake-accounts';
+import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
+
+const emptyDocument: AccountsDocument = { schemaVersion: 2, accounts: [] };
 
 const observedSystem: SystemState = {
   fileBrowser: 'finder',
@@ -46,14 +51,15 @@ export type BridgeParameters = {
   settings?: Settings;
   gateways?: readonly GatewayConfig[];
   engineStates?: EngineStates;
+  subscriptions?: readonly SubscriptionAccountView[];
+  tools?: readonly SubscriptionTool[];
   overrides?: Partial<RecomposeIpc>;
 };
 
 type SettingsHandlers = Pick<RecomposeIpc, 'settings:get' | 'settings:save'>;
-type AccountHandlers = Pick<RecomposeIpc, 'accounts:list' | 'accounts:connect' | 'accounts:remove'>;
 type SystemHandlers = Pick<
   RecomposeIpc,
-  'system:get' | 'system:open-config-folder' | 'system:sidebar-shown'
+  'system:get' | 'system:open-config-folder' | 'system:window-band'
 >;
 type GatewayHandlers = Pick<
   RecomposeIpc,
@@ -193,49 +199,11 @@ function settingsHandlers(seed: Settings): SettingsHandlers {
   };
 }
 
-function accountHandlers(seed: AccountsDocument): AccountHandlers {
-  let registry = seed;
-  let nextAccountNumber = registry.accounts.length + 1;
-
-  return {
-    'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': async (request) => {
-      const id = `a${nextAccountNumber}`;
-
-      nextAccountNumber += 1;
-
-      registry = {
-        ...registry,
-        accounts: [
-          ...registry.accounts,
-          {
-            id,
-            provider: request.provider,
-            kind: request.kind,
-            label: request.label,
-            credentialRef: `c-${id}`,
-          },
-        ],
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-    'accounts:remove': async (request) => {
-      registry = {
-        ...registry,
-        accounts: registry.accounts.filter((row) => row.id !== request.id),
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-  };
-}
-
 function systemHandlers(): SystemHandlers {
   return {
     'system:get': async () => Promise.resolve({ ok: true, value: observedSystem }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
-    'system:sidebar-shown': async () => Promise.resolve({ ok: true, value: undefined }),
+    'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),
   };
 }
 
@@ -256,10 +224,13 @@ const noEngineStates: EngineStates = {};
 
 function seedsFrom(parameters: BridgeParameters) {
   return {
-    settings: parameters.settings ?? defaultSettings(),
-    accounts: parameters.accounts ?? emptyDocument,
-    gateways: parameters.gateways ?? noGateways,
-    engineStates: parameters.engineStates ?? noEngineStates,
+    settings: defaultSettings(),
+    accounts: emptyDocument,
+    gateways: noGateways,
+    engineStates: noEngineStates,
+    subscriptions: noSubscriptions,
+    tools: noTools,
+    ...parameters,
   };
 }
 
@@ -268,11 +239,14 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
 
   engineStateListeners.clear();
 
+  const { landSubscription, ...accounts } = accountHandlers(seeds.accounts);
+
   window.recompose = {
     ...settingsHandlers(seeds.settings),
-    ...accountHandlers(seeds.accounts),
+    ...accounts,
     ...systemHandlers(),
     ...gatewayHandlers(seeds.gateways, seeds.engineStates),
+    ...subscriptionHandlers(seeds.subscriptions, seeds.tools, landSubscription),
     ...parameters.overrides,
   };
   window.recomposeEvents = eventBridge();

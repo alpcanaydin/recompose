@@ -19,7 +19,7 @@ export function EmptyState({ onCreateGateway }: EmptyStateProps) {
     <section className="absolute inset-0 flex flex-col items-center justify-center text-center">
       <GhostGraph />
       <h1 className="mb-1.5 text-invitation text-ink">Create your first gateway</h1>
-      <p className="mb-4.5 max-w-102.5 text-note leading-normal text-ink-secondary">
+      <p className="mb-4.5 max-w-102.5 text-body text-ink-secondary">
         A gateway is one local address that routes requests across your AI accounts. Everything
         stays on this machine.
       </p>

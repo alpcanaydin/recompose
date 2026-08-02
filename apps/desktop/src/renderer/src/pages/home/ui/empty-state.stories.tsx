@@ -55,12 +55,12 @@ export const Rhythm = meta.story({
     await expect(paintedStyle(heading).letterSpacing).toBe('-0.3px');
     await expect(paintedStyle(heading).marginBottom).toBe('6px');
 
-    await expect(paintedStyle(body).fontSize).toBe('12.5px');
+    await expect(paintedStyle(body).fontSize).toBe('13px');
     await expect(paintedStyle(body).maxWidth).toBe('410px');
-    await expect(paintedStyle(body).lineHeight).toBe('18.75px');
+    await expect(paintedStyle(body).lineHeight).toBe('18.85px');
     await expect(paintedStyle(body).marginBottom).toBe('18px');
 
-    await expect(paintedStyle(hint).fontSize).toBe('11px');
+    await expect(paintedStyle(hint).fontSize).toBe('12px');
     await expect(paintedStyle(hint).marginTop).toBe('14px');
   },
 });
@@ -77,7 +77,7 @@ export const CallToAction = meta.story({
       await expect(paintedBox(control).height).toBe(28);
       await expect(paintedStyle(control).paddingLeft).toBe('13px');
       await expect(paintedStyle(control).borderRadius).toBe('6px');
-      await expect(paintedStyle(control).fontSize).toBe('12.5px');
+      await expect(paintedStyle(control).fontSize).toBe('13px');
       await expect(paintedStyle(control).fontWeight).toBe('500');
       await expect(paintedStyle(control).columnGap).toBe('6px');
       await expect(paintedBox(control.querySelector('svg')).width).toBe(15);

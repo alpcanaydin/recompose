@@ -16,7 +16,7 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
 const settings: Settings = { ...defaultSettings(), theme: 'dark' };
-const emptyAccounts: AccountsDocument = { schemaVersion: 1, accounts: [] };
+const emptyAccounts: AccountsDocument = { schemaVersion: 2, accounts: [] };
 const systemState: SystemState = {
   fileBrowser: 'finder',
   loginItem: 'available',
@@ -42,12 +42,17 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'accounts:remove': reject,
     'system:get': reject,
     'system:open-config-folder': reject,
-    'system:sidebar-shown': reject,
+    'system:window-band': reject,
     'gateways:offer-port': reject,
     'gateways:move-port': reject,
     'engine:start': reject,
     'engine:stop': reject,
     'engine:states': reject,
+    'subscriptions:list': reject,
+    'subscriptions:tools': reject,
+    'subscriptions:sign-in': reject,
+    'subscriptions:restore': reject,
+    'subscriptions:activate': reject,
   };
 
   return { ...base, ...overrides };
@@ -64,12 +69,17 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'system:get': async () => Promise.resolve({ ok: true, value: systemState }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
-    'system:sidebar-shown': async () => Promise.resolve({ ok: true, value: undefined }),
+    'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),
     'gateways:offer-port': async () => Promise.resolve({ ok: true, value: 51234 }),
     'gateways:move-port': async () => Promise.resolve({ ok: true, value: [] }),
     'engine:start': async () => Promise.resolve({ ok: true, value: { status: 'running' } }),
     'engine:stop': async () => Promise.resolve({ ok: true, value: { status: 'stopped' } }),
     'engine:states': async () => Promise.resolve({ ok: true, value: {} }),
+    'subscriptions:list': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:tools': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:sign-in': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:restore': async () => Promise.resolve({ ok: true, value: [] }),
+    'subscriptions:activate': async () => Promise.resolve({ ok: true, value: [] }),
   };
 }
 

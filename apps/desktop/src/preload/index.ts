@@ -38,12 +38,17 @@ const recompose: RecomposeIpc = Object.freeze({
   'accounts:remove': bridgeEntry('accounts:remove'),
   'system:get': bridgeEntry('system:get'),
   'system:open-config-folder': bridgeEntry('system:open-config-folder'),
-  'system:sidebar-shown': bridgeEntry('system:sidebar-shown'),
+  'system:window-band': bridgeEntry('system:window-band'),
   'gateways:offer-port': bridgeEntry('gateways:offer-port'),
   'gateways:move-port': bridgeEntry('gateways:move-port'),
   'engine:start': bridgeEntry('engine:start'),
   'engine:stop': bridgeEntry('engine:stop'),
   'engine:states': bridgeEntry('engine:states'),
+  'subscriptions:list': bridgeEntry('subscriptions:list'),
+  'subscriptions:tools': bridgeEntry('subscriptions:tools'),
+  'subscriptions:sign-in': bridgeEntry('subscriptions:sign-in'),
+  'subscriptions:restore': bridgeEntry('subscriptions:restore'),
+  'subscriptions:activate': bridgeEntry('subscriptions:activate'),
 });
 
 const recomposeEvents: RecomposeIpcEvents = Object.freeze({

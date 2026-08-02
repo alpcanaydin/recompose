@@ -40,8 +40,8 @@ test('a kind row points at the providers surface narrowed to that kind', async (
   const screen = await renderAt('/');
 
   await expect
-    .element(screen.getByRole('link', { name: 'API Keys' }))
-    .toHaveAttribute('href', '#/providers?kind=api-key');
+    .poll(() => screen.getByRole('link', { name: 'API Keys' }).element().getAttribute('href'))
+    .toMatch(/\/providers\?kind=api-key$/);
 });
 
 test('the sidebar reaches the creation sheet once the empty state has left', async () => {
@@ -173,6 +173,67 @@ test('a gateway surface keeps the way back once the sidebar has gone', async () 
 
   expect(document.activeElement).not.toBe(settings);
   expect(reachableSidebarControls(screen.container)).toHaveLength(1);
+});
+
+test('the providers surface keeps its one act in the window strip rather than the page', async () => {
+  const screen = await renderAt('/providers');
+
+  await expect.element(screen.getByRole('button', { name: 'Add provider' })).toBeVisible();
+  expect(screen.container.querySelector('main section')?.querySelectorAll('button')).toHaveLength(
+    0,
+  );
+});
+
+test('asking to add a provider from the window strip opens the catalog', async () => {
+  const screen = await renderAt('/providers');
+
+  await screen.getByRole('button', { name: 'Add provider' }).click();
+
+  await expect.element(screen.getByRole('dialog', { name: 'Add provider' })).toBeVisible();
+});
+
+test('a surface away from the providers screens offers no way into the catalog', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Add provider' }))
+    .not.toBeInTheDocument();
+});
+
+test('a sign-in that lands is counted by the sidebar without a reload', async () => {
+  const screen = await renderAt('/providers', {
+    tools: [
+      {
+        provider: 'anthropic',
+        toolName: 'Claude Code',
+        present: true,
+        signInCommand: 'claude',
+        shellSetupLine: 'export CLAUDE_CONFIG_DIR="/tmp/anthropic/active"',
+      },
+    ],
+  });
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Subscriptions, 0 connected' }))
+    .toBeVisible();
+
+  await screen.getByRole('button', { name: 'Add provider' }).click();
+
+  const card = screen.getByRole('button', { name: /^Claude/ });
+
+  await expect.element(card).toBeVisible();
+  card.element().focus();
+  await userEvent.keyboard('{Enter}');
+
+  const signIn = screen.getByRole('button', { name: 'Sign in to Anthropic' });
+
+  await expect.element(signIn).toBeVisible();
+  signIn.element().focus();
+  await userEvent.keyboard('{Enter}');
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Subscriptions, 1 connected' }))
+    .toBeVisible();
 });
 
 test('the edge answers the arrow keys, so a pointer is not the only way', async () => {

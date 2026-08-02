@@ -59,10 +59,26 @@ function describeFailure(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
+/** Raised when a cited path names a directory, which holds no text and so holds no symbol. */
+export class PathIsDirectoryError extends Error {
+  constructor(path: string) {
+    super(`path names a directory: ${path}`);
+    this.name = 'PathIsDirectoryError';
+  }
+}
+
 function describeReadFailure(path: string, cause: unknown): string {
   return cause instanceof PathEscapesRepositoryError
     ? `path escapes the repository root: ${path}`
     : `path exists but could not be read: ${path}: ${describeFailure(cause)}`;
+}
+
+function failuresForDirectory(entry: CodeMapEntry): readonly CitationFailure[] {
+  return entry.symbols.map((symbol) => ({
+    path: entry.path,
+    symbol,
+    reason: `a directory holds no symbol: ${entry.path}: ${symbol}`,
+  }));
 }
 
 function failuresForEntry(
@@ -74,7 +90,9 @@ function failuresForEntry(
   try {
     text = readFile(entry.path);
   } catch (cause) {
-    return [{ path: entry.path, reason: describeReadFailure(entry.path, cause) }];
+    return cause instanceof PathIsDirectoryError
+      ? failuresForDirectory(entry)
+      : [{ path: entry.path, reason: describeReadFailure(entry.path, cause) }];
   }
 
   if (text === null) {
@@ -112,7 +130,15 @@ function resolveWithinRepository(repositoryRoot: string, path: string): string {
 function readRepositoryFile(repositoryRoot: string, path: string): string | null {
   const resolvedPath = resolveWithinRepository(repositoryRoot, path);
 
-  return existsSync(resolvedPath) ? readFileSync(resolvedPath, 'utf8') : null;
+  if (!existsSync(resolvedPath)) {
+    return null;
+  }
+
+  if (statSync(resolvedPath).isDirectory()) {
+    throw new PathIsDirectoryError(path);
+  }
+
+  return readFileSync(resolvedPath, 'utf8');
 }
 
 function isDirectory(path: string): boolean {

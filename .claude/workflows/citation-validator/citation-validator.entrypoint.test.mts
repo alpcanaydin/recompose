@@ -110,13 +110,27 @@ describe('citation validator entry point: resolving paths against an explicit re
   });
 });
 
-describe('citation validator entry point: a citation naming a path that is not a readable file', () => {
-  it('fails with a reason that names the path and the read failure, not a missing path', () => {
+describe('citation validator entry point: a citation naming a directory', () => {
+  it('passes when the entry cites no symbol, because a directory is a real place', () => {
     const repository = scratchRepository();
 
     mkdirSync(join(repository, 'src/widget-slice'), { recursive: true });
 
     const entries: readonly CodeMapEntry[] = [entry({ path: 'src/widget-slice', symbols: [] })];
+    const run = runEntryPoint(repository, JSON.stringify(entries));
+
+    assert.equal(run.status, PASSING_STATUS);
+    assert.equal(readPrintedVerdict(run.stdout).status, 'pass');
+  });
+
+  it('fails a symbol cited against it, naming the directory rather than a read failure', () => {
+    const repository = scratchRepository();
+
+    mkdirSync(join(repository, 'src/widget-slice'), { recursive: true });
+
+    const entries: readonly CodeMapEntry[] = [
+      entry({ path: 'src/widget-slice', symbols: ['createWidget'] }),
+    ];
     const run = runEntryPoint(repository, JSON.stringify(entries));
 
     assert.equal(run.status, FAILING_VERDICT_STATUS);
@@ -128,8 +142,8 @@ describe('citation validator entry point: a citation naming a path that is not a
     const reason = readFailureReason(verdict.failures[0]);
 
     assert.doesNotMatch(reason, /not found/);
-    assert.match(reason, /widget-slice/);
-    assert.match(reason, /could not be read/);
+    assert.match(reason, /directory/);
+    assert.match(reason, /createWidget/);
   });
 });
 

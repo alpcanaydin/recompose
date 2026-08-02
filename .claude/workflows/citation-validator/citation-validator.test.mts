@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import type { CodeMapEntry } from './citation-validator.mts';
 
-import { validate } from './citation-validator.mts';
+import { PathIsDirectoryError, validate } from './citation-validator.mts';
 
 function entry(overrides: Partial<CodeMapEntry>): CodeMapEntry {
   return {
@@ -167,5 +167,34 @@ describe('citation validator: an empty-string symbol', () => {
 
     assert.ok(failure);
     assert.equal(failure.symbol, '');
+  });
+});
+
+describe('citation validator: a citation naming a directory', () => {
+  it('passes when the entry cites no symbol, because a directory is a real place', () => {
+    const verdict = validate([entry({ path: 'openspec/specs' })], () => {
+      throw new PathIsDirectoryError('openspec/specs');
+    });
+
+    assert.equal(verdict.status, 'pass');
+    assert.equal(verdict.failures.length, 0);
+  });
+
+  it('fails every symbol cited against it, because a directory holds none', () => {
+    const verdict = validate(
+      [entry({ path: 'openspec/specs', symbols: ['gatewaySlugSchema'] })],
+      () => {
+        throw new PathIsDirectoryError('openspec/specs');
+      },
+    );
+
+    assert.equal(verdict.status, 'fail');
+    assert.equal(verdict.failures.length, 1);
+
+    const [failure] = verdict.failures;
+
+    assert.ok(failure);
+    assert.equal(failure.symbol, 'gatewaySlugSchema');
+    assert.match(failure.reason, /directory/);
   });
 });

@@ -13,6 +13,8 @@ import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { StorageIpcContext } from './storage-context';
 
 import { loadVaultFile } from '../storage/vault';
+import { subscriptionHomes } from '../subscriptions/subscription-homes';
+import { subscriptionRelease } from '../subscriptions/subscription-release';
 import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
@@ -35,6 +37,10 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    releaseSubscription: subscriptionRelease(
+      subscriptionHomes(userDataPath, process.platform),
+      null,
+    ),
     ...overrides,
   };
 }
@@ -150,12 +156,16 @@ describe('storage ipc handlers: accounts connect', () => {
 
     const account = result.value.accounts[0];
 
-    expect(account?.credentialRef).toBeDefined();
+    if (account === undefined || account.kind === 'subscription') {
+      throw new Error('expected a credentialed account');
+    }
+
+    expect(account.credentialRef).toBeDefined();
     expect(JSON.stringify(result.value)).not.toContain('sk-verysecret');
 
     const vault = await loadVaultFile(join(ctx.userDataPath, 'vault.bin'), () => undefined);
 
-    expect(Object.keys(vault.entries)).toEqual([account?.credentialRef]);
+    expect(Object.keys(vault.entries)).toEqual([account.credentialRef]);
     expect(JSON.stringify(vault)).not.toContain('sk-verysecret');
   });
 
@@ -212,7 +222,7 @@ describe('storage ipc handlers: accounts remove', () => {
 
     const removed = await handlers['accounts:remove']({ id });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 1, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
 
     const vault = await loadVaultFile(join(ctx.userDataPath, 'vault.bin'), () => undefined);
 
@@ -224,7 +234,7 @@ describe('storage ipc handlers: accounts remove', () => {
 
     const removed = await handlers['accounts:remove']({ id: 'ghost' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 1, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
   });
 
   test('removing against a newer-schema vault surfaces as vault-newer-schema', async () => {
@@ -260,7 +270,7 @@ describe('storage ipc handlers: accounts list', () => {
 
     const after = await handlers['accounts:list'](undefined);
 
-    expect(before).toEqual({ ok: true, value: { schemaVersion: 1, accounts: [] } });
+    expect(before).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
 
     if (!after.ok) {
       throw new Error('expected success');
