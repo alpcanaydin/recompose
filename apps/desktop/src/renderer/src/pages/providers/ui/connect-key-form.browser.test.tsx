@@ -68,6 +68,22 @@ test('a key the person typed never reaches the screen it was typed into', async 
   await expect.element(screen.getByText('sk-supersecret')).not.toBeInTheDocument();
 });
 
+test('a connect still out cannot be sent a second time, so one key makes one account', async () => {
+  installFakeBridge({
+    overrides: {
+      'accounts:connect': async () => new Promise<never>(() => undefined),
+    },
+  });
+
+  const screen = await renderKeyForm();
+
+  await screen.getByLabelText('Label').fill('Work key');
+  await screen.getByLabelText('Key').fill('sk-supersecret');
+  await screen.getByRole('button', { name: 'Connect' }).click();
+
+  await expect.element(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+});
+
 test('a refused connect says why and keeps the draft the person typed', async () => {
   installFakeBridge({
     overrides: {

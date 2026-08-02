@@ -38,7 +38,11 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
       >
         <LabelledTextField label="Label" onChangeValue={setLabel} value={label} />
         <LabelledTextField label="Key" onChangeValue={setSecret} type="password" value={secret} />
-        <button className="push-button self-start focus-ring" type="submit">
+        <button
+          className="push-button self-start focus-ring"
+          disabled={connect.isPending}
+          type="submit"
+        >
           Connect
         </button>
       </form>
