@@ -39,10 +39,7 @@ async function anAccountWithAHome(provider: SubscriptionAccount['provider'], id:
 
 beforeEach(async () => {
   userDataPath = await mkdtemp(join(tmpdir(), 'recompose-release-'));
-  homes = subscriptionHomes(
-    userDataPath,
-    process.platform === 'win32' ? 'linux' : process.platform,
-  );
+  homes = subscriptionHomes(userDataPath, process.platform);
   keychain = fakeKeychain();
 });
 
