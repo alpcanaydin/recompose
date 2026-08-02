@@ -41,6 +41,7 @@ jobs:
               - '**/routeTree.gen.ts'
               - .agents
               - .claude
+              - apps/desktop/e2e
               - coverage
               - dist
               - docs
