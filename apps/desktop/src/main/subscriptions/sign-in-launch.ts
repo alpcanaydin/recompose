@@ -69,13 +69,27 @@ async function openALinuxTerminal(command: string): Promise<void> {
   throw new Error(`no terminal emulator on this machine could run ${command}`);
 }
 
+async function runOverride(
+  platform: NodeJS.Platform,
+  launcher: string,
+  command: string,
+): Promise<void> {
+  if (platform === 'win32' && /\.(?:cmd|bat)$/iu.test(launcher)) {
+    await detached('cmd.exe', ['/c', launcher, command]);
+
+    return;
+  }
+
+  await detached(launcher, [command]);
+}
+
 export function terminalSignInLaunch(
   platform: NodeJS.Platform,
   launcherOverride: string | null,
 ): SignInLaunch {
   return async (command) => {
     if (launcherOverride !== null) {
-      await detached(launcherOverride, [command]);
+      await runOverride(platform, launcherOverride, command);
 
       return;
     }

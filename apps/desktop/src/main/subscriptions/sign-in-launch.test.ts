@@ -81,3 +81,23 @@ describe('handing the sign-in to a terminal on macOS', () => {
     expect(spawned.calls).toEqual([{ binary: '/tmp/fake-launcher', argv: ['claude /login'] }]);
   });
 });
+
+describe('handing the sign-in to an override launcher on Windows', () => {
+  test('a .cmd override runs through cmd.exe, because Node will not spawn a batch file itself', async () => {
+    spawned.calls.length = 0;
+
+    await terminalSignInLaunch('win32', 'C:\\fakes\\sign-in-launcher.cmd')('claude login');
+
+    expect(spawned.calls).toEqual([
+      { binary: 'cmd.exe', argv: ['/c', 'C:\\fakes\\sign-in-launcher.cmd', 'claude login'] },
+    ]);
+  });
+
+  test('an .exe override still runs directly, because Node spawns an executable without a shell', async () => {
+    spawned.calls.length = 0;
+
+    await terminalSignInLaunch('win32', 'C:\\fakes\\launcher.exe')('claude login');
+
+    expect(spawned.calls).toEqual([{ binary: 'C:\\fakes\\launcher.exe', argv: ['claude login'] }]);
+  });
+});
