@@ -21,8 +21,10 @@ export const Closed = meta.story({
   play: async ({ canvas }) => {
     const control = await canvas.findByRole('button', { name: 'Claude Max actions' });
 
-    await expect(control).toHaveAttribute('aria-haspopup');
-    await expect(control).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(async () => {
+      await expect(control).toHaveAttribute('aria-haspopup');
+      await expect(control).toHaveAttribute('aria-expanded', 'false');
+    });
   },
 });
 

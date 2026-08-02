@@ -1,6 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { withSidebarSurface } from '#.storybook/sidebar-surface';
@@ -100,9 +100,11 @@ export const TintsClearTheFloor = meta.story({
     for (const name of rows) {
       const row = await canvas.findByRole('link', { name });
 
-      await expect(
-        contrastRatio(paintedStyle(row.querySelector('svg')).color, backdropOf(row)),
-      ).toBeGreaterThanOrEqual(3);
+      await waitFor(async () => {
+        await expect(
+          contrastRatio(paintedStyle(row.querySelector('svg')).color, backdropOf(row)),
+        ).toBeGreaterThanOrEqual(3);
+      });
     }
   },
 });
