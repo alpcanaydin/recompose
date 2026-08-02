@@ -65,11 +65,11 @@ export const Lapsed = meta.story({
 });
 
 /**
- * The overflow open on an account a tool does not currently run as.
+ * The overflow open on a connected account.
  *
- * @summary Choosing the account is the act that moves the pointer, so it appears only where it
- * would change something. The menu holds the three quieter acts and nothing else, because every
- * setup detail the row once copied now travels with the sign-in itself.
+ * @summary The menu holds the two quieter acts and nothing else, because every setup detail the
+ * row once copied now travels with the sign-in itself, and the pointer follows the sign-in
+ * rather than a menu act.
  */
 export const QuieterActions = meta.story({
   args: { view: { ...connected, active: false } },
@@ -78,11 +78,7 @@ export const QuieterActions = meta.story({
 
     const actions = await screen.findAllByRole('menuitem');
 
-    await expect(actions.map((action) => action.textContent)).toEqual([
-      'Use this account',
-      'Sign in again',
-      'Remove',
-    ]);
+    await expect(actions.map((action) => action.textContent)).toEqual(['Sign in again', 'Remove']);
   },
 });
 

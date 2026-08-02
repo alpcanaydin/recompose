@@ -79,16 +79,6 @@ export function useRestoreSubscription() {
 }
 
 /**
- * Points a provider's tool at one of its accounts.
- *
- * @summary The pointer lives outside the renderer, one per provider, so the answer carries every
- * row rather than the one that was chosen.
- */
-export function useActivateSubscription() {
-  return useSubscriptionAct(async (request) => window.recompose['subscriptions:activate'](request));
-}
-
-/**
  * Takes a subscription account out of the registry it was held in.
  *
  * @summary Removal is an act on the account row rather than on the sign-in, so it travels the

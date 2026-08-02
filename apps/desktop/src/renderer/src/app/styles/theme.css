@@ -88,7 +88,7 @@
   --spacing-toolbar: 54px;
   --spacing-window-controls: 36px;
   --spacing-window-controls-width: 90px;
-  --spacing-page-top: 50px;
+  --spacing-page-top: 68px;
   --spacing-status-bar: 38px;
   --spacing-ghost-width: 436px;
   --spacing-ghost-height: 114px;
@@ -100,6 +100,8 @@
   --radius-card: 10px;
   --radius-panel: 11px;
   --radius-sheet: 13px;
+  /* macOS Tahoe draws standard window corners at 26pt; the strip act matches them. */
+  --radius-window: 26px;
   --radius-pill: 999px;
 
   --shadow-thumb: 0 1px 2px rgb(0 0 0 / 22%), 0 0 0 0.5px rgb(0 0 0 / 8%);
@@ -317,7 +319,7 @@
   gap: calc(var(--spacing) * 1.5);
   height: var(--spacing-button);
   border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  border-radius: var(--push-button-radius, var(--radius-control));
   background-color: var(--color-accent-fill);
   padding-inline: 13px;
   font-size: var(--text-control);
@@ -327,6 +329,10 @@
   &:hover {
     background-color: color-mix(in oklab, var(--color-accent-fill), black 14%);
   }
+}
+
+@utility push-button-window-corners {
+  --push-button-radius: var(--radius-window);
 }
 
 @utility checklist-ring {

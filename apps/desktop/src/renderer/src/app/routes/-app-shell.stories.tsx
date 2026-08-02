@@ -34,8 +34,8 @@ const meta = preview.meta({
  *
  * @summary The window hides its own title bar, so this region is the only place left to take
  * hold of it. It carries no surface and sits out of the flow, leaving the content its full box.
- * It stands as tall as the sidebar's own band and no taller, because the band is what it stands
- * in for and every pixel past it is emptiness the page below has to leave clear.
+ * It holds the same height as a gateway's toolbar, so an act it carries breathes instead of
+ * hugging the window's edge and the shell reads as one bar everywhere.
  */
 export const NoGatewaySelected = meta.story({
   play: async ({ canvasElement }) => {
@@ -53,7 +53,7 @@ export const NoGatewaySelected = meta.story({
 
     await expect(drawn.top).toBe(surface.top);
     await expect(drawn.width).toBe(surface.width);
-    await expect(drawn.height).toBe(36);
+    await expect(drawn.height).toBe(54);
   },
 });
 
@@ -62,7 +62,9 @@ export const NoGatewaySelected = meta.story({
  *
  * @summary It takes the toolbar's surface and hairline so that the control it now carries stands
  * on something, and so that scrolled content passes under a bar rather than under a control
- * floating over the page. It keeps its place out of the flow, so nothing below it moves.
+ * floating over the page. It holds the same height as a gateway's toolbar, and its control is
+ * the same raised button that toolbar carries, so the shell reads as one bar everywhere. It
+ * keeps its place out of the flow, so nothing below it moves.
  */
 export const NoGatewaySelectedWithTheSidebarAway = meta.story({
   beforeEach: () => {
@@ -73,13 +75,17 @@ export const NoGatewaySelectedWithTheSidebarAway = meta.story({
     };
   },
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByRole('button', { name: 'Sidebar' });
+    const toggle = await canvas.findByRole('button', { name: 'Sidebar' });
 
-    const painted = paintedStyle(canvasElement.firstElementChild?.firstElementChild);
+    const region = canvasElement.firstElementChild?.firstElementChild;
+    const painted = paintedStyle(region);
 
     await expect(painted.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
     await expect(painted.borderBottomWidth).toBe('1px');
     await expect(painted.position).toBe('absolute');
+    await expect(paintedBox(region).height).toBe(54);
+    await expect(paintedStyle(toggle).borderTopWidth).toBe('1px');
+    await expect(paintedBox(toggle).height).toBe(29);
   },
 });
 

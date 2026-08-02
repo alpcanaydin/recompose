@@ -171,7 +171,7 @@ The platform split is deliberate. On Linux and Windows, recompose writes nothing
 
 ### The screen and the drawer
 
-The providers route keeps its kind search parameter and gains `subscription` as its default. The content header carries the heading and the subtitle. The Add provider act stands at the trailing edge of the window strip, where macOS keeps a window's own acts. The surface below holds either the empty state or the rows. A row reads leading to trailing: brand mark, the plan product with the plan badge, the signed-in address under it, the standing chip, and the overflow. The identity holds two lines and no more, because the connect step already taught what the account serves. The overflow holds Use this account, Sign in again, and Remove. A lapsed row surfaces Sign in again beside the standing rather than only inside the overflow.
+The providers route keeps its kind search parameter and gains `subscription` as its default. The content header carries the heading and the subtitle. The Add provider act stands at the trailing edge of the window strip, where macOS keeps a window's own acts. The surface below holds either the empty state or the rows. A row reads leading to trailing: brand mark, the plan product with the plan badge, the signed-in address under it, the standing chip, and the overflow. The identity holds two lines and no more, because the connect step already taught what the account serves. The overflow holds Sign in again and Remove. A lapsed row surfaces Sign in again beside the standing rather than only inside the overflow, and the pointer follows the sign-in rather than a menu act.
 
 The Add provider control opens the catalog in a wide `Sheet`, the same centered modal primitive the gateway sheet uses. The catalog is kind-locked: it holds only the kind the screen behind holds, as a two-column grid of cards. Each card carries the provider's mark, the plan product it reads as, and one benefit line, and the plans the release can't connect yet stand inert. Picking a card slides the connect step in over the grid, with a back control leading the sheet's title. The sheet's open state is local component state per ADR-0065, because nothing outside the page opens it.
 
@@ -427,7 +427,7 @@ Three rules bind the handlers. No silent failures: an abandoned sign-in logs its
 
 - Consumes: the twenty-channel bridge, `unwrapIpcResult`, `refusalSentence`, and the kit.
 - Produces:
-  - `shared/api`: `subscriptionsQueryOptions`, `subscriptionToolsQueryOptions`, `useSignInSubscription()`, `useRestoreSubscription()`, and `useActivateSubscription()`
+  - `shared/api`: `subscriptionsQueryOptions`, `subscriptionToolsQueryOptions`, `useSignInSubscription()`, and `useRestoreSubscription()`
   - `shared/ui`: `Drawer({ open, onOpenChange, title, children })`, `Chip({ selected, onSelectedChange, children })`, `Badge({ children })`, `StatusChip({ word, tone })`, `OverflowMenu({ label, items })`, and `BrandMark({ name })`
   - `pages/providers`: `ProvidersPage({ kind })` through the slice's public interface, unchanged for the route
 
@@ -589,7 +589,7 @@ Run the desktop app from `apps/desktop` with `pnpm dev`, with `claude` installed
 5. The sheet closes on success, and the machine-wide login now follows the active account: `claude` in a fresh terminal runs as the connected account, and the pre-existing login sits parked in the reserved item.
 6. Picking Codex with `codex` absent shows the missing-tool sentence and its remedy, and the act stands inert.
 7. Signing out inside the tool and reopening the screen flips the row to the attention chip with the lapse word, and Sign in again sits on the row itself. Running it restores Connected.
-8. With two Anthropic accounts, Use this account parks the outgoing blob, places the incoming one, and moves the pointer. The rows swap their active marker, and a fresh `claude` anywhere runs as the incoming account.
+8. With two Anthropic accounts, signing in again on a row parks the outgoing blob, places the incoming one, and moves the pointer, because the sign-in itself performs the swap. A fresh `claude` anywhere then runs as the incoming account.
 9. Remove deletes the row, its home, and its parked item, then heals the pointer. Removing the last account writes the reserved login back, and the machine signs in as it did before recompose. Nothing under `~/.claude` or `~/.codex` changed at any point.
 10. Both schemes get the `claude-in-chrome` pass: the standing chips, the plan badge, the chips' selected state, and the drawer edge measured from the page.
 

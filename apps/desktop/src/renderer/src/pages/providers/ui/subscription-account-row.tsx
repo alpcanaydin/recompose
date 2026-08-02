@@ -1,11 +1,7 @@
 import type { SubscriptionAccountView } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
-import {
-  useActivateSubscription,
-  useForgetSubscription,
-  useRestoreSubscription,
-} from '../../../shared/api';
+import { useForgetSubscription, useRestoreSubscription } from '../../../shared/api';
 import { Badge, BrandMark, OverflowMenu, StatusChip } from '../../../shared/ui';
 import { subscriptionTitleFor } from '../model/provider-catalog';
 
@@ -21,14 +17,12 @@ const standing = {
 
 type RowActions = {
   view: SubscriptionAccountView;
-  onUse: () => void;
   onSignInAgain: () => void;
   onRemove: () => void;
 };
 
-function quieterActions({ view, onUse, onSignInAgain, onRemove }: RowActions) {
+function quieterActions({ view, onSignInAgain, onRemove }: RowActions) {
   return [
-    ...(view.active ? [] : [{ label: 'Use this account', onSelect: onUse }]),
     ...(view.standing === 'lapsed' ? [] : [{ label: 'Sign in again', onSelect: onSignInAgain }]),
     { label: 'Remove', onSelect: onRemove },
   ];
@@ -62,14 +56,13 @@ function accountIdentity(view: SubscriptionAccountView, refusal: string | undefi
  * target and has nowhere else to be edited. It holds two lines, the plan product and the address
  * it signed in as, because the connect step already taught what the account serves. A lapse puts
  * its remedy on the row rather than behind the overflow, so the standing and the way out of it
- * are read in one glance.
+ * are read in one glance, and the overflow keeps only signing in again and removal.
  */
 export function SubscriptionAccountRow({ view }: SubscriptionAccountRowProps) {
   const restore = useRestoreSubscription();
-  const activate = useActivateSubscription();
   const forget = useForgetSubscription();
 
-  const refusal = firstRefusal([restore.refusal, activate.refusal, forget.refusal]);
+  const refusal = firstRefusal([restore.refusal, forget.refusal]);
 
   const signInAgain = () => {
     restore.mutate({ id: view.id });
@@ -88,9 +81,6 @@ export function SubscriptionAccountRow({ view }: SubscriptionAccountRowProps) {
       <OverflowMenu
         items={quieterActions({
           view,
-          onUse: () => {
-            activate.mutate({ id: view.id });
-          },
           onSignInAgain: signInAgain,
           onRemove: () => {
             forget.mutate({ id: view.id });

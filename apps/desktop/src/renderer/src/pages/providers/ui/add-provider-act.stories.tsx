@@ -21,10 +21,10 @@ const meta = preview.meta({
 });
 
 /**
- * The act as the window strip carries it, a glyph control at the trailing edge.
+ * The act as the window strip carries it, a named control at the trailing edge.
  *
- * @summary The reading asks for the accessible name, because the glyph is decorative and the
- * name is all a screen reader gets of the one way into the catalog.
+ * @summary The reading asks for the name beside the plus, because the one way into the catalog
+ * has to say what it adds rather than stand as a symbol a first visit can't read.
  */
 export const Standing = meta.story({
   play: async ({ canvas }) => {

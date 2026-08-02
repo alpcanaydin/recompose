@@ -77,10 +77,8 @@ function RootLayout() {
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
 
   useEffect(() => {
-    void window.recompose['system:window-band'](
-      sidebarAway && slug !== undefined ? 'toolbar' : 'sidebar',
-    );
-  }, [sidebarAway, slug]);
+    void window.recompose['system:window-band'](sidebarAway ? 'toolbar' : 'sidebar');
+  }, [sidebarAway]);
 
   return (
     <div className="flex h-full overflow-hidden">

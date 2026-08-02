@@ -140,39 +140,14 @@ test('a refused restore says why on the row rather than leaving it unchanged in 
     .toHaveTextContent('Claude Code is not installed.');
 });
 
-test('a connected account keeps its quieter acts behind the overflow', async () => {
+test('the overflow holds signing in again and removal, and nothing else', async () => {
   await renderRow({ ...connected, active: false });
 
   await press('Actions for Anthropic');
 
-  await expect.element(page.getByRole('menuitem', { name: 'Use this account' })).toBeVisible();
+  await expect.element(page.getByRole('menuitem', { name: 'Sign in again' })).toBeVisible();
   await expect.element(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
-  await expect
-    .element(page.getByRole('menuitem', { name: 'Copy shell setup' }))
-    .not.toBeInTheDocument();
-});
-
-test('the account its provider tool already runs as offers no way to be chosen again', async () => {
-  await renderRow(connected);
-
-  await press('Actions for Anthropic');
-
-  await expect.element(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
-  await expect
-    .element(page.getByRole('menuitem', { name: 'Use this account' }))
-    .not.toBeInTheDocument();
-});
-
-test('choosing an account points its provider tool at that account', async () => {
-  const spare: SubscriptionAccountView = { ...connected, id: 's2', active: false };
-
-  await renderRow(spare, { subscriptions: [{ ...connected, active: true }, spare] });
-
-  await choose('Use this account');
-
-  await expect
-    .poll(async () => (await heldSubscriptions()).filter((view) => view.active).map((v) => v.id))
-    .toEqual(['s2']);
+  await expect.poll(() => page.getByRole('menuitem').elements().length).toBe(2);
 });
 
 test('removing an account takes it out of the registry it was held in', async () => {
