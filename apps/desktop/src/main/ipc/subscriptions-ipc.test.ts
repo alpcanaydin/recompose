@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, test } from 'vitest';
 
 import type { SubscriptionsWorld } from './subscriptions-ipc.testkit';
 
-import { PARKED_SERVICE } from '../subscriptions/credential-custody';
+import { PARKED_SERVICE, VENDOR_SERVICE } from '../subscriptions/credential-custody';
+import { osUser } from '../subscriptions/subscriptions.testkit';
 import { createSubscriptionsIpcHandlers } from './subscriptions-ipc';
 import { aFreshWorld, viewsIn } from './subscriptions-ipc.testkit';
 
@@ -40,6 +41,14 @@ async function aCodexHomeUnder(id: string): Promise<void> {
   await homes.resetPending('openai');
   await writeFile(join(pending, 'auth.json'), JSON.stringify({ tokens: {} }), 'utf8');
   await homes.promotePending('openai', id);
+}
+
+async function aBareActiveAnthropicHome(): Promise<void> {
+  const homes = world.homesOn('darwin');
+
+  await homes.resetPending('anthropic');
+  await homes.promotePending('anthropic', 'acc-one');
+  await homes.pointActiveAt('anthropic', 'acc-one');
 }
 
 async function anAnthropicRow(): Promise<void> {
@@ -142,6 +151,28 @@ describe('a row reads connected only where a credential stands', () => {
     const [view] = viewsIn(await handlersOn('darwin')['subscriptions:list']());
 
     expect(view).toMatchObject({ standing: 'lapsed' });
+  });
+});
+
+describe('the active account answers for the credential the tool actually spends', () => {
+  test('given the vendor slot gone empty, the active row reads lapsed even while a backup sits parked', async () => {
+    await anAnthropicRow();
+    await aBareActiveAnthropicHome();
+    world.keychain.put(PARKED_SERVICE, 'acc-one', 'stale-backup');
+
+    const [view] = viewsIn(await handlersOn('darwin')['subscriptions:list']());
+
+    expect(view).toMatchObject({ standing: 'lapsed', active: true });
+  });
+
+  test('given the vendor slot standing, the active row reads connected on a bare home', async () => {
+    await anAnthropicRow();
+    await aBareActiveAnthropicHome();
+    world.keychain.put(VENDOR_SERVICE, osUser, 'live-login');
+
+    const [view] = viewsIn(await handlersOn('darwin')['subscriptions:list']());
+
+    expect(view).toMatchObject({ standing: 'connected', active: true });
   });
 });
 

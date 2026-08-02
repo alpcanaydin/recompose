@@ -200,6 +200,42 @@ test('a surface away from the providers screens offers no way into the catalog',
     .not.toBeInTheDocument();
 });
 
+test('a sign-in that lands is counted by the sidebar without a reload', async () => {
+  const screen = await renderAt('/providers', {
+    tools: [
+      {
+        provider: 'anthropic',
+        toolName: 'Claude Code',
+        present: true,
+        signInCommand: 'claude',
+        shellSetupLine: 'export CLAUDE_CONFIG_DIR="/tmp/anthropic/active"',
+      },
+    ],
+  });
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Subscriptions, 0 connected' }))
+    .toBeVisible();
+
+  await screen.getByRole('button', { name: 'Add provider' }).click();
+
+  const card = screen.getByRole('button', { name: /^Claude/ });
+
+  await expect.element(card).toBeVisible();
+  card.element().focus();
+  await userEvent.keyboard('{Enter}');
+
+  const signIn = screen.getByRole('button', { name: 'Sign in to Anthropic' });
+
+  await expect.element(signIn).toBeVisible();
+  signIn.element().focus();
+  await userEvent.keyboard('{Enter}');
+
+  await expect
+    .element(screen.getByRole('link', { name: 'Subscriptions, 1 connected' }))
+    .toBeVisible();
+});
+
 test('the edge answers the arrow keys, so a pointer is not the only way', async () => {
   const screen = await renderAt('/', { gateways: [codex] });
   const edge = screen.container.querySelector<HTMLElement>('[aria-label="Sidebar edge"]');

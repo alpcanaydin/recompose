@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
 
-import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
+import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { oneAtATime } from '../storage/one-at-a-time';
 import {
@@ -167,10 +167,10 @@ async function connectAccount(
       setSecret(opened.vault, ctx.getCodec(), credentialRef, request.secret),
     );
 
-    const accounts = await readAccounts(ctx, paths);
-    const updated = { ...accounts, accounts: [...accounts.accounts, account] };
-
-    await saveAccountsFile(paths.accountsFile, updated);
+    const updated = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (accounts) => ({
+      ...accounts,
+      accounts: [...accounts.accounts, account],
+    }));
 
     return { ok: true as const, value: updated };
   } catch (error) {
@@ -194,12 +194,30 @@ async function releaseSubscriptionRow(
   ctx: StorageIpcContext,
   row: SubscriptionAccount,
   updated: AccountsDocument,
-): Promise<void> {
+): Promise<{ ok: true } | ReturnType<typeof ipcFailure>> {
   const released = await ctx.releaseSubscription(row, sameProviderIds(updated, row.provider));
 
   if (!released.ok) {
-    console.error(released.message);
+    return ipcFailure(released.code, released.message);
   }
+
+  return { ok: true as const };
+}
+
+async function releaseKeyRow(
+  ctx: StorageIpcContext,
+  paths: StoragePaths,
+  row: { credentialRef: string },
+) {
+  const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
+
+  if (!opened.ok) {
+    return opened;
+  }
+
+  await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
+
+  return { ok: true as const };
 }
 
 async function removeAccount(
@@ -215,24 +233,24 @@ async function removeAccount(
       return { ok: true as const, value: accounts };
     }
 
-    const updated = {
+    const survivors = {
       ...accounts,
       accounts: accounts.accounts.filter((candidate) => candidate.id !== request.id),
     };
 
-    if (row.kind === 'subscription') {
-      await releaseSubscriptionRow(ctx, row, updated);
-    } else {
-      const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
+    const released =
+      row.kind === 'subscription'
+        ? await releaseSubscriptionRow(ctx, row, survivors)
+        : await releaseKeyRow(ctx, paths, row);
 
-      if (!opened.ok) {
-        return opened;
-      }
-
-      await saveVaultFile(paths.vaultFile, deleteSecret(opened.vault, row.credentialRef));
+    if (!released.ok) {
+      return released;
     }
 
-    await saveAccountsFile(paths.accountsFile, updated);
+    const updated = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (fresh) => ({
+      ...fresh,
+      accounts: fresh.accounts.filter((candidate) => candidate.id !== request.id),
+    }));
 
     return { ok: true as const, value: updated };
   } catch (error) {

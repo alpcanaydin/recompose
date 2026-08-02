@@ -34,7 +34,8 @@ export const subscriptionToolsQueryOptions = queryOptions({
  * Hands the sign-in to the provider's own tool and waits for it to report.
  *
  * @summary The channel answers with the whole list after the act, so the answer is published as
- * the new truth rather than as a hint to go and re-ask. A refused sign-in carries its sentence,
+ * the new truth rather than as a hint to go and re-ask. The accounts registry grew a row the
+ * renderer never saw, so that reading is re-asked. A refused sign-in carries its sentence,
  * because a sign-in that stops has nothing else on screen to explain itself with.
  */
 export function useSignInSubscription() {
@@ -44,8 +45,9 @@ export function useSignInSubscription() {
     useMutation({
       mutationFn: async (request: IpcRequest<'subscriptions:sign-in'>) =>
         unwrapIpcResult(await window.recompose['subscriptions:sign-in'](request)),
-      onSuccess: (views) => {
+      onSuccess: async (views) => {
         queryClient.setQueryData(subscriptionsQueryOptions.queryKey, views);
+        await queryClient.invalidateQueries({ queryKey: accountsQueryOptions.queryKey });
       },
     }),
   );
@@ -60,8 +62,9 @@ function useSubscriptionAct(act: SubscriptionAct) {
     useMutation({
       mutationFn: async (request: IpcRequest<'subscriptions:restore'>) =>
         unwrapIpcResult(await act(request)),
-      onSuccess: (views) => {
+      onSuccess: async (views) => {
         queryClient.setQueryData(subscriptionsQueryOptions.queryKey, views);
+        await queryClient.invalidateQueries({ queryKey: accountsQueryOptions.queryKey });
       },
     }),
   );

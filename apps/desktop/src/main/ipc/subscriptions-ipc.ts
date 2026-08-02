@@ -13,7 +13,7 @@ import type { SubscriptionObservation } from '../subscriptions/subscription-stan
 import type { IpcHandlers } from './dispatch';
 import type { Answered, SubscriptionsIpcContext, Workshop } from './subscriptions-workshop';
 
-import { saveAccountsFile } from '../storage/accounts-store';
+import { amendAccountsFile } from '../storage/accounts-store';
 import { oneAtATime } from '../storage/one-at-a-time';
 import { custodyOver, RESERVED_SLOT } from '../subscriptions/credential-custody';
 import { signInCommandFor } from '../subscriptions/subscription-commands';
@@ -110,13 +110,11 @@ async function runTheTool(
 }
 
 async function keepTheAccount(shop: Workshop, row: SubscriptionAccount): Promise<AccountsDocument> {
-  const accounts = await readAccounts(shop);
-  const updated = {
+  const updated = await amendAccountsFile(shop.accountsFile, shop.ctx.onCorrupt, (accounts) => ({
     ...accounts,
     accounts: [...accounts.accounts.filter((one) => one.id !== row.id), row],
-  };
+  }));
 
-  await saveAccountsFile(shop.accountsFile, updated);
   await shop.homes.pointActiveAt(row.provider, row.id);
 
   return updated;

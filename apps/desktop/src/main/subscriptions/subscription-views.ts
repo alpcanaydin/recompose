@@ -39,6 +39,20 @@ async function whoIsActive(homes: SubscriptionHomes): Promise<WhoIsActive> {
   );
 }
 
+function credentialEvidenceFor(
+  custody: ReturnType<typeof custodyOver>,
+  row: SubscriptionAccount,
+  standsActive: boolean,
+): (() => Promise<boolean>) | null {
+  if (custody === null) {
+    return null;
+  }
+
+  return standsActive
+    ? async () => custody.vendorStands()
+    : async () => custody.parkedStands(row.id);
+}
+
 async function viewOf(
   request: SubscriptionViewRequest,
   row: SubscriptionAccount,
@@ -48,7 +62,7 @@ async function viewOf(
   const observed = await observeSubscription({
     provider: row.provider,
     home: request.homes.homeFor(row.provider, row.id),
-    outsideCredential: custody === null ? null : async () => custody.parkedStands(row.id),
+    outsideCredential: credentialEvidenceFor(custody, row, active.get(row.provider) === row.id),
   });
 
   return {

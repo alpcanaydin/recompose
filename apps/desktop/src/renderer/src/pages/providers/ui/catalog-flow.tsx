@@ -26,8 +26,8 @@ const descriptions: Record<AccountKind, string> = {
 /**
  * The two steps of the catalog: the grid of one kind, then the picked provider's connect.
  *
- * @summary The caller keys this to the open state, so a closing sheet keeps whichever step it
- * was showing until it has left the screen, and the next open always starts on the grid.
+ * @summary The caller keys this to the open state, so every transition mounts a fresh flow: the
+ * next open always starts on the grid, and a closing sheet never flashes a reset step mid-fade.
  */
 export function CatalogFlow({ kind, open, onOpenChange }: CatalogFlowProps) {
   const [picked, setPicked] = useState<CatalogEntry | undefined>(undefined);

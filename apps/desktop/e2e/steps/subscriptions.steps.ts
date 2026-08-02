@@ -242,14 +242,3 @@ Then('no sign-in begins', async ({ electronApp }) => {
 Then('the vault holds nothing for the account', async ({ electronApp }) => {
   expect(existsSync(await vaultFile(electronApp))).toBe(false);
 });
-
-Then(
-  'the way that yields a gateway target asks for a key rather than a sign-in',
-  async ({ page }) => {
-    const gatewayWay = catalog(page).getByRole('region', { name: 'A target a gateway can reach' });
-
-    await openProviderWays(page, 'anthropic');
-    await expect(gatewayWay.getByLabel('Key', { exact: true })).toBeVisible();
-    await expect(gatewayWay.getByRole('button', { name: /Sign in/u })).toHaveCount(0);
-  },
-);

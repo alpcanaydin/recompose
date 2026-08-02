@@ -25,6 +25,7 @@ export const noTools: readonly SubscriptionTool[] = [];
 export function subscriptionHandlers(
   seededViews: readonly SubscriptionAccountView[],
   seededTools: readonly SubscriptionTool[],
+  onAccountLanded?: (id: string, provider: SubscriptionAccountView['provider']) => void,
 ): SubscriptionHandlers {
   let held = [...seededViews];
   let nextSubscriptionNumber = held.length + 1;
@@ -38,6 +39,7 @@ export function subscriptionHandlers(
       const id = `s${nextSubscriptionNumber}`;
 
       nextSubscriptionNumber += 1;
+      onAccountLanded?.(id, provider);
       held = [
         ...held,
         {

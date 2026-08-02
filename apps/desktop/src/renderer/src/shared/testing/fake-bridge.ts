@@ -12,6 +12,7 @@ import type {
 
 import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/contracts';
 
+import { accountHandlers } from './fake-accounts';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
 const emptyDocument: AccountsDocument = { schemaVersion: 2, accounts: [] };
@@ -56,7 +57,6 @@ export type BridgeParameters = {
 };
 
 type SettingsHandlers = Pick<RecomposeIpc, 'settings:get' | 'settings:save'>;
-type AccountHandlers = Pick<RecomposeIpc, 'accounts:list' | 'accounts:connect' | 'accounts:remove'>;
 type SystemHandlers = Pick<
   RecomposeIpc,
   'system:get' | 'system:open-config-folder' | 'system:window-band'
@@ -199,44 +199,6 @@ function settingsHandlers(seed: Settings): SettingsHandlers {
   };
 }
 
-function accountHandlers(seed: AccountsDocument): AccountHandlers {
-  let registry = seed;
-  let nextAccountNumber = registry.accounts.length + 1;
-
-  return {
-    'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': async (request) => {
-      const id = `a${nextAccountNumber}`;
-
-      nextAccountNumber += 1;
-
-      registry = {
-        ...registry,
-        accounts: [
-          ...registry.accounts,
-          {
-            id,
-            provider: request.provider,
-            kind: request.kind,
-            label: request.label,
-            credentialRef: `c-${id}`,
-          },
-        ],
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-    'accounts:remove': async (request) => {
-      registry = {
-        ...registry,
-        accounts: registry.accounts.filter((row) => row.id !== request.id),
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
-  };
-}
-
 function systemHandlers(): SystemHandlers {
   return {
     'system:get': async () => Promise.resolve({ ok: true, value: observedSystem }),
@@ -277,12 +239,14 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
 
   engineStateListeners.clear();
 
+  const { landSubscription, ...accounts } = accountHandlers(seeds.accounts);
+
   window.recompose = {
     ...settingsHandlers(seeds.settings),
-    ...accountHandlers(seeds.accounts),
+    ...accounts,
     ...systemHandlers(),
     ...gatewayHandlers(seeds.gateways, seeds.engineStates),
-    ...subscriptionHandlers(seeds.subscriptions, seeds.tools),
+    ...subscriptionHandlers(seeds.subscriptions, seeds.tools, landSubscription),
     ...parameters.overrides,
   };
   window.recomposeEvents = eventBridge();
