@@ -92,6 +92,7 @@ test('the plans the release does not connect yet stand disabled rather than hidd
 
   await expect.element(copilot).toBeVisible();
   await expect.element(copilot).toHaveAttribute('aria-disabled', 'true');
+  await expect.element(copilot.getByText('Soon')).toBeVisible();
 });
 
 test('the keys screen catalog reads each row as the endpoint the key is spent against', async () => {

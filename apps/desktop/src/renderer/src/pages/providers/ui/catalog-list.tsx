@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { AccountKind } from '../../../entities/account';
 import type { AwaitedProvider, CatalogEntry, ConnectionWay } from '../model/provider-catalog';
 
-import { BrandMark, Icon } from '../../../shared/ui';
+import { Badge, BrandMark, Icon } from '../../../shared/ui';
 import { awaitedFor, catalogEntries, offerFor, offeredUnder } from '../model/provider-catalog';
 
 type CatalogListProps = {
@@ -56,7 +56,7 @@ function awaitedCards(awaited: readonly AwaitedProvider[]): readonly ReactNode[]
   return awaited.map((provider) => (
     <button
       aria-disabled
-      className="flex items-center gap-2.5 rounded-card border border-line-subtle bg-surface-card p-3 text-start opacity-60 focus-ring"
+      className="relative flex items-center gap-2.5 rounded-card border border-line-subtle bg-surface-card p-3 text-start opacity-60 focus-ring"
       key={provider.name}
       type="button"
     >
@@ -65,6 +65,9 @@ function awaitedCards(awaited: readonly AwaitedProvider[]): readonly ReactNode[]
         provider.name,
         provider.benefit,
       )}
+      <span className="absolute inset-e-2 top-2">
+        <Badge>Soon</Badge>
+      </span>
     </button>
   ));
 }
