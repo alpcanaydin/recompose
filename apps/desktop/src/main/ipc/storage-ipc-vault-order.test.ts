@@ -41,7 +41,7 @@ function context(): StorageIpcContext {
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
-    releaseSubscription: async () => Promise.resolve(),
+    releaseSubscription: async () => Promise.resolve({ ok: true }),
   };
 }
 

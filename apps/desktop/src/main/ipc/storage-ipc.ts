@@ -190,6 +190,18 @@ function sameProviderIds(accounts: AccountsDocument, provider: SubscriptionAccou
   return ids;
 }
 
+async function releaseSubscriptionRow(
+  ctx: StorageIpcContext,
+  row: SubscriptionAccount,
+  updated: AccountsDocument,
+): Promise<void> {
+  const released = await ctx.releaseSubscription(row, sameProviderIds(updated, row.provider));
+
+  if (!released.ok) {
+    console.error(released.message);
+  }
+}
+
 async function removeAccount(
   ctx: StorageIpcContext,
   paths: StoragePaths,
@@ -209,7 +221,7 @@ async function removeAccount(
     };
 
     if (row.kind === 'subscription') {
-      await ctx.releaseSubscription(row, sameProviderIds(updated, row.provider));
+      await releaseSubscriptionRow(ctx, row, updated);
     } else {
       const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 

@@ -1,6 +1,6 @@
 import type { SubscriptionAccount } from '@recompose/contracts';
 
-import type { CredentialCustody } from './credential-custody';
+import type { CredentialCustody, CustodyOutcome } from './credential-custody';
 import type { SubscriptionHomes } from './subscription-homes';
 
 import { custodyOver, RESERVED_SLOT } from './credential-custody';
@@ -8,7 +8,7 @@ import { custodyOver, RESERVED_SLOT } from './credential-custody';
 export type SubscriptionRelease = (
   row: SubscriptionAccount,
   survivors: readonly string[],
-) => Promise<void>;
+) => Promise<CustodyOutcome>;
 
 export function subscriptionRelease(
   homes: SubscriptionHomes,
@@ -23,13 +23,17 @@ export function subscriptionRelease(
     const settled = await homes.healActive(row.provider, survivors);
 
     if (keeper === null) {
-      return;
+      return { ok: true };
     }
 
-    await keeper.forget(row.id);
+    const forgotten = await keeper.forget(row.id);
 
-    if (stoodHere) {
-      await keeper.place(settled ?? RESERVED_SLOT);
+    if (!stoodHere) {
+      return forgotten;
     }
+
+    const placed = await keeper.place(settled ?? RESERVED_SLOT);
+
+    return forgotten.ok ? placed : forgotten;
   };
 }
