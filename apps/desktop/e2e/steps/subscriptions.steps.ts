@@ -196,6 +196,10 @@ Then('the row itself offers the way to restore the account', async ({ page }) =>
   ).toBeVisible();
 });
 
+Then('the screen lists one subscription account', async ({ page }) => {
+  await expect(accountRows(page)).toHaveCount(1);
+});
+
 Then('the row names the plan product the account signs into', async ({ page }) => {
   await expect(accountRows(page).first()).toContainText('Claude');
   await expect(accountRows(page).first()).not.toContainText('Serves');

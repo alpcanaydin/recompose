@@ -9,6 +9,11 @@ Feature: Signing in through the provider's own tool
     Then the app hands the sign-in to the provider's own tool
     And the account appears once that tool reports success
 
+  Scenario: Signing the same address in again writes over the account
+    Given a connected "anthropic" subscription
+    When the maintainer connects an "anthropic" subscription by signing in
+    Then the screen lists one subscription account
+
   Scenario: An absent tool is a stated reason
     Given the "anthropic" command-line tool isn't installed
     When the maintainer chooses to sign in to "anthropic"

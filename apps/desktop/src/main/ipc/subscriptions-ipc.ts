@@ -20,7 +20,7 @@ import { signInCommandFor } from '../subscriptions/subscription-commands';
 import { subscriptionHomes } from '../subscriptions/subscription-homes';
 import { awaitSignIn } from '../subscriptions/subscription-sign-in';
 import { observeSubscription } from '../subscriptions/subscription-standing';
-import { isSubscription } from '../subscriptions/subscription-views';
+import { heldUnderTheAddress, isSubscription } from '../subscriptions/subscription-views';
 import { reportTools } from '../subscriptions/tool-presence';
 import { storagePathsFor } from './storage-context';
 import { ipcFailure, storageFailure } from './storage-envelope';
@@ -129,7 +129,15 @@ async function afterTheToolAnswers(
   custody: CredentialCustody | null,
   observed: SubscriptionObservation,
 ): Promise<Answered> {
-  const id = existingId ?? `acc-${randomUUID()}`;
+  const held =
+    existingId ??
+    (await heldUnderTheAddress(
+      shop.homes,
+      await readAccounts(shop),
+      provider,
+      observed.signedInAs,
+    ));
+  const id = held ?? `acc-${randomUUID()}`;
 
   await shop.homes.promotePending(provider, id);
 

@@ -217,6 +217,37 @@ describe('bringing a lapsed account back', () => {
   });
 });
 
+describe('signing the same address in again', () => {
+  test('given the tool lands an address already held, the account is written over, not doubled', async () => {
+    await world.toolInstalled('claude');
+    const { launch } = claudeCodeSigningIn('linux');
+    const handlers = handlersOn('linux', launch);
+
+    await handlers['subscriptions:sign-in']({ provider: 'anthropic' });
+    const before = await world.storedAccounts();
+
+    await handlers['subscriptions:sign-in']({ provider: 'anthropic' });
+    const after = await world.storedAccounts();
+
+    expect(after.accounts).toHaveLength(1);
+    expect(after.accounts[0]?.id).toBe(before.accounts[0]?.id);
+  });
+
+  test('given a tool that names nobody, a second sign-in stands as its own account', async () => {
+    await world.toolInstalled('codex');
+    const homes = world.homesOn('linux');
+    const launch = world.toolSigningIn(homes, 'openai', { 'auth.json': { tokens: {} } });
+    const handlers = handlersOn('linux', launch);
+
+    await handlers['subscriptions:sign-in']({ provider: 'openai' });
+    await handlers['subscriptions:sign-in']({ provider: 'openai' });
+
+    await expect(world.storedAccounts()).resolves.toMatchObject({
+      accounts: [expect.anything(), expect.anything()],
+    });
+  });
+});
+
 describe('the handlers run one turn at a time', () => {
   test('given a sign-in still waiting, the list answers without queueing behind it', async () => {
     await world.toolInstalled('claude');
@@ -237,10 +268,14 @@ describe('the handlers run one turn at a time', () => {
     await signingIn;
   });
 
-  test('given two sign-ins asked for together, two accounts land rather than one', async () => {
+  test('given two sign-ins asked for together, two addresses land as two accounts', async () => {
     await world.toolInstalled('claude');
-    const { launch } = claudeCodeSigningIn('linux');
-    const handlers = handlersOn('linux', launch);
+    const homes = world.homesOn('linux');
+    const eachInTurn = [
+      world.toolSigningIn(homes, 'anthropic', claudeCodeSignedIn('ada@ex.com', 'max')),
+      world.toolSigningIn(homes, 'anthropic', claudeCodeSignedIn('grace@ex.com', 'max')),
+    ];
+    const handlers = handlersOn('linux', async (command) => eachInTurn.shift()?.(command));
 
     await Promise.all([
       handlers['subscriptions:sign-in']({ provider: 'anthropic' }),

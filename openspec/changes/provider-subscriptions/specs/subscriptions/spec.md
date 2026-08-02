@@ -39,6 +39,17 @@ The app MUST delegate signing in and renewing authorization to the provider's ow
 - Then the surface names the missing tool and what to do about it
 - And no sign-in begins
 
+### Requirement: One address stands as one account
+
+A sign-in that lands an address the app already holds for that provider MUST write over that account rather than record a second one. The check runs on return, because the tool only names the address once the sign-in finishes. A sign-in that names nobody MUST stand as its own account.
+
+#### Scenario: a person signs the same address in again
+
+- Given a connected account signed in as an address
+- When a sign-in for the same provider lands the same address
+- Then the surface lists one account for that address
+- And the account stands connected and active
+
 ### Requirement: The empty state says what a subscription is
 
 With no subscription connected, the surface MUST present a single call to action alongside a sentence naming what a subscription account is, rather than an empty list.

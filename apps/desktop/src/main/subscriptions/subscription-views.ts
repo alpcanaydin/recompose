@@ -62,6 +62,38 @@ async function viewOf(
   };
 }
 
+/**
+ * The held account already signing in as an address, and nothing when no account does.
+ *
+ * @summary Reach for it when a sign-in returns, because the tool only names the address once it
+ * finishes. The match reads each home's identity records rather than the stored label, so an
+ * account recorded before its address was known still counts as the same account.
+ */
+export async function heldUnderTheAddress(
+  homes: SubscriptionHomes,
+  accounts: AccountsDocument,
+  provider: SubscriptionProviderId,
+  address: string | undefined,
+): Promise<string | null> {
+  if (address === undefined) {
+    return null;
+  }
+
+  const rows = accounts.accounts.filter((row) => isSubscription(row) && row.provider === provider);
+  const identities = await Promise.all(
+    rows.map(async (row) => ({
+      id: row.id,
+      observed: await observeSubscription({
+        provider,
+        home: homes.homeFor(provider, row.id),
+        outsideCredential: null,
+      }),
+    })),
+  );
+
+  return identities.find(({ observed }) => observed.signedInAs === address)?.id ?? null;
+}
+
 export async function subscriptionViews(
   request: SubscriptionViewRequest,
   accounts: AccountsDocument,
