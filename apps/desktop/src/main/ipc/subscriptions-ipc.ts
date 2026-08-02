@@ -8,7 +8,7 @@ import type {
 import { subscriptionProviders } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
-import type { CredentialCustody } from '../subscriptions/credential-custody';
+import type { CredentialCustody, CustodyOutcome } from '../subscriptions/credential-custody';
 import type { SubscriptionObservation } from '../subscriptions/subscription-standing';
 import type { IpcHandlers } from './dispatch';
 import type { Answered, SubscriptionsIpcContext, Workshop } from './subscriptions-workshop';
@@ -63,19 +63,24 @@ async function makeRoomForTheSignIn(
   return cleared.ok ? null : refusalFailure(cleared);
 }
 
+type ToolRun = { landed: SubscriptionObservation | null; restored: CustodyOutcome };
+
 /**
- * Runs the provider's tool and hands back what it left behind.
+ * Runs the provider's tool and hands back what it left behind, alongside how the restore went.
  *
  * @summary The vendor slot stands empty from here until the tool fills it, so anything short of a
- * finished sign-in, a timeout as much as a broken run, has to put the parked credential back.
+ * finished sign-in, a timeout as much as a broken run, has to put the parked credential back. A
+ * restore the keychain refuses leaves nobody signed in, which is worse news than the timeout, so
+ * the caller hears about it rather than the sign-in swallowing it.
  */
 async function runTheTool(
   shop: Workshop,
   provider: SubscriptionProviderId,
   custody: CredentialCustody | null,
   previous: string,
-): Promise<SubscriptionObservation | null> {
+): Promise<ToolRun> {
   let landed: SubscriptionObservation | null = null;
+  let restored: CustodyOutcome = { ok: true };
 
   try {
     const home = await shop.homes.resetPending(provider);
@@ -95,13 +100,13 @@ async function runTheTool(
       boundMs: shop.ctx.signInBoundMs,
       everyMs: shop.ctx.signInEveryMs,
     });
-
-    return landed;
   } finally {
     if (landed === null) {
-      await putBack(custody, previous);
+      restored = await putBack(custody, previous);
     }
   }
+
+  return { landed, restored };
 }
 
 async function keepTheAccount(shop: Workshop, row: SubscriptionAccount): Promise<AccountsDocument> {
@@ -140,6 +145,10 @@ async function afterTheToolAnswers(
   return { ok: true, value: await viewsOf(shop, kept) };
 }
 
+async function activeSlot(shop: Workshop, provider: SubscriptionProviderId): Promise<string> {
+  return (await shop.homes.readActive(provider)) ?? RESERVED_SLOT;
+}
+
 async function signIn(
   shop: Workshop,
   provider: SubscriptionProviderId,
@@ -155,23 +164,27 @@ async function signIn(
   }
 
   const custody = custodyOver(shop.ctx.custody, provider);
-  const previous = (await shop.homes.readActive(provider)) ?? RESERVED_SLOT;
+  const previous = await activeSlot(shop, provider);
   const refused = await makeRoomForTheSignIn(custody, previous);
 
   if (refused !== null) {
     return refused;
   }
 
-  const observed = await runTheTool(shop, provider, custody, previous);
+  const { landed, restored } = await runTheTool(shop, provider, custody, previous);
 
-  if (observed === null) {
+  if (!restored.ok) {
+    return refusalFailure(restored);
+  }
+
+  if (landed === null) {
     return ipcFailure(
       'sign-in-timed-out',
       `${toolName} did not finish signing in before recompose stopped waiting.`,
     );
   }
 
-  return afterTheToolAnswers(shop, provider, existingId, custody, observed);
+  return afterTheToolAnswers(shop, provider, existingId, custody, landed);
 }
 
 async function heldSubscription(shop: Workshop, id: string): Promise<SubscriptionAccount | null> {

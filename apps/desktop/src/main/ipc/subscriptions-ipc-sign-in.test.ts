@@ -172,6 +172,24 @@ describe('signing in on macOS, where the tool keeps its credential in the keycha
   });
 });
 
+describe('signing in when the login that stood before cannot be put back', () => {
+  test('given the keychain refusing the restore, the sign-in says so rather than reporting a timeout', async () => {
+    await world.toolInstalled('claude');
+    world.keychain.put(VENDOR_SERVICE, osUser, 'someone-elses-login');
+
+    const answered = await handlersOn('darwin', async () => {
+      world.keychain.denyEverything();
+
+      return Promise.resolve();
+    })['subscriptions:sign-in']({ provider: 'anthropic' });
+
+    expect(refusalIn(answered).code).toBe('keychain-denied');
+    expect(world.keychain.blobAt(PARKED_SERVICE, 'login-before-recompose')).toBe(
+      'someone-elses-login',
+    );
+  });
+});
+
 describe('bringing a lapsed account back', () => {
   test('given a lapsed account, restoring signs it back in under the same account', async () => {
     await world.toolInstalled('claude');
