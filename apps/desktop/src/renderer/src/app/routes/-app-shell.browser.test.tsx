@@ -40,8 +40,8 @@ test('a kind row points at the providers surface narrowed to that kind', async (
   const screen = await renderAt('/');
 
   await expect
-    .element(screen.getByRole('link', { name: 'API Keys' }))
-    .toHaveAttribute('href', '#/providers?kind=api-key');
+    .poll(() => screen.getByRole('link', { name: 'API Keys' }).element().getAttribute('href'))
+    .toMatch(/\/providers\?kind=api-key$/);
 });
 
 test('the sidebar reaches the creation sheet once the empty state has left', async () => {

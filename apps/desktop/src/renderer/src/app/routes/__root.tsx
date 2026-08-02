@@ -22,7 +22,9 @@ import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
 import { SidebarEdge, SidebarToggle } from '../../shared/ui';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
-import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
+import { AppSidebar } from './-app-sidebar';
+import { AppToolbar } from './-app-toolbar';
+import { NotFound } from './-not-found';
 import { surfaceRequest, withSheet, withoutSheet } from './-surface-request';
 
 const noDevtools = () => null;
@@ -65,8 +67,10 @@ function RootLayout() {
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
 
   useEffect(() => {
-    void window.recompose['system:sidebar-shown'](!sidebarAway);
-  }, [sidebarAway]);
+    void window.recompose['system:window-band'](
+      sidebarAway && slug !== undefined ? 'toolbar' : 'sidebar',
+    );
+  }, [sidebarAway, slug]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -81,9 +85,9 @@ function RootLayout() {
       <SidebarEdge />
       <main className="relative flex flex-1 flex-col overflow-hidden bg-surface-content text-body">
         <AppToolbar slug={slug} />
-        <AppContent>
+        <div className="relative flex-1 overflow-y-auto">
           <Outlet />
-        </AppContent>
+        </div>
         {slug !== undefined && <StatusBar />}
       </main>
       <CreateGatewaySheet
@@ -102,8 +106,4 @@ function RootLayout() {
       </Suspense>
     </div>
   );
-}
-
-function NotFound() {
-  return <p>Not found</p>;
 }

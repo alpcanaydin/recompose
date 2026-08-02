@@ -1,4 +1,5 @@
 import type { SubscriptionAccountView } from '@recompose/contracts';
+import type { ReactNode } from 'react';
 
 import { subscriptionProviders } from '@recompose/contracts';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -52,12 +53,7 @@ function firstRefusal(refusals: readonly (string | undefined)[]) {
   return refusals.find((refusal) => refusal !== undefined);
 }
 
-type AccountIdentityProps = {
-  view: SubscriptionAccountView;
-  refusal: string | undefined;
-};
-
-function AccountIdentity({ view, refusal }: AccountIdentityProps) {
+function accountIdentity(view: SubscriptionAccountView, refusal: string | undefined): ReactNode {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       <span className="flex items-center gap-1.5">
@@ -100,7 +96,7 @@ export function SubscriptionAccountRow({ view }: SubscriptionAccountRowProps) {
   return (
     <li className="flex min-h-row items-center gap-3 rounded-card border border-line-subtle bg-surface-card px-4 py-2.5">
       <BrandMark name={view.provider} />
-      <AccountIdentity refusal={refusal} view={view} />
+      {accountIdentity(view, refusal)}
       {view.standing === 'lapsed' ? (
         <button className="push-button focus-ring" onClick={signInAgain} type="button">
           Sign in again

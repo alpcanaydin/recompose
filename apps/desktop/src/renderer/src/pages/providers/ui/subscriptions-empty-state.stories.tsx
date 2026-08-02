@@ -1,19 +1,14 @@
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
+import { inProvidersColumn } from '#.storybook/providers-column';
 
 import { SubscriptionsEmptyState } from './subscriptions-empty-state';
 
 const meta = preview.meta({
   component: SubscriptionsEmptyState,
   args: { onAddProvider: () => undefined },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-column p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [inProvidersColumn],
 });
 
 /**
@@ -32,5 +27,5 @@ export const Empty = meta.story({
   },
 });
 
-/** The same state in the dark scheme, where open space alone has to hold the state together. */
+/** The same state in the dark scheme, where the dashed edge has to stay readable as an edge. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

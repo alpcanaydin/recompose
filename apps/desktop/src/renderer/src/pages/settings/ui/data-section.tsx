@@ -25,7 +25,7 @@ export function DataSection() {
         }
         description={system.configFolder}
         label="Config folder"
-        {...(openConfigFolder.isError ? { status: openConfigFolder.error.message } : {})}
+        status={openConfigFolder.isError ? openConfigFolder.error.message : undefined}
       />
       <FieldRow
         control={

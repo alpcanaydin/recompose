@@ -40,6 +40,7 @@
   --color-subscription: light-dark(var(--blue-600), var(--blue-500));
   --color-api-key: light-dark(var(--yellow-700), var(--yellow-500));
   --color-aggregator: light-dark(var(--purple-600), var(--purple-500));
+  --color-local: light-dark(var(--teal-700), var(--teal-500));
   --color-running: light-dark(var(--green-700), var(--green-500));
   --color-stopped: light-dark(var(--red-700), var(--red-500));
   --color-warning: light-dark(var(--orange-600), var(--orange-500));
@@ -386,6 +387,30 @@
   height: calc(var(--spacing) * 7);
   border-radius: var(--radius-control);
   padding-inline: calc(var(--spacing) * 2);
+  color: var(--color-ink);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+
+  &:active {
+    background: var(--color-surface-pressed);
+  }
+
+  &[data-status='active'] {
+    background: var(--color-surface-pressed);
+  }
+}
+
+@utility nav-item-action {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.75);
+  height: calc(var(--spacing) * 7);
+  border-radius: var(--radius-control);
+  padding-inline: calc(var(--spacing) * 2);
+  color: var(--color-accent-ink);
+  font-weight: 500;
 
   &:hover {
     background: var(--color-surface-hover);

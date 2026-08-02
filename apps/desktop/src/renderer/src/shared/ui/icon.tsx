@@ -24,6 +24,12 @@ const glyphs = {
       stroke="none"
     />
   ),
+  monitor: (
+    <>
+      <rect height="12" rx="2.4" width="17" x="3.5" y="4.5" />
+      <path d="M9.4 20.2h5.2M12 16.5v3.7" />
+    </>
+  ),
   person: (
     <>
       <circle cx="12" cy="8.4" r="3.5" />

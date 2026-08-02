@@ -221,6 +221,8 @@
     "typescript/unbound-method": "error",
     "typescript/use-unknown-in-catch-callback-variable": "error",
     "react/jsx-no-target-blank": "error",
+    "react/no-multi-comp": "error",
+    "react/no-object-type-as-default-prop": "error",
     "react-doctor/activity-wraps-effect-heavy-subtree": "error",
     "react-doctor/advanced-event-handler-refs": "error",
     "react-doctor/alt-text": "error",
@@ -254,7 +256,7 @@
     "react-doctor/effect-needs-cleanup": "error",
     "react-doctor/exhaustive-deps": "error",
     "react-doctor/expo-no-non-inlined-env": "error",
-    "react-doctor/forbid-component-props": "off",
+    "react-doctor/forbid-component-props": "error",
     "react-doctor/forbid-dom-props": "error",
     "react-doctor/forbid-elements": "error",
     "react-doctor/forward-ref-uses-ref": "error",
@@ -305,7 +307,7 @@
     "react-doctor/jsx-no-useless-fragment": "error",
     "react-doctor/jsx-pascal-case": "error",
     "react-doctor/jsx-props-no-spread-multi": "error",
-    "react-doctor/jsx-props-no-spreading": "off",
+    "react-doctor/jsx-props-no-spreading": "error",
     "react-doctor/label-has-associated-control": "error",
     "react-doctor/lang": "error",
     "react-doctor/media-has-caption": "error",
@@ -339,7 +341,7 @@
     "react-doctor/no-array-index-as-key": "error",
     "react-doctor/no-array-index-key": "error",
     "react-doctor/no-async-effect-callback": "error",
-    "react-doctor/no-autofocus": "off",
+    "react-doctor/no-autofocus": "error",
     "react-doctor/no-barrel-import": "error",
     "react-doctor/no-call-component-as-function": "error",
     "react-doctor/no-cascading-set-state": "error",
@@ -692,6 +694,19 @@
       "files": ["apps/desktop/src/renderer/src/**"],
       "rules": {
         "react-doctor/no-barrel-import": "off"
+      }
+    },
+    {
+      "files": ["**/*.stories.tsx", "**/testing/**"],
+      "rules": {
+        "react/no-multi-comp": "off",
+        "react-doctor/jsx-props-no-spreading": "off"
+      }
+    },
+    {
+      "files": ["**/*.tsx"],
+      "rules": {
+        "react/function-component-definition": "error"
       }
     }
   ]

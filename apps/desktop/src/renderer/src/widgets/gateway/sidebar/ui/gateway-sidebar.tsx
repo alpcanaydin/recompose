@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { useId } from 'react';
 
 import {
@@ -13,22 +14,6 @@ type GatewaySidebarProps = {
   onNewGateway: () => void;
 };
 
-const NEW_GATEWAY = 'New Gateway…';
-
-/** The way to the next gateway, standing at the foot of the list whether or not one is listed. */
-function NewGatewayRow({ onNewGateway }: GatewaySidebarProps) {
-  return (
-    <button
-      className="nav-item text-start font-medium text-accent-ink focus-ring"
-      onClick={onNewGateway}
-      type="button"
-    >
-      <Icon className="size-3.5 icon-emphasis" name="plus" />
-      {NEW_GATEWAY}
-    </button>
-  );
-}
-
 /**
  * The way to the next gateway, over the stored ones, each row reporting whether it serves.
  *
@@ -41,20 +26,32 @@ export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
   const { data: states } = useSuspenseQuery(engineStatesQueryOptions);
 
   return (
-    <div aria-labelledby={groupId} className="flex flex-col" role="group">
+    <div aria-labelledby={groupId} className="flex flex-col gap-px" role="group">
       <h2 className="nav-group" id={groupId}>
         Local Gateways
       </h2>
       {gateways.map((gateway) => (
-        <a className="nav-item text-ink" href={`#/gateways/${gateway.slug}`} key={gateway.slug}>
+        <Link
+          className="nav-item"
+          key={gateway.slug}
+          params={{ slug: gateway.slug }}
+          to="/gateways/$slug"
+        >
           <Icon name="network" />
           <span className="truncate">{gateway.displayName}</span>{' '}
           <span className="ms-auto flex">
             <StatusIndicator status={gatewayStateIn(states, gateway.slug).status} />
           </span>
-        </a>
+        </Link>
       ))}
-      <NewGatewayRow onNewGateway={onNewGateway} />
+      <button
+        className="nav-item-action text-start focus-ring"
+        onClick={onNewGateway}
+        type="button"
+      >
+        <Icon className="size-3.5 icon-emphasis" name="plus" />
+        New Gateway…
+      </button>
     </div>
   );
 }

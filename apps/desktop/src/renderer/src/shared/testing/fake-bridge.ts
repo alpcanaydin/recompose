@@ -59,7 +59,7 @@ type SettingsHandlers = Pick<RecomposeIpc, 'settings:get' | 'settings:save'>;
 type AccountHandlers = Pick<RecomposeIpc, 'accounts:list' | 'accounts:connect' | 'accounts:remove'>;
 type SystemHandlers = Pick<
   RecomposeIpc,
-  'system:get' | 'system:open-config-folder' | 'system:sidebar-shown'
+  'system:get' | 'system:open-config-folder' | 'system:window-band'
 >;
 type GatewayHandlers = Pick<
   RecomposeIpc,
@@ -241,7 +241,7 @@ function systemHandlers(): SystemHandlers {
   return {
     'system:get': async () => Promise.resolve({ ok: true, value: observedSystem }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
-    'system:sidebar-shown': async () => Promise.resolve({ ok: true, value: undefined }),
+    'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),
   };
 }
 

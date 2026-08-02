@@ -15,10 +15,10 @@ function centeredIn(bandHeight: number): number {
  * join the toolbar's row of controls, and a row of buttons beside a cluster drawn to a different
  * centre reads as a mistake. So the position follows the sidebar rather than staying put.
  */
-export function windowButtonsFor(sidebarShown: boolean): { x: number; y: number } {
+export function windowButtonsFor(band: 'sidebar' | 'toolbar'): { x: number; y: number } {
   return {
     x: LEADING_INSET,
-    y: centeredIn(sidebarShown ? SIDEBAR_BAND_HEIGHT : TOOLBAR_HEIGHT),
+    y: centeredIn(band === 'sidebar' ? SIDEBAR_BAND_HEIGHT : TOOLBAR_HEIGHT),
   };
 }
 

@@ -29,7 +29,9 @@ export function GeneralSection() {
           }
           description="Opens recompose when you sign in."
           label="Launch at login"
-          {...{ ...waiting, ...saveStatusFor('launchAtLogin', unsavedFields) }}
+          inert={waiting.inert}
+          reason={waiting.reason}
+          status={saveStatusFor('launchAtLogin', unsavedFields)}
         />
       ) : null}
       <FieldRow
@@ -44,7 +46,7 @@ export function GeneralSection() {
         }
         description="Keeps recompose running after the last window closes."
         label="Show in menu bar"
-        {...saveStatusFor('showInMenuBar', unsavedFields)}
+        status={saveStatusFor('showInMenuBar', unsavedFields)}
       />
       <FieldRow
         control={<span className="text-control text-ink-secondary">None</span>}

@@ -8,7 +8,8 @@ import { gatewaySeed, paintedBox, paintedStyle } from '../../shared/testing';
 import { SidebarToggle } from '../../shared/ui';
 import { createQueryClient } from '../query-client';
 import { createAppRouter } from '../router';
-import { AppContent, AppSidebar, AppToolbar } from './-app-shell';
+import { AppSidebar } from './-app-sidebar';
+import { AppToolbar } from './-app-toolbar';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 
@@ -105,9 +106,9 @@ export const TopEdgeTakesHoldOfTheWindow = meta.story({
   render: () => (
     <>
       <AppToolbar slug={undefined} />
-      <AppContent>
+      <div className="relative flex-1 overflow-y-auto">
         <section className="absolute inset-0" />
-      </AppContent>
+      </div>
     </>
   ),
   play: async ({ canvasElement }) => {
@@ -184,9 +185,9 @@ export const SidebarControlTakesTheWindowControlCentre = meta.story({
  */
 export const ContentSurface = meta.story({
   render: () => (
-    <AppContent>
+    <div className="relative flex-1 overflow-y-auto">
       <p className="p-4 text-body text-ink-secondary">The route paints here.</p>
-    </AppContent>
+    </div>
   ),
   play: async ({ canvasElement }) => {
     const surface = canvasElement.firstElementChild?.firstElementChild;

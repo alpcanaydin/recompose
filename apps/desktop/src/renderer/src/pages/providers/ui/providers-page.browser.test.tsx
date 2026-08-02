@@ -131,9 +131,25 @@ test('a storage-failed remove surfaces as a visible error', async () => {
     .toHaveTextContent('Could not write the accounts file');
 });
 
-test('the local runtimes destination says its surface follows and offers nothing to connect', async () => {
+test('a keys screen with nothing connected explains the kind and lists nothing', async () => {
+  const screen = await renderProviders('api-key');
+
+  await expect.element(screen.getByText(/An API key is/)).toBeVisible();
+  await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
+});
+
+test('an aggregators screen with nothing connected explains the kind and lists nothing', async () => {
+  const screen = await renderProviders('aggregator');
+
+  await expect.element(screen.getByText(/An aggregator key is/)).toBeVisible();
+  await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
+});
+
+test('the local runtimes destination says its surface follows and still offers the catalog', async () => {
   const screen = await renderProviders('local');
 
   await expect.element(screen.getByText(/A local runtime/)).toBeVisible();
-  await expect.poll(() => screen.getByRole('button').elements()).toEqual([]);
+  await expect
+    .poll(() => controlNames(screen.getByRole('button').elements()))
+    .toEqual(['Add provider']);
 });

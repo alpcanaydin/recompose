@@ -75,7 +75,7 @@ export const ipcChannels = {
   },
   'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
   'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },
-  'system:sidebar-shown': { request: z.boolean(), response: ipcResult(z.void()) },
+  'system:window-band': { request: z.enum(['sidebar', 'toolbar']), response: ipcResult(z.void()) },
   'gateways:offer-port': { request: z.void(), response: ipcResult(gatewayPortSchema) },
   'gateways:move-port': {
     request: z.strictObject({ slug: gatewaySlugSchema }),
