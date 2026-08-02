@@ -2,7 +2,6 @@ export { Badge } from './badge';
 export { type BrandMarkName, BrandMark } from './brand-mark';
 export { Chip } from './chip';
 export { CopyButton } from './copy-button';
-export { Drawer } from './drawer';
 export { FieldGroup } from './field-group';
 export { type IconName, Icon } from './icon';
 export { placeFocus } from './place-focus';

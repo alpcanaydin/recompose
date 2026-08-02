@@ -15,7 +15,7 @@ const meta = preview.meta({
   },
   decorators: [
     (Story) => (
-      <div className="flex w-drawer flex-col gap-2 p-4">
+      <div className="flex w-sheet flex-col gap-2 p-4">
         <Story />
       </div>
     ),

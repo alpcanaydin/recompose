@@ -46,13 +46,13 @@ test('a key form connects the provider it was opened for, without asking who it 
   const screen = await renderKeyForm();
 
   await expect.element(screen.getByLabelText('Provider')).not.toBeInTheDocument();
-  await screen.getByLabelText('Label').fill('Work key');
+  await expect.element(screen.getByLabelText('Label')).not.toBeInTheDocument();
   await screen.getByLabelText('Key').fill('sk-supersecret');
   await screen.getByRole('button', { name: 'Connect' }).click();
 
   await expect.element(screen.getByText('The form stepped aside.')).toBeVisible();
   expect(await storedAccounts()).toMatchObject([
-    { provider: 'anthropic', kind: 'api-key', label: 'Work key' },
+    { provider: 'anthropic', kind: 'api-key', label: 'Anthropic' },
   ]);
 });
 
@@ -61,7 +61,6 @@ test('a key the person typed never reaches the screen it was typed into', async 
 
   const screen = await renderKeyForm();
 
-  await screen.getByLabelText('Label').fill('Work key');
   await screen.getByLabelText('Key').fill('sk-supersecret');
 
   await expect.element(screen.getByLabelText('Key')).toHaveAttribute('type', 'password');
@@ -77,7 +76,6 @@ test('a connect still out cannot be sent a second time, so one key makes one acc
 
   const screen = await renderKeyForm();
 
-  await screen.getByLabelText('Label').fill('Work key');
   await screen.getByLabelText('Key').fill('sk-supersecret');
   await screen.getByRole('button', { name: 'Connect' }).click();
 
@@ -97,12 +95,11 @@ test('a refused connect says why and keeps the draft the person typed', async ()
 
   const screen = await renderKeyForm();
 
-  await screen.getByLabelText('Label').fill('Work key');
   await screen.getByLabelText('Key').fill('sk-supersecret');
   await screen.getByRole('button', { name: 'Connect' }).click();
 
   await expect
     .element(screen.getByRole('alert'))
     .toHaveTextContent('OS secret encryption is unavailable.');
-  await expect.element(screen.getByLabelText('Label')).toHaveValue('Work key');
+  await expect.element(screen.getByLabelText('Key')).toHaveValue('sk-supersecret');
 });

@@ -75,9 +75,9 @@ test('the providers screen matches its baseline with a connected account', async
 }) => {
   await pinLightScheme(electronApp);
   await openProviders(page);
-  await connectKeyAccount(page, 'Anthropic', 'Claude Max');
+  await connectKeyAccount(page, 'anthropic');
   await expect(
-    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Claude Max' }),
+    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Anthropic' }),
   ).toBeVisible();
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-connected.png', capture);

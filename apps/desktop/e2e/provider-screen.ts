@@ -6,29 +6,34 @@ import { join } from 'node:path';
 
 const CATALOG = 'Add provider';
 
-const PROVIDER_ROW = /^(Anthropic|OpenAI|OpenRouter)$/u;
+const planTitles = { anthropic: 'Claude', openai: 'Codex' } as const;
+
+const keyTitles = { anthropic: 'Anthropic API', openai: 'OpenAI API' } as const;
 
 export function catalog(page: Page): Locator {
   return page.getByRole('dialog', { name: CATALOG });
 }
 
-/** Every provider the catalog offers right now, whatever heading each one stands under. */
-export function offeredProviders(page: Page): Locator {
-  return catalog(page).getByRole('button', { name: PROVIDER_ROW });
+function offeredId(provider: string): keyof typeof planTitles {
+  if (provider !== 'anthropic' && provider !== 'openai') {
+    throw new Error(`the catalog offers no ${provider}`);
+  }
+
+  return provider;
 }
 
-export function catalogGroupTitles(page: Page): Locator {
-  return catalog(page).getByRole('heading', { level: 3 });
+/** The card one provider's plan stands as on the subscriptions catalog. */
+export function planCard(page: Page, provider: string): Locator {
+  return catalog(page).getByRole('button', {
+    name: new RegExp(`^${planTitles[offeredId(provider)]}`, 'u'),
+  });
 }
 
-/**
- * What each named row reads as, once its own decoration is allowed for.
- *
- * @summary A decorative monogram leads every provider row and lands in the row's words without
- * touching its accessible name, so a name is what a row's words end with rather than all of them.
- */
-export function readingAs(...names: readonly string[]): RegExp[] {
-  return names.map((name) => new RegExp(`${name}$`, 'u'));
+/** The card one provider's key endpoint stands as on the keys catalog. */
+function keyCard(page: Page, provider: string): Locator {
+  return catalog(page).getByRole('button', {
+    name: new RegExp(`^${keyTitles[offeredId(provider)]}`, 'u'),
+  });
 }
 
 /** Read from the document, because an open drawer hides the screen behind it from the roles. */
@@ -59,25 +64,21 @@ export async function openCatalog(page: Page): Promise<void> {
   await expect(catalog(page)).toBeVisible();
 }
 
-/** Picks one provider, which is the only route to either of the ways it connects. */
+/** Picks one plan, which is the only route to the sign-in the subscriptions screen offers. */
 export async function openProviderWays(page: Page, provider: string): Promise<void> {
   await openCatalog(page);
-  await catalog(page).getByRole('button', { name: provider }).click();
-  await expect(catalog(page).getByRole('button', { name: 'All providers' })).toBeVisible();
+  await planCard(page, provider).click();
+  await expect(catalog(page).getByRole('button', { name: 'Back' })).toBeVisible();
 }
 
-/** Connects an account from a key, which the catalog's gateway-target way is the only route to. */
-export async function connectKeyAccount(
-  page: Page,
-  provider: string,
-  label: string,
-): Promise<void> {
-  const keyWay = catalog(page).getByRole('region', { name: 'A target a gateway can reach' });
-
-  await openProviderWays(page, provider);
-  await keyWay.getByLabel('Label', { exact: true }).fill(label);
-  await keyWay.getByLabel('Key', { exact: true }).fill('not-a-real-secret');
-  await keyWay.getByRole('button', { name: 'Connect' }).click();
+/** Connects a key account from the keys screen, whose catalog holds the endpoint cards. */
+export async function connectKeyAccount(page: Page, provider: string): Promise<void> {
+  await page.getByRole('link', { name: 'API Keys' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
+  await openCatalog(page);
+  await keyCard(page, provider).click();
+  await catalog(page).getByLabel('Key', { exact: true }).fill('not-a-real-secret');
+  await catalog(page).getByRole('button', { name: 'Connect' }).click();
   await expect(catalog(page)).toBeHidden();
 }
 

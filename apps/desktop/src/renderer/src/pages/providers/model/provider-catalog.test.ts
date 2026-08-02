@@ -4,28 +4,30 @@ import { expect } from 'vitest';
 import type { CatalogEntry, ConnectionWay } from './provider-catalog';
 
 import {
+  awaitedFor,
   catalogEntries,
-  catalogGroups,
   keyKindOf,
-  narrowedCatalog,
+  offerFor,
+  offeredUnder,
   signInProviderOf,
 } from './provider-catalog';
 
 const anyWay = fc.constantFrom<ConnectionWay[]>('subscription', 'api-key', 'aggregator');
 
+const anyOffer = fc.record({
+  way: anyWay,
+  title: fc.string(),
+  benefit: fc.string(),
+});
+
 const anyCatalog = fc.uniqueArray(
   fc.record({
     id: fc.constantFrom('anthropic' as const, 'openai' as const, 'openrouter' as const),
     name: fc.string(),
-    ways: fc.uniqueArray(anyWay, { minLength: 1 }),
+    offers: fc.uniqueArray(anyOffer, { minLength: 1, selector: (offer) => offer.way }),
   }),
   { selector: (entry) => entry.id },
 );
-
-const anyNarrowing = fc.record({
-  search: fc.string(),
-  way: fc.option(anyWay, { nil: undefined }),
-});
 
 function offered(id: CatalogEntry['id']): CatalogEntry {
   const entry = catalogEntries.find((candidate) => candidate.id === id);
@@ -39,11 +41,44 @@ function offered(id: CatalogEntry['id']): CatalogEntry {
 
 test('the catalog offers a provider under every way that provider connects', () => {
   expect(offered('anthropic').name).toBe('Anthropic');
-  expect(offered('anthropic').ways).toEqual(['subscription', 'api-key']);
+  expect(offered('anthropic').offers.map((offer) => offer.way)).toEqual([
+    'subscription',
+    'api-key',
+  ]);
+});
+
+test('a subscription offer reads as the plan product rather than the vendor', () => {
+  expect(offerFor(offered('anthropic'), 'subscription')).toEqual({
+    way: 'subscription',
+    title: 'Claude',
+    benefit: 'Sign in with your Pro or Max plan',
+  });
+  expect(offerFor(offered('openai'), 'subscription')).toEqual({
+    way: 'subscription',
+    title: 'Codex',
+    benefit: 'Sign in with your ChatGPT plan',
+  });
+});
+
+test('a key offer names the endpoint the key is spent against', () => {
+  expect(offerFor(offered('anthropic'), 'api-key')?.title).toBe('Anthropic API');
+  expect(offerFor(offered('anthropic'), 'api-key')?.benefit).toBe(
+    'api.anthropic.com with your key',
+  );
 });
 
 test('a provider that only ever takes a key offers no way to sign in', () => {
-  expect(offered('openrouter').ways).toEqual(['aggregator']);
+  expect(offered('openrouter').offers.map((offer) => offer.way)).toEqual(['aggregator']);
+});
+
+test('a way keeps the providers that connect by it and drops the rest', () => {
+  expect(offeredUnder(catalogEntries, 'subscription').map((entry) => entry.id)).toEqual([
+    'anthropic',
+    'openai',
+  ]);
+  expect(offeredUnder(catalogEntries, 'aggregator').map((entry) => entry.id)).toEqual([
+    'openrouter',
+  ]);
 });
 
 test('a provider that signs in names the provider identity it signs in under', () => {
@@ -59,66 +94,40 @@ test('a provider that takes a key names the kind that key is held under', () => 
   expect(keyKindOf(offered('openrouter'))).toBe('aggregator');
 });
 
-test('the catalog gathers under the name each way goes by on screen', () => {
-  expect(catalogGroups(catalogEntries).map((group) => group.title)).toEqual([
-    'Subscriptions',
-    'Aggregators',
+test('the subscriptions nothing connects yet still stand in the catalog, named and explained', () => {
+  expect(awaitedFor('subscription').map((awaited) => awaited.name)).toEqual([
+    'GitHub Copilot',
+    'Kimi Code',
+    'GLM Coding Plan',
+    'Qwen Coding Plan',
+    'MiniMax Coding Plan',
+  ]);
+
+  for (const awaited of awaitedFor('subscription')) {
+    expect(awaited.benefit.length).toBeGreaterThan(0);
+  }
+});
+
+test('the local servers nothing runs yet stand in the catalog the same way', () => {
+  expect(awaitedFor('local').map((awaited) => awaited.name)).toEqual([
+    'Ollama',
+    'LM Studio',
+    'llama.cpp',
+    'vLLM',
   ]);
 });
 
-test('a provider that connects two ways stands once, under the way it leads with', () => {
-  const groups = catalogGroups(catalogEntries);
-  const under = (way: ConnectionWay) =>
-    groups.find((group) => group.way === way)?.entries.map((entry) => entry.id);
-
-  expect(under('subscription')).toEqual(['anthropic', 'openai']);
-  expect(under('api-key')).toBeUndefined();
+test('the kinds whose catalog is complete await nothing', () => {
+  expect(awaitedFor('api-key')).toEqual([]);
+  expect(awaitedFor('aggregator')).toEqual([]);
 });
 
-test('a way asked for gathers the providers that lead with another way under it', () => {
-  const narrowed = narrowedCatalog(catalogEntries, { search: '', way: 'api-key' });
+test.prop([anyCatalog, anyWay])(
+  'a way answers a subset of what it was handed, every one offering that way',
+  (entries: readonly CatalogEntry[], way) => {
+    const under = offeredUnder(entries, way);
 
-  expect(catalogGroups(narrowed, 'api-key')).toEqual([
-    { way: 'api-key', title: 'API Keys', entries: [offered('anthropic'), offered('openai')] },
-  ]);
-});
-
-test('a way nothing is left under drops its heading rather than standing empty', () => {
-  const narrowed = narrowedCatalog(catalogEntries, { search: 'openrouter' });
-
-  expect(catalogGroups(narrowed).map((group) => group.way)).toEqual(['aggregator']);
-});
-
-test('searching keeps the providers whose name carries the text, whatever its case', () => {
-  expect(narrowedCatalog(catalogEntries, { search: 'ROUTER' })).toEqual([offered('openrouter')]);
-});
-
-test('searching on nothing but blanks keeps every provider rather than none', () => {
-  expect(narrowedCatalog(catalogEntries, { search: '   ' })).toEqual(catalogEntries);
-});
-
-test('a way keeps the providers that connect by it and drops the rest', () => {
-  expect(narrowedCatalog(catalogEntries, { search: '', way: 'aggregator' })).toEqual([
-    offered('openrouter'),
-  ]);
-});
-
-test('a search and a way narrow together rather than one overriding the other', () => {
-  expect(narrowedCatalog(catalogEntries, { search: 'open', way: 'subscription' })).toEqual([
-    offered('openai'),
-  ]);
-});
-
-test('a narrowing nothing answers keeps nothing rather than falling back to everything', () => {
-  expect(narrowedCatalog(catalogEntries, { search: 'mistral' })).toEqual([]);
-});
-
-test.prop([anyCatalog, anyNarrowing])(
-  'a narrowing answers a subset of what it was handed, whatever it is asked for',
-  (entries: readonly CatalogEntry[], narrowing) => {
-    const narrowed = narrowedCatalog(entries, narrowing);
-
-    expect(narrowed.every((entry) => entries.includes(entry))).toBe(true);
-    expect(new Set(narrowed).size).toBe(narrowed.length);
+    expect(under.every((entry) => entries.includes(entry))).toBe(true);
+    expect(under.every((entry) => offerFor(entry, way) !== undefined)).toBe(true);
   },
 );

@@ -3,22 +3,16 @@ import { expect } from '@playwright/test';
 import { Given, Then, When } from '../fixtures';
 import { connectKeyAccount } from '../provider-screen';
 
-When(
-  'the maintainer connects an {string} api-key account labeled {string}',
-  async ({ page }, provider: string, label: string) => {
-    await connectKeyAccount(page, provider, label);
-  },
-);
+When('the maintainer connects an {string} api-key account', async ({ page }, provider: string) => {
+  await connectKeyAccount(page, provider);
+});
 
-Given(
-  'a connected {string} api-key account labeled {string}',
-  async ({ page }, provider: string, label: string) => {
-    await connectKeyAccount(page, provider, label);
-    await expect(
-      page.getByRole('main').getByRole('listitem').filter({ hasText: label }),
-    ).toBeVisible();
-  },
-);
+Given('a connected {string} api-key account', async ({ page }, provider: string) => {
+  await connectKeyAccount(page, provider);
+  await expect(
+    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Anthropic' }),
+  ).toBeVisible();
+});
 
 When('the maintainer removes the {string} account', async ({ page }, label: string) => {
   await page.getByRole('button', { name: `Remove ${label}` }).click();

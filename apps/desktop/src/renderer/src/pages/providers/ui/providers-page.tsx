@@ -5,7 +5,7 @@ import type { AccountKind } from '../../../entities/account';
 import { accountKindTitle } from '../../../entities/account';
 import { CredentialedSurface } from './credentialed-surface';
 import { LocalRuntimesNote } from './local-runtimes-note';
-import { ProviderCatalogDrawer } from './provider-catalog-drawer';
+import { ProviderCatalogSheet } from './provider-catalog-sheet';
 import { SubscriptionsSurface } from './subscriptions-surface';
 
 type ProvidersPageProps = {
@@ -52,7 +52,7 @@ export function ProvidersPage({ kind }: ProvidersPageProps) {
       {kindSurface(kind, () => {
         setCatalogOpen(true);
       })}
-      <ProviderCatalogDrawer onOpenChange={setCatalogOpen} open={catalogOpen} />
+      <ProviderCatalogSheet kind={kind} onOpenChange={setCatalogOpen} open={catalogOpen} />
     </section>
   );
 }

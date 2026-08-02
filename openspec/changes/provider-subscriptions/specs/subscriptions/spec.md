@@ -72,26 +72,20 @@ An account whose authorization lapsed MUST report that on its own row and MUST o
 
 ### Requirement: Adding a provider opens the catalog
 
-The way to another subscription MUST open a catalog carrying every provider the app can connect, grouped by kind, each entry naming the provider and what connecting it gives. The catalog MUST offer a search field and a way to narrow to one kind.
+The way to another account MUST open a catalog over the surface, holding only the kind that surface holds. Each entry MUST name the plan product and what connecting it gives. A provider the release can't connect yet MUST stand inert rather than hidden.
 
-#### Scenario: a person opens the catalog
+#### Scenario: a person opens the catalog from the subscriptions surface
 
 - When a person asks to add a provider
-- Then the catalog opens beside the surface rather than replacing it
-- And it lists the providers grouped by kind
+- Then the catalog opens over the surface, holding only subscription plans
+- And the plans that can't connect yet stand inert
 
-#### Scenario: a person narrows the catalog to one kind
+### Requirement: Picking a provider offers the one way the surface holds
 
-- Given the catalog stands open
-- When a person narrows it to subscriptions
-- Then only the subscription providers remain listed
+The surface opens the catalog for one kind, so a picked provider MUST offer only that kind's way of connecting. A subscription pick MUST hand the sign-in to the provider's own tool and MUST NOT offer a key beside it. A key pick MUST ask for the key alone, because the provider and the account's name ride in from the picked entry.
 
-### Requirement: Picking a provider states what each way of connecting yields
+#### Scenario: a person picks a provider from the subscriptions catalog
 
-A provider offering more than one way to connect MUST present them together, and each MUST state what it yields rather than how many steps it takes. A sign-in MUST say it yields an account for the provider's own tool. A key MUST say it yields a target a gateway can reach.
-
-#### Scenario: a person picks a provider offering both ways
-
-- When a person picks a provider that accepts a sign-in and a key
-- Then both ways stand together
-- And each names what connecting that way gives them
+- When a person picks "anthropic" in the catalog the subscriptions surface opened
+- Then the sign-in stands alone, yielding an account for the provider's own tool
+- And the surface asks for no key

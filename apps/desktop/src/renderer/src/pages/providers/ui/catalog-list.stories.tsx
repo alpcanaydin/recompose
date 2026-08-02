@@ -1,40 +1,15 @@
-import { useState } from 'react';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import type { ConnectionWay } from '../model/provider-catalog';
-
 import { CatalogList } from './catalog-list';
-
-function StandingCatalog({ search: opening = '' }: { search?: string }) {
-  const [search, setSearch] = useState(opening);
-  const [way, setWay] = useState<ConnectionWay | undefined>(undefined);
-
-  return (
-    <CatalogList
-      onPick={() => undefined}
-      onSearchChange={setSearch}
-      onWayChange={setWay}
-      search={search}
-      way={way}
-    />
-  );
-}
 
 const meta = preview.meta({
   component: CatalogList,
-  args: {
-    search: '',
-    onSearchChange: () => undefined,
-    way: undefined,
-    onWayChange: () => undefined,
-    onPick: () => undefined,
-  },
-  render: () => <StandingCatalog />,
+  args: { kind: 'subscription' as const, onPick: () => undefined },
   decorators: [
     (Story) => (
-      <div className="w-drawer p-4">
+      <div className="w-sheet-wide p-4">
         <Story />
       </div>
     ),
@@ -42,30 +17,43 @@ const meta = preview.meta({
 });
 
 /**
- * The whole catalog, narrowable by the search field and by the chips under it.
+ * The subscription grid: the two plans that connect today, then the five that follow.
  *
- * @summary The reading asks for the field, the three chips, and at least one provider row,
- * because the list is the only way into every kind of account and has to offer all of them.
+ * @summary The reading asks for a live Claude card and a disabled Copilot card, because the
+ * catalog says what it grows toward rather than hiding it, and a person must be able to tell the
+ * two apart before pressing anything.
  */
-export const Standing = meta.story({
+export const Subscriptions = meta.story({
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('textbox', { name: 'Search providers' })).toBeVisible();
-    await expect(await canvas.findByRole('button', { name: 'Subscriptions' })).toBeVisible();
-    await expect((await canvas.findAllByRole('button')).length).toBeGreaterThan(4);
+    await expect(await canvas.findByRole('button', { name: /^Claude/ })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+    await expect(await canvas.findByRole('button', { name: /GitHub Copilot/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   },
 });
 
-/**
- * A search no provider answers to, which says so rather than standing empty.
- *
- * @summary A silent empty list reads as a broken one, so the absence carries its own sentence.
- */
-export const NothingMatches = meta.story({
-  render: () => <StandingCatalog search="zzzz" />,
+/** The keys grid, where each card reads as the endpoint the key is spent against. */
+export const Keys = meta.story({
+  args: { kind: 'api-key' as const },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText(/No provider matches/)).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: /Anthropic API/ })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: /OpenAI API/ })).toBeVisible();
   },
 });
 
-/** The same list in the dark scheme, where the rows have to keep their hover floor. */
+/** The local grid, standing entirely on the servers that connect later. */
+export const Local = meta.story({
+  args: { kind: 'local' as const },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('button', { name: /Ollama/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  },
+});
+
+/** The subscription grid in the dark scheme, where each card lifts off the sheet behind it. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

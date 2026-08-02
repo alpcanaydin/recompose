@@ -81,7 +81,7 @@
   --spacing-thumb: 18px;
   --spacing-port: 76px;
   --spacing-sheet: 404px;
-  --spacing-drawer: 380px;
+  --spacing-sheet-wide: 640px;
   --spacing-sheet-row: 38px;
   --spacing-sheet-field: 170px;
   --spacing-sheet-port: 74px;
@@ -193,7 +193,7 @@
   top: 47%;
   inset-inline-start: 50%;
   translate: -50% -50%;
-  width: var(--spacing-sheet);
+  width: var(--sheet-surface-width, var(--spacing-sheet));
   overflow: hidden;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-sheet);
@@ -213,25 +213,19 @@
   }
 }
 
-@utility drawer-surface {
-  position: fixed;
-  inset-block: 0;
-  inset-inline-end: 0;
-  display: flex;
-  max-width: 100%;
-  flex-direction: column;
-  border-inline-start: 1px solid var(--color-line-strong);
-  background-color: var(--color-surface-card);
-  width: var(--spacing-drawer);
-  box-shadow: var(--shadow-raised);
+@utility sheet-wide {
+  --sheet-surface-width: var(--spacing-sheet-wide);
+}
 
+@utility step-enter-forward {
   @media (prefers-reduced-motion: no-preference) {
-    transition: translate 220ms cubic-bezier(0.32, 0.72, 0, 1);
+    animation: step-from-end 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
 
-    &[data-starting-style],
-    &[data-ending-style] {
-      translate: 100% 0;
-    }
+@utility step-enter-back {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: step-from-start 200ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 }
 
@@ -439,5 +433,19 @@
 @utility row-hover {
   &:not([aria-disabled='true']):hover {
     background: var(--color-surface-hover);
+  }
+}
+
+@keyframes step-from-end {
+  from {
+    translate: 28px 0;
+    opacity: 0;
+  }
+}
+
+@keyframes step-from-start {
+  from {
+    translate: -28px 0;
+    opacity: 0;
   }
 }

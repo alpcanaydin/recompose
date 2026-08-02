@@ -19,13 +19,21 @@ async function detached(binary: string, argv: readonly string[]): Promise<void> 
 function appleScriptFor(command: string): string {
   const quoted = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
-  return `tell application "Terminal" to do script "${quoted}"`;
+  return [
+    'tell application "Terminal"',
+    `set signInTab to do script "${quoted}"`,
+    'repeat while busy of signInTab',
+    'delay 0.5',
+    'end repeat',
+    'close (first window whose tabs contains signInTab) saving no',
+    'end tell',
+  ].join('\n');
 }
 
 async function openALinuxTerminal(command: string): Promise<void> {
   for (const terminal of linuxTerminals) {
     try {
-      await detached(terminal, ['-e', 'sh', '-c', `${command}; exec sh`]);
+      await detached(terminal, ['-e', 'sh', '-c', command]);
 
       return;
     } catch {
@@ -54,7 +62,7 @@ export function terminalSignInLaunch(
     }
 
     if (platform === 'win32') {
-      await detached('cmd.exe', ['/c', 'start', '', 'powershell', '-NoExit', '-Command', command]);
+      await detached('cmd.exe', ['/c', 'start', '', 'powershell', '-Command', command]);
 
       return;
     }

@@ -9,4 +9,4 @@ Feature: A subscription is a managed account
   Scenario: Signing in through the tool stores no credential recompose could route with
     Given a connected "anthropic" subscription
     Then the vault holds nothing for the account
-    And the way that yields a gateway target asks for a key rather than a sign-in
+    And the subscriptions catalog offers no key field

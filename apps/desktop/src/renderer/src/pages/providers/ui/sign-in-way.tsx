@@ -5,8 +5,8 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 
 import { subscriptionToolsQueryOptions } from '../../../shared/api';
+import { BrandMark } from '../../../shared/ui';
 import { SignInAction } from './sign-in-action';
-import { Way } from './way';
 
 type SignInWayProps = {
   name: string;
@@ -14,7 +14,13 @@ type SignInWayProps = {
   onConnected: () => void;
 };
 
-/** The subscription arm of the fork, which yields an account for the provider's own tool. */
+/**
+ * The subscription connect step, standing the one act the pick still needs.
+ *
+ * @summary The picked card already said what the plan gives, so this step holds the mark, what
+ * the sign-in yields, one sentence naming whose plan and terms carry it, and the act itself at
+ * full width. It draws no card of its own, because it already stands inside one surface.
+ */
 export function SignInWay({ name, provider, onConnected }: SignInWayProps) {
   const reasonId = useId();
   const { data: tools } = useSuspenseQuery(subscriptionToolsQueryOptions);
@@ -23,13 +29,14 @@ export function SignInWay({ name, provider, onConnected }: SignInWayProps) {
   const command = reported?.present === true ? reported.signInCommand : undefined;
 
   return (
-    <Way yields={`An account for ${toolName}`}>
+    <div className="mx-auto flex w-80 flex-col items-center gap-2.5 py-4 text-center">
+      <span className="flex size-11 items-center justify-center rounded-card border border-line-subtle bg-surface-raised">
+        <BrandMark className="size-6" name={provider} />
+      </span>
+      <h3 className="text-heading text-ink">{`An account for ${toolName}`}</h3>
       <p className="text-detail text-ink-secondary">
-        {toolName} signs in and renews on its own. Requests draw on your {name} plan&apos;s own
-        limits, and no gateway ever routes through it.
-      </p>
-      <p className="text-detail text-ink-secondary">
-        {name}&apos;s terms govern this connection, and {name} may end access without notice.
+        {toolName} signs in on its own and spends your {name} plan, under {name}&apos;s terms.
+        {` ${toolName} serves one account at a time.`}
       </p>
       {command === undefined ? (
         <>
@@ -38,7 +45,7 @@ export function SignInWay({ name, provider, onConnected }: SignInWayProps) {
           </p>
           <button
             aria-describedby={reasonId}
-            className="push-button-primary self-start focus-ring disabled:bg-surface-inert disabled:text-ink-secondary"
+            className="mt-1 push-button-primary w-full justify-center focus-ring disabled:bg-surface-inert disabled:text-ink-secondary"
             disabled
             type="button"
           >
@@ -54,6 +61,6 @@ export function SignInWay({ name, provider, onConnected }: SignInWayProps) {
           toolName={toolName}
         />
       )}
-    </Way>
+    </div>
   );
 }

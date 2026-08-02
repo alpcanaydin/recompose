@@ -11,15 +11,16 @@ const heldAs: CredentialedAccountKind = 'api-key';
 
 const meta = preview.meta({
   component: ConnectKeyForm,
-  args: { provider: 'anthropic', kind: heldAs, onConnected: () => undefined },
+  args: { provider: 'anthropic' as const, kind: heldAs, onConnected: () => undefined },
   decorators: [inSettingsColumn],
 });
 
-/** The two things the catalog can't already know, with the provider left off the form. */
+/** The one thing the catalog can't already know, with everything else left off the form. */
 export const AsksOnlyWhatIsUnknown = meta.story({
   play: async ({ canvas }) => {
     await expect(canvas.queryByLabelText('Provider')).toBeNull();
-    await expect(await canvas.findByLabelText('Label')).toBeVisible();
+    await expect(canvas.queryByLabelText('Label')).toBeNull();
+    await expect(await canvas.findByLabelText('Key')).toBeVisible();
   },
 });
 

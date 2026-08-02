@@ -38,7 +38,7 @@ export function SignInAction({
   return (
     <>
       <button
-        className="push-button-primary self-start focus-ring"
+        className="mt-1 push-button-primary w-full justify-center focus-ring"
         onClick={() => {
           signIn.mutate({ provider }, { onSuccess: onConnected });
         }}

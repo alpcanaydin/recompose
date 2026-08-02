@@ -19,7 +19,7 @@ const meta = preview.meta({
   args: { name: 'Anthropic', provider: 'anthropic' as const, onConnected: () => undefined },
   decorators: [
     (Story) => (
-      <div className="w-drawer p-4">
+      <div className="w-sheet p-4">
         <Story />
       </div>
     ),
@@ -36,7 +36,7 @@ export const ToolPresent = meta.story({
   parameters: { bridge: { tools: [claudeCode] } },
   play: async ({ canvas }) => {
     await expect(
-      await canvas.findByRole('region', { name: 'An account for Claude Code' }),
+      await canvas.findByRole('heading', { name: 'An account for Claude Code' }),
     ).toBeVisible();
     await expect(await canvas.findByRole('button', { name: 'Sign in to Anthropic' })).toBeEnabled();
   },

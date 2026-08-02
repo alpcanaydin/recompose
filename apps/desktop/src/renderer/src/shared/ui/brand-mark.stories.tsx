@@ -26,7 +26,7 @@ export const EveryMark = meta.story({
   ),
   play: async ({ canvasElement }) => {
     const drawn = [...canvasElement.querySelectorAll('svg')];
-    const shapes = new Set(drawn.map((mark) => mark.textContent));
+    const shapes = new Set(drawn.map((mark) => mark.innerHTML));
 
     await expect(shapes.size).toBe(catalog.length);
 

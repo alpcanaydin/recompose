@@ -37,7 +37,7 @@ export const SheetBands = meta.story({
     await expect(paintedBox(sheet).width).toBe(404);
     await expect(paintedStyle(sheet).borderRadius).toBe('13px');
 
-    await expect(paintedStyle(title.parentElement).padding).toBe('18px 18px 13px');
+    await expect(paintedStyle(title.closest('header')).padding).toBe('18px 18px 13px');
     await expect(paintedStyle(title).fontSize).toBe('15px');
     await expect(paintedStyle(title).fontWeight).toBe('600');
     await expect(paintedStyle(title).letterSpacing).toBe('normal');

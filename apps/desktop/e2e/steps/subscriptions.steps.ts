@@ -13,12 +13,10 @@ import {
   accountRows,
   activeToolHome,
   catalog,
-  catalogGroupTitles,
-  offeredProviders,
   openCatalog,
   openProviderWays,
   openSubscriptionsScreen,
-  readingAs,
+  planCard,
   screenTitle,
   toolBinaryFor,
   toolHomesFolder,
@@ -104,10 +102,6 @@ When('the maintainer asks to add a provider', async ({ page }) => {
   await openCatalog(page);
 });
 
-When('the maintainer narrows it to subscriptions', async ({ page }) => {
-  await catalog(page).getByRole('button', { name: 'Subscriptions', exact: true }).click();
-});
-
 When('the maintainer picks {string}', async ({ page }, provider: string) => {
   focusProvider(page, provider);
   await openProviderWays(page, provider);
@@ -125,40 +119,34 @@ When('the maintainer chooses to sign in to {string}', async ({ page }, provider:
   await openProviderWays(page, provider);
 });
 
-Then('the catalog opens beside the screen rather than replacing it', async ({ page }) => {
+Then('the catalog opens over the screen, holding only subscription plans', async ({ page }) => {
   await expect(catalog(page)).toBeVisible();
   await expect(screenTitle(page)).toHaveText('Subscriptions');
+  await expect(planCard(page, 'anthropic')).toBeVisible();
+  await expect(planCard(page, 'openai')).toBeVisible();
+  await expect(catalog(page).getByRole('button', { name: /OpenRouter/u })).toBeHidden();
 });
 
-Then('it lists the providers grouped by kind', async ({ page }) => {
-  await expect(catalogGroupTitles(page)).toHaveText(['Subscriptions', 'Aggregators']);
-  await expect(offeredProviders(page)).toHaveText(readingAs('Anthropic', 'OpenAI', 'OpenRouter'));
+Then('the plans that cannot connect yet stand disabled', async ({ page }) => {
+  await expect(catalog(page).getByRole('button', { name: /GitHub Copilot/u })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
 });
 
-Then('it offers a search field', async ({ page }) => {
-  await expect(catalog(page).getByRole('textbox', { name: 'Search providers' })).toBeVisible();
-});
+Then(
+  "the sign-in stands alone, yielding an account for the provider's own tool",
+  async ({ page }) => {
+    const yields = `An account for ${toolNameFor(focusedProvider(page))}`;
 
-Then('only the subscription providers remain listed', async ({ page }) => {
-  await expect(catalogGroupTitles(page)).toHaveText(['Subscriptions']);
-  await expect(offeredProviders(page)).toHaveText(readingAs('Anthropic', 'OpenAI'));
-});
+    await expect(catalog(page).getByRole('heading', { name: yields })).toBeVisible();
+    await expect(catalog(page).getByLabel('Key', { exact: true })).toBeHidden();
+  },
+);
 
-Then('both ways of connecting stand together', async ({ page }) => {
-  await expect(catalog(page).getByRole('region')).toHaveCount(2);
-});
-
-Then("the sign-in says it yields an account for the provider's own tool", async ({ page }) => {
-  const yields = `An account for ${toolNameFor(focusedProvider(page))}`;
-
-  await expect(catalog(page).getByRole('region', { name: yields })).toBeVisible();
-});
-
-Then('the key says it yields a target a gateway can reach', async ({ page }) => {
-  const gatewayWay = catalog(page).getByRole('region', { name: 'A target a gateway can reach' });
-
-  await expect(gatewayWay).toBeVisible();
-  await expect(gatewayWay.getByLabel('Key', { exact: true })).toBeVisible();
+Then('the subscriptions catalog offers no key field', async ({ page }) => {
+  await openProviderWays(page, 'anthropic');
+  await expect(catalog(page).getByLabel('Key', { exact: true })).toBeHidden();
 });
 
 Then('the screen offers one call to action', async ({ page }) => {

@@ -1,81 +1,86 @@
 import type { ReactNode } from 'react';
 
-import type { CatalogEntry, CatalogGroup, ConnectionWay } from '../model/provider-catalog';
+import type { AccountKind } from '../../../entities/account';
+import type { AwaitedProvider, CatalogEntry, ConnectionWay } from '../model/provider-catalog';
 
-import { accountKindTitle } from '../../../entities/account';
-import { BrandMark, Chip, TextField } from '../../../shared/ui';
-import { catalogEntries, catalogGroups, narrowedCatalog } from '../model/provider-catalog';
-
-const chipWays: readonly ConnectionWay[] = ['subscription', 'api-key', 'aggregator'];
+import { BrandMark, Icon } from '../../../shared/ui';
+import { awaitedFor, catalogEntries, offerFor, offeredUnder } from '../model/provider-catalog';
 
 type CatalogListProps = {
-  search: string;
-  onSearchChange: (search: string) => void;
-  way: ConnectionWay | undefined;
-  onWayChange: (way: ConnectionWay | undefined) => void;
+  /** The kind the screen behind holds, which is the only kind the list offers. */
+  kind: AccountKind;
   onPick: (entry: CatalogEntry) => void;
 };
 
-function groupedRows(
-  groups: readonly CatalogGroup[],
-  onPick: (entry: CatalogEntry) => void,
-): ReactNode {
-  if (groups.length === 0) {
-    return <p className="text-body text-ink-secondary">No provider matches that search.</p>;
-  }
+function cardBody(lead: ReactNode, title: string, benefit: string): ReactNode {
+  return (
+    <>
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-control border border-line-subtle bg-surface-raised">
+        {lead}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-card-title text-ink">{title}</span>
+        <span className="truncate text-detail text-ink-secondary">{benefit}</span>
+      </span>
+    </>
+  );
+}
 
-  return groups.map((group) => (
-    <section className="flex flex-col gap-1" key={group.way}>
-      <h3 className="text-caption text-ink-secondary">{group.title}</h3>
-      {group.entries.map((entry) => (
-        <button
-          className="flex items-center gap-2.5 rounded-control p-2 text-body text-ink focus-ring row-hover"
-          key={entry.id}
-          onClick={() => {
-            onPick(entry);
-          }}
-          type="button"
-        >
-          <BrandMark name={entry.id} />
-          {entry.name}
-        </button>
-      ))}
-    </section>
+function connectableCards(
+  kind: ConnectionWay,
+  onPick: (entry: CatalogEntry) => void,
+): readonly ReactNode[] {
+  return offeredUnder(catalogEntries, kind).map((entry) => {
+    const offer = offerFor(entry, kind);
+
+    if (offer === undefined) {
+      return null;
+    }
+
+    return (
+      <button
+        className="flex items-center gap-2.5 rounded-card border border-line-subtle bg-surface-card p-3 text-start focus-ring row-hover"
+        key={entry.id}
+        onClick={() => {
+          onPick(entry);
+        }}
+        type="button"
+      >
+        {cardBody(<BrandMark name={entry.id} />, offer.title, offer.benefit)}
+      </button>
+    );
+  });
+}
+
+function awaitedCards(awaited: readonly AwaitedProvider[]): readonly ReactNode[] {
+  return awaited.map((provider) => (
+    <button
+      aria-disabled
+      className="flex items-center gap-2.5 rounded-card border border-line-subtle bg-surface-card p-3 text-start opacity-60 focus-ring"
+      key={provider.name}
+      type="button"
+    >
+      {cardBody(
+        <Icon className="size-4.5 text-ink-secondary" name={provider.glyph} />,
+        provider.name,
+        provider.benefit,
+      )}
+    </button>
   ));
 }
 
-/** The searchable, chip-narrowed list of every provider the catalog offers. */
-export function CatalogList({
-  search,
-  onSearchChange,
-  way,
-  onWayChange,
-  onPick,
-}: CatalogListProps) {
-  const groups = catalogGroups(narrowedCatalog(catalogEntries, { search, way }), way);
+/**
+ * The providers the screen's kind can connect to, as cards, with the ones that follow later.
+ *
+ * @summary Reach for it from the catalog. The grid holds one kind because the screen that opened
+ * it holds one kind, and a card the release cannot connect yet stands disabled rather than
+ * hidden, so the catalog says what it grows toward.
+ */
+export function CatalogList({ kind, onPick }: CatalogListProps) {
+  const cards =
+    kind === 'local'
+      ? awaitedCards(awaitedFor(kind))
+      : [...connectableCards(kind, onPick), ...awaitedCards(awaitedFor(kind))];
 
-  return (
-    <div className="flex flex-col gap-3.5">
-      <TextField
-        label="Search providers"
-        onChangeValue={onSearchChange}
-        placeholder="Search providers"
-        value={search}
-      />
-      <div className="flex flex-wrap gap-1.5">
-        {chipWays.map((offered) => (
-          <Chip
-            key={offered}
-            onSelectedChange={(selected) => {
-              onWayChange(selected ? offered : undefined);
-            }}
-            selected={way === offered}
-          >
-            {accountKindTitle(offered)}
-          </Chip>
-        ))}
-      </div>
-      {groupedRows(groups, onPick)}
-    </div>
-  );
+  return <div className="grid grid-cols-2 gap-2">{cards}</div>;
 }

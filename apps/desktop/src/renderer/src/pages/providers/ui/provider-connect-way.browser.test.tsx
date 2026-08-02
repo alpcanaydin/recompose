@@ -10,7 +10,7 @@ import type { CatalogEntry } from '../model/provider-catalog';
 import { subscriptionToolsQueryOptions } from '../../../shared/api';
 import { installFakeBridge } from '../../../shared/testing';
 import { catalogEntries } from '../model/provider-catalog';
-import { ProviderConnectFork } from './provider-connect-fork';
+import { ProviderConnectWay } from './provider-connect-way';
 
 const claudeCode: SubscriptionTool = {
   provider: 'anthropic',
@@ -30,17 +30,20 @@ function offered(id: CatalogEntry['id']): CatalogEntry {
   return entry;
 }
 
-function Fork({ entry }: { entry: CatalogEntry }) {
+import type { ConnectionWay } from '../model/provider-catalog';
+
+function Fork({ entry, way }: { entry: CatalogEntry; way: ConnectionWay }) {
   const [connected, setConnected] = useState(false);
 
   return connected ? (
     <p>The fork stepped aside.</p>
   ) : (
-    <ProviderConnectFork
+    <ProviderConnectWay
       entry={entry}
       onConnected={() => {
         setConnected(true);
       }}
+      way={way}
     />
   );
 }
@@ -51,11 +54,15 @@ function newQueryClient() {
   });
 }
 
-async function renderFork(entry: CatalogEntry, queryClient = newQueryClient()) {
+async function renderFork(
+  entry: CatalogEntry,
+  way: ConnectionWay = 'subscription',
+  queryClient = newQueryClient(),
+) {
   return render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<p>Loading…</p>}>
-        <Fork entry={entry} />
+        <Fork entry={entry} way={way} />
       </Suspense>
     </QueryClientProvider>,
   );
@@ -67,66 +74,56 @@ async function heldSubscriptions() {
   return answer.ok ? answer.value : [];
 }
 
-test('a provider that connects two ways stands both of them together', async () => {
+test('a subscription pick stands only the sign-in way, with nothing about gateways', async () => {
   installFakeBridge({ tools: [claudeCode] });
 
-  const screen = await renderFork(offered('anthropic'));
+  const screen = await renderFork(offered('anthropic'), 'subscription');
 
   await expect
     .element(screen.getByRole('heading', { name: 'An account for Claude Code' }))
     .toBeVisible();
   await expect
     .element(screen.getByRole('heading', { name: 'A target a gateway can reach' }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
+  await expect.element(screen.getByLabelText('Key', { exact: true })).not.toBeInTheDocument();
 });
 
-test('each way stands as a region named after what it yields', async () => {
+test('a key pick stands only the key it still needs, with no sign-in beside it', async () => {
   installFakeBridge({ tools: [claudeCode] });
 
-  const screen = await renderFork(offered('anthropic'));
+  const screen = await renderFork(offered('anthropic'), 'api-key');
 
-  await expect
-    .element(
-      screen
-        .getByRole('region', { name: 'A target a gateway can reach' })
-        .getByLabelText('Key', { exact: true }),
-    )
-    .toBeVisible();
-  await expect
-    .element(
-      screen
-        .getByRole('region', { name: 'An account for Claude Code' })
-        .getByRole('button', { name: 'Sign in to Anthropic' }),
-    )
-    .toBeVisible();
-});
-
-test('the sign-in way names whose quota the requests draw on', async () => {
-  installFakeBridge({ tools: [claudeCode] });
-
-  const screen = await renderFork(offered('anthropic'));
-
-  await expect.element(screen.getByText(/draw on your Anthropic plan/)).toBeVisible();
-});
-
-test('the sign-in way names whose terms govern it and that access can end unannounced', async () => {
-  installFakeBridge({ tools: [claudeCode] });
-
-  const screen = await renderFork(offered('anthropic'));
-
-  await expect
-    .element(screen.getByText(/Anthropic's terms govern this connection/))
-    .toHaveTextContent('without notice');
-});
-
-test('a provider that only ever takes a key stands one way rather than a fork', async () => {
-  installFakeBridge();
-
-  const screen = await renderFork(offered('openrouter'));
-
+  await expect.element(screen.getByLabelText('Key', { exact: true })).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: /Sign in/ })).not.toBeInTheDocument();
   await expect
     .element(screen.getByRole('heading', { name: 'A target a gateway can reach' }))
-    .toBeVisible();
+    .not.toBeInTheDocument();
+});
+
+test('the sign-in says in one line whose plan it spends and whose terms govern it', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderFork(offered('anthropic'));
+
+  await expect
+    .element(screen.getByText(/spends your Anthropic plan/))
+    .toHaveTextContent("under Anthropic's terms");
+});
+
+test('the sign-in warns that the tool serves one account at a time', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderFork(offered('anthropic'));
+
+  await expect.element(screen.getByText(/Claude Code serves one account at a time/)).toBeVisible();
+});
+
+test('an aggregator pick asks for its one key and nothing else', async () => {
+  installFakeBridge();
+
+  const screen = await renderFork(offered('openrouter'), 'aggregator');
+
+  await expect.element(screen.getByLabelText('Key', { exact: true })).toBeVisible();
   await expect.element(screen.getByRole('button', { name: /Sign in/ })).not.toBeInTheDocument();
 });
 
@@ -148,7 +145,7 @@ test('a tool installed since the last look is signable-in as soon as the fork op
   await queryClient.fetchQuery(subscriptionToolsQueryOptions);
   installFakeBridge({ tools: [claudeCode] });
 
-  const screen = await renderFork(offered('anthropic'), queryClient);
+  const screen = await renderFork(offered('anthropic'), 'subscription', queryClient);
 
   await expect.element(screen.getByRole('button', { name: 'Sign in to Anthropic' })).toBeEnabled();
 });
