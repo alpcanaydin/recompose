@@ -46,7 +46,7 @@ function GeneralRows() {
   );
 }
 
-/** A section of related settings under one overline heading. */
+/** A section of related settings under one heading, which stands outside the card it names. */
 export const Basic = meta.story({
   args: { children: <GeneralRows /> },
   play: async ({ canvas }) => {

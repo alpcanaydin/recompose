@@ -34,7 +34,7 @@ type AddressPillProps = {
 /** The address the gateway answers on, filling the strip the way the reference draws it. */
 function AddressPill({ address, port, status }: AddressPillProps) {
   return (
-    <span className="relative flex h-7.5 min-w-0 flex-1 items-center justify-center gap-2.25 overflow-hidden rounded-control border border-line-subtle bg-surface-raised px-8 font-mono text-note whitespace-nowrap">
+    <span className="relative flex h-7.5 min-w-0 flex-1 items-center justify-center gap-2.25 overflow-hidden rounded-control border border-line-subtle bg-surface-raised px-8 font-mono text-mono-value whitespace-nowrap">
       <Icon
         className="absolute inset-s-2.5 top-1/2 size-3.5 -translate-y-1/2 text-accent-ink"
         name="network"

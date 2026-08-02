@@ -37,7 +37,7 @@ function SignInAction({
   if (signIn.isPending) {
     return (
       <div className="flex flex-col gap-1.5">
-        <p className="text-caption text-ink-secondary">
+        <p className="text-detail text-ink-secondary">
           Waiting for {toolName} to finish signing in.
         </p>
         <p className="flex items-center gap-2 font-mono text-mono-value text-ink">
@@ -51,7 +51,7 @@ function SignInAction({
   return (
     <>
       <button
-        className="push-button self-start focus-ring"
+        className="push-button-primary self-start focus-ring"
         onClick={() => {
           signIn.mutate({ provider }, { onSuccess: onConnected });
         }}
@@ -60,7 +60,7 @@ function SignInAction({
         Sign in to {name}
       </button>
       {signIn.refusal === undefined ? null : (
-        <p className="text-caption text-danger-ink" role="alert">
+        <p className="text-detail text-danger-ink" role="alert">
           {signIn.refusal}
         </p>
       )}
@@ -73,12 +73,12 @@ function ToolAbsent({ name, toolName }: { name: string; toolName: string }) {
 
   return (
     <>
-      <p className="text-caption text-attention-ink" id={reasonId}>
+      <p className="text-detail text-attention-ink" id={reasonId}>
         {toolName} isn&apos;t installed. Install it, then sign in from here.
       </p>
       <button
         aria-describedby={reasonId}
-        className="push-button self-start focus-ring disabled:bg-surface-inert disabled:text-ink-secondary"
+        className="push-button-primary self-start focus-ring disabled:bg-surface-inert disabled:text-ink-secondary"
         disabled
         type="button"
       >
@@ -117,7 +117,7 @@ function SignInWay({ name, provider, onConnected }: SignInWayProps) {
         {toolName} signs in and renews on its own. Requests draw on your {name} plan&apos;s own
         limits, and no gateway ever routes through it.
       </p>
-      <p className="text-caption text-ink-secondary">
+      <p className="text-detail text-ink-secondary">
         {name}&apos;s terms govern this connection, and {name} may end access without notice.
       </p>
       {command === undefined ? (

@@ -30,7 +30,7 @@ export function Drawer({ open, onOpenChange, title, children }: DrawerProps) {
         <Dialog.Backdrop className="sheet-scrim" />
         <Dialog.Popup className="drawer-surface">
           <header className="flex items-center gap-2 border-b border-line-faint px-4.5 py-3.25">
-            <Dialog.Title className="text-sheet-title text-ink">{title}</Dialog.Title>
+            <Dialog.Title className="text-heading text-ink">{title}</Dialog.Title>
             <Dialog.Close
               aria-label="Close"
               className="ms-auto flex size-6 items-center justify-center rounded-control text-ink-secondary focus-ring hover:bg-surface-hover active:bg-surface-pressed"

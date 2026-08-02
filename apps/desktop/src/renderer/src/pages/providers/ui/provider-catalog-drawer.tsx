@@ -29,7 +29,12 @@ function CatalogList({ search, onSearchChange, way, onWayChange, onPick }: Catal
 
   return (
     <div className="flex flex-col gap-3.5">
-      <TextField label="Search providers" onChangeValue={onSearchChange} value={search} />
+      <TextField
+        label="Search providers"
+        onChangeValue={onSearchChange}
+        placeholder="Search providers"
+        value={search}
+      />
       <div className="flex flex-wrap gap-1.5">
         {chipWays.map((offered) => (
           <Chip

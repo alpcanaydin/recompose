@@ -7,9 +7,9 @@
  */
 export function LocalRuntimesNote() {
   return (
-    <div className="flex flex-col gap-2 rounded-card border border-dashed border-line-strong px-6 py-10 text-center">
-      <p className="text-body text-ink">Local runtimes arrive later</p>
-      <p className="mx-auto max-w-prose text-caption text-ink-secondary">
+    <div className="flex flex-col gap-2.5 px-6 py-10 text-center">
+      <h2 className="text-heading text-ink">Local runtimes arrive later</h2>
+      <p className="mx-auto max-w-prose text-body text-ink-secondary">
         A local runtime serves a model from this machine rather than from a provider. Nothing
         connects here yet, and this destination fills in once recompose can run one.
       </p>

@@ -32,5 +32,5 @@ export const Empty = meta.story({
   },
 });
 
-/** The same state in the dark scheme, where the dashed edge has to stay readable as an edge. */
+/** The same state in the dark scheme, where open space alone has to hold the state together. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

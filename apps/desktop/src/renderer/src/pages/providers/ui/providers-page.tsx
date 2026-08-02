@@ -29,7 +29,11 @@ const subtitles: Record<AccountKind, string> = {
 
 function AddProviderButton({ onAddProvider }: SurfaceProps) {
   return (
-    <button className="push-button self-start focus-ring" onClick={onAddProvider} type="button">
+    <button
+      className="push-button-primary self-start focus-ring"
+      onClick={onAddProvider}
+      type="button"
+    >
       Add provider
     </button>
   );
@@ -92,7 +96,7 @@ export function ProvidersPage({ kind }: ProvidersPageProps) {
     <section className="mx-auto flex w-full max-w-column flex-col gap-5 px-6 pt-page-top pb-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-title text-ink">{accountKindTitle(kind)}</h1>
-        <p className="text-caption text-ink-secondary">{subtitles[kind]}</p>
+        <p className="text-body text-ink-secondary">{subtitles[kind]}</p>
       </header>
       <KindSurface
         kind={kind}

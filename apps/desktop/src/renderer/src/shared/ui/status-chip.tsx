@@ -22,7 +22,7 @@ type StatusChipProps = {
  */
 export function StatusChip({ word, tone }: StatusChipProps) {
   return (
-    <span className={`inline-flex items-center gap-1.5 text-note ${standing[tone].ink}`}>
+    <span className={`inline-flex items-center gap-1.5 text-detail ${standing[tone].ink}`}>
       <span aria-hidden className={`size-1.5 shrink-0 rounded-pill ${standing[tone].mark}`} />
       {word}
     </span>

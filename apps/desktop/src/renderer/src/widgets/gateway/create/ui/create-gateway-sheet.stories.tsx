@@ -38,9 +38,9 @@ export const SheetBands = meta.story({
     await expect(paintedStyle(sheet).borderRadius).toBe('13px');
 
     await expect(paintedStyle(title.parentElement).padding).toBe('18px 18px 13px');
-    await expect(paintedStyle(title).fontSize).toBe('16px');
-    await expect(paintedStyle(title).fontWeight).toBe('700');
-    await expect(paintedStyle(title).letterSpacing).toBe('-0.2px');
+    await expect(paintedStyle(title).fontSize).toBe('15px');
+    await expect(paintedStyle(title).fontWeight).toBe('600');
+    await expect(paintedStyle(title).letterSpacing).toBe('normal');
 
     await expect(paintedStyle(description).fontSize).toBe('12px');
     await expect(paintedStyle(description).lineHeight).toBe('18px');
@@ -80,7 +80,7 @@ export const AddressPreview = meta.story({
     const preview = (await screen.findByText('Serves at')).parentElement;
 
     await expect(paintedStyle(preview).marginTop).toBe('10px');
-    await expect(paintedStyle(preview).fontSize).toBe('11.5px');
+    await expect(paintedStyle(preview).fontSize).toBe('12px');
     await expect(paintedStyle(preview).fontFamily).toContain('Mono');
     await expect(paintedStyle(preview).columnGap).toBe('7px');
     await expect(paintedBox(preview?.querySelector('span')).width).toBe(7);

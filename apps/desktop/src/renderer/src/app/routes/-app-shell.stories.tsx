@@ -185,7 +185,7 @@ export const SidebarControlTakesTheWindowControlCentre = meta.story({
 export const ContentSurface = meta.story({
   render: () => (
     <AppContent>
-      <p className="p-4 text-note text-ink-secondary">The route paints here.</p>
+      <p className="p-4 text-body text-ink-secondary">The route paints here.</p>
     </AppContent>
   ),
   play: async ({ canvasElement }) => {

@@ -39,7 +39,7 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
         <LabelledTextField label="Label" onChangeValue={setLabel} value={label} />
         <LabelledTextField label="Key" onChangeValue={setSecret} type="password" value={secret} />
         <button
-          className="push-button self-start focus-ring"
+          className="push-button-primary self-start focus-ring"
           disabled={connect.isPending}
           type="submit"
         >
@@ -47,7 +47,7 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
         </button>
       </form>
       {connect.refusal === undefined ? null : (
-        <p className="text-caption text-danger-ink" role="alert">
+        <p className="text-detail text-danger-ink" role="alert">
           {connect.refusal}
         </p>
       )}

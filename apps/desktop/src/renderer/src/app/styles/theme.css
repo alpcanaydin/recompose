@@ -54,25 +54,17 @@
   --text-invitation: 17px;
   --text-invitation--font-weight: 600;
   --text-invitation--letter-spacing: -0.3px;
-  --text-sheet-title: 16px;
-  --text-sheet-title--font-weight: 700;
-  --text-sheet-title--letter-spacing: -0.2px;
   --text-heading: 15px;
+  --text-heading--font-weight: 600;
   --text-card-title: 13px;
   --text-card-title--font-weight: 600;
-  --text-heading--font-weight: 600;
   --text-body: 13px;
   --text-body--line-height: 1.45;
-  --text-note: 12.5px;
-  --text-control: 12px;
+  --text-control: 13px;
   --text-detail: 12px;
   --text-detail--line-height: 1.5;
-  --text-quiet: 11.5px;
+  --text-mono-value: 12px;
   --text-caption: 11px;
-  --text-overline: 10px;
-  --text-overline--font-weight: 700;
-  --text-overline--letter-spacing: 1.4px;
-  --text-mono-value: 11px;
   --text-footnote: 10px;
 
   --spacing-column: 720px;
@@ -153,7 +145,7 @@
   border-radius: var(--radius-control);
   background-color: var(--color-surface-raised);
   padding-inline: 13px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   font-weight: 500;
   color: var(--color-ink);
 
@@ -269,7 +261,7 @@
   align-items: center;
   height: var(--spacing-sheet-row);
   padding-inline: calc(var(--spacing) * 3);
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   color: var(--color-ink);
 
   &[data-highlighted] {
@@ -303,7 +295,7 @@
   row-gap: calc(var(--spacing) * 1);
   min-height: var(--spacing-sheet-row);
   padding: 5px 12px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   color: var(--color-ink);
 
   &:not(:last-child) {
@@ -316,7 +308,7 @@
   border-radius: var(--radius-control);
   background-color: var(--color-surface-card);
   padding: 4.5px 9px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   color: var(--color-ink);
 
   &:hover {
@@ -333,7 +325,7 @@
   border-radius: var(--radius-control);
   background-color: var(--color-accent-fill);
   padding-inline: 13px;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   font-weight: 500;
   color: var(--white);
 

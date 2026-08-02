@@ -41,7 +41,7 @@ export function Sheet({
         <Dialog.Backdrop className="sheet-scrim" />
         <Dialog.Popup className="sheet-surface" initialFocus={initialFocus}>
           <header className="px-4.5 pt-4.5 pb-3.25">
-            <Dialog.Title className="block text-sheet-title text-ink">{title}</Dialog.Title>
+            <Dialog.Title className="block text-heading text-ink">{title}</Dialog.Title>
             <Dialog.Description className="mt-1.25 text-detail text-ink-secondary">
               {description}
             </Dialog.Description>

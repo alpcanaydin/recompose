@@ -30,9 +30,9 @@ const labelClasses = {
 };
 
 const statusStyles = {
-  alert: { className: 'border-s-2 border-danger ps-2 text-caption text-ink', role: 'alert' },
+  alert: { className: 'border-s-2 border-danger ps-2 text-detail text-ink', role: 'alert' },
   note: {
-    className: 'border-s-2 border-line-strong ps-2 text-caption text-ink-secondary',
+    className: 'border-s-2 border-line-strong ps-2 text-detail text-ink-secondary',
     role: 'note',
   },
 };

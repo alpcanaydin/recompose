@@ -41,7 +41,7 @@ function StepRow({ step }: { step: GetStartedStep }) {
         {step.state === 'done' && <Icon className="size-2.25 stroke-3" name="check" />}
       </span>
       <span className={`flex flex-col ${stepInk[step.state]}`}>
-        <span aria-current={step.state === 'current' ? 'step' : undefined} className="text-note">
+        <span aria-current={step.state === 'current' ? 'step' : undefined} className="text-body">
           {step.title}
         </span>
         {step.reason !== undefined && (
@@ -97,7 +97,7 @@ function ChecklistSteps({ steps }: { steps: readonly GetStartedStep[] }) {
       </ul>
       <footer className="mt-1.25 flex justify-end border-t border-line-faint px-0.5 py-1.75">
         <button
-          className="text-quiet text-ink-secondary focus-ring hover:text-ink"
+          className="text-detail text-ink-secondary focus-ring hover:text-ink"
           onClick={dismissGetStarted}
           type="button"
         >

@@ -30,5 +30,5 @@ export const Awaited = meta.story({
   },
 });
 
-/** The same note in the dark scheme, where the dashed edge carries the whole shape of the box. */
+/** The same note in the dark scheme, where the heading and the sentence carry the whole note. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

@@ -78,7 +78,7 @@ function SheetRefusal({ refusal }: { refusal: string | undefined }) {
 
 function PreviewLine({ port }: { port: string }) {
   return (
-    <p className="mt-2.5 flex items-center gap-1.75 px-0.5 font-mono text-quiet text-ink-secondary">
+    <p className="mt-2.5 flex items-center gap-1.75 px-0.5 font-mono text-mono-value text-ink-secondary">
       <span aria-hidden className="size-1.75 shrink-0 rounded-pill bg-ink-tertiary" />
       <span>Serves at</span>
       <span className="font-medium text-ink">{previewAddressFor(port)}</span>

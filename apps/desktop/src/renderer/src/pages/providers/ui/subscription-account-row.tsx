@@ -64,12 +64,12 @@ function AccountIdentity({ view, refusal }: AccountIdentityProps) {
         <span className="text-body text-ink">{providerName(view.provider)}</span>
         {view.plan === undefined ? null : <Badge>{view.plan}</Badge>}
       </span>
-      <span className="text-caption text-ink-secondary">{view.signedInAs ?? view.label}</span>
-      <span className="text-caption text-ink-secondary">
+      <span className="text-detail text-ink-secondary">{view.signedInAs ?? view.label}</span>
+      <span className="text-detail text-ink-secondary">
         {`Serves ${subscriptionProviders[view.provider].toolName} from this account's quota.`}
       </span>
       {refusal === undefined ? null : (
-        <span className="text-caption text-danger-ink" role="alert">
+        <span className="text-detail text-danger-ink" role="alert">
           {refusal}
         </span>
       )}

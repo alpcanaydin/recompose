@@ -53,7 +53,7 @@ export function SegmentedControl<Value extends string>({
       {options.map((option) => (
         <Radio.Root
           aria-labelledby={`${segmentId}-${option.value}`}
-          className="flex h-chip items-center rounded-chip px-2 text-control text-ink focus-ring row-hover data-checked:chip-selected"
+          className="flex h-chip items-center rounded-chip px-2 text-detail text-ink focus-ring row-hover data-checked:chip-selected"
           key={option.value}
           value={option.value}
         >

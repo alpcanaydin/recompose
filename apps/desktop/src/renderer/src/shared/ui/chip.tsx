@@ -21,7 +21,7 @@ type ChipProps = {
 export function Chip({ selected, onSelectedChange, children }: ChipProps) {
   return (
     <Toggle
-      className="flex h-chip items-center rounded-chip border border-transparent px-2 text-control text-ink focus-ring row-hover data-pressed:chip-selected"
+      className="flex h-chip items-center rounded-chip border border-transparent px-2 text-detail text-ink focus-ring row-hover data-pressed:chip-selected"
       onPressedChange={onSelectedChange}
       pressed={selected}
     >
