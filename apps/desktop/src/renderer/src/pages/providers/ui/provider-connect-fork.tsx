@@ -1,4 +1,5 @@
 import type { CredentialedAccountKind, SubscriptionProviderId } from '@recompose/contracts';
+import type { ReactNode } from 'react';
 
 import { subscriptionProviders } from '@recompose/contracts';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -87,6 +88,23 @@ function ToolAbsent({ name, toolName }: { name: string; toolName: string }) {
   );
 }
 
+/** One way of connecting, named after what it yields so the name reaches assistive technology. */
+function Way({ yields, children }: { yields: string; children: ReactNode }) {
+  const titleId = useId();
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="flex flex-col gap-2 rounded-card border border-line-subtle bg-surface-card p-4"
+    >
+      <h3 className="text-card-title text-ink" id={titleId}>
+        {yields}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
 function SignInWay({ name, provider, onConnected }: SignInWayProps) {
   const { data: tools } = useSuspenseQuery(subscriptionToolsQueryOptions);
   const { toolName } = subscriptionProviders[provider];
@@ -94,8 +112,7 @@ function SignInWay({ name, provider, onConnected }: SignInWayProps) {
   const command = reported?.present === true ? reported.signInCommand : undefined;
 
   return (
-    <section className="flex flex-col gap-2 rounded-card border border-line-subtle bg-surface-card p-4">
-      <h3 className="text-card-title text-ink">An account for {toolName}</h3>
+    <Way yields={`An account for ${toolName}`}>
       <p className="text-detail text-ink-secondary">
         {toolName} signs in and renews on its own. Requests draw on your {name} plan&apos;s own
         limits, and no gateway ever routes through it.
@@ -114,7 +131,7 @@ function SignInWay({ name, provider, onConnected }: SignInWayProps) {
           toolName={toolName}
         />
       )}
-    </section>
+    </Way>
   );
 }
 
@@ -128,14 +145,13 @@ function KeyWay({
   onConnected: () => void;
 }) {
   return (
-    <section className="flex flex-col gap-2 rounded-card border border-line-subtle bg-surface-card p-4">
-      <h3 className="text-card-title text-ink">A target a gateway can reach</h3>
+    <Way yields="A target a gateway can reach">
       <p className="text-detail text-ink-secondary">
         A key makes {entry.name} a target any virtual model can route to, charged to that key
         request by request.
       </p>
       <ConnectKeyForm kind={kind} onConnected={onConnected} provider={entry.id} />
-    </section>
+    </Way>
   );
 }
 
