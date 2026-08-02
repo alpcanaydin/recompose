@@ -1,3 +1,4 @@
+import { setTimeout as sleepFor } from 'node:timers/promises';
 import { beforeEach, describe, expect, test } from 'vitest';
 
 import type { SubscriptionsIpcContext } from './subscriptions-ipc';
@@ -199,6 +200,25 @@ describe('bringing a lapsed account back', () => {
 });
 
 describe('the handlers run one turn at a time', () => {
+  test('given a sign-in still waiting, the list answers without queueing behind it', async () => {
+    await world.toolInstalled('claude');
+    let releaseTheTool = (): void => undefined;
+    const theToolIsStillOpen = new Promise<void>((resolve) => {
+      releaseTheTool = resolve;
+    });
+    const handlers = handlersOn('linux', async () => theToolIsStillOpen);
+    const signingIn = handlers['subscriptions:sign-in']({ provider: 'anthropic' });
+
+    const winner = await Promise.race([
+      handlers['subscriptions:list']().then(() => 'the list answered'),
+      sleepFor(100, 'the list waited for the sign-in'),
+    ]);
+
+    expect(winner).toBe('the list answered');
+    releaseTheTool();
+    await signingIn;
+  });
+
   test('given two sign-ins asked for together, two accounts land rather than one', async () => {
     await world.toolInstalled('claude');
     const { launch } = claudeCodeSigningIn('linux');

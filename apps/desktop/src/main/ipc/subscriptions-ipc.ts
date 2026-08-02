@@ -221,6 +221,13 @@ export function createSubscriptionsIpcHandlers(
     homes: subscriptionHomes(ctx.userDataPath, ctx.platform),
     accountsFile: storagePathsFor(ctx.userDataPath).accountsFile,
   };
+  /**
+   * The lane the writers queue in, which the readers stay out of.
+   *
+   * @summary A sign-in holds the lane for as long as somebody takes to finish in a browser, so a
+   * read that queued behind it would leave the screen blank for minutes. The accounts file is
+   * written whole, so a read alongside a write sees one version or the other, never half of each.
+   */
   const inTurn = oneAtATime();
 
   const guarded = (work: () => Promise<Answered>) => async (): Promise<Answered> => {
@@ -232,10 +239,10 @@ export function createSubscriptionsIpcHandlers(
   };
 
   return {
-    'subscriptions:list': async () =>
-      inTurn(
-        guarded(async () => ({ ok: true, value: await viewsOf(shop, await readAccounts(shop)) })),
-      ),
+    'subscriptions:list': guarded(async () => ({
+      ok: true,
+      value: await viewsOf(shop, await readAccounts(shop)),
+    })),
 
     'subscriptions:tools': async () => {
       try {
