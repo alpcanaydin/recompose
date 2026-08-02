@@ -1,4 +1,4 @@
-import type { AccountsDocument } from '@recompose/contracts';
+import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
@@ -6,29 +6,41 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 
 import type { AccountKind } from '../../../entities/account';
+import type { BridgeParameters } from '../../../shared/testing';
 
 import { installFakeBridge } from '../../../shared/testing';
 import { ProvidersPage } from './providers-page';
 
-const seeded: AccountsDocument = {
-  schemaVersion: 2,
-  accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
+const anthropic: SubscriptionAccountView = {
+  id: 's1',
+  provider: 'anthropic',
+  label: 'Anthropic',
+  signedInAs: 'dev@example.com',
+  plan: 'Max',
+  standing: 'connected',
+  active: true,
 };
 
-const mixed: AccountsDocument = {
+const openai: SubscriptionAccountView = {
+  id: 's2',
+  provider: 'openai',
+  label: 'OpenAI',
+  standing: 'connected',
+  active: true,
+};
+
+const keys: AccountsDocument = {
   schemaVersion: 2,
   accounts: [
-    ...seeded.accounts,
     { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
   ],
 };
 
-async function renderProviders(kind?: AccountKind) {
+async function renderProviders(kind: AccountKind, parameters: BridgeParameters = {}) {
+  installFakeBridge(parameters);
+
   const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
   return render(
@@ -40,83 +52,69 @@ async function renderProviders(kind?: AccountKind) {
   );
 }
 
-test('a surface narrowed to a kind lists the accounts of that kind and no others', async () => {
-  installFakeBridge({ accounts: mixed });
+function controlNames(elements: readonly Element[]) {
+  return elements.map((control) => control.getAttribute('aria-label') ?? control.textContent);
+}
 
-  const screen = await renderProviders('api-key');
+test('the subscriptions screen names the kind it holds and what that kind is', async () => {
+  const screen = await renderProviders('subscription');
+
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Subscriptions' }))
+    .toBeVisible();
+  await expect.element(screen.getByText(/command-line tool/).first()).toBeVisible();
+});
+
+test('a subscriptions screen with nothing connected explains the kind and lists nothing', async () => {
+  const screen = await renderProviders('subscription');
+
+  await expect.element(screen.getByText(/A subscription account is/)).toBeVisible();
+  await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
+});
+
+test('every connected subscription stands as its own row', async () => {
+  const screen = await renderProviders('subscription', { subscriptions: [anthropic, openai] });
+
+  await expect.element(screen.getByText('dev@example.com')).toBeVisible();
+  await expect.poll(() => screen.getByRole('listitem').elements().length).toEqual(2);
+});
+
+test('a screen holding rows offers the catalog once rather than beside every row', async () => {
+  const screen = await renderProviders('subscription', { subscriptions: [anthropic, openai] });
+
+  await expect.element(screen.getByRole('button', { name: 'Add provider' })).toBeVisible();
+  await expect
+    .poll(() => controlNames(screen.getByRole('button').elements()))
+    .toEqual(['Add provider', 'Actions for Anthropic', 'Actions for OpenAI']);
+});
+
+test('asking to add a provider opens the catalog beside the screen rather than over it', async () => {
+  const screen = await renderProviders('subscription');
+
+  await screen.getByRole('button', { name: 'Add provider' }).click();
+
+  await expect.element(screen.getByRole('dialog', { name: 'Add provider' })).toBeVisible();
+  await expect.element(screen.getByText(/A subscription account is/)).toBeVisible();
+});
+
+test('a screen narrowed to keys lists the keys and never a subscription', async () => {
+  const screen = await renderProviders('api-key', { accounts: keys, subscriptions: [anthropic] });
 
   await expect.element(screen.getByText('Work key', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('Claude Max', { exact: true })).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Anthropic', { exact: true })).not.toBeInTheDocument();
 });
 
-test('a surface narrowed to a kind says which kind it is narrowed to', async () => {
-  installFakeBridge({ accounts: mixed });
+test('removing a key account takes its row off the screen', async () => {
+  const screen = await renderProviders('api-key', { accounts: keys });
 
-  const screen = await renderProviders('api-key');
+  await screen.getByRole('button', { name: 'Remove Work key' }).click();
 
-  await expect.element(screen.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
-});
-
-test('a surface asked for no kind lists every account under one heading', async () => {
-  installFakeBridge({ accounts: mixed });
-
-  const screen = await renderProviders();
-
-  await expect.element(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeVisible();
-  await expect.element(screen.getByText('Work key', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
-});
-
-test('the providers screen lists connected accounts from the registry', async () => {
-  installFakeBridge({ accounts: seeded });
-
-  const screen = await renderProviders();
-
-  await expect.element(screen.getByText('Claude Max', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('anthropic · subscription')).toBeVisible();
-});
-
-test('connecting a provider adds it to the list and never shows the secret', async () => {
-  installFakeBridge({ accounts: seeded });
-
-  const screen = await renderProviders();
-
-  await screen.getByLabelText('Provider').fill('openai');
-  await screen.getByLabelText('Label').fill('Work key');
-  await screen.getByLabelText('Secret').fill('sk-supersecret');
-  await screen.getByRole('button', { name: 'Connect' }).click();
-
-  await expect.element(screen.getByText('Work key', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('sk-supersecret')).not.toBeInTheDocument();
-});
-
-test('connecting an aggregator account shows its kind on the new row', async () => {
-  installFakeBridge({ accounts: seeded });
-
-  const screen = await renderProviders();
-
-  await screen.getByLabelText('Provider').fill('openai');
-  await screen.getByLabelText('Kind').selectOptions('aggregator');
-  await screen.getByLabelText('Label').fill('Work key');
-  await screen.getByLabelText('Secret').fill('sk-supersecret');
-  await screen.getByRole('button', { name: 'Connect' }).click();
-
-  await expect.element(screen.getByText('openai · aggregator')).toBeVisible();
-});
-
-test('removing an account deletes its row', async () => {
-  installFakeBridge({ accounts: seeded });
-
-  const screen = await renderProviders();
-
-  await screen.getByRole('button', { name: 'Remove Claude Max' }).click();
-
-  await expect.element(screen.getByText('Claude Max')).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Work key')).not.toBeInTheDocument();
 });
 
 test('a storage-failed remove surfaces as a visible error', async () => {
-  installFakeBridge({
-    accounts: seeded,
+  const screen = await renderProviders('api-key', {
+    accounts: keys,
     overrides: {
       'accounts:remove': async () =>
         Promise.resolve({
@@ -126,33 +124,16 @@ test('a storage-failed remove surfaces as a visible error', async () => {
     },
   });
 
-  const screen = await renderProviders();
-
-  await screen.getByRole('button', { name: 'Remove Claude Max' }).click();
+  await screen.getByRole('button', { name: 'Remove Work key' }).click();
 
   await expect
     .element(screen.getByRole('alert'))
     .toHaveTextContent('Could not write the accounts file');
 });
 
-test('a vault-unavailable failure surfaces as a visible error', async () => {
-  installFakeBridge({
-    accounts: seeded,
-    overrides: {
-      'accounts:connect': async () =>
-        Promise.resolve({
-          ok: false,
-          error: { code: 'vault-unavailable', message: 'OS secret encryption is unavailable' },
-        }),
-    },
-  });
+test('the local runtimes destination says its surface follows and offers nothing to connect', async () => {
+  const screen = await renderProviders('local');
 
-  const screen = await renderProviders();
-
-  await screen.getByLabelText('Provider').fill('openai');
-  await screen.getByLabelText('Label').fill('Work key');
-  await screen.getByLabelText('Secret').fill('sk-x');
-  await screen.getByRole('button', { name: 'Connect' }).click();
-
-  await expect.element(screen.getByRole('alert')).toBeVisible();
+  await expect.element(screen.getByText(/A local runtime/)).toBeVisible();
+  await expect.poll(() => screen.getByRole('button').elements()).toEqual([]);
 });

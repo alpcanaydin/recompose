@@ -1,9 +1,8 @@
-import type { AccountsDocument } from '@recompose/contracts';
+import type { AccountKind, AccountsDocument } from '@recompose/contracts';
 
 import { accountKindSchema } from '@recompose/contracts';
 
-/** One of the three ways an account can be held, as the accounts document stores it. */
-export type AccountKind = AccountsDocument['accounts'][number]['kind'];
+export type { AccountKind };
 
 type StoredAccounts = AccountsDocument['accounts'];
 
@@ -11,18 +10,17 @@ const titles: Record<AccountKind, string> = {
   subscription: 'Subscriptions',
   'api-key': 'API Keys',
   aggregator: 'Aggregators',
+  local: 'Local Runtimes',
 };
 
 /**
- * Every kind an account can be stored as, in the order they are offered.
+ * Every kind an account can be held as, in the order they are offered.
  *
  * @summary The contract is the one authority on which kinds exist, so the list reads from the
- * schema rather than repeating it and drifting from it. The vocabulary knows `local` before any
- * local provider connects, and the document refuses to store one, so it browses to nothing yet.
+ * schema rather than repeating it and drifting from it. `local` browses to a destination that
+ * holds nothing yet, because the document refuses to store a local row.
  */
-export const accountKinds: readonly AccountKind[] = accountKindSchema.options.filter(
-  (kind) => kind !== 'local',
-);
+export const accountKinds: readonly AccountKind[] = accountKindSchema.options;
 
 /** The kind a search parameter asks for, or nothing when it names no kind on offer. */
 export function offeredAccountKind(asked: unknown): AccountKind | undefined {

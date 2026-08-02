@@ -16,12 +16,14 @@ const glyph: Record<AccountKind, IconName> = {
   subscription: 'person',
   'api-key': 'key',
   aggregator: 'cube',
+  local: 'spark',
 };
 
 const tint: Record<AccountKind, string> = {
   subscription: 'text-subscription',
   'api-key': 'text-api-key',
   aggregator: 'text-aggregator',
+  local: 'text-ink-secondary',
 };
 
 type ProviderKindRowProps = {
