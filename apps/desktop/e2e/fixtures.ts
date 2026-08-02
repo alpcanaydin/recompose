@@ -7,7 +7,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createBdd, test as base } from 'playwright-bdd';
 
+import type { SubscriptionTools } from './subscription-tools';
+
 import { dropServer, holdPort, LOOPBACK_HOSTS } from './loopback-ports';
+import { fakeSubscriptionTools } from './subscription-tools';
 
 const appRoot = join(__dirname, '..');
 
@@ -29,6 +32,7 @@ type ElectronFixtures = {
   electronApp: ElectronApplication;
   page: Page;
   portSquatter: PortSquatter;
+  subscriptionTools: SubscriptionTools;
 };
 
 async function takePort(held: Map<number, Server[]>, port: number): Promise<void> {
@@ -79,19 +83,28 @@ async function restoreLoginItem(
 }
 
 export const test = base.extend<ElectronFixtures>({
-  electronApp: async ({}, use, testInfo) => {
+  subscriptionTools: async ({}, use) => {
+    const tools = await fakeSubscriptionTools();
+
+    try {
+      await use(tools);
+    } finally {
+      await tools.dispose();
+    }
+  },
+  electronApp: async ({ subscriptionTools }, use, testInfo) => {
     const userDataDir = join(homedir(), `.recompose-e2e-w${String(testInfo.parallelIndex)}`);
 
     await rm(userDataDir, { force: true, recursive: true });
     await mkdir(userDataDir, { recursive: true });
     const app = await electron.launch({
       args: [appRoot],
-      env: {
+      env: subscriptionTools.env({
         ...inheritedEnv(),
         NODE_ENV: 'production',
         ELECTRON_RENDERER_URL: '',
         RECOMPOSE_USER_DATA_DIR: userDataDir,
-      },
+      }),
     });
 
     app.process().stderr?.on('data', (chunk: Buffer) => {
