@@ -73,7 +73,7 @@ export const CountsHoldTheTrailingLine = meta.story({
   parameters: { bridge: { accounts: stored(['api-key', 'api-key', 'subscription']) } },
   play: async ({ canvas, canvasElement }) => {
     const row = await canvas.findByRole('link', { name: 'API Keys, 2 connected' });
-    const surface = canvasElement.firstElementChild;
+    const surface = canvasElement.querySelector('aside');
 
     for (const kind of ['Subscriptions, 1 connected', 'Local Runtimes, 0 connected']) {
       const other = await canvas.findByRole('link', { name: kind });
