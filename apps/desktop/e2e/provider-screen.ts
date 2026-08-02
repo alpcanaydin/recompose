@@ -29,7 +29,6 @@ export function planCard(page: Page, provider: string): Locator {
   });
 }
 
-/** The card one provider's key endpoint stands as on the keys catalog. */
 function keyCard(page: Page, provider: string): Locator {
   return catalog(page).getByRole('button', {
     name: new RegExp(`^${keyTitles[offeredId(provider)]}`, 'u'),

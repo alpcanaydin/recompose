@@ -19,7 +19,7 @@ type ToolbarStripProps = {
   status: GatewayEngineState['status'];
 };
 
-/** The strip itself, holding the run control, the address, and the four the reference draws. */
+/** The strip itself, holding the run control, the address, and the four controls the reference draws. */
 export function ToolbarStrip({ address, name, onRun, port, running, status }: ToolbarStripProps) {
   const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
 

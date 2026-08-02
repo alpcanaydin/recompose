@@ -19,7 +19,7 @@ export function ToolbarFooter({ attempt, failure, onMoveToFreePort, refusal }: T
   if (refusal !== undefined) {
     return (
       <div className="app-no-drag px-4 pb-2">
-        <p className="text-caption text-danger-ink" role="alert">
+        <p className="text-caption text-danger-ink" key={attempt} role="alert">
           {refusal}
         </p>
       </div>
