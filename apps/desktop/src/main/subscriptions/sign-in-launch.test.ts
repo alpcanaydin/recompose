@@ -56,7 +56,7 @@ describe('handing the sign-in to a terminal on macOS', () => {
     expect(spawned.calls).toEqual([{ binary: 'open', argv: [script?.path] }]);
   });
 
-  test('the window closes itself once the tool finishes, instead of standing spent', async () => {
+  test('the window closes itself once the tool finishes, found by its tty, not its title', async () => {
     spawned.calls.length = 0;
     written.files.length = 0;
 
@@ -65,7 +65,10 @@ describe('handing the sign-in to a terminal on macOS', () => {
     const content = written.files[0]?.content ?? '';
 
     expect(content).toContain('rm -f "$0"');
-    expect(content).toContain('close (every window whose name contains "recompose sign-in")');
+    expect(content).toContain('SIGNIN_TTY="$(tty)"');
+    expect(content).toContain(
+      'if (tty of tabs of w) contains \\"$SIGNIN_TTY\\" then close w saving no',
+    );
   });
 
   test('an override launcher takes the command whole, so end-to-end runs open no terminal', async () => {
