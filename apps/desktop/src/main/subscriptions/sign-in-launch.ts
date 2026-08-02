@@ -1,6 +1,12 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { chmod, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 export type SignInLaunch = (command: string) => Promise<void>;
+
+const WINDOW_MARK = 'recompose sign-in';
 
 const linuxTerminals = ['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xterm'];
 
@@ -16,18 +22,30 @@ async function detached(binary: string, argv: readonly string[]): Promise<void> 
   });
 }
 
-function appleScriptFor(command: string): string {
-  const quoted = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-
+function signInScript(command: string): string {
   return [
-    'tell application "Terminal"',
-    `set signInTab to do script "${quoted}"`,
-    'repeat while busy of signInTab',
-    'delay 0.5',
-    'end repeat',
-    'close (first window whose tabs contains signInTab) saving no',
-    'end tell',
+    '#!/bin/zsh',
+    `printf '\\033]0;${WINDOW_MARK}\\007'`,
+    'clear',
+    command,
+    'rm -f "$0"',
+    'if [ "$TERM_PROGRAM" = "Apple_Terminal" ]; then',
+    `  osascript -e 'tell application "Terminal" to close (every window whose name contains "${WINDOW_MARK}") saving no' > /dev/null 2>&1 &`,
+    'fi',
+    '',
   ].join('\n');
+}
+
+/**
+ * LaunchServices decides which terminal opens a .command file, which is the one place macOS
+ * lets a person choose their terminal, and `open` brings that terminal to the front.
+ */
+async function openTheMacTerminal(command: string): Promise<void> {
+  const script = join(tmpdir(), `recompose-sign-in-${randomUUID()}.command`);
+
+  await writeFile(script, signInScript(command), { mode: 0o700 });
+  await chmod(script, 0o700);
+  await detached('open', [script]);
 }
 
 async function openALinuxTerminal(command: string): Promise<void> {
@@ -56,7 +74,7 @@ export function terminalSignInLaunch(
     }
 
     if (platform === 'darwin') {
-      await detached('osascript', ['-e', appleScriptFor(command)]);
+      await openTheMacTerminal(command);
 
       return;
     }
