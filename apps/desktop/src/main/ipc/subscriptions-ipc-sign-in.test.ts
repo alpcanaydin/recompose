@@ -150,6 +150,25 @@ describe('signing in on macOS, where the tool keeps its credential in the keycha
 
     expect(world.keychain.blobAt(VENDOR_SERVICE, osUser)).toBe('someone-elses-login');
   });
+
+  test('given a sign-in that breaks partway, the credential that was there is put back', async () => {
+    await world.toolInstalled('claude');
+    world.keychain.put(VENDOR_SERVICE, osUser, 'someone-elses-login');
+    const handlers = createSubscriptionsIpcHandlers({
+      ...world.contextOn('darwin', world.nothingHappens),
+      clock: () => ({
+        elapsed: () => 0,
+        sleep: async () => {
+          await Promise.reject(new Error('the machine stopped answering'));
+        },
+      }),
+    });
+
+    const answered = await handlers['subscriptions:sign-in']({ provider: 'anthropic' });
+
+    expect(answered.ok).toBe(false);
+    expect(world.keychain.blobAt(VENDOR_SERVICE, osUser)).toBe('someone-elses-login');
+  });
 });
 
 describe('bringing a lapsed account back', () => {

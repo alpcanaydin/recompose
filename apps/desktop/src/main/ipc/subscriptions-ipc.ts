@@ -2,46 +2,38 @@ import type {
   AccountsDocument,
   IpcRequest,
   SubscriptionAccount,
-  SubscriptionAccountView,
   SubscriptionProviderId,
 } from '@recompose/contracts';
 
 import { subscriptionProviders } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
-import type { CredentialCustody, CustodyOutcome } from '../subscriptions/credential-custody';
-import type { SignInLaunch } from '../subscriptions/sign-in-launch';
-import type { SubscriptionHomes } from '../subscriptions/subscription-homes';
-import type { Clock } from '../subscriptions/subscription-sign-in';
+import type { CredentialCustody } from '../subscriptions/credential-custody';
 import type { SubscriptionObservation } from '../subscriptions/subscription-standing';
 import type { IpcHandlers } from './dispatch';
+import type { Answered, SubscriptionsIpcContext, Workshop } from './subscriptions-workshop';
 
-import { loadAccountsFile, saveAccountsFile } from '../storage/accounts-store';
+import { saveAccountsFile } from '../storage/accounts-store';
 import { oneAtATime } from '../storage/one-at-a-time';
 import { custodyOver, RESERVED_SLOT } from '../subscriptions/credential-custody';
 import { signInCommandFor } from '../subscriptions/subscription-commands';
 import { subscriptionHomes } from '../subscriptions/subscription-homes';
 import { awaitSignIn } from '../subscriptions/subscription-sign-in';
 import { observeSubscription } from '../subscriptions/subscription-standing';
-import { isSubscription, subscriptionViews } from '../subscriptions/subscription-views';
+import { isSubscription } from '../subscriptions/subscription-views';
 import { reportTools } from '../subscriptions/tool-presence';
 import { storagePathsFor } from './storage-context';
 import { ipcFailure, storageFailure } from './storage-envelope';
+import {
+  parkUnder,
+  putBack,
+  readAccounts,
+  refusalFailure,
+  toolPresent,
+  viewsOf,
+} from './subscriptions-workshop';
 
-export type SubscriptionsIpcContext = {
-  userDataPath: string;
-  /** The home directory this process runs under, so no account name reaches the screen. */
-  homeFolder: string;
-  platform: NodeJS.Platform;
-  /** Only macOS keeps the Claude Code credential outside the config home, so elsewhere this is absent. */
-  custody: CredentialCustody | null;
-  searchPath: () => Promise<string>;
-  launch: SignInLaunch;
-  clock: () => Clock;
-  signInBoundMs: number;
-  signInEveryMs: number;
-  onCorrupt: (quarantinedPath: string) => void;
-};
+export type { SubscriptionsIpcContext };
 
 export type SubscriptionsIpcHandlers = Pick<
   IpcHandlers,
@@ -51,43 +43,6 @@ export type SubscriptionsIpcHandlers = Pick<
   | 'subscriptions:restore'
   | 'subscriptions:activate'
 >;
-
-type Answered = { ok: true; value: SubscriptionAccountView[] } | ReturnType<typeof ipcFailure>;
-
-type Workshop = {
-  ctx: SubscriptionsIpcContext;
-  homes: SubscriptionHomes;
-  accountsFile: string;
-};
-
-function refusalFailure(outcome: CustodyOutcome & { ok: false }) {
-  return ipcFailure(outcome.code, outcome.message);
-}
-
-async function readAccounts(shop: Workshop): Promise<AccountsDocument> {
-  return loadAccountsFile(shop.accountsFile, shop.ctx.onCorrupt);
-}
-
-async function viewsOf(
-  shop: Workshop,
-  accounts: AccountsDocument,
-): Promise<SubscriptionAccountView[]> {
-  return subscriptionViews({ homes: shop.homes, custody: shop.ctx.custody }, accounts);
-}
-
-async function toolPresent(shop: Workshop, provider: SubscriptionProviderId): Promise<boolean> {
-  const tools = await reportTools({
-    homes: shop.homes,
-    searchPath: await shop.ctx.searchPath(),
-    platform: shop.ctx.platform,
-  });
-
-  return tools.find((tool) => tool.provider === provider)?.present === true;
-}
-
-async function parkUnder(custody: CredentialCustody | null, slot: string): Promise<CustodyOutcome> {
-  return custody === null ? { ok: true } : custody.park(slot);
-}
 
 async function makeRoomForTheSignIn(
   custody: CredentialCustody | null,
@@ -108,35 +63,45 @@ async function makeRoomForTheSignIn(
   return cleared.ok ? null : refusalFailure(cleared);
 }
 
+/**
+ * Runs the provider's tool and hands back what it left behind.
+ *
+ * @summary The vendor slot stands empty from here until the tool fills it, so anything short of a
+ * finished sign-in, a timeout as much as a broken run, has to put the parked credential back.
+ */
 async function runTheTool(
   shop: Workshop,
   provider: SubscriptionProviderId,
   custody: CredentialCustody | null,
   previous: string,
 ): Promise<SubscriptionObservation | null> {
-  const home = await shop.homes.resetPending(provider);
+  let landed: SubscriptionObservation | null = null;
 
-  await shop.ctx
-    .launch(signInCommandFor({ provider, home, platform: shop.ctx.platform }))
-    .catch(() => undefined);
+  try {
+    const home = await shop.homes.resetPending(provider);
 
-  const observed = await awaitSignIn({
-    observe: async () =>
-      observeSubscription({
-        provider,
-        home,
-        outsideCredential: custody === null ? null : async () => custody.vendorStands(),
-      }),
-    clock: shop.ctx.clock(),
-    boundMs: shop.ctx.signInBoundMs,
-    everyMs: shop.ctx.signInEveryMs,
-  });
+    await shop.ctx
+      .launch(signInCommandFor({ provider, home, platform: shop.ctx.platform }))
+      .catch(() => undefined);
 
-  if (observed === null && custody !== null) {
-    await custody.place(previous);
+    landed = await awaitSignIn({
+      observe: async () =>
+        observeSubscription({
+          provider,
+          home,
+          outsideCredential: custody === null ? null : async () => custody.vendorStands(),
+        }),
+      clock: shop.ctx.clock(),
+      boundMs: shop.ctx.signInBoundMs,
+      everyMs: shop.ctx.signInEveryMs,
+    });
+
+    return landed;
+  } finally {
+    if (landed === null) {
+      await putBack(custody, previous);
+    }
   }
-
-  return observed;
 }
 
 async function keepTheAccount(shop: Workshop, row: SubscriptionAccount): Promise<AccountsDocument> {
