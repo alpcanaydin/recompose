@@ -8,6 +8,7 @@ import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { SubscriptionHomes } from '../subscriptions/subscription-homes';
 import type { StorageIpcContext } from './storage-context';
 
+import { loadAccountsFile } from '../storage/accounts-store';
 import { loadVaultFile } from '../storage/vault';
 import { subscriptionHomes } from '../subscriptions/subscription-homes';
 import { subscriptionRelease } from '../subscriptions/subscription-release';
@@ -58,15 +59,18 @@ async function withHomes(
   rows: readonly SubscriptionAccount[],
 ): Promise<SubscriptionHomes> {
   const homes = homesUnder(ctx.userDataPath);
+  const accountsFile = join(ctx.userDataPath, 'accounts.json');
 
   for (const row of rows) {
     await homes.resetPending(row.provider);
     await homes.promotePending(row.provider, row.id);
   }
 
+  const held = await loadAccountsFile(accountsFile, () => undefined);
+
   await writeFile(
-    join(ctx.userDataPath, 'accounts.json'),
-    JSON.stringify({ schemaVersion: ACCOUNTS_VERSION, accounts: rows }),
+    accountsFile,
+    JSON.stringify({ schemaVersion: ACCOUNTS_VERSION, accounts: [...held.accounts, ...rows] }),
     'utf8',
   );
 
