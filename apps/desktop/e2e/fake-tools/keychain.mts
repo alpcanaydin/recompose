@@ -94,7 +94,7 @@ const store = process.env['RECOMPOSE_FAKE_KEYCHAIN_DIR'];
 
 if (store === undefined || store === '') {
   process.stderr.write('the fake security needs RECOMPOSE_FAKE_KEYCHAIN_DIR\n');
-  process.exit(UNKNOWN_REQUEST);
+  process.exitCode = UNKNOWN_REQUEST;
+} else {
+  process.exitCode = await answer(store, readRequest(process.argv.slice(2)));
 }
-
-process.exit(await answer(store, readRequest(process.argv.slice(2))));

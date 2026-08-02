@@ -49,7 +49,11 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
-          include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mts'],
+          include: [
+            'src/**/*.test.{ts,tsx}',
+            'scripts/**/*.test.mts',
+            'e2e/fake-tools/**/*.test.mts',
+          ],
           exclude: [...defaultExclude, '**/*.browser.test.*'],
         },
       },
