@@ -75,7 +75,8 @@ function CatalogList({ search, onSearchChange, way, onWayChange, onPick }: Catal
  * @summary Reach for it from the Add provider control. The list narrows by search and by chip,
  * and picking a provider trades the list for that provider's ways rather than opening a second
  * surface on top of this one. A finished connect closes the catalog, because the account it made
- * is on the screen behind.
+ * is on the screen behind, and a closed catalog forgets what narrowed it, so the next open stands
+ * on the whole list.
  */
 export function ProviderCatalogDrawer({ open, onOpenChange }: ProviderCatalogDrawerProps) {
   const [search, setSearch] = useState('');
@@ -84,6 +85,8 @@ export function ProviderCatalogDrawer({ open, onOpenChange }: ProviderCatalogDra
 
   const settle = (next: boolean) => {
     setPicked(undefined);
+    setSearch('');
+    setWay(undefined);
     onOpenChange(next);
   };
 

@@ -23,6 +23,14 @@ function Catalog() {
   return (
     <>
       <p>{open ? 'The screen behind stands.' : 'The catalog closed.'}</p>
+      <button
+        onClick={() => {
+          setOpen(true);
+        }}
+        type="button"
+      >
+        Add provider again
+      </button>
       <ProviderCatalogDrawer onOpenChange={setOpen} open={open} />
     </>
   );
@@ -125,6 +133,31 @@ test('a provider picked by mistake hands the catalog back', async () => {
 
   await press('Anthropic');
   await press('All providers');
+
+  await expect.element(screen.getByRole('button', { name: 'OpenRouter' })).toBeVisible();
+});
+
+test('a catalog opened again stands on the whole list, not on the last search', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog();
+
+  await screen.getByRole('textbox', { name: 'Search providers' }).fill('rout');
+  await press('Close');
+  await press('Add provider again');
+
+  await expect.element(screen.getByRole('textbox', { name: 'Search providers' })).toHaveValue('');
+  await expect.element(screen.getByRole('button', { name: 'Anthropic' })).toBeVisible();
+});
+
+test('a catalog opened again stands on the whole list, not on the last chip', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog();
+
+  await press('Subscriptions');
+  await press('Close');
+  await press('Add provider again');
 
   await expect.element(screen.getByRole('button', { name: 'OpenRouter' })).toBeVisible();
 });
