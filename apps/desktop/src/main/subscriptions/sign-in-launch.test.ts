@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 
 import { terminalSignInLaunch } from './sign-in-launch';
 
-type SpawnCall = { binary: string; argv: string[] };
+type SpawnCall = { binary: string; argv: string[]; env?: Record<string, string> };
 
 type WrittenFile = { path: string; content: string };
 
@@ -19,8 +19,12 @@ const written = vi.hoisted(() => {
 });
 
 vi.mock('node:child_process', () => ({
-  spawn: (binary: string, argv: string[]) => {
-    spawned.calls.push({ binary, argv });
+  spawn: (binary: string, argv: string[], options?: { env?: Record<string, string> }) => {
+    spawned.calls.push({
+      binary,
+      argv,
+      ...(options?.env === undefined ? {} : { env: options.env }),
+    });
 
     return {
       unref: () => undefined,
@@ -83,21 +87,37 @@ describe('handing the sign-in to a terminal on macOS', () => {
 });
 
 describe('handing the sign-in to an override launcher on Windows', () => {
+  const composite = '$env:CLAUDE_CONFIG_DIR="C:\\a b\\pending"; claude login';
+
   test('a .cmd override runs through cmd.exe, because Node will not spawn a batch file itself', async () => {
     spawned.calls.length = 0;
 
-    await terminalSignInLaunch('win32', 'C:\\fakes\\sign-in-launcher.cmd')('claude login');
+    await terminalSignInLaunch('win32', 'C:\\fakes\\sign-in-launcher.cmd')(composite);
 
-    expect(spawned.calls).toEqual([
-      { binary: 'cmd.exe', argv: ['/c', 'C:\\fakes\\sign-in-launcher.cmd', 'claude login'] },
-    ]);
+    const call = spawned.calls[0];
+
+    expect(call?.binary).toBe('cmd.exe');
+    expect(call?.argv).toEqual(['/c', 'C:\\fakes\\sign-in-launcher.cmd']);
   });
 
-  test('an .exe override still runs directly, because Node spawns an executable without a shell', async () => {
+  test('the command travels in the environment, so cmd.exe never has to quote it', async () => {
     spawned.calls.length = 0;
 
-    await terminalSignInLaunch('win32', 'C:\\fakes\\launcher.exe')('claude login');
+    await terminalSignInLaunch('win32', 'C:\\fakes\\sign-in-launcher.cmd')(composite);
 
-    expect(spawned.calls).toEqual([{ binary: 'C:\\fakes\\launcher.exe', argv: ['claude login'] }]);
+    expect(spawned.calls[0]?.env?.['RECOMPOSE_SIGN_IN_COMMAND']).toBe(composite);
+    expect(spawned.calls[0]?.argv).not.toContain(composite);
+  });
+
+  test('an .exe override runs directly, still handed the command through the environment', async () => {
+    spawned.calls.length = 0;
+
+    await terminalSignInLaunch('win32', 'C:\\fakes\\launcher.exe')(composite);
+
+    const call = spawned.calls[0];
+
+    expect(call?.binary).toBe('C:\\fakes\\launcher.exe');
+    expect(call?.argv).toEqual([]);
+    expect(call?.env?.['RECOMPOSE_SIGN_IN_COMMAND']).toBe(composite);
   });
 });

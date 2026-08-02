@@ -10,9 +10,17 @@ const WINDOW_MARK = 'recompose sign-in';
 
 const linuxTerminals = ['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xterm'];
 
-async function detached(binary: string, argv: readonly string[]): Promise<void> {
+async function detached(
+  binary: string,
+  argv: readonly string[],
+  env?: Record<string, string>,
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(binary, [...argv], { detached: true, stdio: 'ignore' });
+    const child = spawn(binary, [...argv], {
+      detached: true,
+      stdio: 'ignore',
+      ...(env === undefined ? {} : { env: { ...process.env, ...env } }),
+    });
 
     child.once('error', reject);
     child.once('spawn', () => {
@@ -74,8 +82,12 @@ async function runOverride(
   launcher: string,
   command: string,
 ): Promise<void> {
-  if (platform === 'win32' && /\.(?:cmd|bat)$/iu.test(launcher)) {
-    await detached('cmd.exe', ['/c', launcher, command]);
+  if (platform === 'win32') {
+    const batch = /\.(?:cmd|bat)$/iu.test(launcher);
+
+    await detached(batch ? 'cmd.exe' : launcher, batch ? ['/c', launcher] : [], {
+      RECOMPOSE_SIGN_IN_COMMAND: command,
+    });
 
     return;
   }

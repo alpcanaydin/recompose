@@ -8,10 +8,11 @@ function shellFor(command: string): { binary: string; argv: string[] } {
     : { binary: 'sh', argv: ['-c', command] };
 }
 
-const command = process.argv[2];
+const command =
+  process.platform === 'win32' ? process.env['RECOMPOSE_SIGN_IN_COMMAND'] : process.argv[2];
 
 if (command === undefined || command === '') {
-  process.stderr.write('the fake terminal needs the sign-in command as its only argument\n');
+  process.stderr.write('the fake terminal needs the sign-in command\n');
   process.exit(MISSING_COMMAND);
 }
 
