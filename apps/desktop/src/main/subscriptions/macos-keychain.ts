@@ -14,14 +14,21 @@ function exitStatus(cause: unknown): number | null {
   return typeof cause.code === 'number' ? cause.code : null;
 }
 
-function refuseOrRethrow(cause: unknown, operation: string): never {
+/**
+ * Names the failed operation without ever repeating what was handed to the tool.
+ *
+ * @summary Node builds a failed child process's message out of the whole argument vector, and a
+ * write hands the credential over as an argument, so rethrowing the cause would carry the blob
+ * into a refusal the renderer reads aloud.
+ */
+function refuse(cause: unknown, operation: string): never {
   const status = exitStatus(cause);
 
   if (status === USER_CANCELED || status === AUTHORIZATION_DENIED) {
     throw new KeychainDenied(`the keychain prompt was denied while recompose ran ${operation}`);
   }
 
-  throw cause;
+  throw new Error(`the keychain refused ${operation}, exit ${status ?? 'unknown'}`);
 }
 
 async function itemStands(command: string, item: KeychainItem): Promise<boolean> {
@@ -38,7 +45,7 @@ async function itemStands(command: string, item: KeychainItem): Promise<boolean>
       return false;
     }
 
-    return refuseOrRethrow(cause, 'find-generic-password');
+    return refuse(cause, 'find-generic-password');
   }
 }
 
@@ -60,7 +67,7 @@ export function securityKeychain(command: string): KeychainSeam {
           return null;
         }
 
-        return refuseOrRethrow(cause, 'find-generic-password');
+        return refuse(cause, 'find-generic-password');
       }
     },
 
@@ -72,7 +79,7 @@ export function securityKeychain(command: string): KeychainSeam {
           WAITS_FOR_THE_PERSON,
         );
       } catch (cause) {
-        refuseOrRethrow(cause, 'add-generic-password');
+        refuse(cause, 'add-generic-password');
       }
     },
 
@@ -88,7 +95,7 @@ export function securityKeychain(command: string): KeychainSeam {
           return;
         }
 
-        refuseOrRethrow(cause, 'delete-generic-password');
+        refuse(cause, 'delete-generic-password');
       }
     },
   };
