@@ -30,6 +30,22 @@ export type CatalogNarrowing = {
   way?: ConnectionWay | undefined;
 };
 
+const providerNames = {
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  openrouter: 'OpenRouter',
+} as const satisfies Record<BrandMarkName, string>;
+
+/**
+ * The name a provider goes by on screen.
+ *
+ * @summary Reach for it where a provider is read without a catalog row beside it, so a stored
+ * account and the catalog it came from never disagree about what the provider is called.
+ */
+export function providerName(id: BrandMarkName): string {
+  return providerNames[id];
+}
+
 /**
  * Every provider the catalog offers, with the ways each one connects.
  *
@@ -38,9 +54,9 @@ export type CatalogNarrowing = {
  * between them rather than being handed one.
  */
 export const catalogEntries: readonly CatalogEntry[] = [
-  { id: 'anthropic', name: 'Anthropic', ways: ['subscription', 'api-key'] },
-  { id: 'openai', name: 'OpenAI', ways: ['subscription', 'api-key'] },
-  { id: 'openrouter', name: 'OpenRouter', ways: ['aggregator'] },
+  { id: 'anthropic', name: providerNames.anthropic, ways: ['subscription', 'api-key'] },
+  { id: 'openai', name: providerNames.openai, ways: ['subscription', 'api-key'] },
+  { id: 'openrouter', name: providerNames.openrouter, ways: ['aggregator'] },
 ];
 
 const groupOrder: readonly ConnectionWay[] = ['subscription', 'api-key', 'aggregator'];

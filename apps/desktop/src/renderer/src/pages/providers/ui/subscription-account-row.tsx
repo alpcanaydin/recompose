@@ -10,6 +10,7 @@ import {
   useRestoreSubscription,
 } from '../../../shared/api';
 import { Badge, BrandMark, OverflowMenu, StatusChip } from '../../../shared/ui';
+import { providerName } from '../model/provider-catalog';
 
 type SubscriptionAccountRowProps = {
   /** The account as the machine last observed it, standing for one row. */
@@ -60,12 +61,10 @@ function AccountIdentity({ view, refusal }: AccountIdentityProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       <span className="flex items-center gap-1.5">
-        <span className="text-body text-ink">{view.label}</span>
+        <span className="text-body text-ink">{providerName(view.provider)}</span>
         {view.plan === undefined ? null : <Badge>{view.plan}</Badge>}
       </span>
-      {view.signedInAs === undefined ? null : (
-        <span className="text-caption text-ink-secondary">{view.signedInAs}</span>
-      )}
+      <span className="text-caption text-ink-secondary">{view.signedInAs ?? view.label}</span>
       <span className="text-caption text-ink-secondary">
         {`Serves ${subscriptionProviders[view.provider].toolName} from this account's quota.`}
       </span>

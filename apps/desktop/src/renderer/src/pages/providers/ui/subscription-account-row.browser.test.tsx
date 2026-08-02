@@ -83,6 +83,13 @@ test('a connected account carries its provider, its plan, and the address it sig
   await expect.element(screen.getByText('dev@example.com')).toBeVisible();
 });
 
+test('an account stored under its address still names the provider, and says the address once', async () => {
+  const screen = await renderRow({ ...connected, label: 'dev@example.com' });
+
+  await expect.element(screen.getByText('Anthropic', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('dev@example.com')).toBeVisible();
+});
+
 test('the row states the account serves the provider tool rather than any gateway', async () => {
   const screen = await renderRow(connected);
 
