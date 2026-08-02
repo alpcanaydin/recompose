@@ -90,7 +90,7 @@ test('a way nothing is left under drops its heading rather than standing empty',
 });
 
 test('searching keeps the providers whose name carries the text, whatever its case', () => {
-  expect(narrowedCatalog(catalogEntries, { search: 'ANTHRO' })).toEqual([offered('anthropic')]);
+  expect(narrowedCatalog(catalogEntries, { search: 'ROUTER' })).toEqual([offered('openrouter')]);
 });
 
 test('searching on nothing but blanks keeps every provider rather than none', () => {

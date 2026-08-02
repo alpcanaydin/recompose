@@ -38,7 +38,7 @@ export const Open = meta.story({
 /**
  * The catalog narrowed to keys, where the providers that lead with a plan gather anyway.
  *
- * @summary Anthropic leads with its subscription, so an unnarrowed catalog files it there. Asking
+ * @summary Anthropic leads with its subscription, so the whole catalog files it there. Asking
  * for keys has to gather it under keys rather than leave a heading a person asked for empty.
  */
 export const NarrowedToKeys = meta.story({
