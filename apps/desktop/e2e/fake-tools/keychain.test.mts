@@ -8,7 +8,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 const fake = fileURLToPath(new URL('./keychain.mts', import.meta.url));
 const item = ['-s', 'recompose-parked-credentials', '-a', 'acc-one'];
-const A_LONG_BLOB = 'x'.repeat(300_000);
+const PIPE_HOLDS = 65_536;
+// Linux caps a single argument at 32 pages, so the blob has to stay under 131_072 bytes.
+const A_LONG_BLOB = 'x'.repeat(PIPE_HOLDS + PIPE_HOLDS / 2);
 
 let store: string;
 
