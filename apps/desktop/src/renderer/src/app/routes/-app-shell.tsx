@@ -80,9 +80,11 @@ type AppToolbarProps = {
  * it to supply. While the sidebar stands that region paints nothing, because the sidebar's own
  * band holds the control that puts it away and a bar reporting nothing reads as a mistake. Once
  * the sidebar has gone the region takes the toolbar's surface and hairline and carries the
- * control, which is then the only thing left to press. It stays out of the flow either way, over
- * the inset every page already leaves at its top, so nothing shifts when the sidebar goes and
- * scrolled content passes under a bar rather than under a floating control.
+ * control, which is then the only thing left to press. It stands as tall as that band and no
+ * taller, so the control lands where the sidebar held it rather than dropping, and so the inset
+ * every page leaves to clear it costs the page nothing it does not owe. It stays out of the flow
+ * either way, so nothing shifts when the sidebar goes and scrolled content passes under a bar
+ * rather than under a floating control.
  */
 export function AppToolbar({ slug }: AppToolbarProps) {
   const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
@@ -90,7 +92,7 @@ export function AppToolbar({ slug }: AppToolbarProps) {
   if (slug === undefined) {
     return (
       <div
-        className={`app-drag absolute inset-x-0 top-0 z-10 flex h-toolbar items-center ps-window-controls-width ${away ? 'border-b border-line-subtle bg-surface-toolbar' : ''}`}
+        className={`app-drag absolute inset-x-0 top-0 z-10 flex h-window-controls items-center ps-window-controls-width ${away ? 'border-b border-line-subtle bg-surface-toolbar' : ''}`}
       >
         {away && (
           <span className="app-no-drag flex">

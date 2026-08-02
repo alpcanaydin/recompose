@@ -32,6 +32,8 @@ const meta = preview.meta({
  *
  * @summary The window hides its own title bar, so this region is the only place left to take
  * hold of it. It carries no surface and sits out of the flow, leaving the content its full box.
+ * It stands as tall as the sidebar's own band and no taller, because the band is what it stands
+ * in for and every pixel past it is emptiness the page below has to leave clear.
  */
 export const NoGatewaySelected = meta.story({
   play: async ({ canvasElement }) => {
@@ -49,7 +51,7 @@ export const NoGatewaySelected = meta.story({
 
     await expect(drawn.top).toBe(surface.top);
     await expect(drawn.width).toBe(surface.width);
-    await expect(drawn.height).toBe(54);
+    await expect(drawn.height).toBe(36);
   },
 });
 
