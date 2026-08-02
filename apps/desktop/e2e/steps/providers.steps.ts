@@ -1,30 +1,19 @@
 import { expect } from '@playwright/test';
 
 import { Given, Then, When } from '../fixtures';
-
-async function connectAccount(
-  page: import('@playwright/test').Page,
-  provider: string,
-  label: string,
-): Promise<void> {
-  await page.getByRole('textbox', { name: 'Provider' }).fill(provider);
-  await page.getByRole('combobox', { name: 'Kind' }).selectOption('api-key');
-  await page.getByRole('textbox', { name: 'Label' }).fill(label);
-  await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
-  await page.getByRole('button', { name: 'Connect' }).click();
-}
+import { connectKeyAccount } from '../provider-screen';
 
 When(
   'the maintainer connects an {string} api-key account labeled {string}',
   async ({ page }, provider: string, label: string) => {
-    await connectAccount(page, provider, label);
+    await connectKeyAccount(page, provider, label);
   },
 );
 
 Given(
   'a connected {string} api-key account labeled {string}',
   async ({ page }, provider: string, label: string) => {
-    await connectAccount(page, provider, label);
+    await connectKeyAccount(page, provider, label);
     await expect(
       page.getByRole('main').getByRole('listitem').filter({ hasText: label }),
     ).toBeVisible();

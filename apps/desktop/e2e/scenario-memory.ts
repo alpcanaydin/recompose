@@ -2,6 +2,8 @@ import type { Page } from '@playwright/test';
 
 const gatewaysInFocus = new WeakMap<Page, string>();
 
+const providersInFocus = new WeakMap<Page, string>();
+
 const portsAnotherProcessTook = new WeakMap<Page, number>();
 
 export function focusGateway(page: Page, name: string): void {
@@ -17,6 +19,21 @@ export function focusedGateway(page: Page): string {
   }
 
   return name;
+}
+
+export function focusProvider(page: Page, provider: string): void {
+  providersInFocus.set(page, provider);
+}
+
+/** The provider the scenario last picked out of the catalog, which its later steps talk about. */
+export function focusedProvider(page: Page): string {
+  const provider = providersInFocus.get(page);
+
+  if (provider === undefined) {
+    throw new Error('no step named the provider this scenario is about');
+  }
+
+  return provider;
 }
 
 export function rememberTakenPort(page: Page, port: number): void {

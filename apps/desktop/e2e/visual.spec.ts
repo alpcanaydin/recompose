@@ -3,6 +3,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { test } from './fixtures';
+import { connectKeyAccount } from './provider-screen';
 
 const captureWidth = 1024;
 const captureHeight = 660;
@@ -74,11 +75,7 @@ test('the providers screen matches its baseline with a connected account', async
 }) => {
   await pinLightScheme(electronApp);
   await openProviders(page);
-  await page.getByRole('textbox', { name: 'Provider' }).fill('anthropic');
-  await page.getByRole('combobox', { name: 'Kind' }).selectOption('api-key');
-  await page.getByRole('textbox', { name: 'Label' }).fill('Claude Max');
-  await page.getByRole('textbox', { name: 'Secret' }).fill('not-a-real-secret');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await connectKeyAccount(page, 'Anthropic', 'Claude Max');
   await expect(
     page.getByRole('main').getByRole('listitem').filter({ hasText: 'Claude Max' }),
   ).toBeVisible();

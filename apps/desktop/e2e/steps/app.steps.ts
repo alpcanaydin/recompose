@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { createBdd } from 'playwright-bdd';
 
 import { Given, inheritedEnv, test, Then, When } from '../fixtures';
+import { openSubscriptionsScreen } from '../provider-screen';
 
 const { After } = createBdd(test);
 
@@ -81,6 +82,10 @@ Given('the app is on the gateways screen', async ({ page }) => {
 Given('the app is on the providers screen', async ({ page }) => {
   await page.getByRole('link', { name: 'API Keys' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
+});
+
+Given('the app is on the subscriptions screen', async ({ page }) => {
+  await openSubscriptionsScreen(page);
 });
 
 Given('the app is on the settings screen', async ({ page }) => {
