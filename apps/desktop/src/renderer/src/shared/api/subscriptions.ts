@@ -20,11 +20,14 @@ export const subscriptionsQueryOptions = queryOptions({
  * What the machine reports about each provider's own command-line tool.
  *
  * @summary Only the main process can look at the machine, so presence, the sign-in command, and
- * the shell line all arrive as one observation rather than being guessed at on screen.
+ * the shell line all arrive as one observation rather than being guessed at on screen. A tool the
+ * maintainer installs while the app runs has to count, because the absent-tool surface says to
+ * install it and sign in from here, so every surface that shows the reading takes a fresh one.
  */
 export const subscriptionToolsQueryOptions = queryOptions({
   queryKey: ['subscription-tools'],
   queryFn: async () => unwrapIpcResult(await window.recompose['subscriptions:tools']()),
+  refetchOnMount: 'always',
 });
 
 /**

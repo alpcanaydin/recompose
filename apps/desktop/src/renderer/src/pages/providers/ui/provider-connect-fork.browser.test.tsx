@@ -7,6 +7,7 @@ import { render } from 'vitest-browser-react';
 
 import type { CatalogEntry } from '../model/provider-catalog';
 
+import { subscriptionToolsQueryOptions } from '../../../shared/api';
 import { installFakeBridge } from '../../../shared/testing';
 import { catalogEntries } from '../model/provider-catalog';
 import { ProviderConnectFork } from './provider-connect-fork';
@@ -44,11 +45,13 @@ function Fork({ entry }: { entry: CatalogEntry }) {
   );
 }
 
-async function renderFork(entry: CatalogEntry) {
-  const queryClient = new QueryClient({
+function newQueryClient() {
+  return new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+}
 
+async function renderFork(entry: CatalogEntry, queryClient = newQueryClient()) {
   return render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<p>Loading…</p>}>
@@ -74,6 +77,27 @@ test('a provider that connects two ways stands both of them together', async () 
     .toBeVisible();
   await expect
     .element(screen.getByRole('heading', { name: 'A target a gateway can reach' }))
+    .toBeVisible();
+});
+
+test('each way stands as a region named after what it yields', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderFork(offered('anthropic'));
+
+  await expect
+    .element(
+      screen
+        .getByRole('region', { name: 'A target a gateway can reach' })
+        .getByLabelText('Key', { exact: true }),
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      screen
+        .getByRole('region', { name: 'An account for Claude Code' })
+        .getByRole('button', { name: 'Sign in to Anthropic' }),
+    )
     .toBeVisible();
 });
 
@@ -114,6 +138,19 @@ test('a tool that is not installed names itself and leaves no sign-in to begin',
   await expect.element(screen.getByText(/Claude Code isn't installed/)).toBeVisible();
   await expect.element(screen.getByRole('button', { name: 'Sign in to Anthropic' })).toBeDisabled();
   expect(await heldSubscriptions()).toEqual([]);
+});
+
+test('a tool installed since the last look is signable-in as soon as the fork opens again', async () => {
+  installFakeBridge({ tools: [{ ...claudeCode, present: false }] });
+
+  const queryClient = newQueryClient();
+
+  await queryClient.fetchQuery(subscriptionToolsQueryOptions);
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderFork(offered('anthropic'), queryClient);
+
+  await expect.element(screen.getByRole('button', { name: 'Sign in to Anthropic' })).toBeEnabled();
 });
 
 test('a sign-in in flight names the tool it waits on and hands over the command it launched', async () => {
