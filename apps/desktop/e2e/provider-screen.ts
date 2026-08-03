@@ -8,7 +8,38 @@ const CATALOG = 'Add provider';
 
 const planTitles = { anthropic: 'Claude', openai: 'Codex' } as const;
 
-const keyTitles = { anthropic: 'Anthropic API', openai: 'OpenAI API' } as const;
+/** Every entry the key catalog offers, in the order a person reads them. */
+export const keyCatalogEntries = [
+  'Anthropic API',
+  'OpenAI API',
+  'Gemini API',
+  'Mistral',
+  'xAI Grok',
+  'DeepSeek',
+  'Moonshot AI',
+  'Qwen',
+  'Custom endpoint',
+] as const;
+
+/** The middle of every key a scenario pastes, which no part of the screen may ever print. */
+export const keyBody = 'not-a-real-key-';
+
+/** What a person typed into the two fields a picked entry asks for. */
+export type PastedKey = {
+  /** The catalog entry the key was picked under, which settles its provider. */
+  entry: string;
+  name: string;
+  pasted: string;
+};
+
+/** Where something stands, so a step can prove an order the roles alone cannot carry. */
+export type Placement = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  centerY: number;
+};
 
 export function catalog(page: Page): Locator {
   return page.getByRole('dialog', { name: CATALOG });
@@ -29,10 +60,9 @@ export function planCard(page: Page, provider: string): Locator {
   });
 }
 
-function keyCard(page: Page, provider: string): Locator {
-  return catalog(page).getByRole('button', {
-    name: new RegExp(`^${keyTitles[offeredId(provider)]}`, 'u'),
-  });
+/** The card one catalog entry stands as, named the way the catalog names it. */
+export function catalogEntry(page: Page, entry: string): Locator {
+  return catalog(page).getByRole('button', { name: new RegExp(`^${entry}`, 'u') });
 }
 
 /** Read from the document, because an open drawer hides the screen behind it from the roles. */
@@ -46,6 +76,24 @@ export function accountRows(page: Page): Locator {
 
 export function accountRow(page: Page, carrying: string): Locator {
   return accountRows(page).filter({ hasText: carrying });
+}
+
+export function nameField(page: Page): Locator {
+  return catalog(page).getByLabel('Name', { exact: true });
+}
+
+export function keyField(page: Page): Locator {
+  return catalog(page).getByLabel('Key', { exact: true });
+}
+
+/** The answer one row carries about its key, which stands only while the screen shows it. */
+export function keyVerdict(page: Page): Locator {
+  return accountRows(page).first().getByRole('status');
+}
+
+export async function openKeysScreen(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'API Keys' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
 }
 
 export async function openSubscriptionsScreen(page: Page): Promise<void> {
@@ -70,15 +118,62 @@ export async function openProviderWays(page: Page, provider: string): Promise<vo
   await expect(catalog(page).getByRole('button', { name: 'Back' })).toBeVisible();
 }
 
-/** Connects a key account from the keys screen, whose catalog holds the endpoint cards. */
-export async function connectKeyAccount(page: Page, provider: string): Promise<void> {
-  await page.getByRole('link', { name: 'API Keys' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
+/** Picks one key entry, which is the only route to the form that asks for a name and a key. */
+export async function pickKeyEntry(page: Page, entry: string): Promise<void> {
   await openCatalog(page);
-  await keyCard(page, provider).click();
-  await catalog(page).getByLabel('Key', { exact: true }).fill('not-a-real-secret');
+  await catalogEntry(page, entry).click();
+  await expect(keyField(page)).toBeVisible();
+}
+
+/** A key plainly nobody's, ending in the four characters a scenario expects the mask to read. */
+export function keyEndingIn(entry: string, tail: string): string {
+  const opening = entry === 'Anthropic API' ? 'sk-ant-api03-' : 'sk-';
+
+  return `${opening}${keyBody}${tail}`;
+}
+
+/** The key a step pastes where the scenario says only that a key stands connected. */
+export function keyAScenarioPastes(entry: string): string {
+  return keyEndingIn(entry, '7f2c');
+}
+
+export async function fillKeyForm(page: Page, key: PastedKey): Promise<void> {
+  await pickKeyEntry(page, key.entry);
+  await nameField(page).fill(key.name);
+  await keyField(page).fill(key.pasted);
+}
+
+export async function submitConnect(page: Page): Promise<void> {
   await catalog(page).getByRole('button', { name: 'Connect' }).click();
+}
+
+/** Hands over both fields and asks to connect, leaving the outcome for the scenario to read. */
+export async function connectKey(page: Page, key: PastedKey): Promise<void> {
+  await fillKeyForm(page, key);
+  await submitConnect(page);
+}
+
+/** Connects one key and waits for the catalog to hand the screen back. */
+export async function keyStandsConnected(page: Page, key: PastedKey): Promise<void> {
+  await connectKey(page, key);
   await expect(catalog(page)).toBeHidden();
+  await expect(accountRow(page, key.entry).filter({ hasText: key.name })).toBeVisible();
+}
+
+export async function placementOf(locator: Locator): Promise<Placement> {
+  const box = await locator.boundingBox();
+
+  if (box === null) {
+    throw new Error('the step asked where something stands that never reached the screen');
+  }
+
+  return {
+    left: box.x,
+    right: box.x + box.width,
+    top: box.y,
+    bottom: box.y + box.height,
+    centerY: box.y + box.height / 2,
+  };
 }
 
 export function toolBinaryFor(provider: string): string {
