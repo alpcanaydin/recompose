@@ -33,6 +33,7 @@ cyclonedx
 dagre
 dbus
 dedup
+DeepSeek
 depcruise
 değiştir
 diffable
@@ -56,8 +57,10 @@ frontmatter
 frontmost
 fuite
 Gebert
+Gemini
 gitdir
 glassmorphism
+Grok
 IDAT
 idempotently
 IHDR
@@ -76,6 +79,7 @@ libsecret
 libvips
 lifecycles
 lintable
+litellm
 lockfiles
 lossily
 McCabe
@@ -83,7 +87,9 @@ Mcpjson
 memlab
 Menlo
 Meridius
+Mistral
 Mobbin
+Moonshot
 negotiables
 nizos
 nofilter
@@ -92,6 +98,7 @@ noninteractive
 nsis
 Ollama
 Ollama's
+openclaw
 opencodex
 openrouter
 openspec
@@ -183,4 +190,5 @@ winstaller
 worktree
 worktrees
 WWDC
+xAI
 zizmor

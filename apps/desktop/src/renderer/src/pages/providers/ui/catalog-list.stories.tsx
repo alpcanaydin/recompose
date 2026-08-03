@@ -35,12 +35,22 @@ export const Subscriptions = meta.story({
   },
 });
 
-/** The keys grid, where each card reads as the endpoint the key is spent against. */
+/**
+ * The keys grid: the two first-party keys that connect today, then the seven that follow.
+ *
+ * @summary Each card reads as the endpoint the key is spent against, and a card the release cannot
+ * connect yet names what it waits on rather than hiding. The reading asks for the two live cards
+ * and one inert one, because a person has to tell them apart before pressing anything.
+ */
 export const Keys = meta.story({
   args: { kind: 'api-key' as const },
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('button', { name: /Anthropic API/ })).toBeVisible();
     await expect(await canvas.findByRole('button', { name: /OpenAI API/ })).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: /Gemini API/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   },
 });
 

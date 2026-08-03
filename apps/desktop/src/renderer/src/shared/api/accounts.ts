@@ -21,6 +21,21 @@ export function useConnectAccount() {
   });
 }
 
+async function verifyStoredKey(request: IpcRequest<'accounts:check-key'>) {
+  return unwrapIpcResult(await window.recompose['accounts:check-key'](request));
+}
+
+/**
+ * The question a person asks of one stored key, answered as of the moment it is asked.
+ *
+ * @summary Reach for it from a key's row. The answer invalidates nothing, because the act writes
+ * nothing: it lives in this mutation while the screen stands, and a remount forgets it rather
+ * than keeping a claim the provider can revoke without telling anyone.
+ */
+export function useCheckKey() {
+  return useMutation({ mutationFn: verifyStoredKey });
+}
+
 export function useRemoveAccount() {
   const queryClient = useQueryClient();
 

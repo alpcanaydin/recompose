@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { page, userEvent } from 'vitest/browser';
 
 import type { AccountKind } from '../../../entities/account';
 import type { BridgeParameters } from '../../../shared/testing';
@@ -32,7 +33,14 @@ const openai: SubscriptionAccountView = {
 const keys: AccountsDocument = {
   schemaVersion: 3,
   accounts: [
-    { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
+    {
+      id: 'a2',
+      provider: 'openai',
+      kind: 'api-key',
+      label: 'Work key',
+      credentialRef: 'c2',
+      keyTail: '7f2c',
+    },
   ],
 };
 
@@ -54,6 +62,21 @@ async function renderProviders(kind: AccountKind, parameters: BridgeParameters =
 
 function controlNames(elements: readonly Element[]) {
   return elements.map((control) => control.getAttribute('aria-label') ?? control.textContent);
+}
+
+async function reach(role: 'button' | 'menuitem', name: string) {
+  const control = page.getByRole(role, { name, exact: true });
+
+  await expect.element(control).toBeVisible();
+
+  control.element().focus();
+
+  await userEvent.keyboard('{Enter}');
+}
+
+async function chooseFromOverflow(actions: string, action: string) {
+  await reach('button', actions);
+  await reach('menuitem', action);
 }
 
 test('the subscriptions screen names the kind it holds and what that kind is', async () => {
@@ -101,10 +124,17 @@ test('a screen narrowed to keys lists the keys and never a subscription', async 
   await expect.element(screen.getByText('Anthropic', { exact: true })).not.toBeInTheDocument();
 });
 
+test('a connected key reads as the product it reaches over its own name and mask', async () => {
+  const screen = await renderProviders('api-key', { accounts: keys });
+
+  await expect.element(screen.getByText('OpenAI API', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('••••7f2c', { exact: true })).toBeVisible();
+});
+
 test('removing a key account takes its row off the screen', async () => {
   const screen = await renderProviders('api-key', { accounts: keys });
 
-  await screen.getByRole('button', { name: 'Remove Work key' }).click();
+  await chooseFromOverflow('Actions for Work key', 'Remove');
 
   await expect.element(screen.getByText('Work key')).not.toBeInTheDocument();
 });
@@ -121,11 +151,58 @@ test('a storage-failed remove surfaces as a visible error', async () => {
     },
   });
 
-  await screen.getByRole('button', { name: 'Remove Work key' }).click();
+  await chooseFromOverflow('Actions for Work key', 'Remove');
 
   await expect
     .element(screen.getByRole('alert'))
     .toHaveTextContent('Could not write the accounts file');
+});
+
+test('a key the provider accepts says so as of the check and claims nothing about spending', async () => {
+  const screen = await renderProviders('api-key', { accounts: keys, keyCheck: 'authenticates' });
+
+  await screen.getByRole('button', { name: 'Verify' }).click();
+
+  await expect
+    .element(screen.getByRole('status'))
+    .toHaveTextContent('This key authenticated as of this check.');
+  await expect.element(screen.getByText(/spend/)).not.toBeInTheDocument();
+});
+
+test('a turned-away key reads as not accepted, guessing at no reason for it', async () => {
+  const screen = await renderProviders('api-key', { accounts: keys, keyCheck: 'not-accepted' });
+
+  await screen.getByRole('button', { name: 'Verify' }).click();
+
+  await expect
+    .element(screen.getByRole('status'))
+    .toHaveTextContent("The provider didn't accept this key as of this check.");
+  await expect.element(screen.getByText(/revoked|expired|mistyped/)).not.toBeInTheDocument();
+});
+
+test('a check that never reached the provider leaves the key unverified rather than broken', async () => {
+  const screen = await renderProviders('api-key', { accounts: keys, keyCheck: 'could-not-check' });
+
+  await screen.getByRole('button', { name: 'Verify' }).click();
+
+  await expect
+    .element(screen.getByRole('status'))
+    .toHaveTextContent("This check couldn't reach the provider, so the key stands unverified.");
+});
+
+test('no answer outlives the screen it was answered on', async () => {
+  const first = await renderProviders('api-key', { accounts: keys, keyCheck: 'authenticates' });
+
+  await first.getByRole('button', { name: 'Verify' }).click();
+
+  await expect.element(first.getByRole('status')).toBeVisible();
+
+  await first.unmount();
+
+  const again = await renderProviders('api-key', { accounts: keys, keyCheck: 'authenticates' });
+
+  await expect.element(again.getByText('Work key')).toBeVisible();
+  await expect.element(again.getByRole('status')).not.toBeInTheDocument();
 });
 
 test('a keys screen with nothing connected explains the kind and lists nothing', async () => {

@@ -107,6 +107,49 @@ test('the keys screen catalog reads each row as the endpoint the key is spent ag
     .not.toBeInTheDocument();
 });
 
+test('the keys catalog stands the seven it cannot connect yet inert under a Soon badge', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog('api-key');
+
+  const awaited = [
+    'Gemini API',
+    'Mistral',
+    'xAI Grok',
+    'DeepSeek',
+    'Moonshot AI',
+    'Qwen',
+    'Custom',
+  ];
+
+  for (const name of awaited) {
+    const entry = screen.getByRole('button', { name: new RegExp(name) });
+
+    await expect.element(entry).toHaveAttribute('aria-disabled', 'true');
+    await expect.element(entry.getByText('Soon')).toBeVisible();
+  }
+
+  await expect
+    .element(screen.getByRole('button', { name: /Anthropic API/ }))
+    .not.toHaveAttribute('aria-disabled');
+});
+
+test('an inert key entry opens nothing, by pointer or by keyboard', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog('api-key');
+
+  screen
+    .getByRole('button', { name: /Gemini API/ })
+    .element()
+    .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+  await press(/Gemini API/);
+
+  await expect.element(screen.getByLabelText('Key')).not.toBeInTheDocument();
+  await expect.element(screen.getByRole('button', { name: /Anthropic API/ })).toBeVisible();
+});
+
 test('the local screen catalog names the servers that will connect later, all disabled', async () => {
   installFakeBridge({ tools: [claudeCode] });
 

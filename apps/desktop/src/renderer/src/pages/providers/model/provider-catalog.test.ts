@@ -1,3 +1,5 @@
+import type { CredentialedAccount } from '@recompose/contracts';
+
 import { fc, test } from '@fast-check/vitest';
 import { expect } from 'vitest';
 
@@ -6,7 +8,11 @@ import type { CatalogEntry, ConnectionWay } from './provider-catalog';
 import {
   awaitedFor,
   catalogEntries,
+  checkableKey,
+  keyHostFor,
+  markFor,
   keyKindOf,
+  keyTitleFor,
   offerFor,
   offeredUnder,
   signInProviderOf,
@@ -29,6 +35,17 @@ const anyCatalog = fc.uniqueArray(
   }),
   { selector: (entry) => entry.id },
 );
+
+function storedKey(overrides: Partial<CredentialedAccount> = {}): CredentialedAccount {
+  return {
+    id: 'a1',
+    provider: 'anthropic',
+    kind: 'api-key',
+    label: 'build',
+    credentialRef: 'c1',
+    ...overrides,
+  };
+}
 
 function offered(id: CatalogEntry['id']): CatalogEntry {
   const entry = catalogEntries.find((candidate) => candidate.id === id);
@@ -124,9 +141,62 @@ test('the local servers nothing runs yet stand in the catalog the same way', () 
   ]);
 });
 
-test('the kinds whose catalog is complete await nothing', () => {
-  expect(awaitedFor('api-key')).toEqual([]);
+test('the key providers nothing connects yet stand in the catalog, each naming what it waits on', () => {
+  expect(awaitedFor('api-key').map((awaited) => awaited.name)).toEqual([
+    'Gemini API',
+    'Mistral',
+    'xAI Grok',
+    'DeepSeek',
+    'Moonshot AI',
+    'Qwen',
+    'Custom endpoint',
+  ]);
+
+  for (const awaited of awaitedFor('api-key')) {
+    expect(awaited.benefit).toMatch(/Waits on/);
+  }
+});
+
+test('the kind whose catalog is complete awaits nothing', () => {
   expect(awaitedFor('aggregator')).toEqual([]);
+});
+
+test('a stored key reads as the product its catalog entry was picked as', () => {
+  expect(keyTitleFor('anthropic')).toBe('Anthropic API');
+  expect(keyTitleFor('openai')).toBe('OpenAI API');
+  expect(keyTitleFor('openrouter')).toBe('OpenRouter');
+});
+
+test('a stored key the catalog never offered reads as the provider it was stored under', () => {
+  expect(keyTitleFor('mistral')).toBe('mistral');
+});
+
+test('a key provider names the one host its key is spent against', () => {
+  expect(keyHostFor('anthropic')).toBe('api.anthropic.com');
+  expect(keyHostFor('openai')).toBe('api.openai.com');
+});
+
+test('a provider whose key reaches many hosts names none of them', () => {
+  expect(keyHostFor('openrouter')).toBeUndefined();
+});
+
+test('a provider the catalog offers is drawn with its own mark', () => {
+  expect(markFor('anthropic')).toBe('anthropic');
+  expect(markFor('openrouter')).toBe('openrouter');
+});
+
+test('a provider the catalog never offered is drawn with no mark at all', () => {
+  expect(markFor('mistral')).toBeUndefined();
+});
+
+test('a check can answer for a key whose provider the probe knows', () => {
+  expect(checkableKey(storedKey())).toBe(true);
+  expect(checkableKey(storedKey({ provider: 'openai' }))).toBe(true);
+});
+
+test('a check can answer for neither an aggregator key nor a provider the probe never learned', () => {
+  expect(checkableKey(storedKey({ provider: 'openrouter', kind: 'aggregator' }))).toBe(false);
+  expect(checkableKey(storedKey({ provider: 'mistral' }))).toBe(false);
 });
 
 test.prop([anyCatalog, anyWay])(
