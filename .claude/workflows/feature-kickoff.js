@@ -167,6 +167,11 @@ function resolveArmQuery(arm, findings) {
   return { arm, findings, status: 'ok' }
 }
 function assertCodeMapArrived(outcome) {
+  if (outcome === undefined) {
+    throw new Error(
+      'feature-kickoff process assertion failed: no code-map arm stands in the arm table, and validation then has nothing to check',
+    )
+  }
   if (outcome.status !== 'ok') {
     throw new Error(
       `feature-kickoff process assertion failed: the ${outcome.arm.label} arm ${outcome.reason}, and validation then has nothing to check`,
