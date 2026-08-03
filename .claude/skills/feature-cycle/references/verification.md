@@ -10,6 +10,7 @@ The `review-pr` saved workflow runs the adversarial review. Two `adversarial-rev
 - **Angle diversity.** The two reviewers take distinct lenses, so coverage spans more than one failure mode.
 - **The judge.** A disagreement escalates to a Fable 5 judge at maximum effort, which settles the conflicting verdicts.
 - **Reproduce-or-drop.** A machine-checkable claim is either reproduced or dropped. Nothing unverified reaches the report.
+- **Proportionality.** The pair with its judge reviews the first full-branch range, and any later range that touches contracts or credential custody. A fix round smaller than about 150 changed lines, whose behaviors already carry red-first tests, takes one seat. A purely mechanical range, renames, documentation, or formatting, takes no seat, because the deterministic gates already hold it.
 - **Confidence threshold.** The report filters at a confidence threshold, starting at the code-review plugin default of 80.
 - **Fix before the pull request opens.** Review findings get fixed on the branch before the pull request opens, not after.
 
