@@ -47,6 +47,9 @@ function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
   return {
     ...storage,
     'accounts:check-key': absent,
+    'accounts:connect-local': absent,
+    'accounts:detect-runtime': absent,
+    'accounts:check-runtime': absent,
     'system:get': absent,
     'system:open-config-folder': absent,
     'system:window-band': absent,

@@ -1,20 +1,62 @@
 import type {
+  Account,
   AccountsDocument,
+  IpcRequest,
   KeyCheckVerdict,
+  LocalRuntimeId,
   RecomposeIpc,
+  RuntimeReachability,
   SubscriptionAccountView,
 } from '@recompose/contracts';
 
-import { keyTail, subscriptionProviders } from '@recompose/contracts';
+import { keyTail, localRuntimeAddresses, subscriptionProviders } from '@recompose/contracts';
 
 type AccountHandlers = Pick<
   RecomposeIpc,
-  'accounts:list' | 'accounts:connect' | 'accounts:remove' | 'accounts:check-key'
+  | 'accounts:list'
+  | 'accounts:connect'
+  | 'accounts:remove'
+  | 'accounts:check-key'
+  | 'accounts:connect-local'
+  | 'accounts:detect-runtime'
+  | 'accounts:check-runtime'
 >;
+
+type RuntimeLookHandlers = Pick<RecomposeIpc, 'accounts:detect-runtime' | 'accounts:check-runtime'>;
 
 type AccountsHalf = AccountHandlers & {
   landSubscription: (id: string, provider: SubscriptionAccountView['provider']) => void;
 };
+
+function keyRow(id: string, request: IpcRequest<'accounts:connect'>): Account {
+  const tail = keyTail(request.secret);
+
+  return {
+    id,
+    provider: request.provider,
+    kind: request.kind,
+    label: request.label,
+    credentialRef: `c-${id}`,
+    ...(tail === undefined ? {} : { keyTail: tail }),
+  };
+}
+
+function localRow(id: string, runtime: LocalRuntimeId): Account {
+  return { id, provider: runtime, kind: 'local', address: localRuntimeAddresses[runtime] };
+}
+
+/**
+ * The two looks a runtime answers, neither of which the registry keeps.
+ *
+ * @summary A scenario decides what the machine says this run, so both looks answer the one seeded
+ * reading rather than the fake deciding, and neither stores it.
+ */
+function runtimeLookHandlers(reachability: RuntimeReachability): RuntimeLookHandlers {
+  return {
+    'accounts:detect-runtime': async () => Promise.resolve({ ok: true, value: reachability }),
+    'accounts:check-runtime': async () => Promise.resolve({ ok: true, value: reachability }),
+  };
+}
 
 /**
  * The accounts half of the fake bridge, holding the registry every kind reads.
@@ -22,47 +64,46 @@ type AccountsHalf = AccountHandlers & {
  * @summary The real main grows this registry when a sign-in lands, so the fake exposes the same
  * growth through landSubscription, and a screen that never re-asks the registry stays caught. A
  * connect mints the mask tail the way main does, and the check answers the verdict the scenario
- * seeded, because a scenario decides what the provider says rather than the fake deciding.
+ * seeded. A local connect mints the documented address the way main does, so no scenario can
+ * supply one.
  */
-export function accountHandlers(seed: AccountsDocument, verdict: KeyCheckVerdict): AccountsHalf {
+export function accountHandlers(
+  seed: AccountsDocument,
+  verdict: KeyCheckVerdict,
+  reachability: RuntimeReachability,
+): AccountsHalf {
   let registry = seed;
   let nextAccountNumber = registry.accounts.length + 1;
 
+  function append(row: Account): AccountsDocument {
+    registry = { ...registry, accounts: [...registry.accounts, row] };
+
+    return registry;
+  }
+
+  function nextId(): string {
+    const id = `a${nextAccountNumber}`;
+
+    nextAccountNumber += 1;
+
+    return id;
+  }
+
   return {
+    ...runtimeLookHandlers(reachability),
     landSubscription: (id, provider) => {
-      registry = {
-        ...registry,
-        accounts: [
-          ...registry.accounts,
-          { id, provider, kind: 'subscription', label: subscriptionProviders[provider].toolName },
-        ],
-      };
+      append({
+        id,
+        provider,
+        kind: 'subscription',
+        label: subscriptionProviders[provider].toolName,
+      });
     },
     'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
-    'accounts:connect': async (request) => {
-      const id = `a${nextAccountNumber}`;
-
-      nextAccountNumber += 1;
-
-      const tail = keyTail(request.secret);
-
-      registry = {
-        ...registry,
-        accounts: [
-          ...registry.accounts,
-          {
-            id,
-            provider: request.provider,
-            kind: request.kind,
-            label: request.label,
-            credentialRef: `c-${id}`,
-            ...(tail === undefined ? {} : { keyTail: tail }),
-          },
-        ],
-      };
-
-      return Promise.resolve({ ok: true, value: registry });
-    },
+    'accounts:connect': async (request) =>
+      Promise.resolve({ ok: true, value: append(keyRow(nextId(), request)) }),
+    'accounts:connect-local': async ({ runtime }) =>
+      Promise.resolve({ ok: true, value: append(localRow(nextId(), runtime)) }),
     'accounts:check-key': async () => Promise.resolve({ ok: true as const, value: { verdict } }),
     'accounts:remove': async (request) => {
       registry = {

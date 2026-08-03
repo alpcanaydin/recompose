@@ -40,6 +40,9 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'settings:save': reject,
     'accounts:list': reject,
     'accounts:check-key': reject,
+    'accounts:connect-local': reject,
+    'accounts:detect-runtime': reject,
+    'accounts:check-runtime': reject,
     'accounts:connect': reject,
     'accounts:remove': reject,
     'system:get': reject,
@@ -71,6 +74,11 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'accounts:check-key': async () =>
       Promise.resolve({ ok: true, value: { verdict: 'could-not-check' as const } }),
+    'accounts:connect-local': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
+    'accounts:detect-runtime': async () =>
+      Promise.resolve({ ok: true, value: { verdict: 'unreachable' as const } }),
+    'accounts:check-runtime': async () =>
+      Promise.resolve({ ok: true, value: { verdict: 'unreachable' as const } }),
     'system:get': async () => Promise.resolve({ ok: true, value: systemState }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
     'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),
