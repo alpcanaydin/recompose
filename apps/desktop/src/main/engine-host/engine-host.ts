@@ -111,6 +111,14 @@ function receiveReport(resident: Resident, message: unknown): void {
     return;
   }
 
+  if (report.data.kind === 'runtime-check') {
+    console.error(
+      'recompose dropped a runtime reading, because no look at a runtime address was asked for.',
+    );
+
+    return;
+  }
+
   answerState(resident, report.data);
 }
 
@@ -149,7 +157,7 @@ function runningChild(resident: Resident): EngineChild {
   return spawned;
 }
 
-type GatewayDirective = Exclude<EngineDirective, { kind: 'probe' }>;
+type GatewayDirective = Extract<EngineDirective, { kind: 'start' | 'stop' }>;
 
 function gatewayOf(directive: GatewayDirective): string {
   return directive.kind === 'start' ? directive.gateway.slug : directive.slug;

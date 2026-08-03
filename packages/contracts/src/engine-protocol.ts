@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { keyCheckVerdictSchema, keyProviderIdSchema } from './api-keys';
 import { gatewayEngineStateSchema } from './engine-state';
 import { gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
+import { loopbackAddressSchema, runtimeReachabilitySchema } from './local-runtimes';
 import { nonBlankString } from './non-blank';
 
 export const engineGatewaySchema = z.strictObject({
@@ -28,6 +29,11 @@ export const engineDirectiveSchema = z.discriminatedUnion('kind', [
     provider: keyProviderIdSchema,
     key: nonBlankString,
   }),
+  z.strictObject({
+    kind: z.literal('probe-runtime'),
+    id: directiveIdSchema,
+    address: loopbackAddressSchema,
+  }),
 ]);
 
 export type EngineDirective = z.infer<typeof engineDirectiveSchema>;
@@ -44,6 +50,11 @@ export const engineReportSchema = z.discriminatedUnion('kind', [
     answers: directiveIdSchema,
     verdict: keyCheckVerdictSchema,
     status: z.number().int().optional(),
+  }),
+  z.strictObject({
+    kind: z.literal('runtime-check'),
+    answers: directiveIdSchema,
+    reachability: runtimeReachabilitySchema,
   }),
 ]);
 

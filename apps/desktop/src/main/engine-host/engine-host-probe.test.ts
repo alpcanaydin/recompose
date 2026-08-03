@@ -153,6 +153,28 @@ describe('a probe that never draws an answer', () => {
   });
 });
 
+describe('a reading nobody asked for', () => {
+  test('a runtime reading arriving unasked is complained about rather than folded into a gateway', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const scripted = scriptedChild(running);
+    const { host } = hostOver(scripted, [codex.slug]);
+
+    await host.start(codex);
+
+    scripted.send({
+      kind: 'runtime-check',
+      answers: 'nobody',
+      reachability: { verdict: 'answers', version: '0.5.1' },
+    });
+
+    const spoken = complaint.mock.calls.flat().map(String).join(' ');
+
+    expect(spoken).toContain('runtime');
+    expect(spoken).not.toContain('undefined');
+    expect(host.states()[codex.slug]).toEqual({ status: 'running' });
+  });
+});
+
 describe('the two wait bounds', () => {
   test('the host waits on a probe longer than the child waits on its fetch', () => {
     expect(PROBE_TIMEOUT_MS).toBeGreaterThan(childFetchBoundMs);

@@ -28,7 +28,7 @@ function scriptedChild(answer: Answer) {
     postMessage: (directive) => {
       directives.push(directive);
 
-      if (directive.kind === 'probe') {
+      if (directive.kind !== 'start' && directive.kind !== 'stop') {
         return;
       }
 

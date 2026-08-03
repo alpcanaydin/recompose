@@ -11,12 +11,12 @@ import { createEngineHost } from './engine-host';
 export const running = (): GatewayEngineState => ({ status: 'running' });
 export const nothing = (): null => null;
 
-function slugOf(directive: Exclude<EngineDirective, { kind: 'probe' }>): string {
+function slugOf(directive: Extract<EngineDirective, { kind: 'start' | 'stop' }>): string {
   return directive.kind === 'start' ? directive.gateway.slug : directive.slug;
 }
 
 function reportOf(
-  directive: Exclude<EngineDirective, { kind: 'probe' }>,
+  directive: Extract<EngineDirective, { kind: 'start' | 'stop' }>,
   state: GatewayEngineState,
 ): unknown {
   return { kind: 'state', answers: directive.id, slug: slugOf(directive), state };
@@ -25,10 +25,10 @@ function reportOf(
 function gatewayDirectiveAt(
   directives: EngineDirective[],
   index: number,
-): Exclude<EngineDirective, { kind: 'probe' }> {
+): Extract<EngineDirective, { kind: 'start' | 'stop' }> {
   const directive = directives[index];
 
-  if (directive === undefined || directive.kind === 'probe') {
+  if (directive === undefined || (directive.kind !== 'start' && directive.kind !== 'stop')) {
     throw new Error(`The scripted child never heard a gateway directive number ${String(index)}.`);
   }
 
@@ -51,6 +51,10 @@ function answerLater(script: Script, directive: EngineDirective): void {
       });
     }
 
+    return;
+  }
+
+  if (directive.kind === 'probe-runtime') {
     return;
   }
 

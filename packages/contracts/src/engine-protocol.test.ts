@@ -205,6 +205,13 @@ const directiveArb = fc.oneof(
     provider: fc.constantFrom('anthropic' as const, 'openai' as const),
     key: fc.stringMatching(/^[A-Za-z0-9_-]{8,40}$/),
   }),
+  fc.record({
+    kind: fc.constant('probe-runtime' as const),
+    id: directiveIdArb,
+    address: fc
+      .integer({ min: 1024, max: 65535 })
+      .map((port) => `http://127.0.0.1:${String(port)}`),
+  }),
 );
 
 describe('the wire between the two processes', () => {

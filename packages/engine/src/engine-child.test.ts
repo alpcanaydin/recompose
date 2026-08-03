@@ -117,6 +117,25 @@ describe('a directive the child cannot read', () => {
     ]);
   });
 
+  test('a runtime probe draws no reading, because the child has taken no look yet', async () => {
+    const parent = aParent();
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      attachEngineChild(parent.port, aLoopbackHolding([]));
+      parent.send({ kind: 'probe-runtime', id: 'd0', address: 'http://127.0.0.1:11434' });
+      parent.send({ kind: 'start', id: 'd1', gateway: codex });
+      await reportsReach(parent, 1);
+
+      expect(parent.reports).toEqual([
+        { kind: 'state', answers: 'd1', slug: 'codex', state: { status: 'running' } },
+      ]);
+      expect(complaints).toHaveBeenCalled();
+    } finally {
+      complaints.mockRestore();
+    }
+  });
+
   test('a gateway named after a Windows device draws no report either', async () => {
     const parent = aParent();
 

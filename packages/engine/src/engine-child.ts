@@ -80,6 +80,9 @@ async function answerFor(
         )),
       };
 
+    case 'probe-runtime':
+      throw new Error('the engine child takes no look at a runtime address yet');
+
     default: {
       const unknownDirective: never = directive;
 
