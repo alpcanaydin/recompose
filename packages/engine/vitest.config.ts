@@ -9,7 +9,7 @@ export default defineConfig({
     coverage: {
       ...coverageDefaults,
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/child.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.testkit.ts', 'src/child.ts'],
     },
   },
 });
