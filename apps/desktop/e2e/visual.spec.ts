@@ -3,7 +3,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { test } from './fixtures';
-import { connectKeyAccount } from './provider-screen';
+import { keyAScenarioPastes, keyStandsConnected, openKeysScreen } from './provider-screen';
 
 const captureWidth = 1024;
 const captureHeight = 660;
@@ -39,11 +39,6 @@ async function settleFonts(app: ElectronApplication, page: Page): Promise<void> 
   });
 }
 
-async function openProviders(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'API Keys' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
-}
-
 async function openSettings(page: Page): Promise<void> {
   await page.getByRole('link', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
@@ -63,7 +58,7 @@ test('the providers screen matches its baseline before any account exists', asyn
   page,
 }) => {
   await pinLightScheme(electronApp);
-  await openProviders(page);
+  await openKeysScreen(page);
   await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(0);
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-empty.png', capture);
@@ -74,11 +69,12 @@ test('the providers screen matches its baseline with a connected account', async
   page,
 }) => {
   await pinLightScheme(electronApp);
-  await openProviders(page);
-  await connectKeyAccount(page, 'anthropic');
-  await expect(
-    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Anthropic' }),
-  ).toBeVisible();
+  await openKeysScreen(page);
+  await keyStandsConnected(page, {
+    entry: 'Anthropic API',
+    name: 'build',
+    pasted: keyAScenarioPastes('Anthropic API'),
+  });
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-connected.png', capture);
 });

@@ -93,7 +93,7 @@ The way to another account MUST stand once, at the trailing edge of the window s
 
 ### Requirement: Picking a provider offers the one way the surface holds
 
-The surface opens the catalog for one kind, so a picked provider MUST offer only that kind's way of connecting. A subscription pick MUST hand the sign-in to the provider's own tool and MUST NOT offer a key beside it. A key pick MUST ask for the key alone, because the provider and the account's name ride in from the picked entry.
+The surface opens the catalog for one kind, so a picked provider MUST offer only that kind's way of connecting. A subscription pick MUST hand the sign-in to the provider's own tool and MUST NOT offer a key beside it. A key pick MUST ask for a name and a key, because the provider rides in from the picked entry.
 
 #### Scenario: a person picks a provider from the subscriptions catalog
 

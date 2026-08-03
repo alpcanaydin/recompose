@@ -1,1 +1,1 @@
-export { GetStartedPanel } from './ui/get-started-panel';
+export { GetStartedPanel } from './ui/get-started-panel/get-started-panel';

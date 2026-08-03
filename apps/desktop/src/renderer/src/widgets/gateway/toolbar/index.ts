@@ -1,1 +1,1 @@
-export { GatewayToolbar } from './ui/gateway-toolbar';
+export { GatewayToolbar } from './ui/gateway-toolbar/gateway-toolbar';

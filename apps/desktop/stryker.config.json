@@ -19,6 +19,7 @@
     "!src/main/subscriptions/subscriptions-wiring.ts",
     "!src/main/tray/menu-bar-tray.ts",
     "!src/main/windows/main-window.ts",
+    "!src/main/windows/permission-wiring.ts",
     "scripts/**/*.mts",
     "!scripts/**/*.test.mts",
     "!scripts/generate-icons.mts",

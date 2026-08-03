@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { accountsDocumentSchema, credentialedAccountKindSchema } from './accounts';
+import { keyCheckReportSchema, pastedKeySchema } from './api-keys';
 import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
 import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { nonBlankString } from './non-blank';
@@ -41,7 +42,7 @@ export const connectAccountRequestSchema = z.strictObject({
   provider: nonBlankString,
   kind: credentialedAccountKindSchema,
   label: z.string().trim().min(1),
-  secret: nonBlankString,
+  secret: pastedKeySchema,
 });
 
 const subscriptionViewsResponse = ipcResult(z.array(subscriptionAccountViewSchema));
@@ -72,6 +73,10 @@ export const ipcChannels = {
   'accounts:remove': {
     request: z.strictObject({ id: nonBlankString }),
     response: ipcResult(accountsDocumentSchema),
+  },
+  'accounts:check-key': {
+    request: z.strictObject({ id: nonBlankString }),
+    response: ipcResult(keyCheckReportSchema),
   },
   'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
   'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },

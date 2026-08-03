@@ -33,8 +33,9 @@ cyclonedx
 dagre
 dbus
 dedup
-depcruise
+DeepSeek
 değiştir
+depcruise
 diffable
 dmgbuild
 docblocks
@@ -48,6 +49,7 @@ Electrobun's
 Electronegativity
 electronjs
 esac
+exfiltration
 Fibery
 Firecrawl
 Flathub
@@ -56,8 +58,10 @@ frontmatter
 frontmost
 fuite
 Gebert
+Gemini
 gitdir
 glassmorphism
+Grok
 IDAT
 idempotently
 IHDR
@@ -76,6 +80,7 @@ libsecret
 libvips
 lifecycles
 lintable
+litellm
 lockfiles
 lossily
 McCabe
@@ -83,7 +88,9 @@ Mcpjson
 memlab
 Menlo
 Meridius
+Mistral
 Mobbin
+Moonshot
 negotiables
 nizos
 nofilter
@@ -92,11 +99,15 @@ noninteractive
 nsis
 Ollama
 Ollama's
+openclaw
 opencodex
 openrouter
 openspec
 opsx
 osascript
+overclaim
+overclaiming
+overclaims
 oxfmtrc
 oxlint
 oxlint's
@@ -183,4 +194,5 @@ winstaller
 worktree
 worktrees
 WWDC
+xAI
 zizmor

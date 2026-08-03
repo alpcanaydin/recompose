@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
+import { keyCheckVerdictSchema, keyProviderIdSchema } from './api-keys';
 import { gatewayEngineStateSchema } from './engine-state';
 import { gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
+import { nonBlankString } from './non-blank';
 
 export const engineGatewaySchema = z.strictObject({
   slug: gatewaySlugSchema,
@@ -20,15 +22,29 @@ export const engineDirectiveSchema = z.discriminatedUnion('kind', [
     gateway: engineGatewaySchema,
   }),
   z.strictObject({ kind: z.literal('stop'), id: directiveIdSchema, slug: gatewaySlugSchema }),
+  z.strictObject({
+    kind: z.literal('probe'),
+    id: directiveIdSchema,
+    provider: keyProviderIdSchema,
+    key: nonBlankString,
+  }),
 ]);
 
 export type EngineDirective = z.infer<typeof engineDirectiveSchema>;
 
-export const engineReportSchema = z.strictObject({
-  kind: z.literal('state'),
-  answers: directiveIdSchema,
-  slug: gatewaySlugSchema,
-  state: gatewayEngineStateSchema,
-});
+export const engineReportSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('state'),
+    answers: directiveIdSchema,
+    slug: gatewaySlugSchema,
+    state: gatewayEngineStateSchema,
+  }),
+  z.strictObject({
+    kind: z.literal('key-check'),
+    answers: directiveIdSchema,
+    verdict: keyCheckVerdictSchema,
+    status: z.number().int().optional(),
+  }),
+]);
 
 export type EngineReport = z.infer<typeof engineReportSchema>;

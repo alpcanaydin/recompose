@@ -1,8 +1,20 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-const uiComponent = /^apps\/desktop\/src\/renderer\/src\/.*\/ui\/[^/]+\.tsx$/u;
+const uiComponent = /^apps\/desktop\/src\/renderer\/src\/.*\/ui\/(?:([^/]+)\/)?([^/]+)\.tsx$/u;
 const notItself = /\.(stories|test|browser\.test)\.tsx$/u;
+
+function strandedOutsideItsFolder(file: string): boolean {
+  const shape = uiComponent.exec(file);
+
+  if (shape === null || notItself.test(file)) {
+    return false;
+  }
+
+  const [, folder, name] = shape;
+
+  return folder === undefined || folder !== name;
+}
 
 function addedFilesSince(base: string): readonly string[] {
   const diff = execFileSync('git', ['diff', '--name-only', '--diff-filter=A', `${base}...HEAD`], {
@@ -25,8 +37,20 @@ function storylessComponents(base: string): readonly string[] {
 }
 
 const missingStories = 3;
+const strandedLayout = 4;
 
 const base = process.argv[2] ?? 'origin/main';
+const stranded = addedFilesSince(base).filter(strandedOutsideItsFolder);
+
+if (stranded.length > 0) {
+  console.error(
+    `every renderer ui component lives in a folder named after it, ui/<name>/<name>.tsx, and these do not:\n${stranded
+      .map((file) => `  ${file}`)
+      .join('\n')}`,
+  );
+  process.exit(strandedLayout);
+}
+
 const storyless = storylessComponents(base);
 
 if (storyless.length > 0) {

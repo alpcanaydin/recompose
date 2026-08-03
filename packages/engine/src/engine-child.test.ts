@@ -1,56 +1,11 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import type { OpenListeners } from './engine-runtime';
-import type { ParentPort } from './parent-port';
 
 import { attachEngineChild } from './engine-child';
+import { aLoopbackHolding, aParent, fetchAnswering, reportsReach } from './engine-child.testkit';
 
 const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
-
-type Parent = {
-  reports: unknown[];
-  send: (directive: unknown) => void;
-  port: ParentPort;
-};
-
-function aParent(): Parent {
-  const reports: unknown[] = [];
-  const handlers: ((messageEvent: { data: unknown }) => void)[] = [];
-
-  return {
-    reports,
-    send: (directive) => {
-      for (const handler of handlers) {
-        handler({ data: directive });
-      }
-    },
-    port: {
-      postMessage: (message) => {
-        reports.push(message);
-      },
-      on: (event: string, handler: (messageEvent: { data: unknown }) => void) => {
-        if (event === 'message') {
-          handlers.push(handler);
-        }
-      },
-    },
-  };
-}
-
-function aLoopbackHolding(heldPorts: readonly number[]): OpenListeners {
-  return async (_app, port) =>
-    Promise.resolve(
-      heldPorts.includes(port)
-        ? { failed: { port } }
-        : { opened: { close: async () => Promise.resolve() } },
-    );
-}
-
-async function reportsReach(parent: Parent, count: number): Promise<void> {
-  await vi.waitFor(() => {
-    expect(parent.reports).toHaveLength(count);
-  });
-}
 
 describe('a directive the parent sends', () => {
   test('a start directive answers with a running report naming the gateway', async () => {
@@ -100,6 +55,54 @@ describe('a directive the parent sends', () => {
   });
 });
 
+describe('a probe directive the parent sends', () => {
+  test('a probe folds the vendor answer and reports it to the directive that asked', async () => {
+    const parent = aParent();
+
+    attachEngineChild(parent.port, aLoopbackHolding([]), fetchAnswering(200).fetchLike);
+    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+    await reportsReach(parent, 1);
+
+    expect(parent.reports).toEqual([
+      { kind: 'key-check', answers: 'd1', verdict: 'authenticates', status: 200 },
+    ]);
+  });
+
+  test('a probe whose fetch throws still answers, and one sanitized line names what failed', async () => {
+    const parent = aParent();
+    const refusing: typeof fetch = async () => Promise.reject(new TypeError('fetch failed'));
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      attachEngineChild(parent.port, aLoopbackHolding([]), refusing);
+      parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+      await reportsReach(parent, 1);
+
+      expect(parent.reports).toEqual([
+        { kind: 'key-check', answers: 'd1', verdict: 'could-not-check' },
+      ]);
+
+      const spoken = JSON.stringify(complaints.mock.calls);
+
+      expect(spoken).toContain('anthropic');
+      expect(spoken).toContain('https://api.anthropic.com');
+      expect(spoken).not.toContain('9f2c');
+    } finally {
+      complaints.mockRestore();
+    }
+  });
+
+  test('the answer carries no window of the key it was handed', async () => {
+    const parent = aParent();
+
+    attachEngineChild(parent.port, aLoopbackHolding([]), fetchAnswering(200).fetchLike);
+    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+    await reportsReach(parent, 1);
+
+    expect(JSON.stringify(parent.reports)).not.toContain('9f2c');
+  });
+});
+
 describe('a directive the child cannot read', () => {
   test('a directive of an unknown kind draws no report at all', async () => {
     const parent = aParent();
@@ -138,6 +141,53 @@ describe('a directive the child cannot read', () => {
       expect.stringContaining('could not read'),
       expect.anything(),
     );
+    complaints.mockRestore();
+  });
+});
+
+describe('the refusal log a malformed directive draws', () => {
+  test('it names issue paths and codes, never what the directive carried', () => {
+    const parent = aParent();
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    attachEngineChild(parent.port, aLoopbackHolding([]));
+    parent.send({
+      kind: 'probe',
+      id: 'd1',
+      provider: 'anthropic',
+      key: 'sk-hidden-77aa',
+      'sk-marker-2b7e1a90': true,
+    });
+    parent.send({ kind: 'start', id: 'd2', gateway: { ...codex, port: 'sk-hidden-77aa' } });
+
+    const spoken = JSON.stringify(complaints.mock.calls);
+
+    expect(spoken).toContain('unrecognized_keys');
+    expect(spoken).toContain('gateway.port');
+    expect(spoken).not.toContain('sk-marker-2b7e1a90');
+    expect(spoken).not.toContain('sk-hidden-77aa');
+    complaints.mockRestore();
+  });
+});
+
+describe('a directive whose work fails', () => {
+  test('the failure is logged rather than swallowed, and no report goes back', async () => {
+    const parent = aParent();
+    const failing: OpenListeners = async () =>
+      Promise.reject(new Error('the listener could not open'));
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    attachEngineChild(parent.port, failing);
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
+
+    await vi.waitFor(() => {
+      expect(complaints).toHaveBeenCalledWith(
+        expect.stringContaining('could not answer'),
+        expect.anything(),
+      );
+    });
+
+    expect(parent.reports).toEqual([]);
     complaints.mockRestore();
   });
 });

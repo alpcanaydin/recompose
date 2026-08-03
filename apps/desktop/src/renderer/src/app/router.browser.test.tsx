@@ -36,7 +36,7 @@ const seededSubscription: SubscriptionAccountView = {
 
 function seededAccounts(): AccountsDocument {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
   };
 }

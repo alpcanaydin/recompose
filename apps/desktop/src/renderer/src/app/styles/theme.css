@@ -23,6 +23,7 @@
   --color-track-off: light-dark(var(--gray-200), var(--gray-800));
   --color-track-off-hover: light-dark(var(--black-a28), var(--gray-700));
 
+  --color-highlight-ink: var(--white);
   --color-ink: light-dark(var(--black-a88), var(--white-a90));
   --color-ink-secondary: light-dark(var(--black-a56), var(--white-a55));
   --color-ink-tertiary: light-dark(var(--black-a28), var(--white-a28));
@@ -85,6 +86,8 @@
   --spacing-sheet-row: 38px;
   --spacing-sheet-field: 170px;
   --spacing-sheet-port: 74px;
+  --spacing-sheet-secret: 288px;
+  --spacing-menu-row: 28px;
   --spacing-toolbar: 54px;
   --spacing-window-controls: 36px;
   --spacing-window-controls-width: 90px;
@@ -205,13 +208,20 @@
   @media (prefers-reduced-motion: no-preference) {
     transition:
       opacity 150ms,
-      scale 150ms;
+      scale 150ms,
+      width 220ms ease;
 
     &[data-starting-style],
     &[data-ending-style] {
       opacity: 0;
       scale: 0.97;
     }
+  }
+}
+
+@utility sheet-body-resize {
+  @media (prefers-reduced-motion: no-preference) {
+    transition: height 220ms ease;
   }
 }
 
@@ -236,19 +246,21 @@
   overflow: hidden;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-panel);
-  background-color: var(--color-surface-raised);
+  background-color: color-mix(in srgb, var(--color-surface-raised) 80%, transparent);
+  backdrop-filter: blur(24px) saturate(140%);
   padding-block: calc(var(--spacing) * 1);
   box-shadow: var(--shadow-raised);
 
   @media (prefers-reduced-motion: no-preference) {
+    transform-origin: var(--transform-origin);
     transition:
-      opacity 120ms,
-      scale 120ms;
+      opacity 140ms ease,
+      scale 140ms ease;
 
     &[data-starting-style],
     &[data-ending-style] {
       opacity: 0;
-      scale: 0.97;
+      scale: 0.95;
     }
   }
 }
@@ -256,8 +268,9 @@
 @utility menu-action {
   display: flex;
   align-items: center;
-  height: var(--spacing-sheet-row);
-  padding-inline: calc(var(--spacing) * 3);
+  gap: calc(var(--spacing) * 2);
+  height: var(--spacing-menu-row);
+  padding-inline: calc(var(--spacing) * 2.5);
   font-size: var(--text-control);
   color: var(--color-ink);
 
@@ -434,6 +447,16 @@
 
 @utility icon-emphasis {
   stroke-width: 2.1;
+}
+
+@utility fold-rows {
+  display: grid;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      grid-template-rows 200ms ease,
+      visibility 200ms;
+  }
 }
 
 @utility row-hover {

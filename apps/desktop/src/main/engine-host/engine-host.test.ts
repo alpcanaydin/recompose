@@ -28,6 +28,10 @@ function scriptedChild(answer: Answer) {
     postMessage: (directive) => {
       directives.push(directive);
 
+      if (directive.kind === 'probe') {
+        return;
+      }
+
       const slug = directive.kind === 'start' ? directive.gateway.slug : directive.slug;
 
       void Promise.resolve().then(() => {

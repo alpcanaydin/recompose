@@ -1,0 +1,194 @@
+# Code map for `provider-api-keys`
+
+- `openspec/changes/provider-api-keys/manifest.md` (openspec change artifact (outside FSD)): —
+  - GAP: records tier full, phase discovery, branch worktree-api-keys, and is the only file in the change folder, so no proposal, design, tasks, or spec delta exists on disk and the feature statement had to come from the caller and the code.
+- `openspec/specs/subscriptions/spec.md` (openspec living spec (outside FSD)): —
+  - Its final requirement already fixes that a key pick asks for the key alone because provider and label ride in from the catalog entry, so the api-key capability must extend that rule rather than contradict it.
+- `openspec/specs/gateways/spec.md` (openspec living spec (outside FSD)): —
+  - The gateway capability whose routing target binds an accountId, the spec that changes if a key account becomes routable; GAP: no accounts or api-keys capability exists, so the delta creates a new one.
+- `openspec/changes/archive/2026-08-03-provider-subscriptions/discovery/code-map.md` (archived openspec discovery artifact (outside FSD)): —
+  - The prior map for the sibling feature, worth reading because most of the key scaffolding this map now finds landed after it was written.
+- `packages/contracts/src/accounts.ts` (contracts package (outside FSD)): accountKindSchema, credentialedAccountKindSchema, CredentialedAccount, accountsDocumentSchema, AccountsDocument, ACCOUNTS_VERSION, loadAccountsDocument, defaultAccountsDocument
+  - credentialedAccountSchema already stores id, provider, kind, label, and credentialRef for api-key and aggregator rows, so a base URL, a key fingerprint, or a standing field starts here and moves ACCOUNTS_VERSION past 2.
+- `packages/contracts/src/accounts.test.ts` (contracts package (outside FSD)): —
+  - Pins the kind enum, the duplicate-id refusal, and the version-1 migration that rewrote pasted-secret subscription rows into api-key rows, so any schema change turns this spec red first.
+- `packages/contracts/src/accounts.test-d.ts` (contracts package (outside FSD)): —
+  - Type-level spec over the account union, which changes if and only if the CredentialedAccount type contract changes.
+- `packages/contracts/src/ipc.ts` (contracts package (outside FSD)): connectAccountRequestSchema, ipcChannels, ipcErrorSchema, IpcError, ipcResult, IpcRequest, IpcResponse, RecomposeIpc
+  - accounts:connect takes provider, kind, label, and secret in one shot; there is no verify, rotate, or update channel, and ipcErrorSchema carries no code for a key the provider rejects.
+- `packages/contracts/src/ipc.test.ts` (contracts package (outside FSD)): —
+  - Behaviour spec over the channel map and the refusal envelope, the first red for a new key channel or a new error code.
+- `packages/contracts/src/ipc.test-d.ts` (contracts package (outside FSD)): —
+  - Type-level spec binding IpcRequest and IpcResponse to the channel map, so a new channel needs its type expectation here.
+- `packages/contracts/src/subscriptions.ts` (contracts package (outside FSD)): subscriptionProviderIdSchema, SubscriptionProviderId, subscriptionProviders, subscriptionAccountViewSchema, SubscriptionAccountView, subscriptionStandingSchema
+  - The neighbouring half constrains provider to a closed enum and exposes a view type carrying standing and active, the shape a key-account view would mirror while a key row's provider stays a free-form nonBlankString.
+- `packages/contracts/src/gateway-config.ts` (contracts package (outside FSD)): RoutingNode, gatewayConfigSchema, GatewayConfig, loadGatewayConfig, GATEWAY_CONFIG_VERSION
+  - A target node binds accountId, the only place a key account could become routable; GAP: no renderer code writes or reads accountId today, so routing to a key is unbuilt.
+- `packages/contracts/src/engine-protocol.ts` (contracts package (outside FSD)): engineGatewaySchema, EngineGateway, engineDirectiveSchema, EngineDirective
+  - The start directive hands the engine only slug, displayName, and port, and the spec beside it asserts an extra accountId is rejected, so no credential crosses into the engine process today.
+- `packages/contracts/src/migration.ts` (contracts package (outside FSD)): Migration, migrateDocument
+  - The schema-version stepper every stored document runs through, already carrying one accounts migration a second entry would follow.
+- `packages/contracts/src/non-blank.ts` (contracts package (outside FSD)): nonBlankString
+  - The trimmed non-empty primitive every provider, label, secret, and credentialRef field is built from.
+- `packages/contracts/src/index.ts` (contracts package (outside FSD)): —
+  - The single barrel main, preload, renderer, and engine import through, so any new key module reaches them only if it is re-exported here.
+- `apps/desktop/src/main/ipc/storage-ipc.ts` (Electron main process (outside FSD)): createStorageIpcHandlers, StorageIpcHandlers, connectAccount, releaseKeyRow, removeAccount, listAccounts
+  - connectAccount mints a cred-uuid ref, writes the secret through setSecret, then appends the row, and releaseKeyRow deletes the vault entry on removal, so rotation or verification extends exactly this pair under inVaultOrder.
+- `apps/desktop/src/main/ipc/storage-ipc.test.ts` (Electron main process (outside FSD)): —
+  - The behaviour spec over connect, remove, and list, where a red test for a rotated or verified key starts.
+- `apps/desktop/src/main/ipc/storage-ipc-secret-hygiene.test.ts` (Electron main process (outside FSD)): —
+  - Asserts no secret leaves main in an IPC response, the invariant any masked preview or key fingerprint on a row has to clear.
+- `apps/desktop/src/main/storage/vault.ts` (Electron main process (outside FSD)): VaultDocument, VaultNewerSchemaError, loadVaultFile, saveVaultFile, setSecret, getSecret, deleteSecret
+  - entries is a flat Record of credentialRef to encrypted string; GAP: getSecret has no production caller anywhere in the repo, so a stored key is written and never read back yet.
+- `apps/desktop/src/main/storage/vault.test.ts` (Electron main process (outside FSD)): —
+  - Pins the string-valued entry invariant and the newer-schema refusal that a richer per-key credential record would have to break.
+- `apps/desktop/src/main/storage/accounts-store.ts` (Electron main process (outside FSD)): loadAccountsFile, saveAccountsFile, amendAccountsFile
+  - The read-modify-write path every account row lands through, with amendAccountsFile the one that appends or filters a row under the lock.
+- `apps/desktop/src/main/storage/safe-storage-codec.ts` (Electron main process (outside FSD)): SecretCodec, createSafeStorageCodec
+  - The safeStorage encrypt and decrypt pair each key passes through, including the platform fallback the surface has to disclose rather than hide.
+- `apps/desktop/src/main/storage/vault-order.ts` (Electron main process (outside FSD)): inVaultOrder
+  - The single-writer queue accounts:connect and accounts:remove already join, which any rotate handler must join rather than write beside.
+- `apps/desktop/src/main/storage/one-at-a-time.ts` (Electron main process (outside FSD)): OneAtATime, oneAtATime
+  - The generic serialisation primitive inVaultOrder is built from, reusable for one turn per key account.
+- `apps/desktop/src/main/ipc/storage-context.ts` (Electron main process (outside FSD)): StorageIpcContext, StoragePaths, storagePathsFor, openVaultForWrite
+  - The injected seam carrying getCodec, isEncryptionAvailable, onCorrupt, and homeFolder plus the accounts.json and vault.bin path map, the place a key-verification capability would be injected.
+- `apps/desktop/src/main/ipc/storage-envelope.ts` (Electron main process (outside FSD)): ipcFailure, storageFailure, openVault
+  - Builds the typed refusal envelope, where a key the provider rejects becomes a stated reason rather than a thrown surprise.
+- `apps/desktop/src/main/ipc/dispatch.ts` (Electron main process (outside FSD)): IpcHandlers, ipcChannelNames, dispatchIpc
+  - ipcChannelNames is a hand-kept list parallel to ipcChannels, so a new key channel that skips this file is never dispatched.
+- `apps/desktop/src/main/ipc/register-ipc.ts` (Electron main process (outside FSD)): registerIpcHandlers
+  - Binds each channel name to ipcMain.handle behind the trusted-sender check, the registration point for any new channel.
+- `apps/desktop/src/main/ipc/sender-trust.ts` (Electron main process (outside FSD)): TrustedSender, AllowedOrigins, assertTrustedSender
+  - Guards which frame may invoke IPC, the wall every account channel stays behind.
+- `apps/desktop/src/main/index.ts` (Electron main process (outside FSD)): —
+  - Side-effect entry point that assembles every handler set and wires safeStorage, the engine host, and window creation, so a key capability is composed here.
+- `apps/desktop/src/preload/index.ts` (Electron preload (outside FSD)): —
+  - Freezes one bridge entry per channel onto window.recompose and today lists accounts:list, accounts:connect, and accounts:remove, so a new key channel needs an explicit line.
+- `apps/desktop/src/preload/index.d.ts` (Electron preload (outside FSD)): —
+  - Declares window.recompose and window.recomposeEvents from the contracts types, the only main-side surface the renderer may reach.
+- `packages/engine/src/gateway-app.ts` (engine package (outside FSD)): createGatewayApp
+  - Serves /health and refuses every model path; GAP: no upstream forwarding exists, so actually spending a stored key is new construction rather than a modification.
+- `packages/engine/src/refusals.ts` (engine package (outside FSD)): missingModelInAnthropicDialect, missingModelInOpenAiDialect, nonLoopbackClient, requestCarriesOrigin, unservedPath
+  - The typed refusal vocabulary a request against an unconfigured or rejected key would extend.
+- `apps/desktop/src/renderer/src/app/routes/providers.tsx` (app): Route
+  - Validates the kind search param through offeredAccountKind, defaults to subscription, and warms the accounts and subscription caches in its loader, so the API Keys screen reads rows from a cache this loader fills.
+- `apps/desktop/src/renderer/src/app/routes/__root.tsx` (app): —
+  - Mounts AddProviderAct in the window strip for the current kind, which is the only way the key catalog is reached.
+- `apps/desktop/src/renderer/src/app/routes/-app-sidebar.tsx` (app): AppSidebar
+  - The standing navigation the provider sidebar sits inside, the frame a key destination is reached through.
+- `apps/desktop/src/renderer/src/app/testing/render-app.tsx` (app): renderAt
+  - Renders the router at a path over a seeded fake bridge, the entry point for a browser spec covering the API Keys screen.
+- `apps/desktop/src/renderer/src/app/styles/theme.css` (app): —
+  - Holds the semantic tokens, including one tint per account kind and the attention pair the subscription row leans on, the file a key-standing colour would join.
+- `apps/desktop/src/renderer/src/entities/account/model/account-kind.ts` (entities): AccountKind, accountKinds, accountKindTitle, accountsOfKind, offeredAccountKind
+  - The renderer's one authority on kinds, reading its options off accountKindSchema; accountsOfKind is how the API Keys surface narrows the registry, and a key-specific view model or masking predicate belongs beside it in this segment.
+- `apps/desktop/src/renderer/src/entities/account/index.ts` (entities): AccountKind, accountKindTitle, accountKinds, accountsOfKind, offeredAccountKind
+  - Public API of the one entity slice, consumed by the providers page, the providers route, and the provider sidebar widget.
+- `apps/desktop/src/renderer/src/entities/account/model/account-kind.test.ts` (entities): —
+  - Behaviour spec pinning the kind titles and the kind filter, the contract any key-specific predicate changes.
+- `apps/desktop/src/renderer/src/pages/providers/index.ts` (pages): AddProviderAct, ProvidersPage
+  - Public API of the providers slice and the only import the app layer may use, so a new key surface export lands here.
+- `apps/desktop/src/renderer/src/pages/providers/ui/providers-page.tsx` (pages): ProvidersPage
+  - Picks the surface per kind and already carries the api-key subtitle promising that a gateway reaches one provider with the key, the sentence this feature has to make true.
+- `apps/desktop/src/renderer/src/pages/providers/ui/credentialed-surface.tsx` (pages): CredentialedSurface
+  - The api-key and aggregator surface, reading rows off accountsQueryOptions and falling back to CredentialedEmptyState; it still renders the placeholder AccountList, which is the seam a real key row replaces.
+- `apps/desktop/src/renderer/src/pages/providers/ui/credentialed-surface.stories.tsx` (pages): Connected, Empty, DarkScheme
+  - The three stories recording the surface connected, empty, and in the dark scheme, the record a new row shape has to update.
+- `apps/desktop/src/renderer/src/pages/providers/ui/account-list.tsx` (pages): AccountList
+  - The placeholder row printing label over provider and kind with a Remove button, the component a key row with a brand mark, a masked key, a standing chip, and an overflow supersedes.
+- `apps/desktop/src/renderer/src/pages/providers/ui/account-list.stories.tsx` (pages): Populated, Empty
+  - The populated and empty stories for the placeholder row, which retire or move with it.
+- `apps/desktop/src/renderer/src/pages/providers/ui/credentialed-empty-state.tsx` (pages): CredentialedEmptyState
+  - Carries the per-kind sentence explaining what an API key and an aggregator key are, the copy an empty-state requirement binds.
+- `apps/desktop/src/renderer/src/pages/providers/ui/kind-empty-state.tsx` (pages): KindEmptyState
+  - The shared empty-state shell both the subscription and credentialed empty states render through.
+- `apps/desktop/src/renderer/src/pages/providers/ui/connect-key-form.tsx` (pages): ConnectKeyForm
+  - Asks only for the key, labels the account with providerName, and keeps the draft on refusal; a verify step, a base URL field, or a person-chosen label lands here.
+- `apps/desktop/src/renderer/src/pages/providers/ui/connect-key-form.browser.test.tsx` (pages): —
+  - The behaviour spec for the key form, where a red test for verification or a preserved draft starts.
+- `apps/desktop/src/renderer/src/pages/providers/ui/connect-key-form.stories.tsx` (pages): AsksOnlyWhatIsUnknown, KeyStaysMasked, DarkScheme
+  - Records that the field masks the key and that the form asks nothing the catalog entry already knows.
+- `apps/desktop/src/renderer/src/pages/providers/ui/provider-connect-way.tsx` (pages): ProviderConnectWay
+  - Forks a picked catalog entry into the sign-in arm or the key arm, so every key connection is reached through this one component.
+- `apps/desktop/src/renderer/src/pages/providers/ui/catalog-flow.tsx` (pages): CatalogFlow, CatalogFlowProps
+  - Holds the pick state between the catalog list and the connect way, the flow a key connection walks from card to stored row.
+- `apps/desktop/src/renderer/src/pages/providers/ui/catalog-list.tsx` (pages): CatalogList
+  - Draws one card per provider offered under the screen's kind plus the inert soon rows, which is exactly what the API Keys catalog shows.
+- `apps/desktop/src/renderer/src/pages/providers/ui/provider-catalog-sheet.tsx` (pages): ProviderCatalogSheet
+  - The modal the catalog opens in, locked to the kind the screen behind it holds.
+- `apps/desktop/src/renderer/src/pages/providers/ui/add-provider-act.tsx` (pages): AddProviderAct
+  - The one way into the catalog, mounted in the window strip and owning the sheet it opens.
+- `apps/desktop/src/renderer/src/pages/providers/model/provider-catalog.ts` (pages): catalogEntries, CatalogEntry, CatalogOffer, ConnectionWay, AwaitedProvider, keyKindOf, offerFor, offeredUnder, providerName, subscriptionTitleFor, awaitedFor, signInProviderOf
+  - The catalog data and its readers; anthropic and openai each offer an api-key way and openrouter offers the aggregator way, and there is no twin of subscriptionTitleFor naming what a stored key row reads as.
+- `apps/desktop/src/renderer/src/pages/providers/model/provider-catalog.test.ts` (pages): —
+  - Behaviour spec over the catalog readers, where a key-title helper or a widened offer turns red first.
+- `apps/desktop/src/renderer/src/pages/providers/ui/subscription-account-row.tsx` (pages): SubscriptionAccountRow
+  - The finished row pattern a key row mirrors, a brand mark, a two-line identity with a badge, a StatusChip, and an OverflowMenu, with the remedy on the row rather than behind the overflow.
+- `apps/desktop/src/renderer/src/pages/providers/ui/providers-page.browser.test.tsx` (pages): —
+  - The screen-level behaviour spec for the providers surface across kinds, the harness a key scenario extends.
+- `apps/desktop/src/renderer/src/widgets/provider/sidebar/ui/provider-sidebar.tsx` (widgets): ProviderSidebar
+  - One row per kind with a live count read off the accounts registry, so a connected key moves the API Keys count here.
+- `apps/desktop/src/renderer/src/widgets/provider/sidebar/index.ts` (widgets): ProviderSidebar
+  - Public API of the provider sidebar widget, imported by the app shell.
+- `apps/desktop/src/renderer/src/widgets/provider/sidebar/ui/provider-sidebar.browser.test.tsx` (widgets): —
+  - Behaviour spec for the per-kind rows and their counts, which a key connection changes.
+- `apps/desktop/src/renderer/src/widgets/provider/sidebar/ui/provider-sidebar.stories.tsx` (widgets): NothingConnected, CountsPerKind, CountsHoldTheTrailingLine, TintsClearTheFloor, DarkScheme
+  - Five stories including the dark scheme and the contrast check the api-key tint already clears.
+- `apps/desktop/src/renderer/src/shared/api/accounts.ts` (shared): accountsQueryOptions, useConnectAccount, useRemoveAccount
+  - The TanStack Query surface over the three account channels, where a rotate or verify mutation and its invalidation would land.
+- `apps/desktop/src/renderer/src/shared/api/ipc-result.ts` (shared): IpcResultError, refusalSentence, withRefusal, unwrapIpcResult
+  - Turns a failed envelope into a typed error carrying the code, which is how a rejected or unusable key reaches the form or the row.
+- `apps/desktop/src/renderer/src/shared/api/subscriptions.ts` (shared): subscriptionsQueryOptions, subscriptionToolsQueryOptions, useSignInSubscription, useRestoreSubscription, useForgetSubscription
+  - The neighbouring query surface showing how a view-shaped list and its mutations are exposed, the pattern a key view list would follow.
+- `apps/desktop/src/renderer/src/shared/api/index.ts` (shared): —
+  - Segment public API re-exporting the account, gateway, subscription, and engine hooks, so a new key hook must be exported through it rather than imported by file path.
+- `apps/desktop/src/renderer/src/shared/ui/index.ts` (shared): —
+  - The kit barrel; Badge, BrandMark, StatusChip, OverflowMenu, and LabelledTextField are all already exported, so a key row composes existing primitives rather than adding new ones.
+- `apps/desktop/src/renderer/src/shared/ui/brand-mark.tsx` (shared): BrandMark, BrandMarkName
+  - Holds exactly the anthropic, openai, and openrouter marks, so a key row can lead with a mark only for those three and any fourth provider needs one added here.
+- `apps/desktop/src/renderer/src/shared/ui/status-chip.tsx` (shared): StatusChip
+  - The word-plus-mark standing chip a key row reuses so standing never reads as colour alone.
+- `apps/desktop/src/renderer/src/shared/ui/overflow-menu.tsx` (shared): OverflowMenu
+  - The quieter-actions menu where replacing a key and removing an account would sit on a key row.
+- `apps/desktop/src/renderer/src/shared/ui/badge.tsx` (shared): Badge
+  - The small inline label the subscription row uses for a plan, available to a key row for the endpoint the key is spent against.
+- `apps/desktop/src/renderer/src/shared/ui/labelled-text-field.tsx` (shared): LabelledTextField
+  - The labelled input the key form already masks the secret with through its password type.
+- `apps/desktop/src/renderer/src/shared/testing/fake-bridge.ts` (shared): installFakeBridge, BridgeParameters, gatewaySeed, emitEngineStates
+  - The in-memory stand-in for window.recompose whose BridgeParameters already seeds an accounts document, so a new key channel is unusable in a story or a browser spec until it is faked here.
+- `apps/desktop/src/renderer/src/shared/testing/index.ts` (shared): installFakeBridge, gatewaySeed, emitEngineStates, BridgeParameters, paintedBox, paintedStyle
+  - Public API of the testing segment, consumed by the Storybook decorator and the app-level render helper.
+- `apps/desktop/.storybook/recompose-bridge.tsx` (Storybook config (outside FSD)): withRecomposeBridge
+  - Installs the fake bridge per story, so a key story seeds its accounts through BridgeParameters rather than reaching main.
+- `apps/desktop/e2e/features/providers/accounts.feature` (end-to-end suite (outside FSD)): —
+  - Its two scenarios already connect and remove an anthropic api-key account, so this is the file the feature rewrites rather than one it adds beside.
+- `apps/desktop/e2e/steps/providers.steps.ts` (end-to-end suite (outside FSD)): —
+  - The bindings behind those scenarios, driving the catalog and the key form by role and name.
+- `apps/desktop/e2e/provider-screen.ts` (end-to-end suite (outside FSD)): connectKeyAccount, openCatalog, openProviderWays, accountRow, accountRows, screenTitle, catalog, planCard
+  - The screen helpers the key scenarios drive through, with connectKeyAccount already walking the catalog to the key form and submitting a secret.
+- `apps/desktop/e2e/fixtures.ts` (end-to-end suite (outside FSD)): inheritedEnv, PortSquatter, test, Given, When, Then
+  - The Electron fixture and behaviour bindings every step file imports, including the environment a stubbed provider endpoint would be injected through.
+- `apps/desktop/e2e/visual.spec.ts` (end-to-end suite (outside FSD)): —
+  - Holds the providers-empty and providers-connected baselines, which a new key row invalidates on darwin, linux, and win32.
+- `README.md` (documentation (outside FSD)): —
+  - Line 31 promises adding any OpenAI-compatible or Anthropic-compatible endpoint with a base URL and key, which no code path offers today, so the claim either ships in this change or the sentence changes with it.
+- `docs/adr/0010-folder-structure-fsd-and-enforced-boundaries.md` (architecture decision record (outside FSD)): —
+  - The Feature-Sliced Design record that decides the layer, slice, and segment of every new renderer file this feature adds.
+- `docs/adr/0016-storage-architecture.md` (architecture decision record (outside FSD)): —
+  - Fixes main as the single writer of the vault and the accounts registry, so no key write may move to the renderer.
+- `docs/adr/0018-typed-ipc-with-result-envelope.md` (architecture decision record (outside FSD)): —
+  - Governs the shape of any new key channel and requires its failure to arrive as a typed envelope rather than a throw.
+- `docs/adr/0028-security-baseline.md` (architecture decision record (outside FSD)): —
+  - The navigation, permission, and origin baseline a key surface must not widen while reaching a provider endpoint.
+- `docs/adr/0047-gateway-token-vault-and-clipboard.md` (architecture decision record (outside FSD)): —
+  - The precedent for secret handling, mint in main and mask on the way out, which a key row and any key preview must not contradict.
+- `docs/adr/0062-a-schema-version-names-one-shape.md` (architecture decision record (outside FSD)): —
+  - The rule deciding whether new key fields force an accounts-document version bump and a matching migration.
+- `docs/adr/0069-subscriptions-delegate-to-the-providers-tool.md` (architecture decision record (outside FSD)): —
+  - Draws the line this feature sits on the other side of, since a key is a credential recompose does hold and does spend.
+- `steiger.config.ts` (repository config (outside FSD)): —
+  - Runs the Feature-Sliced Design ruleset over the renderer and judges the layer of any new slice this feature adds.
+- `.dependency-cruiser.cjs` (repository config (outside FSD)): —
+  - Enforces the renderer-isolated, engine-only-contracts, and desktop-not-into-engine walls a new key module has to sit inside.
+- `cspell-words.txt` (repository config (outside FSD)): —
+  - The committed accept list where a new provider or endpoint name has to land in the same diff that uses it.

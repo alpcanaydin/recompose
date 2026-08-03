@@ -2,6 +2,7 @@ import type {
   AccountsDocument,
   EngineStates,
   GatewayConfig,
+  KeyCheckVerdict,
   RecomposeIpc,
   RecomposeIpcEvents,
   Settings,
@@ -15,7 +16,7 @@ import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/cont
 import { accountHandlers } from './fake-accounts';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
-const emptyDocument: AccountsDocument = { schemaVersion: 2, accounts: [] };
+const emptyDocument: AccountsDocument = { schemaVersion: 3, accounts: [] };
 
 const observedSystem: SystemState = {
   fileBrowser: 'finder',
@@ -48,6 +49,8 @@ export function gatewaySeed({ slug, displayName, port }: GatewaySeed): GatewayCo
 
 export type BridgeParameters = {
   accounts?: AccountsDocument;
+  /** The verdict every key check answers, standing for what the provider says this run. */
+  keyCheck?: KeyCheckVerdict;
   settings?: Settings;
   gateways?: readonly GatewayConfig[];
   engineStates?: EngineStates;
@@ -221,11 +224,13 @@ function eventBridge(): RecomposeIpcEvents {
 
 const noGateways: readonly GatewayConfig[] = [];
 const noEngineStates: EngineStates = {};
+const unreachableProvider: KeyCheckVerdict = 'could-not-check';
 
 function seedsFrom(parameters: BridgeParameters) {
   return {
     settings: defaultSettings(),
     accounts: emptyDocument,
+    keyCheck: unreachableProvider,
     gateways: noGateways,
     engineStates: noEngineStates,
     subscriptions: noSubscriptions,
@@ -239,7 +244,7 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
 
   engineStateListeners.clear();
 
-  const { landSubscription, ...accounts } = accountHandlers(seeds.accounts);
+  const { landSubscription, ...accounts } = accountHandlers(seeds.accounts, seeds.keyCheck);
 
   window.recompose = {
     ...settingsHandlers(seeds.settings),

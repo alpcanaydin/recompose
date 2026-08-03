@@ -93,7 +93,7 @@ describe('signing in when nobody finishes and when no terminal opens', () => {
 
     expect(refusalIn(answered).code).toBe('sign-in-timed-out');
     expect(refusalIn(answered).message).toContain('Claude Code');
-    await expect(world.storedAccounts()).resolves.toEqual({ schemaVersion: 2, accounts: [] });
+    await expect(world.storedAccounts()).resolves.toEqual({ schemaVersion: 3, accounts: [] });
   });
 
   test('given a terminal that will not open, the sign-in still watches for the tool', async () => {

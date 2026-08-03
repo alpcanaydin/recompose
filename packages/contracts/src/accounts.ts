@@ -4,7 +4,7 @@ import { migrateDocument, type Migration } from './migration';
 import { nonBlankString } from './non-blank';
 import { subscriptionProviderIdSchema } from './subscriptions';
 
-export const ACCOUNTS_VERSION = 2;
+export const ACCOUNTS_VERSION = 3;
 
 export const accountKindSchema = z.enum(['subscription', 'api-key', 'aggregator', 'local']);
 
@@ -29,6 +29,7 @@ const credentialedAccountSchema = z.strictObject({
   kind: credentialedAccountKindSchema,
   label: z.string().trim().min(1),
   credentialRef: nonBlankString,
+  keyTail: z.string().length(4).optional(),
 });
 
 export type CredentialedAccount = z.infer<typeof credentialedAccountSchema>;
@@ -73,7 +74,15 @@ const subscriptionRowsHeldPastedSecrets: Migration = {
   },
 };
 
-const accountsMigrations: readonly Migration[] = [subscriptionRowsHeldPastedSecrets];
+const rowsPredateTheMaskNoMigrationCanMint: Migration = {
+  from: 2,
+  migrate: (doc) => ({ ...doc, schemaVersion: 3 }),
+};
+
+const accountsMigrations: readonly Migration[] = [
+  subscriptionRowsHeldPastedSecrets,
+  rowsPredateTheMaskNoMigrationCanMint,
+];
 
 export function loadAccountsDocument(doc: unknown): AccountsDocument {
   return accountsDocumentSchema.parse(migrateDocument(doc, accountsMigrations, ACCOUNTS_VERSION));

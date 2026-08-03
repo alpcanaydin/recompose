@@ -16,7 +16,7 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
 const settings: Settings = { ...defaultSettings(), theme: 'dark' };
-const emptyAccounts: AccountsDocument = { schemaVersion: 2, accounts: [] };
+const emptyAccounts: AccountsDocument = { schemaVersion: 3, accounts: [] };
 const systemState: SystemState = {
   fileBrowser: 'finder',
   loginItem: 'available',
@@ -38,6 +38,7 @@ function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
     'settings:get': reject,
     'settings:save': reject,
     'accounts:list': reject,
+    'accounts:check-key': reject,
     'accounts:connect': reject,
     'accounts:remove': reject,
     'system:get': reject,
@@ -67,6 +68,8 @@ function alwaysSucceedingHandlers(): IpcHandlers {
     'accounts:list': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'accounts:connect': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
     'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
+    'accounts:check-key': async () =>
+      Promise.resolve({ ok: true, value: { verdict: 'could-not-check' as const } }),
     'system:get': async () => Promise.resolve({ ok: true, value: systemState }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
     'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),

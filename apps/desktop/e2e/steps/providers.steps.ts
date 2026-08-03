@@ -1,34 +1,69 @@
+import type { Page } from '@playwright/test';
+
 import { expect } from '@playwright/test';
 
 import { Given, Then, When } from '../fixtures';
-import { connectKeyAccount } from '../provider-screen';
+import {
+  accountRows,
+  catalog,
+  keyAScenarioPastes,
+  keyStandsConnected,
+  openCatalog,
+} from '../provider-screen';
+import { rememberKeyEntry } from '../scenario-memory';
+import { secretsHeldInVault } from '../vault-file';
 
-When('the maintainer connects an {string} api-key account', async ({ page }, provider: string) => {
-  await connectKeyAccount(page, provider);
+async function aKeyStandsUnder(page: Page, entry: string, name: string): Promise<void> {
+  rememberKeyEntry(page, entry);
+  await keyStandsConnected(page, { entry, name, pasted: keyAScenarioPastes(entry) });
+}
+
+Given('the catalog is open', async ({ page }) => {
+  await openCatalog(page);
 });
 
-Given('a connected {string} api-key account', async ({ page }, provider: string) => {
-  await connectKeyAccount(page, provider);
-  await expect(
-    page.getByRole('main').getByRole('listitem').filter({ hasText: 'Anthropic' }),
-  ).toBeVisible();
+Given('a connected {string} key named {string}', async ({ page }, entry: string, name: string) => {
+  await aKeyStandsUnder(page, entry, name);
 });
 
-When('the maintainer removes the {string} account', async ({ page }, label: string) => {
-  await page.getByRole('button', { name: `Remove ${label}` }).click();
+When('the maintainer asks to add a provider', async ({ page }) => {
+  await openCatalog(page);
 });
 
-Then(
-  'the providers list shows the {string} account for {string}',
-  async ({ page }, label: string, provider: string) => {
-    const item = page.getByRole('main').getByRole('listitem').filter({ hasText: label });
-
-    await expect(item).toBeVisible();
-    await expect(item).toContainText(provider);
-    await expect(item).toContainText('api-key');
+When(
+  'the maintainer connects an {string} key named {string}',
+  async ({ page }, entry: string, name: string) => {
+    await aKeyStandsUnder(page, entry, name);
   },
 );
 
-Then('the providers list is empty', async ({ page }) => {
-  await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(0);
+When('the maintainer removes the account', async ({ page }) => {
+  await accountRows(page)
+    .first()
+    .getByRole('button', { name: /^Actions for/u })
+    .click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+});
+
+Then('the account connects', async ({ page }) => {
+  await expect(catalog(page)).toBeHidden();
+  await expect(accountRows(page).first()).toBeVisible();
+});
+
+Then('the account leaves the list', async ({ page }) => {
+  await expect(accountRows(page)).toHaveCount(0);
+});
+
+Then('a sentence names what a key serves', async ({ page }) => {
+  await expect(page.getByRole('main')).toContainText(
+    'An API key is a secret one provider gives you',
+  );
+});
+
+Then('no account list renders', async ({ page }) => {
+  await expect(page.getByRole('main').getByRole('list')).toHaveCount(0);
+});
+
+Then('the vault holds nothing for the account', async ({ electronApp }) => {
+  expect(await secretsHeldInVault(electronApp)).toBe(0);
 });

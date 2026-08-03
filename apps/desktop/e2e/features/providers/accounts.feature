@@ -1,12 +1,14 @@
 Feature: Provider accounts
 
-  Scenario: Connecting the first account lists it
-    Given the app is on the providers screen
-    When the maintainer connects an "anthropic" api-key account
-    Then the providers list shows the "Anthropic" account for "anthropic"
+  Background:
+    Given the app is on the API Keys screen
 
-  Scenario: Removing the only account empties the list
-    Given the app is on the providers screen
-    And a connected "anthropic" api-key account
-    When the maintainer removes the "Anthropic" account
-    Then the providers list is empty
+  Scenario: A connected key stands as one row under its product and its name
+    When the maintainer connects an "Anthropic API" key named "build"
+    Then the list holds one key, named "build" under "Anthropic API"
+
+  Scenario: Removing the only key brings back what a key serves
+    Given a connected "Anthropic API" key named "build"
+    When the maintainer removes the account
+    Then the account leaves the list
+    And a sentence names what a key serves

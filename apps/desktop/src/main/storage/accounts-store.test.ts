@@ -16,7 +16,7 @@ describe('accounts store', () => {
   test('a saved registry loads back identically', async () => {
     const file = join(await mkdtemp(join(tmpdir(), 'recompose-accounts-')), 'accounts.json');
     const doc: AccountsDocument = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: [
         { id: 'a1', provider: 'anthropic', kind: 'subscription' as const, label: 'Max' },
         {

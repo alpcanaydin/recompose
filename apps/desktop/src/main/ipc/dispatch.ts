@@ -19,6 +19,7 @@ export const ipcChannelNames: readonly IpcChannel[] = [
   'accounts:list',
   'accounts:connect',
   'accounts:remove',
+  'accounts:check-key',
   'system:get',
   'system:open-config-folder',
   'system:window-band',

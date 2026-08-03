@@ -3,9 +3,6 @@ import { describe, expectTypeOf, test } from 'vitest';
 import type {
   AccountsDocument,
   CredentialedAccount,
-  EngineDirective,
-  EngineGateway,
-  EngineReport,
   EngineStates,
   GatewayConfig,
   GatewayEngineState,
@@ -15,6 +12,8 @@ import type {
   IpcEventPayload,
   IpcRequest,
   IpcResponse,
+  KeyCheckReport,
+  KeyCheckVerdict,
   Migration,
   RecomposeIpc,
   RecomposeIpcEvents,
@@ -159,9 +158,53 @@ describe('the channels that act rather than read', () => {
   });
 });
 
+describe('the channel that checks a stored key', () => {
+  test('a check names a stored row, so neither the provider nor the key crosses the bridge', () => {
+    expectTypeOf<IpcRequest<'accounts:check-key'>>().toEqualTypeOf<{ id: string }>();
+    expectTypeOf<IpcRequest<'accounts:check-key'>>().not.toHaveProperty('secret');
+    expectTypeOf<IpcRequest<'accounts:check-key'>>().not.toHaveProperty('key');
+  });
+
+  test('a check answers a verdict envelope with no field a vendor body could fill', () => {
+    expectTypeOf<IpcResponse<'accounts:check-key'>>().toEqualTypeOf<
+      { ok: true; value: KeyCheckReport } | { ok: false; error: IpcError }
+    >();
+    expectTypeOf<KeyCheckReport>().toEqualTypeOf<{
+      verdict: KeyCheckVerdict;
+      status?: number | undefined;
+    }>();
+  });
+});
+
 describe('bridge surface totality', () => {
   test('the bridge type covers every contract channel and nothing else', () => {
     expectTypeOf<keyof RecomposeIpc>().toEqualTypeOf<IpcChannel>();
+  });
+
+  test('the surface is exactly these twenty-one channels, so a twenty-second arrives red', () => {
+    expectTypeOf<IpcChannel>().toEqualTypeOf<
+      | 'gateways:list'
+      | 'gateways:save'
+      | 'gateways:offer-port'
+      | 'gateways:move-port'
+      | 'settings:get'
+      | 'settings:save'
+      | 'accounts:list'
+      | 'accounts:connect'
+      | 'accounts:remove'
+      | 'accounts:check-key'
+      | 'system:get'
+      | 'system:open-config-folder'
+      | 'system:window-band'
+      | 'engine:start'
+      | 'engine:stop'
+      | 'engine:states'
+      | 'subscriptions:list'
+      | 'subscriptions:tools'
+      | 'subscriptions:sign-in'
+      | 'subscriptions:restore'
+      | 'subscriptions:activate'
+    >();
   });
 
   test('no channel on the bridge serves a gateway token', () => {
@@ -212,25 +255,6 @@ describe('the state one gateway reports', () => {
     expectTypeOf<
       NonNullable<Extract<GatewayEngineState, { status: 'stopped' }>['failure']>
     >().toEqualTypeOf<{ port: number }>();
-  });
-});
-
-describe('the protocol the two processes speak', () => {
-  test('a directive is exactly a start or a stop', () => {
-    expectTypeOf<EngineDirective['kind']>().toEqualTypeOf<'start' | 'stop'>();
-  });
-
-  test('the child hears only what serving needs, so no secret can reach it', () => {
-    expectTypeOf<EngineGateway>().toEqualTypeOf<{
-      slug: string;
-      displayName: string;
-      port: number;
-    }>();
-  });
-
-  test('a report carries one gateway and the same state every surface reads', () => {
-    expectTypeOf<EngineReport['state']>().toEqualTypeOf<GatewayEngineState>();
-    expectTypeOf<EngineReport['kind']>().toEqualTypeOf<'state'>();
   });
 });
 

@@ -7,7 +7,6 @@ import type {
 } from '@recompose/contracts';
 
 import { withSettingsPatch } from '@recompose/contracts';
-import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
 
@@ -19,14 +18,10 @@ import {
   saveSettingsFile,
   SettingsNewerSchemaError,
 } from '../storage/settings-store';
-import { deleteSecret, saveVaultFile, setSecret } from '../storage/vault';
+import { deleteSecret, saveVaultFile } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
-import {
-  openVaultForWrite,
-  storagePathsFor,
-  type StorageIpcContext,
-  type StoragePaths,
-} from './storage-context';
+import { connectAccount } from './connect-account';
+import { storagePathsFor, type StorageIpcContext, type StoragePaths } from './storage-context';
 import { ipcFailure, openVault, storageFailure } from './storage-envelope';
 
 async function readAccounts(
@@ -136,43 +131,6 @@ async function saveSettings(
 async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, value: await readAccounts(ctx, paths) };
-  } catch (error) {
-    return storageFailure(error, ctx.homeFolder);
-  }
-}
-
-async function connectAccount(
-  ctx: StorageIpcContext,
-  paths: StoragePaths,
-  request: IpcRequest<'accounts:connect'>,
-) {
-  const opened = await openVaultForWrite(ctx, paths);
-
-  if (!opened.ok) {
-    return opened;
-  }
-
-  try {
-    const credentialRef = `cred-${randomUUID()}`;
-    const account = {
-      id: `acc-${randomUUID()}`,
-      provider: request.provider,
-      kind: request.kind,
-      label: request.label,
-      credentialRef,
-    };
-
-    await saveVaultFile(
-      paths.vaultFile,
-      setSecret(opened.vault, ctx.getCodec(), credentialRef, request.secret),
-    );
-
-    const updated = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (accounts) => ({
-      ...accounts,
-      accounts: [...accounts.accounts, account],
-    }));
-
-    return { ok: true as const, value: updated };
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);
   }

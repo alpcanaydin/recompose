@@ -1,4 +1,4 @@
-import type { ElectronApplication, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
@@ -13,7 +13,6 @@ import {
   accountRows,
   activeToolHome,
   catalog,
-  openCatalog,
   openProviderWays,
   openSubscriptionsScreen,
   planCard,
@@ -21,7 +20,6 @@ import {
   toolBinaryFor,
   toolHomesFolder,
   toolNameFor,
-  userDataFolder,
 } from '../provider-screen';
 import { focusedProvider, focusProvider } from '../scenario-memory';
 
@@ -46,11 +44,6 @@ async function connectSubscription(
   await signInThroughTheTool(page, provider);
 }
 
-/** The vault only ever exists once something is kept in it, so its absence is an empty vault. */
-async function vaultFile(app: ElectronApplication): Promise<string> {
-  return join(await userDataFolder(app), 'vault.bin');
-}
-
 Given(
   'the {string} command-line tool is installed',
   async ({ subscriptionTools }, provider: string) => {
@@ -64,10 +57,6 @@ Given(
     await subscriptionTools.uninstall(toolBinaryFor(provider));
   },
 );
-
-Given('the catalog is open', async ({ page }) => {
-  await openCatalog(page);
-});
 
 Given(
   'a connected {string} subscription',
@@ -97,10 +86,6 @@ Given(
     await openSubscriptionsScreen(page);
   },
 );
-
-When('the maintainer asks to add a provider', async ({ page }) => {
-  await openCatalog(page);
-});
 
 When('the maintainer picks {string}', async ({ page }, provider: string) => {
   focusProvider(page, provider);
@@ -160,10 +145,6 @@ Then('a sentence names what a subscription account is', async ({ page }) => {
   await expect(page.getByRole('main')).toContainText(
     'A subscription account is a plan you already pay for',
   );
-});
-
-Then('no account list renders', async ({ page }) => {
-  await expect(page.getByRole('main').getByRole('list')).toHaveCount(0);
 });
 
 Then(
@@ -237,8 +218,4 @@ Then('the surface names the missing tool and what to do about it', async ({ page
 
 Then('no sign-in begins', async ({ electronApp }) => {
   expect(existsSync(await toolHomesFolder(electronApp, 'anthropic'))).toBe(false);
-});
-
-Then('the vault holds nothing for the account', async ({ electronApp }) => {
-  expect(existsSync(await vaultFile(electronApp))).toBe(false);
 });

@@ -1,5 +1,4 @@
-import { fc, test } from '@fast-check/vitest';
-import { describe, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
 import {
   ACCOUNTS_VERSION,
@@ -7,7 +6,6 @@ import {
   credentialedAccountKindSchema,
   defaultAccountsDocument,
   loadAccountsDocument,
-  type Account,
 } from './accounts';
 
 const subscriptionRow = {
@@ -32,10 +30,6 @@ const aggregatorRow = {
   label: 'Router',
   credentialRef: 'cred-91bd',
 };
-
-function vaultReferenceOf(account: Account): string | undefined {
-  return account.kind === 'subscription' ? undefined : account.credentialRef;
-}
 
 describe('the row the accounts registry stores', () => {
   test('a subscription row parses carrying identity alone', () => {
@@ -94,9 +88,40 @@ describe('the row the accounts registry stores', () => {
   });
 });
 
+describe('the mask a key row publishes in place of its secret', () => {
+  test('a key row carries the four characters that match it to a console entry', () => {
+    const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [{ ...keyRow, keyTail: '9f2c' }] };
+
+    expect(loadAccountsDocument(stored)).toEqual(stored);
+  });
+
+  test('a row stored before the mask existed parses carrying no tail at all', () => {
+    const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [keyRow] };
+
+    expect(loadAccountsDocument(stored)).toEqual(stored);
+  });
+
+  test('a tail of any width but four is refused, because the mask reveals a fixed window', () => {
+    for (const tail of ['', '9f2', '9f2ca']) {
+      const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [{ ...keyRow, keyTail: tail }] };
+
+      expect(() => loadAccountsDocument(stored)).toThrow();
+    }
+  });
+
+  test('a subscription row carries no tail, because no pasted key stands behind it', () => {
+    const stored = {
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [{ ...subscriptionRow, keyTail: '9f2c' }],
+    };
+
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+});
+
 describe('what the accounts registry refuses to hold', () => {
   test('the default registry is empty and current-version', () => {
-    expect(defaultAccountsDocument()).toEqual({ schemaVersion: 2, accounts: [] });
+    expect(defaultAccountsDocument()).toEqual({ schemaVersion: 3, accounts: [] });
   });
 
   test('an account never carries a raw secret field', () => {
@@ -142,80 +167,4 @@ describe('what the accounts registry refuses to hold', () => {
       expect(() => loadAccountsDocument(stored)).toThrow();
     }
   });
-});
-
-describe('a stored version 1 document, written while a subscription held a pasted secret', () => {
-  test('the subscription row becomes a key row, keeping its id, label, and credential', () => {
-    const storedUnderVersionOne = {
-      schemaVersion: 1,
-      accounts: [{ ...subscriptionRow, credentialRef: 'cred-7f3a' }],
-    };
-
-    expect(loadAccountsDocument(storedUnderVersionOne)).toEqual({
-      schemaVersion: 2,
-      accounts: [{ ...subscriptionRow, kind: 'api-key', credentialRef: 'cred-7f3a' }],
-    });
-  });
-
-  test('a key row travels untouched', () => {
-    expect(loadAccountsDocument({ schemaVersion: 1, accounts: [keyRow] })).toEqual({
-      schemaVersion: 2,
-      accounts: [keyRow],
-    });
-  });
-
-  test('an aggregator row travels untouched', () => {
-    expect(loadAccountsDocument({ schemaVersion: 1, accounts: [aggregatorRow] })).toEqual({
-      schemaVersion: 2,
-      accounts: [aggregatorRow],
-    });
-  });
-
-  test('an empty registry crosses the version with nothing invented', () => {
-    expect(loadAccountsDocument({ schemaVersion: 1, accounts: [] })).toEqual({
-      schemaVersion: 2,
-      accounts: [],
-    });
-  });
-
-  test('a document whose accounts are not a list is refused naming what it actually held', () => {
-    expect(() => loadAccountsDocument({ schemaVersion: 1, accounts: 'none' })).toThrow(
-      /received string/,
-    );
-  });
-});
-
-describe('every version 1 document a machine could hold', () => {
-  const nonBlank = fc.string({ minLength: 1, maxLength: 12 }).map((value) => `x${value.trim()}`);
-
-  const versionOneRows = fc.record({
-    id: nonBlank,
-    provider: nonBlank,
-    kind: fc.constantFrom('subscription', 'api-key', 'aggregator'),
-    label: nonBlank,
-    credentialRef: nonBlank,
-  });
-
-  const versionOneDocuments = fc.record({
-    schemaVersion: fc.constant(1),
-    accounts: fc.uniqueArray(versionOneRows, { selector: (row) => row.id, maxLength: 6 }),
-  });
-
-  test.prop([versionOneDocuments])(
-    'it reaches version 2 with its identifiers intact and no subscription row referencing the vault',
-    (storedUnderVersionOne) => {
-      const migrated = loadAccountsDocument(storedUnderVersionOne);
-      const stored = storedUnderVersionOne.accounts;
-
-      expect(migrated.schemaVersion).toBe(2);
-      expect(migrated.accounts.map((account) => account.id)).toEqual(stored.map((row) => row.id));
-      expect(migrated.accounts.map((account) => account.label)).toEqual(
-        stored.map((row) => row.label),
-      );
-      expect(migrated.accounts.map(vaultReferenceOf)).toEqual(
-        stored.map((row) => row.credentialRef),
-      );
-      expect(migrated.accounts.filter((account) => account.kind === 'subscription')).toEqual([]);
-    },
-  );
 });

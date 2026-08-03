@@ -1,6 +1,15 @@
-import type { CredentialedAccountKind, SubscriptionProviderId } from '@recompose/contracts';
+import type {
+  CredentialedAccount,
+  CredentialedAccountKind,
+  KeyProviderId,
+  SubscriptionProviderId,
+} from '@recompose/contracts';
 
-import { credentialedAccountKindSchema, subscriptionProviderIdSchema } from '@recompose/contracts';
+import {
+  credentialedAccountKindSchema,
+  keyProviderIdSchema,
+  subscriptionProviderIdSchema,
+} from '@recompose/contracts';
 
 import type { AccountKind } from '../../../entities/account';
 import type { BrandMarkName, IconName } from '../../../shared/ui';
@@ -50,6 +59,11 @@ export function providerName(id: BrandMarkName): string {
   return providerNames[id];
 }
 
+const keyHosts: Record<KeyProviderId, string> = {
+  anthropic: 'api.anthropic.com',
+  openai: 'api.openai.com',
+};
+
 /**
  * Every provider the catalog offers, with the ways each one connects.
  *
@@ -64,7 +78,7 @@ export const catalogEntries: readonly CatalogEntry[] = [
     name: providerNames.anthropic,
     offers: [
       { way: 'subscription', title: 'Claude', benefit: 'Sign in with your Pro or Max plan' },
-      { way: 'api-key', title: 'Anthropic API', benefit: 'api.anthropic.com with your key' },
+      { way: 'api-key', title: 'Anthropic API', benefit: `${keyHosts.anthropic} with your key` },
     ],
   },
   {
@@ -72,7 +86,7 @@ export const catalogEntries: readonly CatalogEntry[] = [
     name: providerNames.openai,
     offers: [
       { way: 'subscription', title: 'Codex', benefit: 'Sign in with your ChatGPT plan' },
-      { way: 'api-key', title: 'OpenAI API', benefit: 'api.openai.com with your key' },
+      { way: 'api-key', title: 'OpenAI API', benefit: `${keyHosts.openai} with your key` },
     ],
   },
   {
@@ -97,19 +111,34 @@ const awaitedLocals: readonly AwaitedProvider[] = [
   { name: 'vLLM', benefit: 'High-throughput GPU serving', glyph: 'monitor' },
 ];
 
+const awaitsAUrlAndADialect = 'Waits on a base URL and a dialect';
+
+const awaitedKeys: readonly AwaitedProvider[] = [
+  { name: 'Gemini API', benefit: 'Waits on a base URL, a dialect, and a header', glyph: 'spark' },
+  { name: 'Mistral', benefit: awaitsAUrlAndADialect, glyph: 'spark' },
+  { name: 'xAI Grok', benefit: awaitsAUrlAndADialect, glyph: 'spark' },
+  { name: 'DeepSeek', benefit: awaitsAUrlAndADialect, glyph: 'spark' },
+  { name: 'Moonshot AI', benefit: awaitsAUrlAndADialect, glyph: 'moon' },
+  { name: 'Qwen', benefit: awaitsAUrlAndADialect, glyph: 'person' },
+  { name: 'Custom endpoint', benefit: awaitsAUrlAndADialect, glyph: 'network' },
+];
+
+const awaitedUnderKind: Record<AccountKind, readonly AwaitedProvider[]> = {
+  subscription: awaitedSubscriptions,
+  'api-key': awaitedKeys,
+  aggregator: [],
+  local: awaitedLocals,
+};
+
 /**
  * The providers recompose will connect to later, standing in the catalog before they can.
  *
- * @summary The first release ends at Claude and Codex, and the rows that follow say what the
- * catalog grows toward rather than hiding it. A row here cannot be picked, so it carries no
- * provider identity yet.
+ * @summary The first release ends at Claude, Codex, and the two first-party keys, and the rows
+ * that follow say what the catalog grows toward rather than hiding it. A row here cannot be
+ * picked, so it carries no provider identity yet, and its line names what it waits on.
  */
 export function awaitedFor(kind: AccountKind): readonly AwaitedProvider[] {
-  if (kind === 'subscription') {
-    return awaitedSubscriptions;
-  }
-
-  return kind === 'local' ? awaitedLocals : [];
+  return awaitedUnderKind[kind];
 }
 
 /** The copy an entry's row reads as under one way, or nothing when the way is not offered. */
@@ -128,6 +157,65 @@ export function subscriptionTitleFor(id: BrandMarkName): string {
   const title = entry === undefined ? undefined : offerFor(entry, 'subscription')?.title;
 
   return title ?? providerName(id);
+}
+
+/**
+ * The endpoint product a stored key reads as, which is what its catalog card read as.
+ *
+ * @summary A person picked "Anthropic API", so the row that lists the key keeps that word. A key
+ * stored under a provider the catalog never offered keeps the provider it was stored under, so a
+ * row that predates the catalog still says whose key it holds rather than standing nameless.
+ */
+export function keyTitleFor(provider: string): string {
+  const entry = catalogEntries.find((candidate) => candidate.id === provider);
+  const offer = entry?.offers.find((candidate) => candidate.way !== 'subscription');
+
+  return offer?.title ?? provider;
+}
+
+const keyShapeHints: Record<KeyProviderId, string> = {
+  anthropic: 'sk-ant-…',
+  openai: 'sk-proj-…',
+};
+
+/**
+ * The shape a provider's keys are handed out in, or nothing where no shape is documented.
+ *
+ * @summary Reach for it where an empty key field wants a hint. The hint echoes the one documented
+ * prefix family per vendor, so a person pasting recognizes at a glance which key belongs here.
+ */
+export function keyShapeHintFor(provider: string): string | undefined {
+  const known = keyProviderIdSchema.safeParse(provider);
+
+  return known.success ? keyShapeHints[known.data] : undefined;
+}
+
+/**
+ * The host a provider's key is spent against, or nothing where its one key reaches many.
+ *
+ * @summary Reach for it where a person is about to hand over a key, so the surface says which
+ * host will hold it before it is stored. An aggregator reaches many hosts through one key, so it
+ * names none of them rather than naming the wrong one.
+ */
+export function keyHostFor(provider: string): string | undefined {
+  const known = keyProviderIdSchema.safeParse(provider);
+
+  return known.success ? keyHosts[known.data] : undefined;
+}
+
+/** The mark a stored provider is drawn with, or nothing when the catalog never offered it. */
+export function markFor(provider: string): BrandMarkName | undefined {
+  return catalogEntries.find((entry) => entry.id === provider)?.id;
+}
+
+/**
+ * Whether a check can answer anything about a stored key.
+ *
+ * @summary The probe speaks two vendors' dialects, so a row under any other provider has nobody
+ * to ask and offers no check rather than offering one that can only fail.
+ */
+export function checkableKey(account: CredentialedAccount): boolean {
+  return account.kind === 'api-key' && keyProviderIdSchema.safeParse(account.provider).success;
 }
 
 /** The entries that offer one way, in catalog order, which is what a kind-locked list holds. */

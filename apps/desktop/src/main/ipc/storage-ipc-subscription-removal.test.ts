@@ -103,7 +103,7 @@ describe('storage ipc handlers: removing a subscription account', () => {
 
     const removed = await handlers['accounts:remove']({ id: 'acc-one' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
     await expect(stands(homes.homeFor('anthropic', 'acc-one'))).resolves.toBe(false);
   });
 

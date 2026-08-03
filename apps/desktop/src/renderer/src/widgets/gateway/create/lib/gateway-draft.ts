@@ -46,11 +46,6 @@ export type DraftRefusals = {
   sheet?: string | undefined;
 };
 
-/** What the draft refuses on its own, before it asks the main process to store anything. */
-export function refusalsBeforeSaving(displayName: string, port: string): DraftRefusals {
-  return { name: nameRefusal(displayName), port: portRefusal(port) };
-}
-
 /**
  * Where a refusal the main process sent belongs on the sheet.
  *

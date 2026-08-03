@@ -51,6 +51,7 @@ function hostAnswering(
     restart: async () => answer(),
     states: () => snapshot,
     onStatesChanged: () => () => undefined,
+    probe: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     dispose: () => undefined,
   };
 
