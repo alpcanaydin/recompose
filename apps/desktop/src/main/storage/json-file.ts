@@ -51,26 +51,6 @@ export async function readJsonWithQuarantine(
   }
 }
 
-export async function readDocumentWithQuarantine<T>(
-  filePath: string,
-  parse: (raw: unknown) => T,
-  onCorrupt: (quarantinedPath: string) => void,
-): Promise<T | undefined> {
-  const raw = await readJsonWithQuarantine(filePath, onCorrupt);
-
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  try {
-    return parse(raw);
-  } catch {
-    await quarantineFile(filePath, onCorrupt);
-
-    return undefined;
-  }
-}
-
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
