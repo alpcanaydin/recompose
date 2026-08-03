@@ -10,8 +10,29 @@ import type { ParentPort } from './parent-port';
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
 import { firstPartyProbeOrigins, probeKey } from './provider/key-probe';
 
+const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+function loopbackOverrideOrNull(override: string | undefined): string | null {
+  if (override === undefined) {
+    return null;
+  }
+
+  if (URL.canParse(override) && loopbackHosts.has(new URL(override).hostname)) {
+    return override;
+  }
+
+  console.error(
+    'The engine child ignored the probe origin override, because it does not name a loopback host.',
+  );
+
+  return null;
+}
+
 function probeOriginFor(provider: KeyProviderId): string {
-  return process.env['RECOMPOSE_PROBE_ORIGIN'] ?? firstPartyProbeOrigins[provider];
+  return (
+    loopbackOverrideOrNull(process.env['RECOMPOSE_PROBE_ORIGIN']) ??
+    firstPartyProbeOrigins[provider]
+  );
 }
 
 type RefusalIssue = { path: readonly PropertyKey[]; code: string };

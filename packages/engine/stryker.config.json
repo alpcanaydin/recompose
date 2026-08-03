@@ -4,7 +4,7 @@
   "vitest": {
     "configFile": "vitest.mutation.config.ts"
   },
-  "mutate": ["src/**/*.ts", "!src/**/*.test.ts", "!src/child.ts"],
+  "mutate": ["src/**/*.ts", "!src/**/*.test.ts", "!src/**/*.testkit.ts", "!src/child.ts"],
   "coverageAnalysis": "perTest",
   "incremental": true,
   "incrementalFile": "reports/stryker-incremental.json",

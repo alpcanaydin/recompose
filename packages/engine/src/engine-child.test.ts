@@ -1,56 +1,11 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import type { OpenListeners } from './engine-runtime';
-import type { ParentPort } from './parent-port';
 
 import { attachEngineChild } from './engine-child';
+import { aLoopbackHolding, aParent, fetchAnswering, reportsReach } from './engine-child.testkit';
 
 const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
-
-type Parent = {
-  reports: unknown[];
-  send: (directive: unknown) => void;
-  port: ParentPort;
-};
-
-function aParent(): Parent {
-  const reports: unknown[] = [];
-  const handlers: ((messageEvent: { data: unknown }) => void)[] = [];
-
-  return {
-    reports,
-    send: (directive) => {
-      for (const handler of handlers) {
-        handler({ data: directive });
-      }
-    },
-    port: {
-      postMessage: (message) => {
-        reports.push(message);
-      },
-      on: (event: string, handler: (messageEvent: { data: unknown }) => void) => {
-        if (event === 'message') {
-          handlers.push(handler);
-        }
-      },
-    },
-  };
-}
-
-function aLoopbackHolding(heldPorts: readonly number[]): OpenListeners {
-  return async (_app, port) =>
-    Promise.resolve(
-      heldPorts.includes(port)
-        ? { failed: { port } }
-        : { opened: { close: async () => Promise.resolve() } },
-    );
-}
-
-async function reportsReach(parent: Parent, count: number): Promise<void> {
-  await vi.waitFor(() => {
-    expect(parent.reports).toHaveLength(count);
-  });
-}
 
 describe('a directive the parent sends', () => {
   test('a start directive answers with a running report naming the gateway', async () => {
@@ -100,26 +55,6 @@ describe('a directive the parent sends', () => {
   });
 });
 
-function urlOf(input: Parameters<typeof fetch>[0]): string {
-  if (typeof input === 'string') {
-    return input;
-  }
-
-  return input instanceof URL ? input.href : input.url;
-}
-
-function fetchAnswering(status: number): { urls: string[]; fetchLike: typeof fetch } {
-  const urls: string[] = [];
-
-  const fetchLike: typeof fetch = async (input) => {
-    urls.push(urlOf(input));
-
-    return Promise.resolve(new Response(null, { status }));
-  };
-
-  return { urls, fetchLike };
-}
-
 describe('a probe directive the parent sends', () => {
   test('a probe folds the vendor answer and reports it to the directive that asked', async () => {
     const parent = aParent();
@@ -154,46 +89,6 @@ describe('a probe directive the parent sends', () => {
     await reportsReach(parent, 1);
 
     expect(JSON.stringify(parent.reports)).not.toContain('9f2c');
-  });
-});
-
-describe('the origin a probe reaches', () => {
-  test('each vendor is probed at its own first-party host by default', async () => {
-    const parent = aParent();
-    const { urls, fetchLike } = fetchAnswering(200);
-
-    attachEngineChild(parent.port, aLoopbackHolding([]), fetchLike);
-    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
-    parent.send({ kind: 'probe', id: 'd2', provider: 'openai', key: 'sk-proj-fake-openai-paste' });
-    await reportsReach(parent, 2);
-
-    expect(urls).toEqual([
-      'https://api.anthropic.com/v1/models',
-      'https://api.openai.com/v1/models',
-    ]);
-  });
-
-  test('the environment substitutes the probe origin for every vendor', async () => {
-    const parent = aParent();
-    const { urls, fetchLike } = fetchAnswering(200);
-
-    vi.stubEnv('RECOMPOSE_PROBE_ORIGIN', 'http://127.0.0.1:8642');
-
-    try {
-      attachEngineChild(parent.port, aLoopbackHolding([]), fetchLike);
-      parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
-      parent.send({
-        kind: 'probe',
-        id: 'd2',
-        provider: 'openai',
-        key: 'sk-proj-fake-openai-paste',
-      });
-      await reportsReach(parent, 2);
-
-      expect(urls).toEqual(['http://127.0.0.1:8642/v1/models', 'http://127.0.0.1:8642/v1/models']);
-    } finally {
-      vi.unstubAllEnvs();
-    }
   });
 });
 
