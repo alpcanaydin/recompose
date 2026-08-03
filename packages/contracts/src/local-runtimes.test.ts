@@ -1,0 +1,185 @@
+import { fc, test } from '@fast-check/vitest';
+import { describe, expect } from 'vitest';
+
+import {
+  localRuntimeAddresses,
+  localRuntimeIdSchema,
+  loopbackAddressSchema,
+  runtimeReachabilitySchema,
+} from './local-runtimes';
+
+const addressParts = fc.record({
+  scheme: fc.constantFrom('http', 'https', 'ws', 'wss', 'ftp', 'file', 'HTTP'),
+  credentials: fc.constantFrom('', 'someone@', 'someone:secret@'),
+  host: fc.constantFrom('127.0.0.1', 'localhost', '0.0.0.0', '127.0.0.2', '[::1]', 'example.com'),
+  port: fc.constantFrom('', ':11434', ':1234'),
+  trailing: fc.constantFrom('', '/', '/api/version', '?probe=1', '#top'),
+});
+
+describe('the runtimes a local account can name', () => {
+  test('exactly the one runtime this release reaches', () => {
+    expect(localRuntimeIdSchema.options).toEqual(['ollama']);
+  });
+
+  test('a runtime nothing detects yet is refused', () => {
+    for (const awaited of ['lmstudio', 'llama.cpp', 'vllm']) {
+      expect(() => localRuntimeIdSchema.parse(awaited)).toThrow();
+    }
+  });
+});
+
+describe('the address a runtime documents itself at', () => {
+  test('Ollama stands at the loopback address its own documentation publishes', () => {
+    expect(localRuntimeAddresses.ollama).toBe('http://127.0.0.1:11434');
+  });
+
+  test('every runtime the vocabulary names has one address to reach it at', () => {
+    expect(Object.keys(localRuntimeAddresses)).toEqual(localRuntimeIdSchema.options);
+  });
+
+  test('every documented address is one a stored row would admit', () => {
+    for (const address of Object.values(localRuntimeAddresses)) {
+      expect(loopbackAddressSchema.parse(address)).toBe(address);
+    }
+  });
+
+  test('no documented address names the host that resolves to the wrong family', () => {
+    for (const address of Object.values(localRuntimeAddresses)) {
+      expect(address).not.toContain('localhost');
+    }
+  });
+});
+
+describe('the address a stored row and a probe directive both parse through', () => {
+  test('the documented Ollama address is admitted whole', () => {
+    expect(loopbackAddressSchema.parse('http://127.0.0.1:11434')).toBe('http://127.0.0.1:11434');
+  });
+
+  test('a loopback address over https is admitted, because the origin is what matters', () => {
+    expect(loopbackAddressSchema.parse('https://127.0.0.1:11434')).toBe('https://127.0.0.1:11434');
+  });
+
+  test.prop([addressParts])(
+    'an address is admitted exactly when it equals its own origin and names the loopback host',
+    ({ scheme, credentials, host, port, trailing }) => {
+      const address = `${scheme}://${credentials}${host}${port}${trailing}`;
+      const isItsOwnLoopbackOrigin =
+        (scheme === 'http' || scheme === 'https') &&
+        credentials === '' &&
+        host === '127.0.0.1' &&
+        trailing === '';
+
+      expect(loopbackAddressSchema.safeParse(address).success).toBe(isItsOwnLoopbackOrigin);
+    },
+  );
+});
+
+describe('what the loopback address schema turns away', () => {
+  test('localhost is refused, because it resolves to a family the runtime never listens on', () => {
+    expect(() => loopbackAddressSchema.parse('http://localhost:11434')).toThrow(/loopback origin/);
+  });
+
+  test('a trailing slash is refused, because the address is then no longer its own origin', () => {
+    expect(() => loopbackAddressSchema.parse('http://127.0.0.1:11434/')).toThrow();
+  });
+
+  test('a path, a query, and a fragment are each refused', () => {
+    for (const beyondTheOrigin of ['/api/version', '?probe=1', '#top']) {
+      expect(() =>
+        loopbackAddressSchema.parse(`http://127.0.0.1:11434${beyondTheOrigin}`),
+      ).toThrow();
+    }
+  });
+
+  test('credentials are refused, because nothing on a loopback address authenticates', () => {
+    for (const carried of ['someone@', 'someone:secret@']) {
+      expect(() => loopbackAddressSchema.parse(`http://${carried}127.0.0.1:11434`)).toThrow();
+    }
+  });
+
+  test('every host but the one the table mints is refused', () => {
+    for (const host of ['0.0.0.0', '127.0.0.2', '[::1]', 'example.com', '169.254.169.254']) {
+      expect(() => loopbackAddressSchema.parse(`http://${host}:11434`)).toThrow();
+    }
+  });
+
+  test('a scheme no probe speaks is refused', () => {
+    for (const scheme of ['ws', 'wss', 'ftp', 'file']) {
+      expect(() => loopbackAddressSchema.parse(`${scheme}://127.0.0.1:11434`)).toThrow();
+    }
+  });
+
+  test('text that is no address at all is refused', () => {
+    for (const nothing of ['', '   ', '127.0.0.1:11434', 'not an address']) {
+      expect(() => loopbackAddressSchema.parse(nothing)).toThrow();
+    }
+  });
+});
+
+describe('the reading a reachability look carries back', () => {
+  test('a runtime that answered carries the version it reported', () => {
+    const reading = { verdict: 'answers', version: '0.5.1' };
+
+    expect(runtimeReachabilitySchema.parse(reading)).toEqual(reading);
+  });
+
+  test('a stranger on the port carries the status it answered with', () => {
+    const reading = { verdict: 'unrecognized', status: 404 };
+
+    expect(runtimeReachabilitySchema.parse(reading)).toEqual(reading);
+  });
+
+  test('silence carries nothing at all, because nothing answered to be carried', () => {
+    const reading = { verdict: 'unreachable' };
+
+    expect(runtimeReachabilitySchema.parse(reading)).toEqual(reading);
+  });
+});
+
+describe('what a reachability reading refuses to carry', () => {
+  test('a verdict outside the three is refused', () => {
+    for (const verdict of ['running', 'stopped', 'reachable']) {
+      expect(() => runtimeReachabilitySchema.parse({ verdict })).toThrow();
+    }
+  });
+
+  test('the three verdicts stay disjoint from what a key check answers', () => {
+    for (const verdict of ['authenticates', 'not-accepted', 'could-not-check']) {
+      expect(() => runtimeReachabilitySchema.parse({ verdict })).toThrow();
+    }
+  });
+
+  test('an answer carrying no version is refused, because the version is the observation', () => {
+    expect(() => runtimeReachabilitySchema.parse({ verdict: 'answers' })).toThrow();
+    expect(() => runtimeReachabilitySchema.parse({ verdict: 'answers', version: '   ' })).toThrow();
+  });
+
+  test('a stranger carrying no status is refused, because the status is what names it strange', () => {
+    expect(() => runtimeReachabilitySchema.parse({ verdict: 'unrecognized' })).toThrow();
+    expect(() =>
+      runtimeReachabilitySchema.parse({ verdict: 'unrecognized', status: 404.5 }),
+    ).toThrow();
+  });
+
+  test('no reading can carry another reading fields', () => {
+    for (const smuggled of [
+      { verdict: 'answers', version: '0.5.1', status: 200 },
+      { verdict: 'unrecognized', status: 404, version: '0.5.1' },
+      { verdict: 'unreachable', version: '0.5.1' },
+      { verdict: 'unreachable', status: 0 },
+    ]) {
+      expect(() => runtimeReachabilitySchema.parse(smuggled)).toThrow();
+    }
+  });
+
+  test('no reading has a field the runtime body could ride home in', () => {
+    for (const smuggled of [
+      { body: '{"version":"0.5.1"}' },
+      { address: 'http://127.0.0.1:11434' },
+    ]) {
+      expect(() =>
+        runtimeReachabilitySchema.parse({ verdict: 'answers', version: '0.5.1', ...smuggled }),
+      ).toThrow();
+    }
+  });
+});
