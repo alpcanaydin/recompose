@@ -8,6 +8,7 @@ import {
   keyTail,
   pastedKeySchema,
   vendorShapeOf,
+  authoredRefusalIn,
 } from './api-keys';
 
 const keyBody = fc.stringMatching(/^[A-Za-z0-9_-]{1,40}$/);
@@ -158,5 +159,23 @@ describe('the answer a key check carries back', () => {
 
   test('a status that is not a whole number is refused', () => {
     expect(() => keyCheckReportSchema.parse({ verdict: 'authenticates', status: 200.5 })).toThrow();
+  });
+});
+
+describe('the refusal a serialized issue list carries', () => {
+  test('an authored issue speaks its own sentence', () => {
+    const issues =
+      '[{"code":"too_small","message":"Too small"},{"code":"custom","message":"the key holds a control character"}]';
+
+    expect(authoredRefusalIn(issues)).toBe('the key holds a control character');
+  });
+
+  test('a list of nothing but machine shapes authors no sentence', () => {
+    expect(authoredRefusalIn('[{"code":"too_small","message":"Too small"}]')).toBeUndefined();
+  });
+
+  test('text that never parses as issues authors no sentence', () => {
+    expect(authoredRefusalIn('not json at all')).toBeUndefined();
+    expect(authoredRefusalIn('{"code":"custom","message":"alone"}')).toBeUndefined();
   });
 });

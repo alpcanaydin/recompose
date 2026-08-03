@@ -70,6 +70,32 @@ test('the form carries the picked product over the fields, so the page says whos
   await expect.element(screen.getByText('Anthropic API')).toBeVisible();
 });
 
+test('a refusal the contract authored reaches the screen in its own words', async () => {
+  installFakeBridge({
+    overrides: {
+      'accounts:connect': async () =>
+        Promise.resolve({
+          ok: false,
+          error: {
+            code: 'validation-failed',
+            message:
+              '[{"code":"custom","path":["secret"],"message":"the key holds a control character"}]',
+          },
+        }),
+    },
+  });
+
+  const screen = await renderKeyForm();
+
+  await screen.getByLabelText('Name').fill('build');
+  await screen.getByRole('button', { name: 'Connect' }).click();
+
+  await expect
+    .element(screen.getByRole('alert'))
+    .toHaveTextContent('the key holds a control character');
+  await expect.element(screen.getByRole('alert')).not.toHaveTextContent('"code"');
+});
+
 test('a connect the schema refuses speaks a sentence, never the issue JSON', async () => {
   installFakeBridge({
     overrides: {

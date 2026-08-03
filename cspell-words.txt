@@ -34,8 +34,8 @@ dagre
 dbus
 dedup
 DeepSeek
-depcruise
 değiştir
+depcruise
 diffable
 dmgbuild
 docblocks
@@ -49,6 +49,7 @@ Electrobun's
 Electronegativity
 electronjs
 esac
+exfiltration
 Fibery
 Firecrawl
 Flathub
@@ -104,6 +105,9 @@ openrouter
 openspec
 opsx
 osascript
+overclaim
+overclaiming
+overclaims
 oxfmtrc
 oxlint
 oxlint's

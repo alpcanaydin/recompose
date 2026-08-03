@@ -38,3 +38,31 @@ export const keyCheckReportSchema = z.strictObject({
 });
 
 export type KeyCheckReport = z.infer<typeof keyCheckReportSchema>;
+
+const authoredIssueSchema = z.looseObject({ code: z.literal('custom'), message: z.string() });
+
+function issuesOrNothing(serialized: string): unknown {
+  try {
+    return JSON.parse(serialized);
+  } catch {
+    return undefined;
+  }
+}
+
+export function authoredRefusalIn(serializedIssues: string): string | undefined {
+  const issues = z.array(z.unknown()).safeParse(issuesOrNothing(serializedIssues));
+
+  if (!issues.success) {
+    return undefined;
+  }
+
+  for (const issue of issues.data) {
+    const authored = authoredIssueSchema.safeParse(issue);
+
+    if (authored.success) {
+      return authored.data.message;
+    }
+  }
+
+  return undefined;
+}

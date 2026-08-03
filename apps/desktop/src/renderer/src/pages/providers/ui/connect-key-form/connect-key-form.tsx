@@ -1,7 +1,7 @@
 import type { CredentialedAccountKind } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
-import { vendorShapeOf } from '@recompose/contracts';
+import { authoredRefusalIn, vendorShapeOf } from '@recompose/contracts';
 import { useForm, useSelector } from '@tanstack/react-form';
 import { useId } from 'react';
 
@@ -77,9 +77,11 @@ function connectAct({ formId, named, pending }: ConnectAct): ReactNode {
 }
 
 function spokenRefusal(error: Error | null, refusal: string | undefined): string | undefined {
-  return error instanceof IpcResultError && error.code === 'validation-failed'
-    ? 'recompose cannot store this key as it stands.'
-    : refusal;
+  if (!(error instanceof IpcResultError) || error.code !== 'validation-failed') {
+    return refusal;
+  }
+
+  return authoredRefusalIn(error.message) ?? 'recompose cannot store this key as it stands.';
 }
 
 function refusalLine(refusal: string | undefined): ReactNode {
