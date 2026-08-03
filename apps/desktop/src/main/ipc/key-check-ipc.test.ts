@@ -9,6 +9,7 @@ import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { StorageIpcContext } from './storage-context';
 
 import { PROBE_TIMEOUT_MS } from '../engine-host/engine-host';
+import { createKeyCheckIpcHandlers } from './key-check-ipc';
 import { checkHandlersOver, connectedKeyId } from './key-check-ipc.testkit';
 import { createStorageIpcHandlers } from './storage-ipc';
 
@@ -276,5 +277,24 @@ describe('where the check stands in the vault queue', () => {
       ok: true,
       value: { verdict: 'could-not-check' },
     });
+  });
+});
+
+describe('the probe leg of a check', () => {
+  test('a probe that dies answers a typed refusal with the home folder scrubbed', async () => {
+    const userDataPath = await tempStorage();
+    const id = await connectKey(userDataPath);
+    const handlers = createKeyCheckIpcHandlers({
+      userDataPath,
+      homeFolder: '/Users/ada',
+      getCodec: () => fakeCodec,
+      onCorrupt: () => undefined,
+      probe: async () => Promise.reject(new Error('the child died reading /Users/ada/library')),
+    });
+
+    const answer = await handlers['accounts:check-key']({ id });
+
+    expect(answer).toMatchObject({ ok: false, error: { code: 'storage-failed' } });
+    expect(JSON.stringify(answer)).not.toContain('/Users/ada');
   });
 });

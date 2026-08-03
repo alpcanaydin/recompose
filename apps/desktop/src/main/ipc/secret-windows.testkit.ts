@@ -5,6 +5,10 @@ function windowsOf(value: string, size: number): string[] {
 }
 
 export function carriesAnyWindowOf(spoken: string, secret: string, size = 8): boolean {
+  if (secret.length < size) {
+    return secret.length > 0 && spoken.includes(secret);
+  }
+
   const spokenWindows = new Set(windowsOf(spoken, size));
 
   return windowsOf(secret, size).some((window) => spokenWindows.has(window));

@@ -57,16 +57,16 @@ function shapeWarning(provider: BrandMarkName, pasted: string): ReactNode {
 
 type ConnectAct = {
   formId: string;
-  named: boolean;
+  ready: boolean;
   pending: boolean;
 };
 
-function connectAct({ formId, named, pending }: ConnectAct): ReactNode {
+function connectAct({ formId, ready, pending }: ConnectAct): ReactNode {
   return (
     <SheetActionSlot>
       <button
         className="push-button-primary focus-ring disabled:bg-surface-inert disabled:text-ink-secondary"
-        disabled={pending || !named}
+        disabled={pending || !ready}
         form={formId}
         type="submit"
       >
@@ -154,7 +154,10 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
   const connect = withRefusal(useConnectAccount());
   const formId = useId();
   const form = useKeyDraftForm(provider, kind, connect, onConnected);
-  const named = useSelector(form.store, (state) => state.values.label.trim() !== '');
+  const ready = useSelector(
+    form.store,
+    (state) => state.values.label.trim() !== '' && state.values.secret.trim() !== '',
+  );
   const pasted = useSelector(form.store, (state) => state.values.secret);
 
   return (
@@ -172,7 +175,7 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
         {shapeWarning(provider, pasted)}
         {refusalLine(spokenRefusal(connect.error, connect.refusal))}
       </form>
-      {connectAct({ formId, named, pending: connect.isPending })}
+      {connectAct({ formId, ready, pending: connect.isPending })}
     </>
   );
 }

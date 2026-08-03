@@ -38,6 +38,8 @@ describe('the pipes of a real engine child, fed a malformed probe carrying a sec
         );
       });
 
+      exitedEarly.catch(() => undefined);
+
       try {
         await Promise.race([once(child, 'message'), exitedEarly]);
         child.send({

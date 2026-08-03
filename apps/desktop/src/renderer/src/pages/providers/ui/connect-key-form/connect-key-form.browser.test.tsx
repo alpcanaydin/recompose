@@ -88,6 +88,7 @@ test('a refusal the contract authored reaches the screen in its own words', asyn
   const screen = await renderKeyForm();
 
   await screen.getByLabelText('Name').fill('build');
+  await screen.getByLabelText('Key').fill('sk-with-a-refused-shape');
   await screen.getByRole('button', { name: 'Connect' }).click();
 
   await expect
@@ -113,6 +114,7 @@ test('a connect the schema refuses speaks a sentence, never the issue JSON', asy
   const screen = await renderKeyForm();
 
   await screen.getByLabelText('Name').fill('build');
+  await screen.getByLabelText('Key').fill('sk-with-a-refused-shape');
   await screen.getByRole('button', { name: 'Connect' }).click();
 
   await expect
@@ -155,6 +157,20 @@ test('a key with no name has nothing to connect, because the name is what tells 
   await expect.element(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
 
   await screen.getByLabelText('Name').fill('build');
+
+  await expect.element(screen.getByRole('button', { name: 'Connect' })).toBeEnabled();
+});
+
+test('a name with no key has nothing to connect either, so the act waits for both', async () => {
+  installFakeBridge();
+
+  const screen = await renderKeyForm();
+
+  await screen.getByLabelText('Name').fill('build');
+
+  await expect.element(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+
+  await screen.getByLabelText('Key').fill('sk-supersecret');
 
   await expect.element(screen.getByRole('button', { name: 'Connect' })).toBeEnabled();
 });

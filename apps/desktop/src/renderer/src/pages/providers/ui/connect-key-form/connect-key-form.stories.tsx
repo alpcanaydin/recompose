@@ -57,6 +57,10 @@ export const NamedAndReady = meta.story({
 
     await userEvent.type(await canvas.findByLabelText('Name'), 'build');
 
+    await expect(await canvas.findByRole('button', { name: 'Connect' })).toBeDisabled();
+
+    await userEvent.type(await canvas.findByLabelText('Key'), 'sk-ant-api03-fake');
+
     await expect(await canvas.findByRole('button', { name: 'Connect' })).toBeEnabled();
   },
 });

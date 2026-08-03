@@ -81,7 +81,11 @@ export function createKeyCheckIpcHandlers(ctx: KeyCheckIpcContext): KeyCheckIpcH
         return gathered;
       }
 
-      return { ok: true as const, value: await ctx.probe(gathered.provider, gathered.secret) };
+      try {
+        return { ok: true as const, value: await ctx.probe(gathered.provider, gathered.secret) };
+      } catch (error) {
+        return storageFailure(error, ctx.homeFolder);
+      }
     },
   };
 }
