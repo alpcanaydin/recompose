@@ -28,5 +28,5 @@ A local runtime row MUST read the runtime's name over its stored address, and MU
 
 - Given a stored Ollama account whose server has stopped
 - When the surface lists it
-- Then the row reads unreachable as of the reading
+- Then the row reads not running as of the reading
 - And the stored account keeps its address unchanged

@@ -14,7 +14,7 @@ The Aggregators catalog MUST offer OpenRouter as a connectable entry. The entrie
 
 ### Requirement: An aggregator row claims no single host and offers no check
 
-An aggregator row MUST read in the two-line key anatomy: the product title, then the name beside the masked tail. The row MUST NOT offer a Verify act, because no probe speaks for the many providers one aggregator key reaches.
+An aggregator row MUST read in the two-line key anatomy: the product title, then the name beside the masked tail. The row MUST NOT offer a Verify act in this change. A models probe answers about a catalog the vendor serves to anyone, never about the key. The credential-scoped endpoint returns spend data this surface has nowhere to put yet.
 
 #### Scenario: a connected aggregator reads as a key without a check
 
