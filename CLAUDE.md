@@ -89,6 +89,7 @@
 - Use the `vercel-react-view-transitions` skill when implementing UI transitions/animations between views or states (screen switches, drawer open/close, node focus).
 - Use the `storybook-stories` skill when writing or reviewing any Storybook story, the Storybook config, or the fake bridge decorator.
 - **A new component under a `ui/` segment ships its `*.stories.tsx` sibling before the branch leaves your machine.** `pnpm run lint:stories` compares the branch against `main` and blocks the push while any sibling is missing.
+- **Every component under a `ui/` segment owns a folder: `ui/<component-name>/<component-name>.tsx`, beside every sibling that shares its basename.** No per-component `index.ts`, so consumers and the segment barrel both import the doubled path. The `feature-sliced-design` skill carries the rule.
 - **Anything that reaches the screen gets looked at through `claude-in-chrome`, in both schemes, before it lands.** That covers a component, a story, a design token, and the Storybook config. The suite proves semantics, never appearance: axe passed a dark scheme that rendered light, a label printed twice, an inert row that looked live, and a selected segment at 1.05 to 1 against its track. Measure the close calls from the page rather than squinting at them.
 - Use the `writing-guidelines` skill when writing any user-facing copy, docs, or README text.
 

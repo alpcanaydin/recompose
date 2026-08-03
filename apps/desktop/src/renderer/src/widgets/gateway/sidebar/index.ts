@@ -1,1 +1,1 @@
-export { GatewaySidebar } from './ui/gateway-sidebar';
+export { GatewaySidebar } from './ui/gateway-sidebar/gateway-sidebar';

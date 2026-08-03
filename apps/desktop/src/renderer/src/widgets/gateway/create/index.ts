@@ -1,1 +1,1 @@
-export { CreateGatewaySheet } from './ui/create-gateway-sheet';
+export { CreateGatewaySheet } from './ui/create-gateway-sheet/create-gateway-sheet';

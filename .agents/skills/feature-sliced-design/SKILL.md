@@ -387,6 +387,37 @@ api/update-settings.ts   ← Settings update
 If a segment has only one domain concern, the filename may match the slice
 name (e.g., `features/auth/model/auth.ts`).
 
+### One folder per component inside `ui/`
+
+A `ui/` segment groups by component, not by file type. Each component owns a
+folder, and every sibling that carries the same basename lives in it: the
+story, the browser test, and anything else named after the component.
+
+```text
+shared/ui/
+  index.ts                          ← segment public API
+  gateway-state.ts                  ← serves several components, stays at root
+  badge/
+    badge.tsx
+    badge.stories.tsx
+    badge.browser.test.tsx
+  sheet/
+    sheet.tsx
+    sheet.stories.tsx
+    sheet.browser.test.tsx
+```
+
+- **Basenames never change when a component gains its folder.** The path
+  repeats the name (`badge/badge.tsx`) so git records a pure rename and a
+  Storybook autotitle keeps its trailing segment.
+- **No per-component `index.ts`.** Consumers outside the folder import
+  `../ui/<component-name>/<component-name>`, and the segment barrel
+  (`shared/ui/index.ts`) points at the same path.
+- **Non-component modules follow their reader.** A plain `.ts` helper or a
+  testkit that serves one component moves into that component's folder. One
+  that serves several stays at the segment root, exported through the barrel
+  alongside the components.
+
 ---
 
 ## 9. Shared Layer Guide
@@ -428,6 +459,8 @@ feature-specific code, or entity-specific code.
   The `@x` notation is for entities only.
 - **File naming**: Domain-based (`user.ts`, `order.ts`). Never technical-role
   (`types.ts`, `utils.ts`).
+- **`ui/` layout**: One folder per component, `ui/<name>/<name>.tsx` with its
+  same-basename siblings. No per-component `index.ts`.
 - **Asset placement**: Place next to the code that uses them; reuse goes to
   `shared/ui/`; global stylesheets and fonts go to `app/`.
 - **Slice groups**: Optional navigation aid for large layers; group folder

@@ -1,1 +1,1 @@
-export { GatewayCanvasPage } from './ui/gateway-canvas-page';
+export { GatewayCanvasPage } from './ui/gateway-canvas-page/gateway-canvas-page';

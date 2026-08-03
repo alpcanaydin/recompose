@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-const uiComponent = /^apps\/desktop\/src\/renderer\/src\/.*\/ui\/[^/]+\.tsx$/u;
+const uiComponent = /^apps\/desktop\/src\/renderer\/src\/.*\/ui\/(?:[^/]+\/)?[^/]+\.tsx$/u;
 const notItself = /\.(stories|test|browser\.test)\.tsx$/u;
 
 function addedFilesSince(base: string): readonly string[] {
