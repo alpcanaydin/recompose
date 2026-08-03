@@ -42,14 +42,14 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] The stale records move in the same task. The `README.md` bullet stops promising a base URL and names the two first-party keys. The subscriptions spec sentence saying a key pick asks for the key alone rewrites to ask for a name and a key. `cspell-words.txt` gains DeepSeek, Gemini, Grok, Mistral, Moonshot, xAI, litellm, and openclaw. The whole list rides here, task 3's two citation names included, because the accept list needs one owner while tasks 3 and 4 run together.
   - [x] Layers: unit, browser, and story.
 
-- [ ] **Task 5: end to end.** Owns `apps/desktop/e2e/`, the visual baselines included. Depends on tasks 2, 3, and 4, because it drives the app they assemble.
-  - [ ] Opens red by graduating the four approved feature files from this change's `gherkin/` folder into `e2e/features/providers/`: every scenario fails before the steps and the stub exist.
-  - [ ] `fixtures.ts` gains the probe-origin override: a loopback stub serving both vendors' `/v1/models` with scripted statuses, handed through `RECOMPOSE_PROBE_ORIGIN` beside the launcher and keychain overrides. The key still travels only in the directive.
-  - [ ] `providers.steps.ts` and `provider-screen.ts` gain the name field, the row lines, the check act, and the verdict sentences, addressed by role and name.
-  - [ ] The two scenarios in `accounts.feature` rewrite around the two-field form and the two-line row.
-  - [ ] `catalog.feature` graduates its three scenarios: `Adding a provider opens the catalog over the screen`, `An inert entry answers neither pointer nor keyboard`, and `One act leads into the catalog`. The inertness step asserts more than color and position.
-  - [ ] `connect.feature` graduates its six scenarios: `A picked entry asks for a name and a key`, `A name stands once per provider`, `Two providers may share a name`, `A key pasted with a trailing newline connects trimmed`, `A key holding a control character is refused for its contents`, and `A key shaped like another vendor warns and still connects`.
-  - [ ] `screen.feature` graduates its five scenarios: `Nothing connected explains what a key is`, `A connected key reads as two lines`, `The mask shows four characters and no vendor prefix`, `The stored secret never reaches the screen`, and `Removing a key removes its secret`.
-  - [ ] `verify.feature` graduates its four scenarios: `A key that authenticates says so as of the check`, `A turned-away key reads as not accepted, nothing more`, `An unreachable provider leaves the question open`, and `No answer outlives the screen`.
-  - [ ] The providers-connected visual baseline regenerates on all three platforms from the pull-request label, never from a local machine.
-  - [ ] Layers: end-to-end and visual.
+- [x] **Task 5: end to end.** Owns `apps/desktop/e2e/`, the visual baselines included. Depends on tasks 2, 3, and 4, because it drives the app they assemble.
+  - [x] Opens red by graduating the four approved feature files from this change's `gherkin/` folder into `e2e/features/providers/`: every scenario fails before the steps and the stub exist.
+  - [x] `fixtures.ts` gains the probe-origin override: a loopback stub serving both vendors' `/v1/models` with scripted statuses, handed through `RECOMPOSE_PROBE_ORIGIN` beside the launcher and keychain overrides. The key still travels only in the directive.
+  - [x] `providers.steps.ts` and `provider-screen.ts` gain the name field, the row lines, the check act, and the verdict sentences, addressed by role and name.
+  - [x] The two scenarios in `accounts.feature` rewrite around the two-field form and the two-line row.
+  - [x] `catalog.feature` graduates its three scenarios: `Adding a provider opens the catalog over the screen`, `An inert entry answers neither pointer nor keyboard`, and `One act leads into the catalog`. The inertness step asserts more than color and position.
+  - [x] `connect.feature` graduates its six scenarios: `A picked entry asks for a name and a key`, `A name stands once per provider`, `Two providers may share a name`, `A key pasted with a trailing newline connects trimmed`, `A key holding a control character is refused for its contents`, and `A key shaped like another vendor warns and still connects`.
+  - [x] `screen.feature` graduates its five scenarios: `Nothing connected explains what a key is`, `A connected key reads as two lines`, `The mask shows four characters and no vendor prefix`, `The stored secret never reaches the screen`, and `Removing a key removes its secret`.
+  - [x] `verify.feature` graduates its four scenarios: `A key that authenticates says so as of the check`, `A turned-away key reads as not accepted, nothing more`, `An unreachable provider leaves the question open`, and `No answer outlives the screen`.
+  - [x] The providers-connected visual baseline regenerates on all three platforms from the pull-request label, never from a local machine.
+  - [x] Layers: end-to-end and visual.
