@@ -1,7 +1,9 @@
 import type { ReactNode, RefObject } from 'react';
 
+import { useSelector } from '@tanstack/react-form';
+
 import { FieldBoxRow, Sheet } from '../../../../shared/ui';
-import { previewAddressFor } from '../lib/gateway-draft';
+import { nameRefusal, portRefusal, previewAddressFor } from '../lib/gateway-draft';
 import { useGatewayDraft } from '../lib/use-gateway-draft';
 
 export type GatewayDraftProps = {
@@ -43,28 +45,53 @@ function draftFooter(draft: Draft, onOpenChange: (open: boolean) => void): React
   );
 }
 
-function draftFields(draft: Draft, nameField: RefObject<HTMLInputElement | null>): ReactNode {
+function spokenAfterAsking(attempted: boolean, spoken: string | undefined): string | undefined {
+  return attempted ? spoken : undefined;
+}
+
+function draftFields(
+  draft: Draft,
+  attempted: boolean,
+  nameField: RefObject<HTMLInputElement | null>,
+): ReactNode {
   return (
     <div className="field-box">
-      <FieldBoxRow
-        controlClasses="w-sheet-field"
-        label="Name"
-        onChangeValue={(typed) => {
-          draft.changeName(typed);
-        }}
-        ref={nameField}
-        refusal={draft.refusals.name}
-        value={draft.displayName}
-      />
-      <FieldBoxRow
-        controlClasses="w-sheet-port text-end font-mono"
-        label="Port"
-        onChangeValue={(typed) => {
-          draft.changePort(typed);
-        }}
-        refusal={draft.refusals.port}
-        value={draft.port}
-      />
+      <draft.form.Field
+        name="displayName"
+        validators={{ onChange: ({ value }) => nameRefusal(value) }}
+      >
+        {(field) => (
+          <FieldBoxRow
+            controlClasses="w-sheet-field"
+            label="Name"
+            onChangeValue={(typed) => {
+              field.handleChange(typed);
+              draft.clearMainRefusal('name');
+            }}
+            ref={nameField}
+            refusal={
+              spokenAfterAsking(attempted, field.state.meta.errors[0]) ?? draft.refusals.name
+            }
+            value={field.state.value}
+          />
+        )}
+      </draft.form.Field>
+      <draft.form.Field name="port" validators={{ onChange: ({ value }) => portRefusal(value) }}>
+        {(field) => (
+          <FieldBoxRow
+            controlClasses="w-sheet-port text-end font-mono"
+            label="Port"
+            onChangeValue={(typed) => {
+              field.handleChange(typed);
+              draft.clearMainRefusal('port');
+            }}
+            refusal={
+              spokenAfterAsking(attempted, field.state.meta.errors[0]) ?? draft.refusals.port
+            }
+            value={field.state.value}
+          />
+        )}
+      </draft.form.Field>
     </div>
   );
 }
@@ -72,6 +99,8 @@ function draftFields(draft: Draft, nameField: RefObject<HTMLInputElement | null>
 /** The standing draft of one gateway, from its fields to the save that stores it. */
 export function GatewayDraft({ open, onOpenChange, onCreated, nameField }: GatewayDraftProps) {
   const draft = useGatewayDraft(onOpenChange, onCreated);
+  const attempted = useSelector(draft.form.store, (state) => state.submissionAttempts > 0);
+  const port = useSelector(draft.form.store, (state) => state.values.port);
 
   return (
     <Sheet
@@ -82,11 +111,11 @@ export function GatewayDraft({ open, onOpenChange, onCreated, nameField }: Gatew
       open={open}
       title="Create a gateway"
     >
-      {draftFields(draft, nameField)}
+      {draftFields(draft, attempted, nameField)}
       <p className="mt-2.5 flex items-center gap-1.75 px-0.5 font-mono text-mono-value text-ink-secondary">
         <span aria-hidden className="size-1.75 shrink-0 rounded-pill bg-ink-tertiary" />
         <span>Serves at</span>
-        <span className="font-medium text-ink">{previewAddressFor(draft.port)}</span>
+        <span className="font-medium text-ink">{previewAddressFor(port)}</span>
       </p>
       {draft.refusals.sheet === undefined ? null : (
         <p className="mt-2.5 px-0.5 text-caption text-danger-ink" role="alert">

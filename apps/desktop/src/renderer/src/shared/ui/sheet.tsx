@@ -68,13 +68,6 @@ type SheetProps = {
   children: ReactNode;
 };
 
-/**
- * Centered modal surface that takes one decision and hands the screen back.
- *
- * @summary Reach for it when a person needs to supply something before the surface behind can
- * change, and the surface behind should stay in view. It dims what it covers, traps focus, and
- * lands focus on the control the caller names rather than on the sheet itself.
- */
 function sheetHead(
   title: string,
   description: string,
@@ -102,6 +95,13 @@ function sheetHead(
   );
 }
 
+/**
+ * Centered modal surface that takes one decision and hands the screen back.
+ *
+ * @summary Reach for it when a person needs to supply something before the surface behind can
+ * change, and the surface behind should stay in view. It dims what it covers, traps focus, and
+ * lands focus on the control the caller names rather than on the sheet itself.
+ */
 export function Sheet({
   open,
   onOpenChange,

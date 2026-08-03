@@ -2,7 +2,8 @@ import type { CredentialedAccountKind } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
 import { vendorShapeOf } from '@recompose/contracts';
-import { useId, useState } from 'react';
+import { useForm, useSelector } from '@tanstack/react-form';
+import { useId } from 'react';
 
 import type { BrandMarkName } from '../../../shared/ui';
 
@@ -53,14 +54,12 @@ type ConnectAct = {
   formId: string;
   named: boolean;
   pending: boolean;
-  nameReasonId: string;
 };
 
-function connectAct({ formId, named, pending, nameReasonId }: ConnectAct): ReactNode {
+function connectAct({ formId, named, pending }: ConnectAct): ReactNode {
   return (
     <SheetActionSlot>
       <button
-        aria-describedby={named ? undefined : nameReasonId}
         className="push-button-primary focus-ring disabled:bg-surface-inert disabled:text-ink-secondary"
         disabled={pending || !named}
         form={formId}
@@ -87,20 +86,63 @@ function refusalLine(refusal: string | undefined): ReactNode {
  * the fields in the mark-and-heading anatomy the subscription step ships, so the page says whose
  * key it takes. The two things left to say are the name and the key, each hinted in the shape the
  * provider hands out. The name is required because two keys under one provider differ by purpose
- * and a person names the purpose, and its guidance stands whether or not a name has arrived, so
- * the form never jumps. The connect act settles the sheet, so it rides the sheet's foot beside
- * Cancel. A key whose shape suggests another vendor draws a warning and connects regardless. A
- * refused connect keeps both drafts, because a person who has just pasted a key should never be
+ * and a person names the purpose. The connect act settles the sheet, so it rides the sheet's foot
+ * beside Cancel. A key whose shape suggests another vendor draws a warning and connects regardless.
+ * A refused connect keeps both drafts, because a person who has just pasted a key should never be
  * asked to find it a second time.
  */
+function useKeyDraftForm(
+  provider: BrandMarkName,
+  kind: CredentialedAccountKind,
+  connect: ReturnType<typeof useConnectAccount>,
+  onConnected: () => void,
+) {
+  return useForm({
+    defaultValues: { label: '', secret: '' },
+    onSubmit: ({ value }) => {
+      connect.mutate({ provider, kind, ...value }, { onSuccess: onConnected });
+    },
+  });
+}
+
+type KeyDraftForm = ReturnType<typeof useKeyDraftForm>;
+
+function keyFields(form: KeyDraftForm, provider: BrandMarkName): ReactNode {
+  return (
+    <div className="mt-4 field-box">
+      <form.Field name="label">
+        {(field) => (
+          <FieldBoxRow
+            controlClasses="w-sheet-secret"
+            label="Name"
+            onChangeValue={field.handleChange}
+            placeholder="My API Key"
+            value={field.state.value}
+          />
+        )}
+      </form.Field>
+      <form.Field name="secret">
+        {(field) => (
+          <FieldBoxRow
+            controlClasses="w-sheet-secret"
+            label="Key"
+            onChangeValue={field.handleChange}
+            placeholder={keyShapeHintFor(provider)}
+            type="password"
+            value={field.state.value}
+          />
+        )}
+      </form.Field>
+    </div>
+  );
+}
+
 export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormProps) {
   const connect = withRefusal(useConnectAccount());
   const formId = useId();
-  const nameReasonId = useId();
-  const [label, setLabel] = useState('');
-  const [secret, setSecret] = useState('');
-
-  const named = label.trim() !== '';
+  const form = useKeyDraftForm(provider, kind, connect, onConnected);
+  const named = useSelector(form.store, (state) => state.values.label.trim() !== '');
+  const pasted = useSelector(form.store, (state) => state.values.secret);
 
   return (
     <>
@@ -109,34 +151,15 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
         id={formId}
         onSubmit={(event) => {
           event.preventDefault();
-          connect.mutate({ provider, kind, label, secret }, { onSuccess: onConnected });
+          void form.handleSubmit();
         }}
       >
         {pickedProduct(provider)}
-        <div className="mt-4 field-box">
-          <FieldBoxRow
-            controlClasses="w-sheet-secret"
-            label="Name"
-            onChangeValue={setLabel}
-            placeholder="Work"
-            value={label}
-          />
-          <FieldBoxRow
-            controlClasses="w-sheet-secret"
-            label="Key"
-            onChangeValue={setSecret}
-            placeholder={keyShapeHintFor(provider)}
-            type="password"
-            value={secret}
-          />
-        </div>
-        <p className="mt-2.5 px-0.5 text-caption text-ink-secondary" id={nameReasonId}>
-          Name the key, so two keys under one provider never read alike.
-        </p>
-        {shapeWarning(provider, secret)}
+        {keyFields(form, provider)}
+        {shapeWarning(provider, pasted)}
         {refusalLine(connect.refusal)}
       </form>
-      {connectAct({ formId, named, pending: connect.isPending, nameReasonId })}
+      {connectAct({ formId, named, pending: connect.isPending })}
     </>
   );
 }

@@ -1,39 +1,13 @@
 import type { GatewayConfig } from '@recompose/contracts';
 
 import { GATEWAY_CONFIG_VERSION, slugFromName } from '@recompose/contracts';
+import { useForm } from '@tanstack/react-form';
 import { useEffect, useState } from 'react';
 
 import type { DraftRefusals } from './gateway-draft';
 
 import { fetchOfferedPort, refusalSentence, useSaveGateway } from '../../../../shared/api';
-import { refusalFromMain, refusalsBeforeSaving } from './gateway-draft';
-
-function useOfferedPort() {
-  const [port, setPort] = useState('');
-  const [refusal, setRefusal] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    let awaited = true;
-
-    fetchOfferedPort()
-      .then((offered) => {
-        if (awaited) {
-          setPort(String(offered));
-        }
-      })
-      .catch((failure: unknown) => {
-        if (awaited) {
-          setRefusal(refusalSentence(failure));
-        }
-      });
-
-    return () => {
-      awaited = false;
-    };
-  }, []);
-
-  return { port, setPort, refusal };
-}
+import { refusalFromMain } from './gateway-draft';
 
 function gatewayFrom(displayName: string, slug: string, port: string): GatewayConfig {
   return {
@@ -46,51 +20,70 @@ function gatewayFrom(displayName: string, slug: string, port: string): GatewayCo
   };
 }
 
+type PortReceiver = { setFieldValue: (field: 'port', offered: string) => void };
+
+function useOfferedPort(form: PortReceiver) {
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let awaited = true;
+
+    fetchOfferedPort()
+      .then((offered) => {
+        if (awaited) {
+          form.setFieldValue('port', String(offered));
+        }
+      })
+      .catch((failure: unknown) => {
+        if (awaited) {
+          setRefusal(refusalSentence(failure));
+        }
+      });
+
+    return () => {
+      awaited = false;
+    };
+  }, [form]);
+
+  return refusal;
+}
+
 /** Everything the sheet's fields read and write, from the offered port to the save itself. */
 export function useGatewayDraft(
   onOpenChange: (open: boolean) => void,
   onCreated: (slug: string) => void,
 ) {
-  const [displayName, setDisplayName] = useState('');
-  const { port, setPort, refusal: offerRefusal } = useOfferedPort();
-  const [refusals, setRefusals] = useState<DraftRefusals>({});
+  const [mainRefusals, setMainRefusals] = useState<DraftRefusals>({});
   const saveGateway = useSaveGateway();
 
-  function save() {
-    const refused = refusalsBeforeSaving(displayName, port);
+  const form = useForm({
+    defaultValues: { displayName: '', port: '' },
+    onSubmit: ({ value }) => {
+      const slug = slugFromName(value.displayName);
 
-    if (refused.name !== undefined || refused.port !== undefined) {
-      setRefusals(refused);
+      saveGateway.mutate(gatewayFrom(value.displayName, slug, value.port), {
+        onSuccess: () => {
+          onOpenChange(false);
+          onCreated(slug);
+        },
+        onError: (failure) => {
+          setMainRefusals(refusalFromMain(failure));
+        },
+      });
+    },
+  });
 
-      return;
-    }
-
-    const slug = slugFromName(displayName);
-
-    saveGateway.mutate(gatewayFrom(displayName, slug, port), {
-      onSuccess: () => {
-        onOpenChange(false);
-        onCreated(slug);
-      },
-      onError: (failure) => {
-        setRefusals(refusalFromMain(failure));
-      },
-    });
-  }
+  const offerRefusal = useOfferedPort(form);
 
   return {
-    displayName,
-    port,
-    refusals: { ...refusals, sheet: refusals.sheet ?? offerRefusal },
-    save,
-    saving: saveGateway.isPending,
-    changeName: (typed: string) => {
-      setDisplayName(typed);
-      setRefusals((held) => ({ ...held, name: undefined }));
+    form,
+    refusals: { ...mainRefusals, sheet: mainRefusals.sheet ?? offerRefusal },
+    save: () => {
+      void form.handleSubmit();
     },
-    changePort: (typed: string) => {
-      setPort(typed);
-      setRefusals((held) => ({ ...held, port: undefined }));
+    saving: saveGateway.isPending,
+    clearMainRefusal: (field: 'name' | 'port') => {
+      setMainRefusals((held) => ({ ...held, [field]: undefined }));
     },
   };
 }
