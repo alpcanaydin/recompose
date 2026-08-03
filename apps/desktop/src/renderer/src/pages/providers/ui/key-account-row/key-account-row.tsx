@@ -57,11 +57,12 @@ function keyIdentity(
 
 type RowActs = {
   account: CredentialedAccount;
+  checking: boolean;
   onVerify: () => void;
   onRemove: () => void;
 };
 
-function quieterActions({ account, onVerify, onRemove }: RowActs) {
+function quieterActions({ account, checking, onVerify, onRemove }: RowActs) {
   return [
     ...(checkableKey(account)
       ? [
@@ -69,6 +70,7 @@ function quieterActions({ account, onVerify, onRemove }: RowActs) {
             label: 'Verify',
             icon: 'shield' as const,
             tone: 'positive' as const,
+            disabled: checking,
             onSelect: onVerify,
           },
         ]
@@ -100,6 +102,7 @@ export function KeyAccountRow({ account }: KeyAccountRowProps) {
       <OverflowMenu
         items={quieterActions({
           account,
+          checking: check.isPending,
           onVerify: () => {
             check.mutate({ id: account.id });
           },

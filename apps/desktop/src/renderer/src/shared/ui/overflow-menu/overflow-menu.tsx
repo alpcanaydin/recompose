@@ -13,6 +13,8 @@ type OverflowAction = {
   icon?: IconName | undefined;
   /** Ink the glyph carries at rest; a highlighted act repaints it in the highlight's own ink. */
   tone?: OverflowTone | undefined;
+  /** Keeps the act readable but out of reach while the work it asks for is still out. */
+  disabled?: boolean | undefined;
   /** Runs when a person chooses this action. */
   onSelect: () => void;
 };
@@ -52,6 +54,7 @@ export function OverflowMenu({ label, items }: OverflowMenuProps) {
             {items.map((action) => (
               <Menu.Item
                 className="group menu-action"
+                disabled={action.disabled ?? false}
                 key={action.label}
                 onClick={() => {
                   action.onSelect();

@@ -139,6 +139,21 @@ test('a check answers as of the moment it ran rather than as a standing the row 
   await expect.element(screen.getByRole('status')).toHaveTextContent('as of this check');
 });
 
+test('a check still out keeps Verify out of reach, so one press asks one probe', async () => {
+  await renderRow(stored, {
+    overrides: {
+      'accounts:check-key': async () => new Promise(() => undefined),
+    },
+  });
+
+  await choose('Verify');
+  await press('Actions for build');
+
+  await expect
+    .element(page.getByRole('menuitem', { name: 'Verify' }))
+    .toHaveAttribute('aria-disabled', 'true');
+});
+
 test('a refused check says why on the row rather than leaving the act silent', async () => {
   const screen = await renderRow(stored, {
     overrides: {

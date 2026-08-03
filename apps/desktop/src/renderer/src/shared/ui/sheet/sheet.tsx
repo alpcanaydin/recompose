@@ -1,7 +1,7 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Icon } from '../icon/icon';
@@ -9,12 +9,10 @@ import { Icon } from '../icon/icon';
 const SheetFootContext = createContext<HTMLElement | null>(null);
 
 function useFollowedHeight() {
-  const inner = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | undefined>(undefined);
+  const [grown, setGrown] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const grown = inner.current;
-
     if (grown === null) {
       return undefined;
     }
@@ -28,9 +26,9 @@ function useFollowedHeight() {
     return () => {
       follow.disconnect();
     };
-  }, []);
+  }, [grown]);
 
-  return { inner, height };
+  return { inner: setGrown, height };
 }
 
 /**

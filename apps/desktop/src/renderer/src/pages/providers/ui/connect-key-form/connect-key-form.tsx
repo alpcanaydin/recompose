@@ -7,7 +7,7 @@ import { useId } from 'react';
 
 import type { BrandMarkName } from '../../../../shared/ui';
 
-import { useConnectAccount, withRefusal } from '../../../../shared/api';
+import { IpcResultError, useConnectAccount, withRefusal } from '../../../../shared/api';
 import { FieldBoxRow, SheetActionSlot } from '../../../../shared/ui';
 import {
   keyHostFor,
@@ -74,6 +74,12 @@ function connectAct({ formId, named, pending }: ConnectAct): ReactNode {
       </button>
     </SheetActionSlot>
   );
+}
+
+function spokenRefusal(error: Error | null, refusal: string | undefined): string | undefined {
+  return error instanceof IpcResultError && error.code === 'validation-failed'
+    ? 'recompose cannot store this key as it stands.'
+    : refusal;
 }
 
 function refusalLine(refusal: string | undefined): ReactNode {
@@ -162,7 +168,7 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
         {pickedProduct(provider)}
         {keyFields(form, provider)}
         {shapeWarning(provider, pasted)}
-        {refusalLine(connect.refusal)}
+        {refusalLine(spokenRefusal(connect.error, connect.refusal))}
       </form>
       {connectAct({ formId, named, pending: connect.isPending })}
     </>

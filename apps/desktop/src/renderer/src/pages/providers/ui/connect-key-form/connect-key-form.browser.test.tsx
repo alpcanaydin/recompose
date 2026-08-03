@@ -70,6 +70,31 @@ test('the form carries the picked product over the fields, so the page says whos
   await expect.element(screen.getByText('Anthropic API')).toBeVisible();
 });
 
+test('a connect the schema refuses speaks a sentence, never the issue JSON', async () => {
+  installFakeBridge({
+    overrides: {
+      'accounts:connect': async () =>
+        Promise.resolve({
+          ok: false,
+          error: {
+            code: 'validation-failed',
+            message: '[{"code":"too_small","path":["secret"],"message":"Too small"}]',
+          },
+        }),
+    },
+  });
+
+  const screen = await renderKeyForm();
+
+  await screen.getByLabelText('Name').fill('build');
+  await screen.getByRole('button', { name: 'Connect' }).click();
+
+  await expect
+    .element(screen.getByRole('alert'))
+    .toHaveTextContent('recompose cannot store this key as it stands.');
+  await expect.element(screen.getByRole('alert')).not.toHaveTextContent('too_small');
+});
+
 test('each field hints at what belongs in it, in the shape the provider hands out', async () => {
   installFakeBridge();
 

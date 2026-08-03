@@ -40,3 +40,17 @@ test('dismissing the sheet takes it off the screen', async () => {
     .element(page.getByRole('dialog', { name: 'Create a gateway' }))
     .not.toBeInTheDocument();
 });
+
+test('the body carries its measured height, so a step change can ease instead of snap', async () => {
+  await render(<GatewaySheet />);
+
+  await expect.element(page.getByRole('dialog', { name: 'Create a gateway' })).toBeVisible();
+
+  await expect
+    .poll(() => {
+      const wrapper = document.querySelector('.sheet-body-resize');
+
+      return wrapper instanceof HTMLElement ? wrapper.style.height : '';
+    })
+    .toMatch(/px$/);
+});
