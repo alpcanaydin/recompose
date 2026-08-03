@@ -1,7 +1,6 @@
 import type { ReactNode, RefObject } from 'react';
 
-import { Sheet } from '../../../../shared/ui';
-import { FieldBoxRow } from '../../../../shared/ui';
+import { FieldBoxRow, Sheet } from '../../../../shared/ui';
 import { previewAddressFor } from '../lib/gateway-draft';
 import { useGatewayDraft } from '../lib/use-gateway-draft';
 

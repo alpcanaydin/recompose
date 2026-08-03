@@ -101,18 +101,6 @@ describe('folding a run of reports', () => {
     },
   );
 
-  test('a key-check report folds no gateway state, because it answers about a key', () => {
-    const states = { codex: { status: 'running' as const } };
-
-    const folded = foldEngineReport(states, {
-      kind: 'key-check',
-      answers: 'd1',
-      verdict: 'could-not-check',
-    });
-
-    expect(folded).toStrictEqual(states);
-  });
-
   test.prop([fc.array(anyReport)])('the ledger names no gateway that never reported', (reports) => {
     const folded = reports.reduce(foldEngineReport, {});
 

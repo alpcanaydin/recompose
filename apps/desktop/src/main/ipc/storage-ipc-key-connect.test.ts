@@ -69,26 +69,6 @@ describe('storage ipc handlers: a name stands once per provider', () => {
 
     expect(await vaultBytes(ctx)).toBe(before);
   });
-
-  test('a name whose surrounding whitespace differs is still the held name', async () => {
-    const handlers = createStorageIpcHandlers(await freshContext());
-
-    await handlers['accounts:connect'](keyRequest('anthropic', 'build'));
-
-    const refused = await handlers['accounts:connect'](keyRequest('anthropic', ' build '));
-
-    expect(refused).toMatchObject({ ok: false, error: { code: 'name-conflict' } });
-  });
-
-  test('a held name stored with surrounding whitespace still blocks its trim', async () => {
-    const handlers = createStorageIpcHandlers(await freshContext());
-
-    await handlers['accounts:connect'](keyRequest('anthropic', ' build '));
-
-    const refused = await handlers['accounts:connect'](keyRequest('anthropic', 'build'));
-
-    expect(refused).toMatchObject({ ok: false, error: { code: 'name-conflict' } });
-  });
 });
 
 describe('storage ipc handlers: the scope of the name guard', () => {

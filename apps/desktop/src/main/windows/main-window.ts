@@ -50,10 +50,10 @@ export function createMainWindow(route: string): void {
   }
 
   mainWindow.on('ready-to-show', () => {
-    if (process.env['RECOMPOSE_WINDOW_STAYS_BACK'] === undefined) {
-      mainWindow.show();
-    } else {
+    if (process.env['RECOMPOSE_WINDOW_STAYS_BACK'] === '1') {
       mainWindow.showInactive();
+    } else {
+      mainWindow.show();
     }
   });
 

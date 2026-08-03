@@ -32,7 +32,7 @@ async function verifyStoredKey(request: IpcRequest<'accounts:check-key'>) {
  * nothing: it lives in this mutation while the screen stands, and a remount forgets it rather
  * than keeping a claim the provider can revoke without telling anyone.
  */
-export function useCheckKey() {
+export function useVerifyKey() {
   return useMutation({ mutationFn: verifyStoredKey });
 }
 

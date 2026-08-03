@@ -1,7 +1,7 @@
 import type { CredentialedAccount, KeyCheckVerdict } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
-import { useCheckKey, useRemoveAccount, withRefusal } from '../../../shared/api';
+import { useVerifyKey, useRemoveAccount, withRefusal } from '../../../shared/api';
 import { BrandMark, OverflowMenu } from '../../../shared/ui';
 import { checkableKey, keyTitleFor, markFor } from '../model/provider-catalog';
 
@@ -66,7 +66,7 @@ function keyIdentity(
  * it appears only where a probe knows the provider well enough to answer.
  */
 export function KeyAccountRow({ account }: KeyAccountRowProps) {
-  const check = withRefusal(useCheckKey());
+  const check = withRefusal(useVerifyKey());
   const forget = withRefusal(useRemoveAccount());
 
   const mark = markFor(account.provider);

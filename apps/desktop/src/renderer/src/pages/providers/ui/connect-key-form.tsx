@@ -20,7 +20,7 @@ type ConnectKeyFormProps = {
   onConnected: () => void;
 };
 
-function keyIdentity(provider: BrandMarkName): ReactNode {
+function pickedProduct(provider: BrandMarkName): ReactNode {
   const host = keyHostFor(provider);
 
   return (
@@ -112,7 +112,7 @@ export function ConnectKeyForm({ provider, kind, onConnected }: ConnectKeyFormPr
           connect.mutate({ provider, kind, label, secret }, { onSuccess: onConnected });
         }}
       >
-        {keyIdentity(provider)}
+        {pickedProduct(provider)}
         <div className="mt-4 field-box">
           <FieldBoxRow
             controlClasses="w-sheet-secret"

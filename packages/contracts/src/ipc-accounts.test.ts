@@ -24,6 +24,10 @@ describe('accounts:connect channel', () => {
   test('a label of nothing but whitespace names no account, so it is refused', () => {
     expect(() => connect.parse({ ...offered, label: ' ' })).toThrow();
   });
+
+  test('a label with surrounding whitespace parses to its trim, so one name has one spelling', () => {
+    expect(connect.parse({ ...offered, label: ' build ' })).toMatchObject({ label: 'build' });
+  });
 });
 
 describe('the key the connect channel carries', () => {

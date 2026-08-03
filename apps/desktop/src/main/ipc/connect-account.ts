@@ -13,11 +13,11 @@ import { ipcFailure, storageFailure } from './storage-envelope';
 type ConnectRequest = IpcRequest<'accounts:connect'>;
 
 function nameHolderUnder(accounts: AccountsDocument, request: ConnectRequest) {
-  const asking = request.label.trim();
-
   return accounts.accounts.find(
     (held) =>
-      held.kind !== 'subscription' && held.provider === request.provider && held.label === asking,
+      held.kind !== 'subscription' &&
+      held.provider === request.provider &&
+      held.label === request.label,
   );
 }
 

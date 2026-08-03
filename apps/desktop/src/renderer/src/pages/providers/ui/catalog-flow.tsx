@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { AccountKind } from '../../../entities/account';
-import type { CatalogEntry } from '../model/provider-catalog';
+import type { CatalogEntry, ConnectionWay } from '../model/provider-catalog';
 
 import { Sheet } from '../../../shared/ui';
 import { CatalogList } from './catalog-list';
@@ -16,8 +16,13 @@ export type CatalogFlowProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-function standsOnGrid(picked: CatalogEntry | undefined, kind: AccountKind): boolean {
-  return picked === undefined || kind === 'local';
+type ConnectStep = { entry: CatalogEntry; way: ConnectionWay };
+
+function connectStepFor(
+  picked: CatalogEntry | undefined,
+  kind: AccountKind,
+): ConnectStep | undefined {
+  return picked === undefined || kind === 'local' ? undefined : { entry: picked, way: kind };
 }
 
 const descriptions: Record<AccountKind, string> = {
@@ -42,6 +47,8 @@ export function CatalogFlow({ kind, open, onOpenChange }: CatalogFlowProps) {
     setArrived('back');
   };
 
+  const connecting = connectStepFor(picked, kind);
+
   return (
     <Sheet
       description={descriptions[kind]}
@@ -60,20 +67,20 @@ export function CatalogFlow({ kind, open, onOpenChange }: CatalogFlowProps) {
       onOpenChange={onOpenChange}
       open={open}
       title="Add provider"
-      wide={standsOnGrid(picked, kind)}
+      wide={connecting === undefined}
     >
-      {picked === undefined || kind === 'local' ? (
+      {connecting === undefined ? (
         <div className={arrived === 'back' ? 'step-enter-back' : ''}>
           <CatalogList kind={kind} onPick={setPicked} />
         </div>
       ) : (
         <div className="step-enter-forward">
           <ProviderConnectWay
-            entry={picked}
+            entry={connecting.entry}
             onConnected={() => {
               onOpenChange(false);
             }}
-            way={kind}
+            way={connecting.way}
           />
         </div>
       )}
