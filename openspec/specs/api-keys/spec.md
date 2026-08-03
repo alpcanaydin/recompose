@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The behavioral contract of an API key account in recompose. A key is the one credential the app holds and spends itself. This contract states what the app stores, what the screen shows, what a connect refuses, and what a check may claim. It covers the masked row, the catalog of endpoints, and the two-field connect with its trim and shape rules. The verify act stands on every checkable key, running it stays the person's choice, and nothing stores its answer.
+The behavioral contract of an API key account in recompose. A key is the one credential the app holds and spends itself. This contract states what the app stores, what the screen shows, what a connect refuses, and what a check may claim. It covers the masked row, the catalog of endpoints, and the two-field connect with its trim and shape rules. The verify act stands on every key whose provider the probe can answer for, running it stays the person's choice, and nothing stores its answer.
 
 ## Requirements
 
@@ -42,7 +42,7 @@ The catalog the API Keys surface opens MUST offer nine entries: Anthropic API, O
 
 ### Requirement: Connecting asks for a name and a key
 
-A picked entry MUST ask for a name and a key, and nothing more. The provider rides in from the picked entry, so the form MUST NOT ask for it, and MUST NOT offer a base URL or a dialect field. The surface MUST name the host the key reaches before a person stores it. A blank name and a blank key MUST refuse at the contract boundary. Neither the registry nor the vault ever holds an empty value, and the stored name is the trim.
+A picked entry MUST ask for a name and a key, and nothing more. The provider rides in from the picked entry, so the form MUST NOT ask for it, and MUST NOT offer a base URL or a dialect field. The surface MUST name the host the key reaches before a person stores it. A name and a key MUST trim before the blank check, and a value that trims to nothing MUST refuse at the contract boundary. Neither the registry nor the vault ever holds an empty value, and the stored name is the trim.
 
 #### Scenario: a person picks a connectable entry
 
