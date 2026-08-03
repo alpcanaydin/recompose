@@ -1,9 +1,9 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { Sheet } from '../../../../shared/ui';
+import { FieldBoxRow } from '../../../../shared/ui';
 import { previewAddressFor } from '../lib/gateway-draft';
 import { useGatewayDraft } from '../lib/use-gateway-draft';
-import { DraftRow } from './draft-row';
 
 export type GatewayDraftProps = {
   /** Whether the sheet stands on screen. */
@@ -47,7 +47,7 @@ function draftFooter(draft: Draft, onOpenChange: (open: boolean) => void): React
 function draftFields(draft: Draft, nameField: RefObject<HTMLInputElement | null>): ReactNode {
   return (
     <div className="field-box">
-      <DraftRow
+      <FieldBoxRow
         controlClasses="w-sheet-field"
         label="Name"
         onChangeValue={(typed) => {
@@ -57,7 +57,7 @@ function draftFields(draft: Draft, nameField: RefObject<HTMLInputElement | null>
         refusal={draft.refusals.name}
         value={draft.displayName}
       />
-      <DraftRow
+      <FieldBoxRow
         controlClasses="w-sheet-port text-end font-mono"
         label="Port"
         onChangeValue={(typed) => {

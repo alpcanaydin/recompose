@@ -16,6 +16,10 @@ export type CatalogFlowProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+function standsOnGrid(picked: CatalogEntry | undefined, kind: AccountKind): boolean {
+  return picked === undefined || kind === 'local';
+}
+
 const descriptions: Record<AccountKind, string> = {
   subscription: 'Sign in with a plan you already pay for.',
   'api-key': "Paste a key for one provider's endpoint.",
@@ -56,7 +60,7 @@ export function CatalogFlow({ kind, open, onOpenChange }: CatalogFlowProps) {
       onOpenChange={onOpenChange}
       open={open}
       title="Add provider"
-      wide
+      wide={standsOnGrid(picked, kind)}
     >
       {picked === undefined || kind === 'local' ? (
         <div className={arrived === 'back' ? 'step-enter-back' : ''}>

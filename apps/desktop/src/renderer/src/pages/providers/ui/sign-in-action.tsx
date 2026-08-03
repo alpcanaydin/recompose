@@ -1,7 +1,7 @@
 import type { SubscriptionProviderId } from '@recompose/contracts';
 
 import { useSignInSubscription } from '../../../shared/api';
-import { CopyButton } from '../../../shared/ui';
+import { CopyButton, SheetActionSlot } from '../../../shared/ui';
 
 type SignInActionProps = {
   name: string;
@@ -37,20 +37,22 @@ export function SignInAction({
 
   return (
     <>
-      <button
-        className="mt-1 push-button-primary w-full justify-center focus-ring"
-        onClick={() => {
-          signIn.mutate({ provider }, { onSuccess: onConnected });
-        }}
-        type="button"
-      >
-        Sign in to {name}
-      </button>
       {signIn.refusal === undefined ? null : (
         <p className="text-detail text-danger-ink" role="alert">
           {signIn.refusal}
         </p>
       )}
+      <SheetActionSlot>
+        <button
+          className="push-button-primary focus-ring"
+          onClick={() => {
+            signIn.mutate({ provider }, { onSuccess: onConnected });
+          }}
+          type="button"
+        >
+          Sign in to {name}
+        </button>
+      </SheetActionSlot>
     </>
   );
 }

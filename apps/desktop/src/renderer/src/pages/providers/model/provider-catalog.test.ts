@@ -17,6 +17,7 @@ import {
   offeredUnder,
   signInProviderOf,
   subscriptionTitleFor,
+  keyShapeHintFor,
 } from './provider-catalog';
 
 const anyWay = fc.constantFrom<ConnectionWay[]>('subscription', 'api-key', 'aggregator');
@@ -208,3 +209,13 @@ test.prop([anyCatalog, anyWay])(
     expect(under.every((entry) => offerFor(entry, way) !== undefined)).toBe(true);
   },
 );
+
+test('a key field hints at the shape the provider hands out', () => {
+  expect(keyShapeHintFor('anthropic')).toBe('sk-ant-…');
+  expect(keyShapeHintFor('openai')).toBe('sk-…');
+});
+
+test('a provider whose key shape the catalog never learned hints at nothing', () => {
+  expect(keyShapeHintFor('openrouter')).toBeUndefined();
+  expect(keyShapeHintFor('mistral')).toBeUndefined();
+});

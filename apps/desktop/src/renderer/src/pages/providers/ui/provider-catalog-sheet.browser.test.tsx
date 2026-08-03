@@ -208,3 +208,32 @@ test('an account the catalog connected closes it', async () => {
 
   await expect.element(screen.getByText('The catalog closed.')).toBeVisible();
 });
+
+function actNamesAtTheFoot() {
+  const dialog = page.getByRole('dialog', { name: 'Add provider' });
+  const foot = dialog.element().querySelector('footer');
+
+  return [...(foot?.querySelectorAll('button') ?? [])].map((act) => act.textContent);
+}
+
+test('the key page stands its settle acts together at the foot, Connect as the primary', async () => {
+  installFakeBridge();
+
+  const screen = await renderCatalog('api-key');
+
+  await press(/Anthropic API/);
+
+  await expect.element(screen.getByLabelText('Key')).toBeVisible();
+  expect(actNamesAtTheFoot()).toEqual(['Cancel', 'Connect']);
+});
+
+test('the subscription page stands the sign-in at the foot the same way', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog('subscription');
+
+  await press(/Claude/);
+
+  await expect.element(screen.getByText(/signs in on its own/)).toBeVisible();
+  expect(actNamesAtTheFoot()).toEqual(['Cancel', 'Sign in to Anthropic']);
+});

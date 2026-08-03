@@ -2,10 +2,10 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { DraftRow } from './draft-row';
+import { FieldBoxRow } from './field-box-row';
 
 const meta = preview.meta({
-  component: DraftRow,
+  component: FieldBoxRow,
   args: {
     label: 'Name',
     value: 'Codex',
@@ -22,10 +22,10 @@ const meta = preview.meta({
 });
 
 /**
- * One labelled row of the gateway draft.
+ * One labelled row of a field box.
  *
  * @summary The reading asks for the control under its label's name, because the label is the only
- * thing that tells the two draft fields apart.
+ * thing that tells sibling fields apart.
  */
 export const Basic = meta.story({
   play: async ({ canvas }) => {
@@ -43,6 +43,19 @@ export const Refused = meta.story({
   args: { refusal: 'A gateway needs a name.', value: '' },
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('alert')).toHaveTextContent('A gateway needs a name.');
+  },
+});
+
+/**
+ * A secret row, masked and hinted in the shape its value is handed out in.
+ *
+ * @summary The hint carries the vendor's documented prefix, so a person pasting recognizes which
+ * key belongs here before the mask swallows it.
+ */
+export const SecretWithHint = meta.story({
+  args: { label: 'Key', placeholder: 'sk-ant-…', type: 'password', value: '' },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByLabelText('Key')).toHaveAttribute('placeholder', 'sk-ant-…');
   },
 });
 

@@ -1,8 +1,26 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
+import { createContext, useContext, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Icon } from './icon';
+
+const SheetFootContext = createContext<HTMLElement | null>(null);
+
+/**
+ * Carries an act into the sheet's foot from wherever its state lives.
+ *
+ * @summary Reach for it inside a sheet's body when the act that settles the sheet needs state
+ * only the body holds. The act renders beside the sheet's own foot actions, so every settle act
+ * reads in one place. Outside a sheet it renders in place, so a surface under test or in a story
+ * still offers the act.
+ */
+export function SheetActionSlot({ children }: { children: ReactNode }): ReactNode {
+  const foot = useContext(SheetFootContext);
+
+  return foot === null ? children : createPortal(children, foot);
+}
 
 type SheetProps = {
   /** Whether the sheet stands on screen. */
@@ -43,6 +61,8 @@ export function Sheet({
   onBack,
   children,
 }: SheetProps) {
+  const [foot, setFoot] = useState<HTMLElement | null>(null);
+
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
       <Dialog.Portal>
@@ -64,13 +84,17 @@ export function Sheet({
             )}
             <div>
               <Dialog.Title className="block text-heading text-ink">{title}</Dialog.Title>
-              <Dialog.Description className="mt-1.25 text-detail text-ink-secondary">
+              <Dialog.Description className="mt-0.75 text-detail text-ink-secondary">
                 {description}
               </Dialog.Description>
             </div>
           </header>
-          <div className="px-4.5 pb-3.75">{children}</div>
-          <footer className="sheet-actions">{footer}</footer>
+          <div className="px-4.5 pb-3.75">
+            <SheetFootContext.Provider value={foot}>{children}</SheetFootContext.Provider>
+          </div>
+          <footer className="sheet-actions" ref={setFoot}>
+            {footer}
+          </footer>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

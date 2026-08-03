@@ -35,5 +35,26 @@ export const GridStep = meta.story({
   },
 });
 
+/**
+ * The key step of the flow, standing the picked product centered over its two fields.
+ *
+ * @summary The reading proves the pick trades the grid for the form: the product heads the page
+ * in the mark-and-heading anatomy the subscription step ships, each field hints the shape it
+ * takes, and the connect act rides the sheet's foot beside Cancel rather than the body.
+ */
+export const KeyStep = meta.story({
+  args: { kind: 'api-key' as const },
+  play: async ({ userEvent }) => {
+    await userEvent.click(await screen.findByRole('button', { name: /Anthropic API/ }));
+
+    await waitFor(async () => {
+      await expect(await screen.findByRole('heading', { name: 'Anthropic API' })).toBeVisible();
+    });
+
+    await expect(await screen.findByLabelText('Key')).toHaveAttribute('placeholder', 'sk-ant-…');
+    await expect(await screen.findByRole('button', { name: 'Connect' })).toBeVisible();
+  },
+});
+
 /** The flow in the dark scheme, where the cards lift off the sheet behind them. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

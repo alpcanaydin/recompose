@@ -44,7 +44,7 @@ export const SheetBands = meta.story({
 
     await expect(paintedStyle(description).fontSize).toBe('12px');
     await expect(paintedStyle(description).lineHeight).toBe('18px');
-    await expect(paintedStyle(description).marginTop).toBe('5px');
+    await expect(paintedStyle(description).marginTop).toBe('3px');
 
     await expect(paintedStyle(actions).padding).toBe('12px 18px');
     await expect(paintedStyle(actions).columnGap).toBe('8px');

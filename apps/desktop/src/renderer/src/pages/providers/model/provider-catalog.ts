@@ -173,6 +173,23 @@ export function keyTitleFor(provider: string): string {
   return offer?.title ?? provider;
 }
 
+const keyShapeHints: Record<KeyProviderId, string> = {
+  anthropic: 'sk-ant-…',
+  openai: 'sk-…',
+};
+
+/**
+ * The shape a provider's keys are handed out in, or nothing where no shape is documented.
+ *
+ * @summary Reach for it where an empty key field wants a hint. The hint echoes the one documented
+ * prefix family per vendor, so a person pasting recognizes at a glance which key belongs here.
+ */
+export function keyShapeHintFor(provider: string): string | undefined {
+  const known = keyProviderIdSchema.safeParse(provider);
+
+  return known.success ? keyShapeHints[known.data] : undefined;
+}
+
 /**
  * The host a provider's key is spent against, or nothing where its one key reaches many.
  *

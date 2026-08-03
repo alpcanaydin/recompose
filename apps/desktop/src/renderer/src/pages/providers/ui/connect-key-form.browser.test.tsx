@@ -62,6 +62,33 @@ test('the form names the host the key will be spent against before it is stored'
   await expect.element(screen.getByText('api.anthropic.com')).toBeVisible();
 });
 
+test('the form carries the picked product over the fields, so the page says whose key it takes', async () => {
+  installFakeBridge();
+
+  const screen = await renderKeyForm();
+
+  await expect.element(screen.getByText('Anthropic API')).toBeVisible();
+});
+
+test('each field hints at what belongs in it, in the shape the provider hands out', async () => {
+  installFakeBridge();
+
+  const screen = await renderKeyForm();
+
+  await expect.element(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'Work');
+  await expect.element(screen.getByLabelText('Key')).toHaveAttribute('placeholder', 'sk-ant-…');
+});
+
+test('the naming guidance keeps standing after a name arrives, so the form never jumps', async () => {
+  installFakeBridge();
+
+  const screen = await renderKeyForm();
+
+  await screen.getByLabelText('Name').fill('build');
+
+  await expect.element(screen.getByText(/never read alike/)).toBeVisible();
+});
+
 test('a connect stores the name the person gave under the provider the entry carried', async () => {
   installFakeBridge();
 
