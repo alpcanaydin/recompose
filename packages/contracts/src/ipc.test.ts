@@ -208,6 +208,7 @@ describe('ipc error codes', () => {
     'vault-unavailable',
     'vault-newer-schema',
     'settings-newer-schema',
+    'accounts-newer-schema',
     'validation-failed',
     'storage-failed',
     'folder-open-failed',
@@ -226,7 +227,7 @@ describe('ipc error codes', () => {
     expect(() => ipcErrorSchema.parse({ code: 'other', message: 'x' })).toThrow();
   });
 
-  test('the set holds exactly eleven codes, so a twelfth arrives through a failing test', () => {
+  test('the set holds exactly twelve codes, so a thirteenth arrives through a failing test', () => {
     expect(ipcErrorSchema.shape.code.options).toEqual(everyCode);
   });
 

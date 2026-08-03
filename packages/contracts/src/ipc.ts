@@ -17,6 +17,7 @@ export const ipcErrorSchema = z.strictObject({
     'vault-unavailable',
     'vault-newer-schema',
     'settings-newer-schema',
+    'accounts-newer-schema',
     'validation-failed',
     'storage-failed',
     'folder-open-failed',

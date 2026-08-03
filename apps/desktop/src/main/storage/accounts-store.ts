@@ -1,21 +1,61 @@
 import {
+  ACCOUNTS_VERSION,
   defaultAccountsDocument,
   loadAccountsDocument,
   type AccountsDocument,
 } from '@recompose/contracts';
 
-import { readDocumentWithQuarantine, writeJsonAtomic } from './json-file';
+import {
+  newerSchemaVersion,
+  quarantineFile,
+  readJsonWithQuarantine,
+  writeJsonAtomic,
+} from './json-file';
 import { oneAtATime } from './one-at-a-time';
 
 const inAccountsOrder = oneAtATime();
+
+/**
+ * An accounts document this build is too old to read.
+ *
+ * @summary Thrown instead of quarantining, so a person who ran a newer build and came back keeps
+ * every subscription and key row rather than finding an empty list and orphaned vault secrets.
+ */
+export class AccountsNewerSchemaError extends Error {
+  readonly schemaVersion: number;
+
+  constructor(schemaVersion: number) {
+    super(
+      `the accounts document names schema version ${String(schemaVersion)}, and this build reads up to ${String(ACCOUNTS_VERSION)}`,
+    );
+    this.name = 'AccountsNewerSchemaError';
+    this.schemaVersion = schemaVersion;
+  }
+}
 
 export async function loadAccountsFile(
   filePath: string,
   onCorrupt: (quarantinedPath: string) => void,
 ): Promise<AccountsDocument> {
-  const accounts = await readDocumentWithQuarantine(filePath, loadAccountsDocument, onCorrupt);
+  const raw = await readJsonWithQuarantine(filePath, onCorrupt);
 
-  return accounts ?? defaultAccountsDocument();
+  if (raw === undefined) {
+    return defaultAccountsDocument();
+  }
+
+  const newer = newerSchemaVersion(raw, ACCOUNTS_VERSION);
+
+  if (newer !== undefined) {
+    throw new AccountsNewerSchemaError(newer);
+  }
+
+  try {
+    return loadAccountsDocument(raw);
+  } catch {
+    await quarantineFile(filePath, onCorrupt);
+
+    return defaultAccountsDocument();
+  }
 }
 
 export async function saveAccountsFile(
