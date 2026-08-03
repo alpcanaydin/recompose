@@ -68,17 +68,28 @@ describe('a probe directive the parent sends', () => {
     ]);
   });
 
-  test('a probe whose fetch throws still answers, saying the check could not run', async () => {
+  test('a probe whose fetch throws still answers, and one sanitized line names what failed', async () => {
     const parent = aParent();
     const refusing: typeof fetch = async () => Promise.reject(new TypeError('fetch failed'));
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    attachEngineChild(parent.port, aLoopbackHolding([]), refusing);
-    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
-    await reportsReach(parent, 1);
+    try {
+      attachEngineChild(parent.port, aLoopbackHolding([]), refusing);
+      parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+      await reportsReach(parent, 1);
 
-    expect(parent.reports).toEqual([
-      { kind: 'key-check', answers: 'd1', verdict: 'could-not-check' },
-    ]);
+      expect(parent.reports).toEqual([
+        { kind: 'key-check', answers: 'd1', verdict: 'could-not-check' },
+      ]);
+
+      const spoken = JSON.stringify(complaints.mock.calls);
+
+      expect(spoken).toContain('anthropic');
+      expect(spoken).toContain('https://api.anthropic.com');
+      expect(spoken).not.toContain('9f2c');
+    } finally {
+      complaints.mockRestore();
+    }
   });
 
   test('the answer carries no window of the key it was handed', async () => {

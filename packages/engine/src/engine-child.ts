@@ -35,6 +35,10 @@ function probeOriginFor(provider: KeyProviderId): string {
   );
 }
 
+function kindOf(directive: { kind: string }): string {
+  return directive.kind;
+}
+
 type RefusalIssue = { path: readonly PropertyKey[]; code: string };
 
 function sanitizedRefusal(issues: readonly RefusalIssue[]): { path: string; code: string }[] {
@@ -80,7 +84,7 @@ async function answerFor(
       const unknownDirective: never = directive;
 
       throw new Error(
-        `the engine child heard a directive kind it does not know: ${typeof unknownDirective}`,
+        `the engine child heard a directive kind it does not know: ${kindOf(unknownDirective)}`,
       );
     }
   }

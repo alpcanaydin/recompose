@@ -21,7 +21,7 @@ function authHeadersFor(provider: KeyProviderId, key: string): Record<string, st
     default: {
       const unknownProvider: never = provider;
 
-      throw new Error(`no probe speaks to the provider: ${typeof unknownProvider}`);
+      throw new Error(`no probe speaks to the provider: ${String(unknownProvider)}`);
     }
   }
 }
@@ -54,6 +54,8 @@ export async function probeKey(
 
     return { verdict: verdictFor(response.status), status: response.status };
   } catch {
+    console.error(`The ${provider} probe could not reach ${origin}, so the check did not run.`);
+
     return { verdict: 'could-not-check' };
   }
 }
