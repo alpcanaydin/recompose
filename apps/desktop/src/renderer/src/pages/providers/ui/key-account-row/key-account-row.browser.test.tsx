@@ -28,7 +28,7 @@ const storedBeforeTheMask: CredentialedAccount = {
 };
 
 async function renderRow(account: CredentialedAccount, parameters: BridgeParameters = {}) {
-  installFakeBridge({ accounts: { schemaVersion: 3, accounts: [account] }, ...parameters });
+  installFakeBridge({ accounts: { schemaVersion: 4, accounts: [account] }, ...parameters });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

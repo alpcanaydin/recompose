@@ -29,7 +29,13 @@ const aggregatorRow = {
 const nonBlank = fc.string({ minLength: 1, maxLength: 12 }).map((value) => `x${value.trim()}`);
 
 function vaultReferenceOf(account: Account): string | undefined {
-  return account.kind === 'subscription' ? undefined : account.credentialRef;
+  return account.kind === 'api-key' || account.kind === 'aggregator'
+    ? account.credentialRef
+    : undefined;
+}
+
+function labelOf(account: Account): string | undefined {
+  return account.kind === 'local' ? undefined : account.label;
 }
 
 describe('a stored version 1 document, written while a subscription held a pasted secret', () => {
@@ -40,28 +46,28 @@ describe('a stored version 1 document, written while a subscription held a paste
     };
 
     expect(loadAccountsDocument(storedUnderVersionOne)).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [{ ...subscriptionRow, kind: 'api-key', credentialRef: 'cred-7f3a' }],
     });
   });
 
   test('a key row travels untouched', () => {
     expect(loadAccountsDocument({ schemaVersion: 1, accounts: [keyRow] })).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [keyRow],
     });
   });
 
   test('an aggregator row travels untouched', () => {
     expect(loadAccountsDocument({ schemaVersion: 1, accounts: [aggregatorRow] })).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [aggregatorRow],
     });
   });
 
   test('an empty registry crosses the version with nothing invented', () => {
     expect(loadAccountsDocument({ schemaVersion: 1, accounts: [] })).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [],
     });
   });
@@ -93,11 +99,9 @@ describe('every version 1 document a machine could hold', () => {
       const migrated = loadAccountsDocument(storedUnderVersionOne);
       const stored = storedUnderVersionOne.accounts;
 
-      expect(migrated.schemaVersion).toBe(3);
+      expect(migrated.schemaVersion).toBe(4);
       expect(migrated.accounts.map((account) => account.id)).toEqual(stored.map((row) => row.id));
-      expect(migrated.accounts.map((account) => account.label)).toEqual(
-        stored.map((row) => row.label),
-      );
+      expect(migrated.accounts.map(labelOf)).toEqual(stored.map((row) => row.label));
       expect(migrated.accounts.map(vaultReferenceOf)).toEqual(
         stored.map((row) => row.credentialRef),
       );
@@ -107,21 +111,21 @@ describe('every version 1 document a machine could hold', () => {
 });
 
 describe('a stored version 2 document, written before a row published a mask', () => {
-  test('the document restamps to version 3 and hands back the rows it held', () => {
+  test('the document restamps to version 4 and hands back the rows it held', () => {
     const storedUnderVersionTwo = {
       schemaVersion: 2,
       accounts: [subscriptionRow, keyRow, aggregatorRow],
     };
 
     expect(loadAccountsDocument(storedUnderVersionTwo)).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [subscriptionRow, keyRow, aggregatorRow],
     });
   });
 
   test('an empty registry crosses the version with nothing invented', () => {
     expect(loadAccountsDocument({ schemaVersion: 2, accounts: [] })).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [],
     });
   });
@@ -131,6 +135,78 @@ describe('a stored version 2 document, written before a row published a mask', (
 
     expect(migrated.accounts[0]).not.toHaveProperty('keyTail');
   });
+});
+
+describe('a stored version 3 document, written before a runtime could stand as a row', () => {
+  test('the document restamps to version 4 and hands back the rows it held', () => {
+    const storedUnderVersionThree = {
+      schemaVersion: 3,
+      accounts: [subscriptionRow, keyRow, aggregatorRow],
+    };
+
+    expect(loadAccountsDocument(storedUnderVersionThree)).toEqual({
+      schemaVersion: 4,
+      accounts: [subscriptionRow, keyRow, aggregatorRow],
+    });
+  });
+
+  test('an empty registry crosses the version with nothing invented', () => {
+    expect(loadAccountsDocument({ schemaVersion: 3, accounts: [] })).toEqual({
+      schemaVersion: 4,
+      accounts: [],
+    });
+  });
+
+  test('no row becomes a runtime on the way, because no version 3 row could name one', () => {
+    const migrated = loadAccountsDocument({ schemaVersion: 3, accounts: [keyRow, aggregatorRow] });
+
+    expect(migrated.accounts.filter((account) => account.kind === 'local')).toEqual([]);
+  });
+
+  test('a mask a row already published survives the restamp', () => {
+    const masked = { ...keyRow, keyTail: '9f2c' };
+
+    expect(loadAccountsDocument({ schemaVersion: 3, accounts: [masked] })).toEqual({
+      schemaVersion: 4,
+      accounts: [masked],
+    });
+  });
+});
+
+describe('every version 3 document a machine could hold', () => {
+  const versionThreeRows = fc.oneof(
+    fc.record({
+      id: nonBlank,
+      provider: fc.constantFrom('anthropic', 'openai'),
+      kind: fc.constant('subscription'),
+      label: nonBlank,
+    }),
+    fc.record({
+      id: nonBlank,
+      provider: nonBlank,
+      kind: fc.constantFrom('api-key', 'aggregator'),
+      label: nonBlank,
+      credentialRef: nonBlank,
+      keyTail: fc.stringMatching(/^[a-z0-9]{4}$/),
+    }),
+  );
+
+  const versionThreeDocuments = fc.record({
+    schemaVersion: fc.constant(3),
+    accounts: fc.uniqueArray(versionThreeRows, { selector: (row) => row.id, maxLength: 6 }),
+  });
+
+  test.prop([versionThreeDocuments])(
+    'it reaches version 4 with every row byte-identical to the one stored',
+    (storedUnderVersionThree) => {
+      const migrated = loadAccountsDocument(storedUnderVersionThree);
+
+      expect(migrated.schemaVersion).toBe(4);
+      expect(JSON.stringify(migrated.accounts)).toBe(
+        JSON.stringify(storedUnderVersionThree.accounts),
+      );
+    },
+  );
 });
 
 describe('every version 2 document a machine could hold', () => {
@@ -156,11 +232,11 @@ describe('every version 2 document a machine could hold', () => {
   });
 
   test.prop([versionTwoDocuments])(
-    'it reaches version 3 with every row byte-identical to the one stored',
+    'it reaches version 4 with every row byte-identical to the one stored',
     (storedUnderVersionTwo) => {
       const migrated = loadAccountsDocument(storedUnderVersionTwo);
 
-      expect(migrated.schemaVersion).toBe(3);
+      expect(migrated.schemaVersion).toBe(4);
       expect(JSON.stringify(migrated.accounts)).toBe(
         JSON.stringify(storedUnderVersionTwo.accounts),
       );

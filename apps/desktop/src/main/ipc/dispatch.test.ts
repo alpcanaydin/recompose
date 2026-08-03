@@ -1,5 +1,6 @@
 import { fc, test } from '@fast-check/vitest';
 import {
+  ACCOUNTS_VERSION,
   defaultSettings,
   GATEWAY_CONFIG_VERSION,
   ipcChannels,
@@ -16,7 +17,7 @@ import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
 
 const settings: Settings = { ...defaultSettings(), theme: 'dark' };
-const emptyAccounts: AccountsDocument = { schemaVersion: 3, accounts: [] };
+const emptyAccounts: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
 const systemState: SystemState = {
   fileBrowser: 'finder',
   loginItem: 'available',

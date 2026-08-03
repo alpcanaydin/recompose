@@ -1,4 +1,8 @@
-import { defaultAccountsDocument, type AccountsDocument } from '@recompose/contracts';
+import {
+  ACCOUNTS_VERSION,
+  defaultAccountsDocument,
+  type AccountsDocument,
+} from '@recompose/contracts';
 import { mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,7 +20,7 @@ describe('accounts store', () => {
   test('a saved registry loads back identically', async () => {
     const file = join(await mkdtemp(join(tmpdir(), 'recompose-accounts-')), 'accounts.json');
     const doc: AccountsDocument = {
-      schemaVersion: 3,
+      schemaVersion: ACCOUNTS_VERSION,
       accounts: [
         { id: 'a1', provider: 'anthropic', kind: 'subscription' as const, label: 'Max' },
         {

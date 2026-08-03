@@ -16,7 +16,7 @@ import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/cont
 import { accountHandlers } from './fake-accounts';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
-const emptyDocument: AccountsDocument = { schemaVersion: 3, accounts: [] };
+const emptyDocument: AccountsDocument = { schemaVersion: 4, accounts: [] };
 
 const observedSystem: SystemState = {
   fileBrowser: 'finder',

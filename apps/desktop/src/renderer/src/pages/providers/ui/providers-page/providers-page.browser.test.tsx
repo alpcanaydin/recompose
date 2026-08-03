@@ -31,7 +31,7 @@ const openai: SubscriptionAccountView = {
 };
 
 const keys: AccountsDocument = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   accounts: [
     {
       id: 'a2',

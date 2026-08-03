@@ -7,6 +7,8 @@ import type {
   CredentialedAccount,
   CredentialedAccountKind,
   IpcRequest,
+  LocalAccount,
+  LocalRuntimeId,
   SubscriptionAccount,
   SubscriptionProviderId,
 } from './index';
@@ -14,13 +16,15 @@ import type {
 import { defaultAccountsDocument, loadAccountsDocument } from './accounts';
 
 describe('the account row the document stores', () => {
-  test('the document pins itself to schema version 3', () => {
-    expectTypeOf<AccountsDocument['schemaVersion']>().toEqualTypeOf<3>();
+  test('the document pins itself to schema version 4', () => {
+    expectTypeOf<AccountsDocument['schemaVersion']>().toEqualTypeOf<4>();
   });
 
-  test('a stored row is either a subscription or a credentialed account', () => {
+  test('a stored row is a subscription, a credentialed account, or a local runtime', () => {
     expectTypeOf<AccountsDocument['accounts'][number]>().toEqualTypeOf<Account>();
-    expectTypeOf<Account['kind']>().toEqualTypeOf<'subscription' | 'api-key' | 'aggregator'>();
+    expectTypeOf<Account['kind']>().toEqualTypeOf<
+      'subscription' | 'api-key' | 'aggregator' | 'local'
+    >();
   });
 
   test('a subscription row structurally cannot reference the vault', () => {
@@ -61,12 +65,38 @@ describe('the account row the document stores', () => {
     expectTypeOf<SubscriptionAccount>().not.toHaveProperty('key');
   });
 
-  test('the vocabulary knows the local kind, though no stored row can name it', () => {
-    expectTypeOf<AccountKind>().toEqualTypeOf<
-      'subscription' | 'api-key' | 'aggregator' | 'local'
-    >();
+  test('every kind the vocabulary names is a kind a stored row can be', () => {
+    expectTypeOf<AccountKind>().toEqualTypeOf<Account['kind']>();
     expectTypeOf<CredentialedAccountKind>().toEqualTypeOf<'api-key' | 'aggregator'>();
-    expectTypeOf<Extract<Account, { kind: 'local' }>>().toEqualTypeOf<never>();
+  });
+});
+
+describe('the local row a runtime stands as', () => {
+  test('the local arm is the whole of what a local kind can be', () => {
+    expectTypeOf<Extract<Account, { kind: 'local' }>>().toEqualTypeOf<LocalAccount>();
+    expectTypeOf<LocalAccount['kind']>().toEqualTypeOf<'local'>();
+  });
+
+  test('a local row structurally cannot reference the vault, because nothing exists to reference', () => {
+    expectTypeOf<LocalAccount>().not.toHaveProperty('credentialRef');
+    expectTypeOf<Extract<Account, { kind: 'local' }>>().not.toHaveProperty('credentialRef');
+  });
+
+  test('a local row structurally cannot carry a label, because the runtime name is the row name', () => {
+    expectTypeOf<LocalAccount>().not.toHaveProperty('label');
+    expectTypeOf<Extract<Account, { kind: 'local' }>>().not.toHaveProperty('label');
+  });
+
+  test('a local row carries the runtime, the address, and nothing else at all', () => {
+    expectTypeOf<keyof LocalAccount>().toEqualTypeOf<'id' | 'provider' | 'kind' | 'address'>();
+    expectTypeOf<LocalAccount['provider']>().toEqualTypeOf<LocalRuntimeId>();
+    expectTypeOf<LocalAccount['address']>().toEqualTypeOf<string>();
+  });
+
+  test('a local row has no field a secret or a mask could occupy', () => {
+    expectTypeOf<LocalAccount>().not.toHaveProperty('secret');
+    expectTypeOf<LocalAccount>().not.toHaveProperty('key');
+    expectTypeOf<LocalAccount>().not.toHaveProperty('keyTail');
   });
 });
 

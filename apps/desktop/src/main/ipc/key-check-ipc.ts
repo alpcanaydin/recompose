@@ -26,7 +26,7 @@ async function checkableRow(ctx: KeyCheckIpcContext, paths: StoragePaths, id: st
   const accounts = await loadAccountsFile(paths.accountsFile, ctx.onCorrupt);
   const row = accounts.accounts.find((candidate) => candidate.id === id);
 
-  if (row === undefined || row.kind === 'subscription') {
+  if (row === undefined || (row.kind !== 'api-key' && row.kind !== 'aggregator')) {
     return ipcFailure('storage-failed', `no key account is held under ${id}.`);
   }
 

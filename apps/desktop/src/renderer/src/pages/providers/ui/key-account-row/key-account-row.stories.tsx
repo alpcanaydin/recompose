@@ -35,7 +35,7 @@ const storedUnderAnUnknownProvider: CredentialedAccount = {
 const meta = preview.meta({
   component: KeyAccountRow,
   args: { account: stored },
-  parameters: { bridge: { accounts: { schemaVersion: 3 as const, accounts: [stored] } } },
+  parameters: { bridge: { accounts: { schemaVersion: 4 as const, accounts: [stored] } } },
   decorators: [
     (Story) => (
       <ul className="mx-auto w-full max-w-column py-4">
@@ -70,7 +70,7 @@ export const Connected = meta.story({
 export const Checked = meta.story({
   parameters: {
     bridge: {
-      accounts: { schemaVersion: 3 as const, accounts: [stored] },
+      accounts: { schemaVersion: 4 as const, accounts: [stored] },
       keyCheck: 'authenticates' as const,
     },
   },
@@ -91,7 +91,7 @@ export const Checked = meta.story({
 export const StoredBeforeTheMask = meta.story({
   args: { account: storedBeforeTheMask },
   parameters: {
-    bridge: { accounts: { schemaVersion: 3 as const, accounts: [storedBeforeTheMask] } },
+    bridge: { accounts: { schemaVersion: 4 as const, accounts: [storedBeforeTheMask] } },
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('release')).toBeVisible();
@@ -110,7 +110,7 @@ export const UnknownProvider = meta.story({
   args: { account: storedUnderAnUnknownProvider },
   parameters: {
     bridge: {
-      accounts: { schemaVersion: 3 as const, accounts: [storedUnderAnUnknownProvider] },
+      accounts: { schemaVersion: 4 as const, accounts: [storedUnderAnUnknownProvider] },
     },
   },
   play: async ({ canvas }) => {

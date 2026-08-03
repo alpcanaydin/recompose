@@ -8,7 +8,7 @@ import { inProvidersColumn } from '#.storybook/providers-column';
 import { CredentialedSurface } from './credentialed-surface';
 
 const keys: AccountsDocument = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   accounts: [
     { id: 'a9', provider: 'anthropic', kind: 'api-key', label: 'Team key', credentialRef: 'c9' },
   ],

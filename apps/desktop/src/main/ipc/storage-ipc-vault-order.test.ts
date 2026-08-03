@@ -81,9 +81,9 @@ describe('two people writing the vault at once', () => {
       throw new Error('the vault could not report what it holds');
     }
 
-    const refs = accounts.value.accounts
-      .filter((stored) => stored.kind !== 'subscription')
-      .map((stored) => stored.credentialRef);
+    const refs = accounts.value.accounts.flatMap((stored) =>
+      stored.kind === 'api-key' || stored.kind === 'aggregator' ? [stored.credentialRef] : [],
+    );
 
     expect(refs).toHaveLength(2);
 

@@ -153,7 +153,7 @@ test('the overflow holds signing in again and removal, and nothing else', async 
 test('removing an account takes it out of the registry it was held in', async () => {
   await renderRow(connected, {
     accounts: {
-      schemaVersion: 3,
+      schemaVersion: 4,
       accounts: [{ id: 's1', kind: 'subscription', label: 'Anthropic', provider: 'anthropic' }],
     },
   });

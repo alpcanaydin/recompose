@@ -8,11 +8,11 @@ import { withSidebarSurface } from '#.storybook/sidebar-surface';
 import { paintedBox, paintedStyle } from '../../../../../shared/testing';
 import { ProviderSidebar } from './provider-sidebar';
 
-type StoredKind = AccountsDocument['accounts'][number]['kind'];
+type StoredKind = Exclude<AccountsDocument['accounts'][number]['kind'], 'local'>;
 
 function stored(kinds: StoredKind[]): AccountsDocument {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     accounts: kinds.map((kind, index) =>
       kind === 'subscription'
         ? { id: `a${index}`, provider: 'anthropic' as const, kind, label: `Account ${index}` }

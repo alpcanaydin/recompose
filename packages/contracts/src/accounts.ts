@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
+import { localRuntimeIdSchema, loopbackAddressSchema } from './local-runtimes';
 import { migrateDocument, type Migration } from './migration';
 import { nonBlankString } from './non-blank';
 import { subscriptionProviderIdSchema } from './subscriptions';
 
-export const ACCOUNTS_VERSION = 3;
+export const ACCOUNTS_VERSION = 4;
 
 export const accountKindSchema = z.enum(['subscription', 'api-key', 'aggregator', 'local']);
 
@@ -34,9 +35,19 @@ const credentialedAccountSchema = z.strictObject({
 
 export type CredentialedAccount = z.infer<typeof credentialedAccountSchema>;
 
+const localAccountSchema = z.strictObject({
+  id: nonBlankString,
+  provider: localRuntimeIdSchema,
+  kind: z.literal('local'),
+  address: loopbackAddressSchema,
+});
+
+export type LocalAccount = z.infer<typeof localAccountSchema>;
+
 const accountSchema = z.discriminatedUnion('kind', [
   subscriptionAccountSchema,
   credentialedAccountSchema,
+  localAccountSchema,
 ]);
 
 export type Account = z.infer<typeof accountSchema>;
@@ -79,9 +90,15 @@ const rowsPredateTheMaskNoMigrationCanMint: Migration = {
   migrate: (doc) => ({ ...doc, schemaVersion: 3 }),
 };
 
+const rowsPredateTheRuntimeArmNoMigrationCanMint: Migration = {
+  from: 3,
+  migrate: (doc) => ({ ...doc, schemaVersion: 4 }),
+};
+
 const accountsMigrations: readonly Migration[] = [
   subscriptionRowsHeldPastedSecrets,
   rowsPredateTheMaskNoMigrationCanMint,
+  rowsPredateTheRuntimeArmNoMigrationCanMint,
 ];
 
 export function loadAccountsDocument(doc: unknown): AccountsDocument {

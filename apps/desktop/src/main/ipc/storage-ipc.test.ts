@@ -1,4 +1,5 @@
 import {
+  ACCOUNTS_VERSION,
   defaultSettings,
   GATEWAY_CONFIG_VERSION,
   type GatewayConfig,
@@ -156,7 +157,7 @@ describe('storage ipc handlers: accounts connect', () => {
 
     const account = result.value.accounts[0];
 
-    if (account === undefined || account.kind === 'subscription') {
+    if (account === undefined || (account.kind !== 'api-key' && account.kind !== 'aggregator')) {
       throw new Error('expected a credentialed account');
     }
 
@@ -222,7 +223,7 @@ describe('storage ipc handlers: accounts remove', () => {
 
     const removed = await handlers['accounts:remove']({ id });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: ACCOUNTS_VERSION, accounts: [] } });
 
     const vault = await loadVaultFile(join(ctx.userDataPath, 'vault.bin'), () => undefined);
 
@@ -234,7 +235,7 @@ describe('storage ipc handlers: accounts remove', () => {
 
     const removed = await handlers['accounts:remove']({ id: 'ghost' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: ACCOUNTS_VERSION, accounts: [] } });
   });
 
   test('removing against a newer-schema vault surfaces as vault-newer-schema', async () => {
@@ -270,7 +271,7 @@ describe('storage ipc handlers: accounts list', () => {
 
     const after = await handlers['accounts:list'](undefined);
 
-    expect(before).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
+    expect(before).toEqual({ ok: true, value: { schemaVersion: ACCOUNTS_VERSION, accounts: [] } });
 
     if (!after.ok) {
       throw new Error('expected success');
