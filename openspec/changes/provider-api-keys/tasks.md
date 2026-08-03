@@ -4,15 +4,15 @@ Five tasks. Task 1 runs first and alone, because every other layer imports what 
 
 Every task opens with a named failing test, captures the red run it started from, and drives it to green. Test code changes if and only if behavior changes.
 
-- [ ] **Task 1: contracts.** Owns `packages/contracts/src/`. Depends on nothing, and runs alone: tasks 2, 3, and 4 all import what it hands off.
-  - [ ] Opens red in `api-keys.test.ts`: a key pasted with a trailing newline parses to its trim, before the module exists.
-  - [ ] `api-keys.ts` lands as the shared key vocabulary, mirroring `subscriptions.ts`: the two provider ids, `pastedKeySchema`, `keyTail()`, `vendorShapeOf()`, and the three verdicts with the key-check report.
-  - [ ] Unit specs with fast-check properties pin the vocabulary. The parse trims. An interior control character refuses with a sentence about the key's contents. The tail holds the trim's last four characters and stays absent for trims of eight or fewer. The shape hint knows the one documented `sk-ant-` family and stays silent otherwise.
-  - [ ] The accounts document moves to version 3: the credentialed arm gains the optional `keyTail`, and the migration restamps the version and touches no row. A property proves any version 2 document migrates with every row byte-identical. `accounts.test-d.ts` pins the tail optional and pins that no arm carries a `secret` or `key` property.
-  - [ ] The engine protocol gains the probe directive arm, and the report becomes a discriminated union with the key-check arm. Admission and refusal specs ride in `engine-protocol.test.ts`. A new type spec pins the union discriminating on `kind`, with no key-check field beyond the verdict, the status, and the answered id.
-  - [ ] The channel surface gains `accounts:check-key`, and `connectAccountRequestSchema` swaps its secret for `pastedKeySchema`, so every caller passes the trim and the refusal. `ipc.test.ts` moves the roster to twenty-one, and `ipc.test-d.ts` pins totality over twenty-one channels with the error codes held at eleven.
-  - [ ] `index.ts` re-exports the module, and every consumer typechecks and passes again.
-  - [ ] Layers: unit, property, and type-level.
+- [x] **Task 1: contracts.** Owns `packages/contracts/src/`. Depends on nothing, and runs alone: tasks 2, 3, and 4 all import what it hands off.
+  - [x] Opens red in `api-keys.test.ts`: a key pasted with a trailing newline parses to its trim, before the module exists.
+  - [x] `api-keys.ts` lands as the shared key vocabulary, mirroring `subscriptions.ts`: the two provider ids, `pastedKeySchema`, `keyTail()`, `vendorShapeOf()`, and the three verdicts with the key-check report.
+  - [x] Unit specs with fast-check properties pin the vocabulary. The parse trims. An interior control character refuses with a sentence about the key's contents. The tail holds the trim's last four characters and stays absent for trims of eight or fewer. The shape hint knows the one documented `sk-ant-` family and stays silent otherwise.
+  - [x] The accounts document moves to version 3: the credentialed arm gains the optional `keyTail`, and the migration restamps the version and touches no row. A property proves any version 2 document migrates with every row byte-identical. `accounts.test-d.ts` pins the tail optional and pins that no arm carries a `secret` or `key` property.
+  - [x] The engine protocol gains the probe directive arm, and the report becomes a discriminated union with the key-check arm. Admission and refusal specs ride in `engine-protocol.test.ts`. A new type spec pins the union discriminating on `kind`, with no key-check field beyond the verdict, the status, and the answered id.
+  - [x] The channel surface gains `accounts:check-key`, and `connectAccountRequestSchema` swaps its secret for `pastedKeySchema`, so every caller passes the trim and the refusal. `ipc.test.ts` moves the roster to twenty-one, and `ipc.test-d.ts` pins totality over twenty-one channels with the error codes held at eleven.
+  - [x] `index.ts` re-exports the module, and every consumer typechecks and passes again.
+  - [x] Layers: unit, property, and type-level.
 
 - [ ] **Task 2: the engine probe.** Owns `packages/engine/src/`: the provider probe pair, `engine-child.ts` with its spec, the pipe-hygiene spec, and the `testing/hygiene-child.mts` entry. Depends on task 1, whose directive and report schemas it reads. Runs beside tasks 3 and 4, each of the three on a disjoint tree.
   - [ ] Opens red in `provider/key-probe.test.ts`: an injected fetch answering 200 folds to the authenticates verdict, before the probe exists.
