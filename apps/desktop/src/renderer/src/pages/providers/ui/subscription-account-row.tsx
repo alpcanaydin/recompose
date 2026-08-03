@@ -23,8 +23,17 @@ type RowActions = {
 
 function quieterActions({ view, onSignInAgain, onRemove }: RowActions) {
   return [
-    ...(view.standing === 'lapsed' ? [] : [{ label: 'Sign in again', onSelect: onSignInAgain }]),
-    { label: 'Remove', onSelect: onRemove },
+    ...(view.standing === 'lapsed'
+      ? []
+      : [
+          {
+            label: 'Sign in again',
+            icon: 'renew' as const,
+            tone: 'accent' as const,
+            onSelect: onSignInAgain,
+          },
+        ]),
+    { label: 'Remove', icon: 'trash' as const, tone: 'danger' as const, onSelect: onRemove },
   ];
 }
 

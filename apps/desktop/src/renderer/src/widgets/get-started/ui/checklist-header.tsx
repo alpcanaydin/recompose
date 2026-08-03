@@ -14,15 +14,17 @@ export function ChecklistHeader({ headingId, collapsed }: ChecklistHeaderProps) 
     <h2 className="text-card-title text-ink" id={headingId}>
       <button
         aria-expanded={!collapsed}
-        className="flex w-full items-center justify-between px-0.5 focus-ring"
+        className="group flex w-full items-center justify-between px-0.5 focus-ring"
         onClick={collapsed ? expandGetStarted : collapseGetStarted}
         type="button"
       >
         Get started
-        <Icon
-          className={`size-3.5 text-ink-secondary ${collapsed ? '-rotate-90' : ''}`}
-          name="chevron"
-        />
+        <span className="flex size-6 items-center justify-center rounded-control transition-colors group-hover:bg-surface-hover group-active:bg-surface-pressed">
+          <Icon
+            className={`size-3.5 text-ink-secondary transition-transform duration-150 motion-reduce:transition-none ${collapsed ? '-rotate-90' : ''}`}
+            name="chevron"
+          />
+        </span>
       </button>
     </h2>
   );

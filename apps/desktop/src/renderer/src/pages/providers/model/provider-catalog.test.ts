@@ -212,7 +212,7 @@ test.prop([anyCatalog, anyWay])(
 
 test('a key field hints at the shape the provider hands out', () => {
   expect(keyShapeHintFor('anthropic')).toBe('sk-ant-…');
-  expect(keyShapeHintFor('openai')).toBe('sk-…');
+  expect(keyShapeHintFor('openai')).toBe('sk-proj-…');
 });
 
 test('a provider whose key shape the catalog never learned hints at nothing', () => {

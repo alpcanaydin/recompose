@@ -1,4 +1,4 @@
-import { expect, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { withSidebarSurface } from '#.storybook/sidebar-surface';
@@ -47,8 +47,10 @@ export const Folded = meta.story({
     await userEvent.click(await canvas.findByRole('button', { name: 'Get started' }));
 
     await expect(await canvas.findByText('1 of 4')).toBeVisible();
-    await expect(canvas.queryByText('Create a gateway')).toBeNull();
-    await expect(canvas.queryByRole('button', { name: 'Skip setup' })).toBeNull();
+
+    await waitFor(async () => {
+      await expect(await canvas.findByText('Create a gateway')).not.toBeVisible();
+    });
   },
 });
 
@@ -73,9 +75,9 @@ export const PanelShape = meta.story({
 
     await userEvent.click(await canvas.findByRole('button', { name: 'Get started' }));
 
-    const folded = paintedBox(canvasElement.querySelector('section')).height;
-
-    await expect(folded).toBeLessThan(open);
+    await waitFor(async () => {
+      await expect(paintedBox(canvasElement.querySelector('section')).height).toBeLessThan(open);
+    });
     await expect(paintedBox(canvasElement.querySelector('section')).width).toBe(220);
   },
 });

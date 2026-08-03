@@ -58,7 +58,7 @@ test('folding the checklist keeps its header and its progress and drops the rest
 
   await expect.element(screen.getByRole('heading', { name: 'Get started' })).toBeVisible();
   await expect.element(screen.getByText('1 of 4')).toBeVisible();
-  await expect.element(screen.getByText('Create a gateway')).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Create a gateway')).not.toBeVisible();
   await expect.element(screen.getByRole('button', { name: 'Skip setup' })).not.toBeInTheDocument();
 });
 
@@ -79,14 +79,14 @@ test('a checklist folded away comes back folded on the next session', async () =
 
   await first.getByRole('button', { name: 'Get started' }).click();
 
-  await expect.element(first.getByText('Create a gateway')).not.toBeInTheDocument();
+  await expect.element(first.getByText('Create a gateway')).not.toBeVisible();
 
   await first.unmount();
 
   const second = await renderPanel({ gateways: [codex] });
 
   await expect.element(second.getByRole('heading', { name: 'Get started' })).toBeVisible();
-  await expect.element(second.getByText('Create a gateway')).not.toBeInTheDocument();
+  await expect.element(second.getByText('Create a gateway')).not.toBeVisible();
 });
 
 test('opening a folded checklist brings its steps back for good', async () => {

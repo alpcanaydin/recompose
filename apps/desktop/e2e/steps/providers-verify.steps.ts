@@ -22,13 +22,21 @@ Given("the provider can't be reached", ({ keyProbe }) => {
   keyProbe.cannotBeReached();
 });
 
+async function verifyThroughOverflow(page: Parameters<typeof accountRows>[0]) {
+  await accountRows(page)
+    .first()
+    .getByRole('button', { name: /^Actions for/ })
+    .click();
+  await page.getByRole('menuitem', { name: 'Verify' }).click();
+}
+
 Given('the maintainer has verified the key', async ({ page }) => {
-  await accountRows(page).first().getByRole('button', { name: 'Verify' }).click();
+  await verifyThroughOverflow(page);
   await expect(keyVerdict(page)).toBeVisible({ timeout: CHECK_WAIT_MS });
 });
 
 When('the maintainer verifies the key', async ({ page }) => {
-  await accountRows(page).first().getByRole('button', { name: 'Verify' }).click();
+  await verifyThroughOverflow(page);
 });
 
 When('the maintainer leaves the screen and returns', async ({ page }) => {

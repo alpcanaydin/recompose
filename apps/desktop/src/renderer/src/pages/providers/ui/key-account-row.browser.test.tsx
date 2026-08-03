@@ -95,23 +95,32 @@ test('a key the catalog never offered stands under the provider it was stored as
   const screen = await renderRow({ ...stored, provider: 'mistral' });
 
   await expect.element(screen.getByText('mistral', { exact: true })).toBeVisible();
-  await expect.element(screen.getByRole('button', { name: 'Verify' })).not.toBeInTheDocument();
+
+  await press('Actions for build');
+
+  await expect.element(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
+  await expect.poll(() => page.getByRole('menuitem').elements().length).toBe(1);
 });
 
 test('an aggregator key takes the same row and offers no check, because no probe knows it', async () => {
   const screen = await renderRow({ ...stored, provider: 'openrouter', kind: 'aggregator' });
 
   await expect.element(screen.getByText('OpenRouter', { exact: true })).toBeVisible();
-  await expect.element(screen.getByRole('button', { name: 'Verify' })).not.toBeInTheDocument();
-});
-
-test('the overflow holds removal and nothing else', async () => {
-  await renderRow(stored);
 
   await press('Actions for build');
 
   await expect.element(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
   await expect.poll(() => page.getByRole('menuitem').elements().length).toBe(1);
+});
+
+test('the overflow holds the two quieter acts and nothing else', async () => {
+  await renderRow(stored);
+
+  await press('Actions for build');
+
+  await expect.element(page.getByRole('menuitem', { name: 'Verify' })).toBeVisible();
+  await expect.element(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
+  await expect.poll(() => page.getByRole('menuitem').elements().length).toBe(2);
 });
 
 test('removing a key takes it out of the registry it was held in', async () => {
@@ -125,7 +134,7 @@ test('removing a key takes it out of the registry it was held in', async () => {
 test('a check answers as of the moment it ran rather than as a standing the row keeps', async () => {
   const screen = await renderRow(stored, { keyCheck: 'authenticates' });
 
-  await screen.getByRole('button', { name: 'Verify' }).click();
+  await choose('Verify');
 
   await expect.element(screen.getByRole('status')).toHaveTextContent('as of this check');
 });
@@ -141,7 +150,7 @@ test('a refused check says why on the row rather than leaving the act silent', a
     },
   });
 
-  await screen.getByRole('button', { name: 'Verify' }).click();
+  await choose('Verify');
 
   await expect.element(screen.getByRole('alert')).toHaveTextContent('The stored key is missing.');
 });

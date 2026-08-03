@@ -51,5 +51,5 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] `connect.feature` graduates its six scenarios: `A picked entry asks for a name and a key`, `A name stands once per provider`, `Two providers may share a name`, `A key pasted with a trailing newline connects trimmed`, `A key holding a control character is refused for its contents`, and `A key shaped like another vendor warns and still connects`.
   - [x] `screen.feature` graduates its five scenarios: `Nothing connected explains what a key is`, `A connected key reads as two lines`, `The mask shows four characters and no vendor prefix`, `The stored secret never reaches the screen`, and `Removing a key removes its secret`.
   - [x] `verify.feature` graduates its four scenarios: `A key that authenticates says so as of the check`, `A turned-away key reads as not accepted, nothing more`, `An unreachable provider leaves the question open`, and `No answer outlives the screen`.
-  - [x] The providers-connected visual baseline regenerates on all three platforms from the pull-request label, never from a local machine.
+  - [ ] The providers-connected visual baseline regenerates on all three platforms from the pull-request label, never from a local machine.
   - [x] Layers: end-to-end and visual.

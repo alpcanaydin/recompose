@@ -175,7 +175,7 @@ export function keyTitleFor(provider: string): string {
 
 const keyShapeHints: Record<KeyProviderId, string> = {
   anthropic: 'sk-ant-…',
-  openai: 'sk-…',
+  openai: 'sk-proj-…',
 };
 
 /**

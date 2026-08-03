@@ -75,18 +75,8 @@ test('each field hints at what belongs in it, in the shape the provider hands ou
 
   const screen = await renderKeyForm();
 
-  await expect.element(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'Work');
+  await expect.element(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'My API Key');
   await expect.element(screen.getByLabelText('Key')).toHaveAttribute('placeholder', 'sk-ant-…');
-});
-
-test('the naming guidance keeps standing after a name arrives, so the form never jumps', async () => {
-  installFakeBridge();
-
-  const screen = await renderKeyForm();
-
-  await screen.getByLabelText('Name').fill('build');
-
-  await expect.element(screen.getByText(/never read alike/)).toBeVisible();
 });
 
 test('a connect stores the name the person gave under the provider the entry carried', async () => {

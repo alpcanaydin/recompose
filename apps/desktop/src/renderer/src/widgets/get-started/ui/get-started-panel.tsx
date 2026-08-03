@@ -73,7 +73,15 @@ export function GetStartedPanel({ restoreRequest }: GetStartedPanelProps) {
     >
       <ChecklistHeader collapsed={collapsed} headingId={headingId} />
       {progressLine(done, steps.length)}
-      {!collapsed && <ChecklistSteps steps={steps} />}
+      <div
+        className={`fold-rows ${collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'}`}
+        inert={collapsed || undefined}
+        style={{ visibility: collapsed ? 'hidden' : 'visible' }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <ChecklistSteps steps={steps} />
+        </div>
+      </div>
     </section>
   );
 }

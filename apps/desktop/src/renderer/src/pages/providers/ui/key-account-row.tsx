@@ -55,15 +55,37 @@ function keyIdentity(
   );
 }
 
+type RowActs = {
+  account: CredentialedAccount;
+  onVerify: () => void;
+  onRemove: () => void;
+};
+
+function quieterActions({ account, onVerify, onRemove }: RowActs) {
+  return [
+    ...(checkableKey(account)
+      ? [
+          {
+            label: 'Verify',
+            icon: 'shield' as const,
+            tone: 'positive' as const,
+            onSelect: onVerify,
+          },
+        ]
+      : []),
+    { label: 'Remove', icon: 'trash' as const, tone: 'danger' as const, onSelect: onRemove },
+  ];
+}
+
 /**
  * One stored key, read leading to trailing as the product it reaches and the key it holds.
  *
  * @summary The row is the whole surface for a key, because a key is never edited once stored: it
  * is replaced. It holds two lines, the product its catalog entry was picked as and the name beside
  * the mask, so a person tells two keys of one provider apart without the secret reaching the
- * screen. A key stored before the mask existed shows its name alone. The check act stands on the
- * row rather than behind the overflow, because it is the one thing a person comes here to ask, and
- * it appears only where a probe knows the provider well enough to answer.
+ * screen. A key stored before the mask existed shows its name alone. Both acts live behind the
+ * overflow, because neither is part of reading the row, and Verify appears there only where a
+ * probe knows the provider well enough to answer.
  */
 export function KeyAccountRow({ account }: KeyAccountRowProps) {
   const check = withRefusal(useVerifyKey());
@@ -75,27 +97,16 @@ export function KeyAccountRow({ account }: KeyAccountRowProps) {
     <li className="flex min-h-row items-center gap-3 rounded-card border border-line-subtle bg-surface-card px-4 py-2.5">
       {mark === undefined ? null : <BrandMark name={mark} />}
       {keyIdentity(account, check.refusal ?? forget.refusal, check.data?.verdict)}
-      {checkableKey(account) ? (
-        <button
-          className="push-button focus-ring disabled:text-ink-secondary"
-          disabled={check.isPending}
-          onClick={() => {
-            check.mutate({ id: account.id });
-          }}
-          type="button"
-        >
-          Verify
-        </button>
-      ) : null}
       <OverflowMenu
-        items={[
-          {
-            label: 'Remove',
-            onSelect: () => {
-              forget.mutate({ id: account.id });
-            },
+        items={quieterActions({
+          account,
+          onVerify: () => {
+            check.mutate({ id: account.id });
           },
-        ]}
+          onRemove: () => {
+            forget.mutate({ id: account.id });
+          },
+        })}
         label={`Actions for ${account.label}`}
       />
     </li>

@@ -1,12 +1,26 @@
 import { Menu } from '@base-ui/react/menu';
 
+import type { IconName } from './icon';
+
 import { Icon } from './icon';
+
+type OverflowTone = 'accent' | 'danger' | 'positive';
 
 type OverflowAction = {
   /** What the action reads as, which is also the name it answers to. */
   label: string;
+  /** Glyph drawn leading the label, so the acts scan without reading. */
+  icon?: IconName | undefined;
+  /** Ink the glyph carries at rest; a highlighted act repaints it in the highlight's own ink. */
+  tone?: OverflowTone | undefined;
   /** Runs when a person chooses this action. */
   onSelect: () => void;
+};
+
+const toneInk: Record<OverflowTone, string> = {
+  accent: 'text-accent-ink',
+  danger: 'text-danger-ink',
+  positive: 'text-running',
 };
 
 type OverflowMenuProps = {
@@ -37,12 +51,20 @@ export function OverflowMenu({ label, items }: OverflowMenuProps) {
           <Menu.Popup className="menu-surface">
             {items.map((action) => (
               <Menu.Item
-                className="menu-action"
+                className="group menu-action"
                 key={action.label}
                 onClick={() => {
                   action.onSelect();
                 }}
               >
+                {action.icon === undefined ? null : (
+                  <Icon
+                    className={`size-4 group-data-highlighted:text-highlight-ink ${
+                      action.tone === undefined ? 'text-ink-secondary' : toneInk[action.tone]
+                    }`}
+                    name={action.icon}
+                  />
+                )}
                 {action.label}
               </Menu.Item>
             ))}

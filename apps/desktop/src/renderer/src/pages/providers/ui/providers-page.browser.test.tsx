@@ -161,7 +161,7 @@ test('a storage-failed remove surfaces as a visible error', async () => {
 test('a key the provider accepts says so as of the check and claims nothing about spending', async () => {
   const screen = await renderProviders('api-key', { accounts: keys, keyCheck: 'authenticates' });
 
-  await screen.getByRole('button', { name: 'Verify' }).click();
+  await chooseFromOverflow('Actions for Work key', 'Verify');
 
   await expect
     .element(screen.getByRole('status'))
@@ -172,7 +172,7 @@ test('a key the provider accepts says so as of the check and claims nothing abou
 test('a turned-away key reads as not accepted, guessing at no reason for it', async () => {
   const screen = await renderProviders('api-key', { accounts: keys, keyCheck: 'not-accepted' });
 
-  await screen.getByRole('button', { name: 'Verify' }).click();
+  await chooseFromOverflow('Actions for Work key', 'Verify');
 
   await expect
     .element(screen.getByRole('status'))
@@ -183,7 +183,7 @@ test('a turned-away key reads as not accepted, guessing at no reason for it', as
 test('a check that never reached the provider leaves the key unverified rather than broken', async () => {
   const screen = await renderProviders('api-key', { accounts: keys, keyCheck: 'could-not-check' });
 
-  await screen.getByRole('button', { name: 'Verify' }).click();
+  await chooseFromOverflow('Actions for Work key', 'Verify');
 
   await expect
     .element(screen.getByRole('status'))
@@ -193,7 +193,7 @@ test('a check that never reached the provider leaves the key unverified rather t
 test('no answer outlives the screen it was answered on', async () => {
   const first = await renderProviders('api-key', { accounts: keys, keyCheck: 'authenticates' });
 
-  await first.getByRole('button', { name: 'Verify' }).click();
+  await chooseFromOverflow('Actions for Work key', 'Verify');
 
   await expect.element(first.getByRole('status')).toBeVisible();
 

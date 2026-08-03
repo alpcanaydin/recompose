@@ -1,6 +1,6 @@
 import type { CredentialedAccount } from '@recompose/contracts';
 
-import { expect, userEvent } from 'storybook/test';
+import { expect, screen, userEvent } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -75,7 +75,8 @@ export const Checked = meta.story({
     },
   },
   play: async ({ canvas }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Verify' }));
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for build' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Verify' }));
 
     await expect(await canvas.findByRole('status')).toHaveTextContent('as of this check');
   },
@@ -114,7 +115,12 @@ export const UnknownProvider = meta.story({
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('mistral')).toBeVisible();
-    await expect(canvas.queryByRole('button', { name: 'Verify' })).toBeNull();
+
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for scratch' }));
+
+    const actions = await screen.findAllByRole('menuitem');
+
+    await expect(actions.map((action) => action.textContent)).toEqual(['Remove']);
   },
 });
 

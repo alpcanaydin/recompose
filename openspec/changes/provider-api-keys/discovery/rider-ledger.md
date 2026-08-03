@@ -19,7 +19,7 @@ Load-bearing fact for that question, from the code: an API-key account already e
 
 ## Riders that touch this feature
 
-### #117 — "A virtual model never offers a subscription target" — CONDITIONAL, strongest hit
+### #117, "A virtual model never offers a subscription target": CONDITIONAL, strongest hit
 
 The tenth approved scenario of `provider-subscriptions`, deferred because "no screen carries a composition surface yet."
 
@@ -27,13 +27,13 @@ Why it lands here: an API-key account is precisely what a virtual-model target p
 
 **Stale pointer in the rider body.** #117 points at `openspec/changes/provider-subscriptions/gherkin/` and `openspec/changes/provider-subscriptions/tasks.md`. Neither path resolves: commit `bbecbd0` archived the change. The scenario now lives at `openspec/changes/archive/2026-08-03-provider-subscriptions/gherkin/subscriptions/managed-account.feature`, line 11, as `Scenario: A virtual model never offers a subscription target`, and the deferral note is in `openspec/changes/archive/2026-08-03-provider-subscriptions/tasks.md`. The issue body should be corrected when this rider is picked up.
 
-### #123 — "subscriptions:activate stands without a surface since the menu prune" — CONDITIONAL, weak
+### #123, "subscriptions:activate stands without a surface since the menu prune": CONDITIONAL, weak
 
 The rider's claim verifies exactly. The channel is declared in `packages/contracts/src/ipc.ts` (`'subscriptions:activate'`), bridged in `apps/desktop/src/preload/index.ts`, and handled by `activate` in `apps/desktop/src/main/ipc/subscriptions-ipc.ts`. The only renderer callers are the fake bridge `apps/desktop/src/renderer/src/shared/testing/fake-subscriptions.ts` and `apps/desktop/src/renderer/src/shared/testing/fake-bridge.browser.test.ts`. No production renderer code calls it.
 
 It touches this feature only if `provider-api-keys` adds a per-row action to the shared list `apps/desktop/src/renderer/src/pages/providers/ui/account-list.tsx` (`AccountList`), which both kinds render through. Note the channel itself is subscription-only: activation swaps the vendor keychain item, so an API-key row action will not consume it. Treat #123 as a pattern precedent, not a dependency.
 
-### #118 — "Keep the credential blob out of /usr/bin/security argv" — PARTIAL, through its ride-alongs only
+### #118, "Keep the credential blob out of /usr/bin/security argv": PARTIAL, through its ride-alongs only
 
 The main defect is **not** on the API-key path. `securityKeychain` in `apps/desktop/src/main/subscriptions/macos-keychain.ts` passes the blob in argv (`['add-generic-password', '-U', '-s', item.service, '-a', item.account, '-w', blob]`), but that writer serves subscriptions alone: `custodyOver` in `apps/desktop/src/main/subscriptions/credential-custody.ts` hands custody out only when `provider === 'anthropic'`. An API key takes a different road entirely, through `connectAccount` in `apps/desktop/src/main/ipc/storage-ipc.ts`, which mints `credentialRef` and writes via `setSecret(opened.vault, ctx.getCodec(), credentialRef, request.secret)` into the vault file (`apps/desktop/src/main/storage/vault.ts`, `apps/desktop/src/main/storage/safe-storage-codec.ts`). Removal mirrors it through `releaseKeyRow` and `deleteSecret`.
 
@@ -46,10 +46,10 @@ Two ride-alongs in #118 do bind, if this feature adds code in those places:
 
 ## Riders that do not touch this feature
 
-- **#120 — parkInto reports success without refreshing a stale parked slot.** Verified in `apps/desktop/src/main/subscriptions/credential-custody.ts`: `parkInto` writes only when `held !== null` yet `attempt` still answers `{ ok: true }`. Subscription custody only, per `custodyOver` in the same file.
-- **#119 — macOS sign-in completion can outrun the identity write.** Sits in the subscription poll: `apps/desktop/src/main/subscriptions/subscription-views.ts` gates on `custody.vendorStands()` and reads `observed.signedInAs` for the one-address-one-account match. An API-key connect has no poll and no identity read.
-- **#121 — Terminal launch failures are swallowed on every platform.** The swallow is `.catch(() => undefined)` in `apps/desktop/src/main/ipc/subscriptions-ipc.ts`; the dead Linux message is `no terminal emulator on this machine could run ${command}` in `apps/desktop/src/main/subscriptions/sign-in-launch.ts`. An API-key connect launches no terminal.
-- **#122 — e2e fake tools lack codex.mts.** Shims are installed by `apps/desktop/e2e/subscription-tools.ts`. `apps/desktop/e2e/fake-tools/` holds `claude.mts`, `keychain.mts`, `keychain.test.mts`, and `sign-in-launcher.mts`; of these only `claude.mts` is a provider CLI, so the rider's substance (no codex shim) holds even though "only claude.mts exists" reads loosely against the directory. An API-key connect needs no CLI shim.
+- **#120, parkInto reports success without refreshing a stale parked slot.** Verified in `apps/desktop/src/main/subscriptions/credential-custody.ts`: `parkInto` writes only when `held !== null` yet `attempt` still answers `{ ok: true }`. Subscription custody only, per `custodyOver` in the same file.
+- **#119, macOS sign-in completion can outrun the identity write.** Sits in the subscription poll: `apps/desktop/src/main/subscriptions/subscription-views.ts` gates on `custody.vendorStands()` and reads `observed.signedInAs` for the one-address-one-account match. An API-key connect has no poll and no identity read.
+- **#121, Terminal launch failures are swallowed on every platform.** The swallow is `.catch(() => undefined)` in `apps/desktop/src/main/ipc/subscriptions-ipc.ts`; the dead Linux message is `no terminal emulator on this machine could run ${command}` in `apps/desktop/src/main/subscriptions/sign-in-launch.ts`. An API-key connect launches no terminal.
+- **#122, e2e fake tools lack codex.mts.** Shims are installed by `apps/desktop/e2e/subscription-tools.ts`. `apps/desktop/e2e/fake-tools/` holds `claude.mts`, `keychain.mts`, `keychain.test.mts`, and `sign-in-launcher.mts`; of these only `claude.mts` is a provider CLI, so the rider's substance (no codex shim) holds even though "only claude.mts exists" reads loosely against the directory. An API-key connect needs no CLI shim.
 
 ## Summary for the planner
 
