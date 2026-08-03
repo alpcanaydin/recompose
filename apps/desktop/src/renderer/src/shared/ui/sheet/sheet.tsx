@@ -8,17 +8,19 @@ import { Icon } from '../icon/icon';
 
 const SheetFootContext = createContext<HTMLElement | null>(null);
 
-function useFollowedHeight() {
+function useFollowedHeight(open: boolean) {
   const [height, setHeight] = useState<number | undefined>(undefined);
   const [grown, setGrown] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (grown === null) {
+    if (grown === null || !open) {
+      setHeight(undefined);
+
       return undefined;
     }
 
     const follow = new ResizeObserver(() => {
-      setHeight(grown.getBoundingClientRect().height);
+      setHeight(grown.offsetHeight);
     });
 
     follow.observe(grown);
@@ -26,7 +28,7 @@ function useFollowedHeight() {
     return () => {
       follow.disconnect();
     };
-  }, [grown]);
+  }, [grown, open]);
 
   return { inner: setGrown, height };
 }
@@ -112,7 +114,7 @@ export function Sheet({
   children,
 }: SheetProps) {
   const [foot, setFoot] = useState<HTMLElement | null>(null);
-  const body = useFollowedHeight();
+  const body = useFollowedHeight(open);
 
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
