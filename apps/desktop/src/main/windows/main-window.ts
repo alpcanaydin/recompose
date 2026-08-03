@@ -41,18 +41,17 @@ function applyGlassBackdrop(window: BrowserWindow): void {
 }
 
 export function createMainWindow(route: string): void {
+  const windowStaysBack = process.env['RECOMPOSE_WINDOW_STAYS_BACK'] === '1';
   const mainWindow = new BrowserWindow(
     windowOptionsFor(process.platform, join(__dirname, '../preload/index.js'), icon),
   );
 
-  if (isMac) {
+  if (isMac && !windowStaysBack) {
     applyGlassBackdrop(mainWindow);
   }
 
   mainWindow.on('ready-to-show', () => {
-    if (process.env['RECOMPOSE_WINDOW_STAYS_BACK'] === '1') {
-      mainWindow.showInactive();
-    } else {
+    if (!windowStaysBack) {
       mainWindow.show();
     }
   });

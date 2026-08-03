@@ -117,7 +117,7 @@ export const test = base.extend<ElectronFixtures>({
         ELECTRON_RENDERER_URL: '',
         RECOMPOSE_USER_DATA_DIR: userDataDir,
         RECOMPOSE_PROBE_ORIGIN: keyProbe.origin,
-        RECOMPOSE_WINDOW_STAYS_BACK: '1',
+        ...(process.env['CI'] === undefined ? { RECOMPOSE_WINDOW_STAYS_BACK: '1' } : {}),
       }),
     });
 
