@@ -2,15 +2,27 @@ import {
   engineReportSchema,
   type EngineDirective,
   type EngineGateway,
+  type EngineReport,
   type EngineStates,
   type GatewayEngineState,
+  type KeyCheckReport,
+  type KeyProviderId,
 } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
+import {
+  answerKeyCheck,
+  createProbeDesk,
+  foldEveryProbe,
+  sendProbe,
+  type ProbeDesk,
+} from './engine-probe';
 import { allStopped, foldEngineReport } from './engine-state-ledger';
 import { createGatewayOrder } from './gateway-order';
 
 export const DIRECTIVE_TIMEOUT_MS = 5000;
+
+export { PROBE_TIMEOUT_MS } from './engine-probe';
 
 export type EngineChild = {
   postMessage: (directive: EngineDirective) => void;
@@ -28,6 +40,7 @@ export type EngineHost = {
   start: (gateway: EngineGateway) => Promise<GatewayEngineState>;
   stop: (slug: string) => Promise<GatewayEngineState>;
   restart: (gateway: EngineGateway) => Promise<GatewayEngineState>;
+  probe: (provider: KeyProviderId, key: string) => Promise<KeyCheckReport>;
   states: () => EngineStates;
   onStatesChanged: (listener: (states: EngineStates) => void) => () => void;
   dispose: () => void;
@@ -46,6 +59,7 @@ type Resident = {
   spawnChild: () => EngineChild;
   subscribers: Set<StateListener>;
   awaitingReport: Map<string, Waiter>;
+  awaitingKeyCheck: ProbeDesk;
 };
 
 function publish(resident: Resident, next: EngineStates): void {
@@ -66,6 +80,22 @@ function refuseEveryWaiter(resident: Resident, reason: Error): void {
   }
 }
 
+function answerState(resident: Resident, report: Extract<EngineReport, { kind: 'state' }>): void {
+  const waiting = resident.awaitingReport.get(report.answers);
+
+  if (waiting === undefined) {
+    console.error(
+      `recompose dropped a report on the gateway "${report.slug}", because the directive it answers had already been given up on.`,
+    );
+
+    return;
+  }
+
+  resident.awaitingReport.delete(report.answers);
+  publish(resident, foldEngineReport(resident.states, report));
+  waiting.answer(report.state);
+}
+
 function receiveReport(resident: Resident, message: unknown): void {
   const report = engineReportSchema.safeParse(message);
 
@@ -75,25 +105,13 @@ function receiveReport(resident: Resident, message: unknown): void {
     return;
   }
 
-  if (report.data.kind !== 'state') {
-    console.error('recompose dropped a key-check report, because nothing waits on a probe yet.');
+  if (report.data.kind === 'key-check') {
+    answerKeyCheck(resident.awaitingKeyCheck, report.data);
 
     return;
   }
 
-  const waiting = resident.awaitingReport.get(report.data.answers);
-
-  if (waiting === undefined) {
-    console.error(
-      `recompose dropped a report on the gateway "${report.data.slug}", because the directive it answers had already been given up on.`,
-    );
-
-    return;
-  }
-
-  resident.awaitingReport.delete(report.data.answers);
-  publish(resident, foldEngineReport(resident.states, report.data));
-  waiting.answer(report.data.state);
+  answerState(resident, report.data);
 }
 
 function receiveExit(resident: Resident, code: number): void {
@@ -106,6 +124,11 @@ function receiveExit(resident: Resident, code: number): void {
   resident.child = null;
   publish(resident, allStopped(Object.keys(resident.states)));
   refuseEveryWaiter(resident, death);
+  foldEveryProbe(
+    resident.awaitingKeyCheck,
+    (provider) =>
+      `recompose could not check the ${provider} key, because the engine stopped before it answered.`,
+  );
 }
 
 function runningChild(resident: Resident): EngineChild {
@@ -164,6 +187,27 @@ async function sendDirective(
   });
 }
 
+async function probeThroughTheChild(
+  resident: Resident,
+  provider: KeyProviderId,
+  key: string,
+): Promise<KeyCheckReport> {
+  let engine: EngineChild;
+
+  try {
+    engine = runningChild(resident);
+  } catch (error) {
+    console.error(
+      `recompose could not check the ${provider} key, because the engine would not spawn.`,
+      error,
+    );
+
+    return { verdict: 'could-not-check' };
+  }
+
+  return sendProbe(resident.awaitingKeyCheck, engine, provider, key);
+}
+
 export function createEngineHost(deps: EngineHostDeps): EngineHost {
   const resident: Resident = {
     states: allStopped(deps.knownSlugs),
@@ -171,6 +215,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
     spawnChild: deps.spawnChild,
     subscribers: new Set(),
     awaitingReport: new Map(),
+    awaitingKeyCheck: createProbeDesk(),
   };
   const inGatewayOrder = createGatewayOrder();
 
@@ -198,6 +243,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
 
         return sendDirective(resident, { kind: 'start', id: randomUUID(), gateway });
       }),
+    probe: async (provider, key) => probeThroughTheChild(resident, provider, key),
     states: () => resident.states,
     onStatesChanged: (listener) => {
       resident.subscribers.add(listener);

@@ -1,4 +1,8 @@
-import { type EngineDirective, type GatewayEngineState } from '@recompose/contracts';
+import {
+  type EngineDirective,
+  type GatewayEngineState,
+  type KeyCheckReport,
+} from '@recompose/contracts';
 
 import type { EngineChild } from './engine-host';
 
@@ -31,7 +35,38 @@ function gatewayDirectiveAt(
   return directive;
 }
 
-export function scriptedChild(answer: () => GatewayEngineState | null) {
+type Script = {
+  send: (report: unknown) => void;
+  answer: () => GatewayEngineState | null;
+  answerProbe: () => KeyCheckReport | null;
+};
+
+function answerLater(script: Script, directive: EngineDirective): void {
+  if (directive.kind === 'probe') {
+    const report = script.answerProbe();
+
+    if (report !== null) {
+      void Promise.resolve().then(() => {
+        script.send({ kind: 'key-check', answers: directive.id, ...report });
+      });
+    }
+
+    return;
+  }
+
+  const state = script.answer();
+
+  if (state !== null) {
+    void Promise.resolve().then(() => {
+      script.send(reportOf(directive, state));
+    });
+  }
+}
+
+export function scriptedChild(
+  answer: () => GatewayEngineState | null,
+  answerProbe: () => KeyCheckReport | null = () => null,
+) {
   const directives: EngineDirective[] = [];
   const heard: ((message: unknown) => void)[] = [];
   const departed: ((code: number) => void)[] = [];
@@ -43,21 +78,12 @@ export function scriptedChild(answer: () => GatewayEngineState | null) {
     }
   };
 
+  const script: Script = { send, answer, answerProbe };
+
   const child: EngineChild = {
     postMessage: (directive) => {
       directives.push(directive);
-
-      if (directive.kind === 'probe') {
-        return;
-      }
-
-      const state = answer();
-
-      if (state !== null) {
-        void Promise.resolve().then(() => {
-          send(reportOf(directive, state));
-        });
-      }
+      answerLater(script, directive);
     },
     onMessage: (listener) => {
       heard.push(listener);
@@ -73,6 +99,7 @@ export function scriptedChild(answer: () => GatewayEngineState | null) {
   return {
     child,
     directives,
+    send,
     answerDirective: (index: number, state: GatewayEngineState): void => {
       send(reportOf(gatewayDirectiveAt(directives, index), state));
     },

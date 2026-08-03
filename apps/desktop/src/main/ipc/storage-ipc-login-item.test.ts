@@ -23,7 +23,6 @@ async function osBackedContext(osHolds: boolean) {
     isEncryptionAvailable: () => true,
     onCorrupt: () => undefined,
     startGateway: () => undefined,
-    checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     releaseSubscription: async () => Promise.resolve({ ok: true }),
     readLoginItem: () => operatingSystem,
     applySettings: (settings, askedLoginItem) => {

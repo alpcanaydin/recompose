@@ -1,18 +1,21 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { defaultSettings, type EngineStates, type Settings } from '@recompose/contracts';
-import { app, BrowserWindow, nativeTheme, safeStorage, session, shell } from 'electron';
+import { type EngineStates, type Settings } from '@recompose/contracts';
+import { app, BrowserWindow, nativeTheme, safeStorage, shell } from 'electron';
 import { join } from 'path';
 
 import type { EngineHost } from './engine-host/engine-host';
 import type { IpcHandlers } from './ipc/dispatch';
+import type { KeyCheckIpcContext } from './ipc/key-check-ipc';
 import type { StorageIpcContext } from './ipc/storage-context';
 import type { SettingsEffects } from './settings/apply-settings';
+import type { CredentialCustody } from './subscriptions/credential-custody';
 
 import { createEngineHost } from './engine-host/engine-host';
 import { createGatewayLifecycleRequests } from './engine-host/gateway-lifecycle-requests';
 import { probeFreePort } from './engine-host/probe-free-port';
 import { spawnEngineChild } from './engine-host/spawn-engine';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
+import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
 import { createSubscriptionsIpcHandlers } from './ipc/subscriptions-ipc';
@@ -21,8 +24,8 @@ import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
 import { applyBootSettings, applyChosenSettings } from './settings/apply-settings';
+import { storedBootState } from './storage/boot-state';
 import { listGatewayConfigs } from './storage/gateway-store';
-import { initializeStorage } from './storage/initialize-storage';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { subscriptionHomes } from './subscriptions/subscription-homes';
 import { subscriptionRelease } from './subscriptions/subscription-release';
@@ -44,7 +47,7 @@ import {
   openSettingsSurface,
   showMainWindow,
 } from './windows/main-window';
-import { allowsPermission } from './windows/permission-policy';
+import { registerPermissionHandlers } from './windows/permission-wiring';
 import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 import { windowButtonsMoveOn } from './windows/window-buttons';
 
@@ -128,6 +131,38 @@ function startStoredGateway(engineHost: EngineHost): StorageIpcContext['startGat
   };
 }
 
+function storageContext(
+  engineHost: EngineHost,
+  custody: CredentialCustody | null,
+): StorageIpcContext {
+  const userDataPath = app.getPath('userData');
+
+  return {
+    userDataPath,
+    getCodec: () => createSafeStorageCodec(),
+    isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
+    onCorrupt: onStorageCorrupt,
+    homeFolder: app.getPath('home'),
+    readLoginItem: () => loginItem.isEnabled(),
+    applySettings: applyChosenSettingsNow,
+    startGateway: startStoredGateway(engineHost),
+    releaseSubscription: subscriptionRelease(
+      subscriptionHomes(userDataPath, process.platform),
+      custody,
+    ),
+  };
+}
+
+function keyCheckContext(engineHost: EngineHost): KeyCheckIpcContext {
+  return {
+    userDataPath: app.getPath('userData'),
+    homeFolder: app.getPath('home'),
+    getCodec: () => createSafeStorageCodec(),
+    onCorrupt: onStorageCorrupt,
+    probe: async (provider, key) => engineHost.probe(provider, key),
+  };
+}
+
 function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
   const userDataPath = app.getPath('userData');
   const homeFolder = app.getPath('home');
@@ -144,21 +179,8 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       onCorrupt: onStorageCorrupt,
       probeFreePort,
     }),
-    ...createStorageIpcHandlers({
-      userDataPath,
-      getCodec: () => createSafeStorageCodec(),
-      isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
-      onCorrupt: onStorageCorrupt,
-      homeFolder,
-      readLoginItem: () => loginItem.isEnabled(),
-      applySettings: applyChosenSettingsNow,
-      startGateway: startStoredGateway(engineHost),
-      releaseSubscription: subscriptionRelease(
-        subscriptionHomes(userDataPath, process.platform),
-        custody,
-      ),
-      checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
-    }),
+    ...createStorageIpcHandlers(storageContext(engineHost, custody)),
+    ...createKeyCheckIpcHandlers(keyCheckContext(engineHost)),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
       loginItem: loginItemAvailability,
@@ -176,20 +198,6 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       },
     }),
   };
-}
-
-type BootState = { settings: Settings; slugs: string[] };
-
-async function storedState(): Promise<BootState> {
-  try {
-    const state = await initializeStorage(app.getPath('userData'), onStorageCorrupt);
-
-    return { settings: state.settings, slugs: state.gateways.map((gateway) => gateway.slug) };
-  } catch (error) {
-    console.error('storage initialization failed', error);
-
-    return { settings: defaultSettings(), slugs: [] };
-  }
 }
 
 function pushEngineStates(states: EngineStates): void {
@@ -211,23 +219,6 @@ function repaintTray(states: EngineStates): void {
     });
 }
 
-function registerPermissionHandlers(): void {
-  const permissionRequestHandler = (
-    _webContents: unknown,
-    permission: string,
-    callback: (allowed: boolean) => void,
-  ) => {
-    callback(allowsPermission(permission));
-  };
-
-  session.defaultSession.setPermissionRequestHandler(permissionRequestHandler);
-
-  const permissionCheckHandler = (_webContents: unknown, permission: string) =>
-    allowsPermission(permission);
-
-  session.defaultSession.setPermissionCheckHandler(permissionCheckHandler);
-}
-
 const userDataOverride = resolveUserDataOverride(process.env);
 
 if (userDataOverride !== null) {
@@ -245,7 +236,7 @@ registerAppScheme();
 async function startRecompose(): Promise<void> {
   serveRenderer(join(__dirname, '../renderer'));
 
-  const boot = await storedState();
+  const boot = await storedBootState(app.getPath('userData'), onStorageCorrupt);
 
   engineHost = createEngineHost({ knownSlugs: boot.slugs, spawnChild: spawnEngineChild });
   engineHost.onStatesChanged(pushEngineStates);

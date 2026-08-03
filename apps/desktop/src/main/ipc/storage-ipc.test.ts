@@ -37,7 +37,6 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
-    checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(userDataPath, process.platform),
       null,

@@ -7,7 +7,6 @@ import type {
 } from '@recompose/contracts';
 
 import { withSettingsPatch } from '@recompose/contracts';
-import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
 
@@ -19,14 +18,10 @@ import {
   saveSettingsFile,
   SettingsNewerSchemaError,
 } from '../storage/settings-store';
-import { deleteSecret, saveVaultFile, setSecret } from '../storage/vault';
+import { deleteSecret, saveVaultFile } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
-import {
-  openVaultForWrite,
-  storagePathsFor,
-  type StorageIpcContext,
-  type StoragePaths,
-} from './storage-context';
+import { connectAccount } from './connect-account';
+import { storagePathsFor, type StorageIpcContext, type StoragePaths } from './storage-context';
 import { ipcFailure, openVault, storageFailure } from './storage-envelope';
 
 async function readAccounts(
@@ -141,43 +136,6 @@ async function listAccounts(ctx: StorageIpcContext, paths: StoragePaths) {
   }
 }
 
-async function connectAccount(
-  ctx: StorageIpcContext,
-  paths: StoragePaths,
-  request: IpcRequest<'accounts:connect'>,
-) {
-  const opened = await openVaultForWrite(ctx, paths);
-
-  if (!opened.ok) {
-    return opened;
-  }
-
-  try {
-    const credentialRef = `cred-${randomUUID()}`;
-    const account = {
-      id: `acc-${randomUUID()}`,
-      provider: request.provider,
-      kind: request.kind,
-      label: request.label,
-      credentialRef,
-    };
-
-    await saveVaultFile(
-      paths.vaultFile,
-      setSecret(opened.vault, ctx.getCodec(), credentialRef, request.secret),
-    );
-
-    const updated = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (accounts) => ({
-      ...accounts,
-      accounts: [...accounts.accounts, account],
-    }));
-
-    return { ok: true as const, value: updated };
-  } catch (error) {
-    return storageFailure(error, ctx.homeFolder);
-  }
-}
-
 function sameProviderIds(accounts: AccountsDocument, provider: SubscriptionAccount['provider']) {
   const ids: string[] = [];
 
@@ -267,7 +225,6 @@ export type StorageIpcHandlers = Pick<
   | 'accounts:list'
   | 'accounts:connect'
   | 'accounts:remove'
-  | 'accounts:check-key'
 >;
 
 export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHandlers {
@@ -284,9 +241,5 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHand
       inVaultOrder(async () => connectAccount(ctx, paths, request)),
     'accounts:remove': async (request) =>
       inVaultOrder(async () => removeAccount(ctx, paths, request)),
-    'accounts:check-key': async (request) => ({
-      ok: true as const,
-      value: await ctx.checkKey(request.id),
-    }),
   };
 }

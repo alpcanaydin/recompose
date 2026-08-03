@@ -1,4 +1,4 @@
-import type { EngineGateway, KeyCheckReport, Settings } from '@recompose/contracts';
+import type { EngineGateway, Settings } from '@recompose/contracts';
 
 import { join } from 'node:path';
 
@@ -20,7 +20,6 @@ export type StorageIpcContext = {
   /** A stored gateway serves at once, and the outcome reaches the screen by push rather than here. */
   startGateway: (gateway: EngineGateway) => void;
   releaseSubscription: SubscriptionRelease;
-  checkKey: (id: string) => Promise<KeyCheckReport>;
 };
 
 export type StoragePaths = {

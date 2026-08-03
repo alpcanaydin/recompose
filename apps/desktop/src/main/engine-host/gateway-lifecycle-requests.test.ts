@@ -46,6 +46,7 @@ function recordingHost() {
     },
     states: () => ({}),
     onStatesChanged: () => () => undefined,
+    probe: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     dispose: () => undefined,
   };
 

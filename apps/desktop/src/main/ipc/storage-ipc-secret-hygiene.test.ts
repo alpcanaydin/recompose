@@ -1,5 +1,5 @@
 import { fc, test } from '@fast-check/vitest';
-import { defaultSettings } from '@recompose/contracts';
+import { defaultSettings, type KeyCheckReport } from '@recompose/contracts';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,12 +10,11 @@ import type { IpcHandlers } from './dispatch';
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import type { StorageIpcContext } from './storage-context';
 import type { StorageIpcHandlers } from './storage-ipc';
-import type { SubscriptionsIpcContext } from './subscriptions-ipc';
 
-import { subscriptionHomes } from '../subscriptions/subscription-homes';
 import { dispatchIpc } from './dispatch';
+import { checkHandlersOver, connectedKeyId } from './key-check-ipc.testkit';
+import { carriesAnyWindowOf } from './secret-windows.testkit';
 import { createStorageIpcHandlers } from './storage-ipc';
-import { createSubscriptionsIpcHandlers } from './subscriptions-ipc';
 
 const fakeCodec: SecretCodec = {
   encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
@@ -37,7 +36,6 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
-    checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     releaseSubscription: async () => Promise.resolve({ ok: true }),
     ...overrides,
   };
@@ -48,6 +46,7 @@ function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
 
   return {
     ...storage,
+    'accounts:check-key': absent,
     'system:get': absent,
     'system:open-config-folder': absent,
     'system:window-band': absent,
@@ -181,12 +180,6 @@ async function readSettingsDocument(userDataPath: string): Promise<string> {
   return readFile(join(userDataPath, 'settings.json'), 'utf8').catch(() => '');
 }
 
-function windowsOf(value: string, size: number): string[] {
-  return Array.from({ length: Math.max(value.length - size + 1, 0) }, (_, start) =>
-    value.slice(start, start + size),
-  );
-}
-
 describe('storage ipc handlers: the settings document holds no secret', () => {
   test.prop([fc.array(fc.constantFrom('dark', 'light', 'system'), { minLength: 1, maxLength: 8 })])(
     'no sequence of saves beside a connected account writes a secret fragment to disk',
@@ -203,95 +196,101 @@ describe('storage ipc handlers: the settings document holds no secret', () => {
       const document = await readSettingsDocument(ctx.userDataPath);
 
       expect(document).not.toContain(secretFragment);
-      expect(windowsOf(secretFragment, 8).some((window) => document.includes(window))).toBe(false);
+      expect(carriesAnyWindowOf(document, secretFragment)).toBe(false);
     },
   );
 });
 
-const tokenMaterial = 'sk-ant-oat01-verysecret-subscription-token';
-
-async function aSignedInSubscription(): Promise<SubscriptionsIpcContext> {
-  const userDataPath = await mkdtemp(join(tmpdir(), 'recompose-subs-hygiene-'));
-  const homes = subscriptionHomes(userDataPath, process.platform);
-  const pending = await homes.resetPending('anthropic');
-
-  await writeFile(
-    join(pending, '.credentials.json'),
-    JSON.stringify({
-      claudeAiOauth: {
-        accessToken: tokenMaterial,
-        refreshToken: `${tokenMaterial}-again`,
-        subscriptionType: 'max',
-      },
-    }),
-    'utf8',
-  );
-  await writeFile(
-    join(pending, '.claude.json'),
-    JSON.stringify({ oauthAccount: { emailAddress: 'ada@example.com' } }),
-    'utf8',
-  );
-  await homes.promotePending('anthropic', 'acc-one');
-  await homes.pointActiveAt('anthropic', 'acc-one');
-  await writeFile(
-    join(userDataPath, 'accounts.json'),
-    JSON.stringify({
-      schemaVersion: 2,
-      accounts: [
-        { id: 'acc-one', provider: 'anthropic', kind: 'subscription', label: 'Claude Code' },
-      ],
-    }),
-    'utf8',
-  );
-
-  return {
-    userDataPath,
-    homeFolder: '/Users/ada',
-    platform: process.platform,
-    custody: null,
-    searchPath: async () => Promise.resolve(''),
-    launch: async () => Promise.resolve(),
-    clock: () => ({ elapsed: () => 0, sleep: async () => Promise.resolve() }),
-    signInBoundMs: 0,
-    signInEveryMs: 0,
-    onCorrupt: () => undefined,
-  };
+function checkKeyOver(ctx: StorageIpcContext, answerProbe: () => KeyCheckReport | null) {
+  return checkHandlersOver(ctx.userDataPath, fakeCodec, answerProbe).handlers;
 }
 
-function carriesNoTokenMaterial(answer: unknown): boolean {
-  const spoken = JSON.stringify(answer);
-
-  return !windowsOf(tokenMaterial, 8).some((window) => spoken.includes(window));
+async function connectKey(handlers: StorageIpcHandlers, secret: string): Promise<string> {
+  return connectedKeyId(await handlers['accounts:connect']({ ...connectRequest, secret }));
 }
 
-describe('subscription ipc handlers: no answer carries token material', () => {
-  test('listing a signed-in subscription names its plan and its address, and no token', async () => {
-    const handlers = createSubscriptionsIpcHandlers(await aSignedInSubscription());
+function silencedConsole() {
+  return (['log', 'warn', 'error'] as const).map((level) =>
+    vi.spyOn(console, level).mockImplementation(() => undefined),
+  );
+}
 
-    const answered = await handlers['subscriptions:list']();
+function spokenBy(spies: ReturnType<typeof silencedConsole>): string {
+  return spies.map((spy) => spy.mock.calls.map(String).join(' ')).join(' ');
+}
 
-    expect(answered).toMatchObject({
-      ok: true,
-      value: [{ standing: 'connected', plan: 'max', signedInAs: 'ada@example.com' }],
-    });
-    expect(carriesNoTokenMaterial(answered)).toBe(true);
+const anyVerdict = fc.constantFrom<KeyCheckReport>(
+  { verdict: 'authenticates', status: 200 },
+  { verdict: 'not-accepted', status: 401 },
+  { verdict: 'could-not-check' },
+);
+const anyKey = fc.string({
+  unit: fc.constantFrom('q', 'z', 'x', 'w', '4'),
+  minLength: 12,
+  maxLength: 48,
+});
+
+describe('key check handlers: no answer carries the key', () => {
+  test('a connect response carries no window of the key beyond the four-character tail', async () => {
+    const handlers = createStorageIpcHandlers(await freshContext());
+
+    const connected = await handlers['accounts:connect'](connectRequest);
+
+    expect(connected).toMatchObject({ ok: true });
+    expect(carriesAnyWindowOf(JSON.stringify(connected), secretFragment)).toBe(false);
   });
 
-  test('activating a signed-in subscription answers without a token', async () => {
-    const handlers = createSubscriptionsIpcHandlers(await aSignedInSubscription());
+  test.prop([anyKey, anyVerdict])(
+    'a check response never carries any window of the stored key, whatever the verdict',
+    async (key, verdict) => {
+      const ctx = await freshContext();
+      const id = await connectKey(createStorageIpcHandlers(ctx), key);
 
-    const answered = await handlers['subscriptions:activate']({ id: 'acc-one' });
+      const answered = await checkKeyOver(ctx, () => verdict)['accounts:check-key']({ id });
 
-    expect(answered).toMatchObject({ ok: true, value: [{ active: true }] });
-    expect(carriesNoTokenMaterial(answered)).toBe(true);
+      expect(carriesAnyWindowOf(JSON.stringify(answered), key)).toBe(false);
+    },
+  );
+
+  test('a check writes no console line carrying any window of the key', async () => {
+    const spies = silencedConsole();
+
+    try {
+      const ctx = await freshContext();
+      const id = await connectKey(createStorageIpcHandlers(ctx), secretFragment);
+
+      await checkKeyOver(ctx, () => ({ verdict: 'not-accepted', status: 401 }))[
+        'accounts:check-key'
+      ]({ id });
+
+      expect(carriesAnyWindowOf(spokenBy(spies), secretFragment)).toBe(false);
+    } finally {
+      for (const spy of spies) {
+        spy.mockRestore();
+      }
+    }
   });
+});
 
-  test('a refused restore names the tool rather than anything the tool holds', async () => {
-    const handlers = createSubscriptionsIpcHandlers(await aSignedInSubscription());
+const storedKeyRow = {
+  id: 'acc-one',
+  provider: 'anthropic',
+  kind: 'api-key',
+  label: 'Work key',
+  credentialRef: 'cred-one',
+  keyTail: '7f2c',
+};
 
-    const answered = await handlers['subscriptions:restore']({ id: 'acc-one' });
+describe('storage ipc handlers: listing reads the registry alone', () => {
+  test('accounts:list answers rows while the vault is unreadable, because it never opens it', async () => {
+    const ctx = await freshContext();
+    const registry = JSON.stringify({ schemaVersion: 3, accounts: [storedKeyRow] });
 
-    expect(answered).toMatchObject({ ok: false, error: { code: 'tool-missing' } });
-    expect(carriesNoTokenMaterial(answered)).toBe(true);
+    await writeFile(join(ctx.userDataPath, 'accounts.json'), registry, 'utf8');
+    await mkdir(join(ctx.userDataPath, 'vault.bin'));
+
+    const listed = await createStorageIpcHandlers(ctx)['accounts:list'](undefined);
+
+    expect(listed).toMatchObject({ ok: true, value: { accounts: [{ keyTail: '7f2c' }] } });
   });
 });
