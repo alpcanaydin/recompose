@@ -1,12 +1,37 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { Dialog } from '@base-ui/react/dialog';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Icon } from './icon';
 
 const SheetFootContext = createContext<HTMLElement | null>(null);
+
+function useFollowedHeight() {
+  const inner = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    const grown = inner.current;
+
+    if (grown === null) {
+      return undefined;
+    }
+
+    const follow = new ResizeObserver(() => {
+      setHeight(grown.getBoundingClientRect().height);
+    });
+
+    follow.observe(grown);
+
+    return () => {
+      follow.disconnect();
+    };
+  }, []);
+
+  return { inner, height };
+}
 
 /**
  * Carries an act into the sheet's foot from wherever its state lives.
@@ -50,6 +75,33 @@ type SheetProps = {
  * change, and the surface behind should stay in view. It dims what it covers, traps focus, and
  * lands focus on the control the caller names rather than on the sheet itself.
  */
+function sheetHead(
+  title: string,
+  description: string,
+  onBack: (() => void) | undefined,
+): ReactNode {
+  return (
+    <header className="flex items-start gap-2 px-4.5 pt-4.5 pb-3.25">
+      {onBack === undefined ? null : (
+        <button
+          aria-label="Back"
+          className="flex h-6 w-7 items-center justify-center rounded-control text-ink-secondary focus-ring row-hover"
+          onClick={onBack}
+          type="button"
+        >
+          <Icon className="size-4 rotate-90" name="chevron" />
+        </button>
+      )}
+      <div>
+        <Dialog.Title className="block text-heading text-ink">{title}</Dialog.Title>
+        <Dialog.Description className="mt-0.75 text-detail text-ink-secondary">
+          {description}
+        </Dialog.Description>
+      </div>
+    </header>
+  );
+}
+
 export function Sheet({
   open,
   onOpenChange,
@@ -62,6 +114,7 @@ export function Sheet({
   children,
 }: SheetProps) {
   const [foot, setFoot] = useState<HTMLElement | null>(null);
+  const body = useFollowedHeight();
 
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
@@ -71,26 +124,14 @@ export function Sheet({
           className={`sheet-surface ${wide ? 'sheet-wide' : ''}`}
           initialFocus={initialFocus}
         >
-          <header className="flex items-start gap-2 px-4.5 pt-4.5 pb-3.25">
-            {onBack === undefined ? null : (
-              <button
-                aria-label="Back"
-                className="flex h-6 w-7 items-center justify-center rounded-control text-ink-secondary focus-ring row-hover"
-                onClick={onBack}
-                type="button"
-              >
-                <Icon className="size-4 rotate-90" name="chevron" />
-              </button>
-            )}
-            <div>
-              <Dialog.Title className="block text-heading text-ink">{title}</Dialog.Title>
-              <Dialog.Description className="mt-0.75 text-detail text-ink-secondary">
-                {description}
-              </Dialog.Description>
+          {sheetHead(title, description, onBack)}
+          <div
+            className="sheet-body-resize"
+            style={body.height === undefined ? undefined : { height: body.height }}
+          >
+            <div className="px-4.5 pb-3.75" ref={body.inner}>
+              <SheetFootContext.Provider value={foot}>{children}</SheetFootContext.Provider>
             </div>
-          </header>
-          <div className="px-4.5 pb-3.75">
-            <SheetFootContext.Provider value={foot}>{children}</SheetFootContext.Provider>
           </div>
           <footer className="sheet-actions" ref={setFoot}>
             {footer}

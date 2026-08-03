@@ -35,12 +35,29 @@ const descriptions: Record<AccountKind, string> = {
 /**
  * The two steps of the catalog: the grid of one kind, then the picked provider's connect.
  *
- * @summary The caller keys this to the open state, so every transition mounts a fresh flow: the
- * next open always starts on the grid, and a closing sheet never flashes a reset step mid-fade.
+ * @summary The flow forgets its pick at the moment it reopens rather than while it closes, so the
+ * next open always starts on the grid and a closing sheet never flashes a reset step mid-fade.
  */
+function useFreshGridOnReopen(open: boolean, forgetThePick: () => void): void {
+  const [stoodOpen, setStoodOpen] = useState(open);
+
+  if (open !== stoodOpen) {
+    setStoodOpen(open);
+
+    if (open) {
+      forgetThePick();
+    }
+  }
+}
+
 export function CatalogFlow({ kind, open, onOpenChange }: CatalogFlowProps) {
   const [picked, setPicked] = useState<CatalogEntry | undefined>(undefined);
   const [arrived, setArrived] = useState<'opening' | 'back'>('opening');
+
+  useFreshGridOnReopen(open, () => {
+    setPicked(undefined);
+    setArrived('opening');
+  });
 
   const back = () => {
     setPicked(undefined);

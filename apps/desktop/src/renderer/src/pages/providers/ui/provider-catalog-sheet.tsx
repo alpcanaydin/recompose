@@ -7,10 +7,10 @@ type ProviderCatalogSheetProps = CatalogFlowProps;
 /**
  * The catalog of providers, opening over the screen that asked for it.
  *
- * @summary Reach for it from the Add provider control. The flow is keyed to the open state, so a
- * dismissal keeps the step it was on while the sheet leaves, and the next open forgets the pick
- * and stands on the whole grid again.
+ * @summary Reach for it from the Add provider control. The flow resets itself on the next open
+ * rather than remounting, because a remount would tear the dialog out of the tree before its
+ * leaving transition could run.
  */
 export function ProviderCatalogSheet({ kind, open, onOpenChange }: ProviderCatalogSheetProps) {
-  return <CatalogFlow key={String(open)} kind={kind} onOpenChange={onOpenChange} open={open} />;
+  return <CatalogFlow kind={kind} onOpenChange={onOpenChange} open={open} />;
 }

@@ -1,4 +1,4 @@
-import { expect, screen, userEvent } from 'storybook/test';
+import { expect, screen, userEvent, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -42,7 +42,9 @@ export const CatalogOpen = meta.story({
   play: async ({ canvas }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Add provider' }));
 
-    await expect(await screen.findByRole('dialog', { name: 'Add provider' })).toBeVisible();
+    await waitFor(async () => {
+      await expect(await screen.findByRole('dialog', { name: 'Add provider' })).toBeVisible();
+    });
   },
 });
 

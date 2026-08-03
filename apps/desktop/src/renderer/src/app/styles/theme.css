@@ -208,13 +208,20 @@
   @media (prefers-reduced-motion: no-preference) {
     transition:
       opacity 150ms,
-      scale 150ms;
+      scale 150ms,
+      width 220ms ease;
 
     &[data-starting-style],
     &[data-ending-style] {
       opacity: 0;
       scale: 0.97;
     }
+  }
+}
+
+@utility sheet-body-resize {
+  @media (prefers-reduced-motion: no-preference) {
+    transition: height 220ms ease;
   }
 }
 
