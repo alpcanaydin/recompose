@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The behavioral contract of an API key account in recompose. A key is the one credential the app holds and spends itself. This contract states what the app stores, what the screen shows, what a connect refuses, and what a check may claim. It covers the masked row, the catalog of endpoints, and the two-field connect with its trim and shape rules. The optional verify answers as of one check, and nothing stores its answer.
+The behavioral contract of an API key account in recompose. A key is the one credential the app holds and spends itself. This contract states what the app stores, what the screen shows, what a connect refuses, and what a check may claim. It covers the masked row, the catalog of endpoints, and the two-field connect with its trim and shape rules. The verify act stands on every key whose provider the probe can answer for, running it stays the person's choice, and nothing stores its answer.
 
 ## Requirements
 
@@ -42,7 +42,7 @@ The catalog the API Keys surface opens MUST offer nine entries: Anthropic API, O
 
 ### Requirement: Connecting asks for a name and a key
 
-A picked entry MUST ask for a name and a key, and nothing more. The provider rides in from the picked entry, so the form MUST NOT ask for it, and MUST NOT offer a base URL or a dialect field. The surface MUST name the host the key reaches before a person stores it.
+A picked entry MUST ask for a name and a key, and nothing more. The provider rides in from the picked entry, so the form MUST NOT ask for it, and MUST NOT offer a base URL or a dialect field. The surface MUST name the host the key reaches before a person stores it. A name and a key MUST trim before the blank check, and a value that trims to nothing MUST refuse at the contract boundary. Neither the registry nor the vault ever holds an empty value, and the stored name is the trim.
 
 #### Scenario: a person picks a connectable entry
 
@@ -93,7 +93,7 @@ The pasted key MUST trim at the contract boundary, so surrounding whitespace nev
 
 ### Requirement: A row reports the product, the name, and the tail
 
-A row MUST read as two lines: the product title its catalog entry carried, then the name beside the masked key tail, and nothing more. The mask MUST hold the last four characters of the trimmed key and MUST carry no vendor prefix. The main process MUST compute the mask at connect time and store it on the row as a non-secret field, so listing accounts never opens the vault.
+A row MUST read as two lines: the product title its catalog entry carried, then the name beside the masked key tail, and nothing more. The mask MUST hold the last four characters of the trimmed key and MUST carry no vendor prefix. A trim of eight or fewer characters MUST mint no tail, so a mask never holds the whole secret and the row reads the name alone. The main process MUST compute the mask at connect time and store it on the row as a non-secret field, so listing accounts never opens the vault.
 
 #### Scenario: a connected key reads as two lines
 
@@ -117,7 +117,7 @@ A row MUST read as two lines: the product title its catalog entry carried, then 
 
 ### Requirement: Verification answers a question and keeps no answer
 
-A Verify act MUST let a person ask whether a stored key still authenticates, and it MUST NOT gate storing. The answer MUST be one of three: the key authenticates, the provider didn't accept the key, or the check couldn't run. The wording MUST speak as of the check, MUST NOT claim the account can spend, and MUST stay recompose's own rather than the provider's. The app MUST NOT store the answer: it lives only while the screen shows it, so no row carries a stale claim.
+A Verify act MUST let a person ask whether a stored key still authenticates, and it MUST NOT gate storing. The answer MUST be one of three: the key authenticates, the provider didn't accept the key, or the check couldn't run. The wording MUST speak as of the check, MUST NOT claim the account can spend, and MUST stay recompose's own rather than the provider's. The app MUST NOT store the answer: it lives only while the screen shows it, so no row carries a stale claim. The check MUST NOT hold the surface: it runs as an asynchronous act, and a timeout or a transport failure folds to the could-not-check verdict.
 
 #### Scenario: a key passes the check
 
