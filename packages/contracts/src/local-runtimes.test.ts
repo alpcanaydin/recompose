@@ -22,7 +22,7 @@ describe('the runtimes a local account can name', () => {
   });
 
   test('a runtime nothing detects yet is refused', () => {
-    for (const awaited of ['lmstudio', 'llama.cpp', 'vllm']) {
+    for (const awaited of ['llama.cpp', 'vllm', 'openai']) {
       expect(() => localRuntimeIdSchema.parse(awaited)).toThrow();
     }
   });

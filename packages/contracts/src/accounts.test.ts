@@ -128,7 +128,7 @@ describe('the local row a runtime stands as', () => {
   test('a local row naming a runtime nothing reaches is refused', () => {
     const stored = {
       schemaVersion: ACCOUNTS_VERSION,
-      accounts: [{ ...localRow, provider: 'lmstudio' }],
+      accounts: [{ ...localRow, provider: 'vllm' }],
     };
 
     expect(() => loadAccountsDocument(stored)).toThrow();
