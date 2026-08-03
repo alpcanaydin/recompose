@@ -20,6 +20,7 @@ Braintrust
 BYOK
 Cabe
 ccproxy
+Cerebras
 chromaui
 cliproxyapi
 Codechecks
@@ -33,9 +34,10 @@ cyclonedx
 dagre
 dbus
 dedup
+DeepInfra
 DeepSeek
-değiştir
 depcruise
+değiştir
 diffable
 dmgbuild
 docblocks
@@ -62,6 +64,7 @@ Gemini
 gitdir
 glassmorphism
 Grok
+Groq
 IDAT
 idempotently
 IHDR
@@ -188,6 +191,7 @@ Vapi
 Veed
 versionless
 verysecret
+vLLM
 Weavy
 WHATWG
 winstaller

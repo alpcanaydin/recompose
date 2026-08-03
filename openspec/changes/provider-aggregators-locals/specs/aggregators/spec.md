@@ -4,7 +4,7 @@
 
 ### Requirement: OpenRouter connects as an aggregator key
 
-The Aggregators catalog MUST offer OpenRouter as a connectable entry, and the entries that lack a contract MUST stand inert under a Soon badge rather than hidden. A picked OpenRouter MUST ask for a name and a key in the anatomy the API Keys destination ships, and the stored account MUST take the `aggregator` kind.
+The Aggregators catalog MUST offer OpenRouter as a connectable entry. The entries that lack a contract MUST stand inert under a Soon badge rather than hidden: Together AI, Fireworks AI, Groq, DeepInfra, Cerebras, and a Custom aggregator escape hatch. A picked OpenRouter MUST ask for a name and a key in the anatomy the API Keys destination ships, and the stored account MUST take the `aggregator` kind.
 
 #### Scenario: a person connects an OpenRouter key
 

@@ -4,7 +4,7 @@
 
 ### Requirement: Detection comes before adding a local runtime
 
-The Local Runtimes catalog MUST offer Ollama, LM Studio, llama.cpp, and vLLM. Picking an entry MUST look for the runtime at its documented localhost port and say what it found before recompose stores anything. Adding the account MUST store the address it answers at and MUST NOT ask for a credential.
+The Local Runtimes catalog MUST offer Ollama, LM Studio, llama.cpp, and vLLM, and a Custom local server escape hatch MUST stand inert under a Soon badge rather than hidden. Picking an entry MUST look for the runtime at its documented localhost port and say what it found before recompose stores anything. Adding the account MUST store the address it answers at and MUST NOT ask for a credential.
 
 #### Scenario: a running runtime answers and joins the registry
 
