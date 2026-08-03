@@ -267,6 +267,7 @@ export type StorageIpcHandlers = Pick<
   | 'accounts:list'
   | 'accounts:connect'
   | 'accounts:remove'
+  | 'accounts:check-key'
 >;
 
 export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHandlers {
@@ -283,5 +284,9 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHand
       inVaultOrder(async () => connectAccount(ctx, paths, request)),
     'accounts:remove': async (request) =>
       inVaultOrder(async () => removeAccount(ctx, paths, request)),
+    'accounts:check-key': async (request) => ({
+      ok: true as const,
+      value: await ctx.checkKey(request.id),
+    }),
   };
 }

@@ -37,6 +37,7 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(userDataPath, process.platform),
       null,
@@ -222,7 +223,7 @@ describe('storage ipc handlers: accounts remove', () => {
 
     const removed = await handlers['accounts:remove']({ id });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
 
     const vault = await loadVaultFile(join(ctx.userDataPath, 'vault.bin'), () => undefined);
 
@@ -234,7 +235,7 @@ describe('storage ipc handlers: accounts remove', () => {
 
     const removed = await handlers['accounts:remove']({ id: 'ghost' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
   });
 
   test('removing against a newer-schema vault surfaces as vault-newer-schema', async () => {
@@ -270,7 +271,7 @@ describe('storage ipc handlers: accounts list', () => {
 
     const after = await handlers['accounts:list'](undefined);
 
-    expect(before).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
+    expect(before).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
 
     if (!after.ok) {
       throw new Error('expected success');

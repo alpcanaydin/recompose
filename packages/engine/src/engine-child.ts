@@ -8,27 +8,45 @@ import type { ParentPort } from './parent-port';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
 
+function keyCheckNoProbeCanAnswerYet(answers: string): unknown {
+  return { kind: 'key-check', answers, verdict: 'could-not-check' };
+}
+
+async function answerFor(runtime: EngineRuntime, directive: EngineDirective): Promise<unknown> {
+  switch (directive.kind) {
+    case 'start':
+      return {
+        kind: 'state',
+        answers: directive.id,
+        slug: directive.gateway.slug,
+        state: await runtime.start(directive.gateway),
+      };
+    case 'stop':
+      return {
+        kind: 'state',
+        answers: directive.id,
+        slug: directive.slug,
+        state: await runtime.stop(directive.slug),
+      };
+    case 'probe':
+      return keyCheckNoProbeCanAnswerYet(directive.id);
+
+    default: {
+      const unknownDirective: never = directive;
+
+      throw new Error(
+        `the engine child heard a directive kind it does not know: ${typeof unknownDirective}`,
+      );
+    }
+  }
+}
+
 async function reportBack(
   parentPort: ParentPort,
   runtime: EngineRuntime,
   directive: EngineDirective,
 ): Promise<void> {
-  const report =
-    directive.kind === 'start'
-      ? {
-          kind: 'state',
-          answers: directive.id,
-          slug: directive.gateway.slug,
-          state: await runtime.start(directive.gateway),
-        }
-      : {
-          kind: 'state',
-          answers: directive.id,
-          slug: directive.slug,
-          state: await runtime.stop(directive.slug),
-        };
-
-  parentPort.postMessage(engineReportSchema.parse(report));
+  parentPort.postMessage(engineReportSchema.parse(await answerFor(runtime, directive)));
 }
 
 export function attachEngineChild(parentPort: ParentPort, openListeners: OpenListeners): void {

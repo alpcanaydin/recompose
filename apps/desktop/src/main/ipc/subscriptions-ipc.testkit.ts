@@ -130,7 +130,7 @@ export async function aFreshWorld(): Promise<SubscriptionsWorld> {
     storedAccounts: async () => loadAccountsFile(accountsFile, () => undefined),
 
     alreadyHolding: async (rows) => {
-      await saveAccountsFile(accountsFile, { schemaVersion: 2, accounts: rows });
+      await saveAccountsFile(accountsFile, { schemaVersion: 3, accounts: rows });
     },
   };
 }

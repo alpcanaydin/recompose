@@ -5,5 +5,5 @@ export function allStopped(slugs: readonly string[]): EngineStates {
 }
 
 export function foldEngineReport(states: EngineStates, report: EngineReport): EngineStates {
-  return { ...states, [report.slug]: report.state };
+  return report.kind === 'state' ? { ...states, [report.slug]: report.state } : states;
 }

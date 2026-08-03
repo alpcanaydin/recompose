@@ -100,6 +100,30 @@ describe('a directive the parent sends', () => {
   });
 });
 
+describe('a probe directive, before any probe reaches a vendor', () => {
+  test('a probe answers the directive that asked, saying the check could not run', async () => {
+    const parent = aParent();
+
+    attachEngineChild(parent.port, aLoopbackHolding([]));
+    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+    await reportsReach(parent, 1);
+
+    expect(parent.reports).toEqual([
+      { kind: 'key-check', answers: 'd1', verdict: 'could-not-check' },
+    ]);
+  });
+
+  test('the answer carries no window of the key it was handed', async () => {
+    const parent = aParent();
+
+    attachEngineChild(parent.port, aLoopbackHolding([]));
+    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+    await reportsReach(parent, 1);
+
+    expect(JSON.stringify(parent.reports)).not.toContain('9f2c');
+  });
+});
+
 describe('a directive the child cannot read', () => {
   test('a directive of an unknown kind draws no report at all', async () => {
     const parent = aParent();

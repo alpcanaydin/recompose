@@ -11,6 +11,7 @@ const channelNames: IpcChannel[] = [
   'accounts:list',
   'accounts:connect',
   'accounts:remove',
+  'accounts:check-key',
   'system:get',
   'system:open-config-folder',
   'system:window-band',
@@ -27,7 +28,7 @@ const channelNames: IpcChannel[] = [
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the twenty specified channels exist', () => {
+  test('exactly the twenty-one specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 
@@ -81,55 +82,6 @@ describe('gateways:list channel', () => {
     const parsed = ipcChannels['gateways:list'].response.parse({ ok: true, value: [config] });
 
     expect(parsed).toEqual({ ok: true, value: [config] });
-  });
-});
-
-describe('accounts:connect channel', () => {
-  test('request requires a non-blank secret and rejects extras', () => {
-    const valid = { provider: 'anthropic', kind: 'api-key', label: 'Work', secret: 'sk-abc' };
-
-    expect(() => ipcChannels['accounts:connect'].request.parse(valid)).not.toThrow();
-    expect(() =>
-      ipcChannels['accounts:connect'].request.parse({ ...valid, secret: '   ' }),
-    ).toThrow();
-    expect(() =>
-      ipcChannels['accounts:connect'].request.parse({ ...valid, credentialRef: 'sneak' }),
-    ).toThrow();
-  });
-
-  test('no secret can be offered for a subscription, because none exists to offer', () => {
-    const connect = ipcChannels['accounts:connect'].request;
-    const offer = { provider: 'anthropic', label: 'Claude Max', secret: 'sk-abc' };
-
-    expect(connect.safeParse({ ...offer, kind: 'subscription' }).success).toBe(false);
-    expect(connect.safeParse({ ...offer, kind: 'local' }).success).toBe(false);
-    expect(connect.safeParse({ ...offer, kind: 'aggregator' }).success).toBe(true);
-  });
-
-  test('a label of nothing but whitespace names no account, so it is refused', () => {
-    const valid = { provider: 'anthropic', kind: 'api-key', label: 'Work', secret: 'sk-abc' };
-
-    expect(() => ipcChannels['accounts:connect'].request.parse({ ...valid, label: ' ' })).toThrow();
-  });
-
-  test('responses cannot smuggle the secret back', () => {
-    const registry = {
-      schemaVersion: 2,
-      accounts: [
-        { id: 'a1', provider: 'anthropic', kind: 'api-key', label: 'Work', credentialRef: 'c1' },
-      ],
-    };
-    const smuggled = {
-      schemaVersion: 2,
-      accounts: [{ ...registry.accounts[0], secret: 'sk-abc' }],
-    };
-
-    expect(() =>
-      ipcChannels['accounts:connect'].response.parse({ ok: true, value: registry }),
-    ).not.toThrow();
-    expect(() =>
-      ipcChannels['accounts:connect'].response.parse({ ok: true, value: smuggled }),
-    ).toThrow();
   });
 });
 

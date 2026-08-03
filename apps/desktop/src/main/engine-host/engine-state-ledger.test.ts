@@ -12,14 +12,17 @@ const anyState: fc.Arbitrary<GatewayEngineState> = fc.oneof(
     .integer({ min: 1024, max: 65535 })
     .map((port) => ({ status: 'stopped' as const, failure: { port } })),
 );
-const anyReport: fc.Arbitrary<EngineReport> = fc.record({
+
+type StateReport = Extract<EngineReport, { kind: 'state' }>;
+
+const anyReport: fc.Arbitrary<StateReport> = fc.record({
   kind: fc.constant('state' as const),
   answers: fc.stringMatching(/^d[0-9]{1,4}$/),
   slug: anySlug,
   state: anyState,
 });
 
-function report(slug: string, state: GatewayEngineState): EngineReport {
+function report(slug: string, state: GatewayEngineState): StateReport {
   return { kind: 'state', answers: 'd1', slug, state };
 }
 
@@ -97,6 +100,18 @@ describe('folding a run of reports', () => {
       }
     },
   );
+
+  test('a key-check report folds no gateway state, because it answers about a key', () => {
+    const states = { codex: { status: 'running' as const } };
+
+    const folded = foldEngineReport(states, {
+      kind: 'key-check',
+      answers: 'd1',
+      verdict: 'could-not-check',
+    });
+
+    expect(folded).toStrictEqual(states);
+  });
 
   test.prop([fc.array(anyReport)])('the ledger names no gateway that never reported', (reports) => {
     const folded = reports.reduce(foldEngineReport, {});

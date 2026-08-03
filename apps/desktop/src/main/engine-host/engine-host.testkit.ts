@@ -7,12 +7,28 @@ import { createEngineHost } from './engine-host';
 export const running = (): GatewayEngineState => ({ status: 'running' });
 export const nothing = (): null => null;
 
-function slugOf(directive: EngineDirective): string {
+function slugOf(directive: Exclude<EngineDirective, { kind: 'probe' }>): string {
   return directive.kind === 'start' ? directive.gateway.slug : directive.slug;
 }
 
-function reportOf(directive: EngineDirective, state: GatewayEngineState): unknown {
+function reportOf(
+  directive: Exclude<EngineDirective, { kind: 'probe' }>,
+  state: GatewayEngineState,
+): unknown {
   return { kind: 'state', answers: directive.id, slug: slugOf(directive), state };
+}
+
+function gatewayDirectiveAt(
+  directives: EngineDirective[],
+  index: number,
+): Exclude<EngineDirective, { kind: 'probe' }> {
+  const directive = directives[index];
+
+  if (directive === undefined || directive.kind === 'probe') {
+    throw new Error(`The scripted child never heard a gateway directive number ${String(index)}.`);
+  }
+
+  return directive;
 }
 
 export function scriptedChild(answer: () => GatewayEngineState | null) {
@@ -30,6 +46,10 @@ export function scriptedChild(answer: () => GatewayEngineState | null) {
   const child: EngineChild = {
     postMessage: (directive) => {
       directives.push(directive);
+
+      if (directive.kind === 'probe') {
+        return;
+      }
 
       const state = answer();
 
@@ -54,13 +74,7 @@ export function scriptedChild(answer: () => GatewayEngineState | null) {
     child,
     directives,
     answerDirective: (index: number, state: GatewayEngineState): void => {
-      const directive = directives[index];
-
-      if (directive === undefined) {
-        throw new Error(`The scripted child never heard a directive number ${String(index)}.`);
-      }
-
-      send(reportOf(directive, state));
+      send(reportOf(gatewayDirectiveAt(directives, index), state));
     },
     wasKilled: () => killed,
     exit: (code: number) => {

@@ -37,6 +37,7 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     releaseSubscription: async () => Promise.resolve({ ok: true }),
     ...overrides,
   };
@@ -91,7 +92,7 @@ describe('storage ipc handlers: a subscription never reaches the vault', () => {
 
     const removed = await createStorageIpcHandlers(ctx)['accounts:remove']({ id: 'sub-1' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 2, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
   });
 });
 

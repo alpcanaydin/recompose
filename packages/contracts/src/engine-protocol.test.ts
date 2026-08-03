@@ -58,6 +58,39 @@ describe('a directive the parent sends the child', () => {
       engineDirectiveSchema.parse({ kind: 'stop', id: '   ', slug: 'personal' }),
     ).toThrow();
   });
+
+  test('a start directive cannot carry a key, because serving spends none', () => {
+    expect(() =>
+      engineDirectiveSchema.parse({ kind: 'start', id: 'd1', gateway, key: 'sk-ant-api03-9f2c' }),
+    ).toThrow();
+  });
+});
+
+describe('the probe directive that asks a vendor about one stored key', () => {
+  const probe = { kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' };
+
+  test('a probe names the provider to ask and carries the key it asks about', () => {
+    expect(engineDirectiveSchema.parse(probe)).toEqual(probe);
+  });
+
+  test('a probe naming a provider no dialect covers is refused', () => {
+    expect(() => engineDirectiveSchema.parse({ ...probe, provider: 'gemini' })).toThrow();
+  });
+
+  test('a probe carrying a blank key is refused, because it would ask about nothing', () => {
+    expect(() => engineDirectiveSchema.parse({ ...probe, key: '   ' })).toThrow();
+  });
+
+  test('a probe carries no gateway, because it serves no traffic', () => {
+    expect(() => engineDirectiveSchema.parse({ ...probe, gateway })).toThrow();
+  });
+
+  test('a probe answering nobody is refused, because its verdict would reach no one', () => {
+    const { id, ...withoutTheIdentifier } = probe;
+
+    expect(id).toBe('d1');
+    expect(() => engineDirectiveSchema.parse(withoutTheIdentifier)).toThrow();
+  });
 });
 
 describe('a report the child sends the parent', () => {
@@ -109,6 +142,41 @@ describe('a report the child sends the parent', () => {
   });
 });
 
+describe('the answer a probe sends home', () => {
+  const answered = { kind: 'key-check', answers: 'd1', verdict: 'authenticates', status: 200 };
+
+  test('a check answers the directive that asked, carrying the verdict and the vendor status', () => {
+    expect(engineReportSchema.parse(answered)).toEqual(answered);
+  });
+
+  test('a check that never reached the vendor answers without a status', () => {
+    const unreached = { kind: 'key-check', answers: 'd1', verdict: 'could-not-check' };
+
+    expect(engineReportSchema.parse(unreached)).toEqual(unreached);
+  });
+
+  test('a check naming a gateway is refused, because a probe belongs to none', () => {
+    expect(() => engineReportSchema.parse({ ...answered, slug: 'personal' })).toThrow();
+  });
+
+  test('a verdict outside the three is refused', () => {
+    expect(() => engineReportSchema.parse({ ...answered, verdict: 'rate-limited' })).toThrow();
+  });
+
+  test('neither the vendor sentence nor the key has a field to ride home in', () => {
+    for (const smuggled of [{ body: 'invalid x-api-key' }, { key: 'sk-ant-api03-9f2c' }]) {
+      expect(() => engineReportSchema.parse({ ...answered, ...smuggled })).toThrow();
+    }
+  });
+
+  test('a check answering no directive is refused', () => {
+    const { answers, ...withoutTheDirective } = answered;
+
+    expect(answers).toBe('d1');
+    expect(() => engineReportSchema.parse(withoutTheDirective)).toThrow();
+  });
+});
+
 const slugArb = fc
   .array(fc.stringMatching(/^[a-z0-9]{1,6}$/), { minLength: 2, maxLength: 3 })
   .map((segments) => segments.join('-'));
@@ -131,6 +199,12 @@ const directiveArb = fc.oneof(
     }),
   }),
   fc.record({ kind: fc.constant('stop' as const), id: directiveIdArb, slug: slugArb }),
+  fc.record({
+    kind: fc.constant('probe' as const),
+    id: directiveIdArb,
+    provider: fc.constantFrom('anthropic' as const, 'openai' as const),
+    key: fc.stringMatching(/^[A-Za-z0-9_-]{8,40}$/),
+  }),
 );
 
 describe('the wire between the two processes', () => {

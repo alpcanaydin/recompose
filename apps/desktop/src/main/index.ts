@@ -5,6 +5,7 @@ import { join } from 'path';
 
 import type { EngineHost } from './engine-host/engine-host';
 import type { IpcHandlers } from './ipc/dispatch';
+import type { StorageIpcContext } from './ipc/storage-context';
 import type { SettingsEffects } from './settings/apply-settings';
 
 import { createEngineHost } from './engine-host/engine-host';
@@ -119,6 +120,14 @@ function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
 
+function startStoredGateway(engineHost: EngineHost): StorageIpcContext['startGateway'] {
+  return (gateway) => {
+    engineHost.start(gateway).catch((error: unknown) => {
+      console.error(`recompose stored ${gateway.slug} but could not start it`, error);
+    });
+  };
+}
+
 function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
   const userDataPath = app.getPath('userData');
   const homeFolder = app.getPath('home');
@@ -143,15 +152,12 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       homeFolder,
       readLoginItem: () => loginItem.isEnabled(),
       applySettings: applyChosenSettingsNow,
-      startGateway: (gateway) => {
-        engineHost.start(gateway).catch((error: unknown) => {
-          console.error(`recompose stored ${gateway.slug} but could not start it`, error);
-        });
-      },
+      startGateway: startStoredGateway(engineHost),
       releaseSubscription: subscriptionRelease(
         subscriptionHomes(userDataPath, process.platform),
         custody,
       ),
+      checkKey: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),

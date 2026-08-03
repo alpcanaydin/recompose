@@ -2,7 +2,10 @@ import type { AccountsDocument, RecomposeIpc, SubscriptionAccountView } from '@r
 
 import { subscriptionProviders } from '@recompose/contracts';
 
-type AccountHandlers = Pick<RecomposeIpc, 'accounts:list' | 'accounts:connect' | 'accounts:remove'>;
+type AccountHandlers = Pick<
+  RecomposeIpc,
+  'accounts:list' | 'accounts:connect' | 'accounts:remove' | 'accounts:check-key'
+>;
 
 type AccountsHalf = AccountHandlers & {
   landSubscription: (id: string, provider: SubscriptionAccountView['provider']) => void;
@@ -50,6 +53,8 @@ export function accountHandlers(seed: AccountsDocument): AccountsHalf {
 
       return Promise.resolve({ ok: true, value: registry });
     },
+    'accounts:check-key': async () =>
+      Promise.resolve({ ok: true as const, value: { verdict: 'could-not-check' as const } }),
     'accounts:remove': async (request) => {
       registry = {
         ...registry,

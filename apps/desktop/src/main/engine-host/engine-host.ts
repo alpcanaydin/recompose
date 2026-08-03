@@ -75,6 +75,12 @@ function receiveReport(resident: Resident, message: unknown): void {
     return;
   }
 
+  if (report.data.kind !== 'state') {
+    console.error('recompose dropped a key-check report, because nothing waits on a probe yet.');
+
+    return;
+  }
+
   const waiting = resident.awaitingReport.get(report.data.answers);
 
   if (waiting === undefined) {
@@ -120,13 +126,15 @@ function runningChild(resident: Resident): EngineChild {
   return spawned;
 }
 
-function gatewayOf(directive: EngineDirective): string {
+type GatewayDirective = Exclude<EngineDirective, { kind: 'probe' }>;
+
+function gatewayOf(directive: GatewayDirective): string {
   return directive.kind === 'start' ? directive.gateway.slug : directive.slug;
 }
 
 async function sendDirective(
   resident: Resident,
-  directive: EngineDirective,
+  directive: GatewayDirective,
 ): Promise<GatewayEngineState> {
   const engine = runningChild(resident);
   const slug = gatewayOf(directive);

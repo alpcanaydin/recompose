@@ -23,7 +23,7 @@ const connected: SubscriptionAccountView = {
 };
 
 const keys: AccountsDocument = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   accounts: [
     { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
   ],

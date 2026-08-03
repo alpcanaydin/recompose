@@ -12,7 +12,7 @@ type StoredKind = AccountsDocument['accounts'][number]['kind'];
 
 function stored(kinds: StoredKind[]): AccountsDocument {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     accounts: kinds.map((kind, index) =>
       kind === 'subscription'
         ? { id: `a${index}`, provider: 'anthropic' as const, kind, label: `Account ${index}` }
