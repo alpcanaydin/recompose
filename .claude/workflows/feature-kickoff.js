@@ -1,11 +1,11 @@
 export const meta = {
   name: 'feature-kickoff',
   description:
-    'Dispatches the discovery fan-out that opens a feature planning phase. Args: slug is the change directory under openspec/changes, tier is full or standard. Folds the arm table by tier, dispatches the researcher and code-analyzer arms in parallel, writes their findings to disk through one writer subagent after the fan-out, validates the rendered code map against the citation validator under a six-dispatch cap, and reruns the code-map arm once on a failing verdict.',
+    'Dispatches the discovery fan-out that opens a feature planning phase. Args: slug is the change directory under openspec/changes, tier is full or standard. Folds the arm table by tier, pipelines the researcher and code-analyzer arms so each brief reaches disk the moment its arm answers rather than waiting on the slowest one, validates the rendered code map against the citation validator under a bounded dispatch cap, and reruns the code-map arm once on a failing verdict.',
   phases: ['Discover', 'Validate', 'Recheck'],
 }
 
-const MAX_DISCOVERY_DISPATCHES = 6
+const MAX_DISCOVERY_DISPATCHES = 12
 const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const WRITER_DISPATCH_COUNT = 1
 const VALIDATOR_DISPATCH_COUNT = 1
@@ -147,17 +147,18 @@ function armQueryPrompt(arm, input, failures) {
       : `Produce ${arm.focus}. Back every claim with a source or a repository reference.`
   const pathRule =
     'Write every repository path relative to the repository root, never as an absolute path. An absolute path carries the checkout location into a committed artifact and points nowhere on another machine.'
-  return [header, ask, pathRule].join('\n') + citationRepairNote(failures)
+  const localityRule =
+    'This repository sits on local disk. Find files with Grep and Glob and open them with Read. Never fetch a source file, a directory listing, or a repository page over the web; the web is only for third-party documentation.'
+  const budgetRule =
+    'Spend at most fifteen reads before you answer. When the budget runs out, answer from what you hold and name the gap in a clause, because an answer that arrives with a stated hole beats a perfect one that never arrives.'
+  return [header, ask, pathRule, localityRule, budgetRule].join('\n') + citationRepairNote(failures)
 }
 function resolveArmQuery(arm, findings) {
   if (arm.kind === 'code-map') {
     if (findings && findings.entries.length > 0) {
       return { arm, findings, status: 'ok' }
     }
-    const reason = findings ? 'returned an empty code map' : 'died'
-    throw new Error(
-      `feature-kickoff process assertion failed: the ${arm.label} arm ${reason}, and validation then has nothing to check`,
-    )
+    return { arm, findings: null, status: 'skipped', reason: findings ? 'returned an empty code map' : 'died' }
   }
   if (!findings) {
     log(`${arm.label} arm died; continuing without its brief`)
@@ -165,8 +166,23 @@ function resolveArmQuery(arm, findings) {
   }
   return { arm, findings, status: 'ok' }
 }
+function assertCodeMapArrived(outcome) {
+  if (outcome.status !== 'ok') {
+    throw new Error(
+      `feature-kickoff process assertion failed: the ${outcome.arm.label} arm ${outcome.reason}, and validation then has nothing to check`,
+    )
+  }
+}
+function assertEveryFindingReachedDisk(arms, outcomes) {
+  const lost = outcomes.map((outcome, index) => (outcome ? null : arms[index])).filter(Boolean)
+  if (lost.length > 0) {
+    throw new Error(
+      `feature-kickoff process assertion failed: ${lost.map((arm) => arm.label).join(', ')} produced findings that never reached disk`,
+    )
+  }
+}
 function assertDispatchCapRespected(arms) {
-  const planned = arms.length + WRITER_DISPATCH_COUNT + VALIDATOR_DISPATCH_COUNT
+  const planned = arms.length * (1 + WRITER_DISPATCH_COUNT) + VALIDATOR_DISPATCH_COUNT
   if (planned > MAX_DISCOVERY_DISPATCHES) {
     throw new Error(
       `feature-kickoff process assertion failed: ${arms.length} arm(s) plus the writer and the validator plan ${planned} dispatch(es), over the cap of ${MAX_DISCOVERY_DISPATCHES}`,
@@ -296,18 +312,27 @@ phase('Discover')
 const arms = armTable[input.tier]
 assertDispatchCapRespected(arms)
 log(`Dispatching ${arms.length} discovery arm(s) for the ${input.tier} tier`)
-const findingsList = await parallel(
-  arms.map((arm) => () => agent(armQueryPrompt(arm, input), armDispatchOptions(arm, 'Discover'))),
+const resolved = await pipeline(
+  arms,
+  (arm) => agent(armQueryPrompt(arm, input), armDispatchOptions(arm, 'Discover')),
+  async (findings, arm) => {
+    const outcome = resolveArmQuery(arm, findings)
+
+    if (outcome.status === 'ok') {
+      await dispatchWriter(
+        [{ path: armFilePath(input.slug, outcome.arm), content: armContent(outcome.arm, outcome.findings) }],
+        'Discover',
+      )
+    }
+
+    return outcome
+  },
 )
-const resolved = arms.map((arm, index) => resolveArmQuery(arm, findingsList[index]))
+assertEveryFindingReachedDisk(arms, resolved)
 const written = resolved.filter((entry) => entry.status === 'ok')
-const filesToWrite = written.map((entry) => ({
-  path: armFilePath(input.slug, entry.arm),
-  content: armContent(entry.arm, entry.findings),
-}))
-await dispatchWriter(filesToWrite, 'Discover')
 
 const codeMapEntry = resolved.find((entry) => entry.arm.kind === 'code-map')
+assertCodeMapArrived(codeMapEntry)
 let entries = codeMapEntry.findings.entries
 phase('Validate')
 let verdict = await runValidation(entries)
