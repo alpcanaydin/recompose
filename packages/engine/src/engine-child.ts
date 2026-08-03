@@ -2,17 +2,32 @@ import {
   type EngineDirective,
   engineDirectiveSchema,
   engineReportSchema,
+  type KeyProviderId,
 } from '@recompose/contracts';
 
 import type { ParentPort } from './parent-port';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
+import { firstPartyProbeOrigins, probeKey } from './provider/key-probe';
 
-function keyCheckNoProbeCanAnswerYet(answers: string): unknown {
-  return { kind: 'key-check', answers, verdict: 'could-not-check' };
+function probeOriginFor(provider: KeyProviderId): string {
+  return process.env['RECOMPOSE_PROBE_ORIGIN'] ?? firstPartyProbeOrigins[provider];
 }
 
-async function answerFor(runtime: EngineRuntime, directive: EngineDirective): Promise<unknown> {
+type RefusalIssue = { path: readonly PropertyKey[]; code: string };
+
+function sanitizedRefusal(issues: readonly RefusalIssue[]): { path: string; code: string }[] {
+  return issues.map((issue) => ({
+    path: issue.path.map((segment) => String(segment)).join('.'),
+    code: issue.code,
+  }));
+}
+
+async function answerFor(
+  runtime: EngineRuntime,
+  fetchLike: typeof fetch,
+  directive: EngineDirective,
+): Promise<unknown> {
   switch (directive.kind) {
     case 'start':
       return {
@@ -29,7 +44,16 @@ async function answerFor(runtime: EngineRuntime, directive: EngineDirective): Pr
         state: await runtime.stop(directive.slug),
       };
     case 'probe':
-      return keyCheckNoProbeCanAnswerYet(directive.id);
+      return {
+        kind: 'key-check',
+        answers: directive.id,
+        ...(await probeKey(
+          fetchLike,
+          directive.provider,
+          directive.key,
+          probeOriginFor(directive.provider),
+        )),
+      };
 
     default: {
       const unknownDirective: never = directive;
@@ -44,12 +68,17 @@ async function answerFor(runtime: EngineRuntime, directive: EngineDirective): Pr
 async function reportBack(
   parentPort: ParentPort,
   runtime: EngineRuntime,
+  fetchLike: typeof fetch,
   directive: EngineDirective,
 ): Promise<void> {
-  parentPort.postMessage(engineReportSchema.parse(await answerFor(runtime, directive)));
+  parentPort.postMessage(engineReportSchema.parse(await answerFor(runtime, fetchLike, directive)));
 }
 
-export function attachEngineChild(parentPort: ParentPort, openListeners: OpenListeners): void {
+export function attachEngineChild(
+  parentPort: ParentPort,
+  openListeners: OpenListeners,
+  fetchLike: typeof fetch = globalThis.fetch,
+): void {
   const runtime = createEngineRuntime(openListeners);
 
   parentPort.on('message', (messageEvent) => {
@@ -58,13 +87,13 @@ export function attachEngineChild(parentPort: ParentPort, openListeners: OpenLis
     if (!directive.success) {
       console.error(
         'The engine child refused a directive it could not read.',
-        directive.error.issues,
+        sanitizedRefusal(directive.error.issues),
       );
 
       return;
     }
 
-    reportBack(parentPort, runtime, directive.data).catch((failure: unknown) => {
+    reportBack(parentPort, runtime, fetchLike, directive.data).catch((failure: unknown) => {
       console.error('The engine child could not answer a directive.', failure);
     });
   });

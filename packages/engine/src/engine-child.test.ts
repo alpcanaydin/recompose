@@ -100,11 +100,44 @@ describe('a directive the parent sends', () => {
   });
 });
 
-describe('a probe directive, before any probe reaches a vendor', () => {
-  test('a probe answers the directive that asked, saying the check could not run', async () => {
+function urlOf(input: Parameters<typeof fetch>[0]): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  return input instanceof URL ? input.href : input.url;
+}
+
+function fetchAnswering(status: number): { urls: string[]; fetchLike: typeof fetch } {
+  const urls: string[] = [];
+
+  const fetchLike: typeof fetch = async (input) => {
+    urls.push(urlOf(input));
+
+    return Promise.resolve(new Response(null, { status }));
+  };
+
+  return { urls, fetchLike };
+}
+
+describe('a probe directive the parent sends', () => {
+  test('a probe folds the vendor answer and reports it to the directive that asked', async () => {
     const parent = aParent();
 
-    attachEngineChild(parent.port, aLoopbackHolding([]));
+    attachEngineChild(parent.port, aLoopbackHolding([]), fetchAnswering(200).fetchLike);
+    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+    await reportsReach(parent, 1);
+
+    expect(parent.reports).toEqual([
+      { kind: 'key-check', answers: 'd1', verdict: 'authenticates', status: 200 },
+    ]);
+  });
+
+  test('a probe whose fetch throws still answers, saying the check could not run', async () => {
+    const parent = aParent();
+    const refusing: typeof fetch = async () => Promise.reject(new TypeError('fetch failed'));
+
+    attachEngineChild(parent.port, aLoopbackHolding([]), refusing);
     parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
     await reportsReach(parent, 1);
 
@@ -116,11 +149,51 @@ describe('a probe directive, before any probe reaches a vendor', () => {
   test('the answer carries no window of the key it was handed', async () => {
     const parent = aParent();
 
-    attachEngineChild(parent.port, aLoopbackHolding([]));
+    attachEngineChild(parent.port, aLoopbackHolding([]), fetchAnswering(200).fetchLike);
     parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
     await reportsReach(parent, 1);
 
     expect(JSON.stringify(parent.reports)).not.toContain('9f2c');
+  });
+});
+
+describe('the origin a probe reaches', () => {
+  test('each vendor is probed at its own first-party host by default', async () => {
+    const parent = aParent();
+    const { urls, fetchLike } = fetchAnswering(200);
+
+    attachEngineChild(parent.port, aLoopbackHolding([]), fetchLike);
+    parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+    parent.send({ kind: 'probe', id: 'd2', provider: 'openai', key: 'sk-proj-fake-openai-paste' });
+    await reportsReach(parent, 2);
+
+    expect(urls).toEqual([
+      'https://api.anthropic.com/v1/models',
+      'https://api.openai.com/v1/models',
+    ]);
+  });
+
+  test('the environment substitutes the probe origin for every vendor', async () => {
+    const parent = aParent();
+    const { urls, fetchLike } = fetchAnswering(200);
+
+    vi.stubEnv('RECOMPOSE_PROBE_ORIGIN', 'http://127.0.0.1:8642');
+
+    try {
+      attachEngineChild(parent.port, aLoopbackHolding([]), fetchLike);
+      parent.send({ kind: 'probe', id: 'd1', provider: 'anthropic', key: 'sk-ant-api03-9f2c' });
+      parent.send({
+        kind: 'probe',
+        id: 'd2',
+        provider: 'openai',
+        key: 'sk-proj-fake-openai-paste',
+      });
+      await reportsReach(parent, 2);
+
+      expect(urls).toEqual(['http://127.0.0.1:8642/v1/models', 'http://127.0.0.1:8642/v1/models']);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
@@ -162,6 +235,53 @@ describe('a directive the child cannot read', () => {
       expect.stringContaining('could not read'),
       expect.anything(),
     );
+    complaints.mockRestore();
+  });
+});
+
+describe('the refusal log a malformed directive draws', () => {
+  test('it names issue paths and codes, never what the directive carried', () => {
+    const parent = aParent();
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    attachEngineChild(parent.port, aLoopbackHolding([]));
+    parent.send({
+      kind: 'probe',
+      id: 'd1',
+      provider: 'anthropic',
+      key: 'sk-hidden-77aa',
+      'sk-marker-2b7e1a90': true,
+    });
+    parent.send({ kind: 'start', id: 'd2', gateway: { ...codex, port: 'sk-hidden-77aa' } });
+
+    const spoken = JSON.stringify(complaints.mock.calls);
+
+    expect(spoken).toContain('unrecognized_keys');
+    expect(spoken).toContain('gateway.port');
+    expect(spoken).not.toContain('sk-marker-2b7e1a90');
+    expect(spoken).not.toContain('sk-hidden-77aa');
+    complaints.mockRestore();
+  });
+});
+
+describe('a directive whose work fails', () => {
+  test('the failure is logged rather than swallowed, and no report goes back', async () => {
+    const parent = aParent();
+    const failing: OpenListeners = async () =>
+      Promise.reject(new Error('the listener could not open'));
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    attachEngineChild(parent.port, failing);
+    parent.send({ kind: 'start', id: 'd1', gateway: codex });
+
+    await vi.waitFor(() => {
+      expect(complaints).toHaveBeenCalledWith(
+        expect.stringContaining('could not answer'),
+        expect.anything(),
+      );
+    });
+
+    expect(parent.reports).toEqual([]);
     complaints.mockRestore();
   });
 });
