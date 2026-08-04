@@ -13,7 +13,6 @@ import type { CredentialCustody } from './subscriptions/credential-custody';
 import { createEngineHost } from './engine-host/engine-host';
 import { createGatewayLifecycleRequests } from './engine-host/gateway-lifecycle-requests';
 import { probeFreePort } from './engine-host/probe-free-port';
-import { probeRuntimeUntilTheHostAnswers } from './engine-host/probe-runtime-until-the-host-answers';
 import { spawnEngineChild } from './engine-host/spawn-engine';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
@@ -187,7 +186,7 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
       userDataPath,
       homeFolder,
       onCorrupt: onStorageCorrupt,
-      probeRuntime: probeRuntimeUntilTheHostAnswers,
+      probeRuntime: async (address) => engineHost.probeRuntime(address),
     }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
