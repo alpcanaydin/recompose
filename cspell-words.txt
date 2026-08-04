@@ -84,9 +84,11 @@ libvips
 lifecycles
 lintable
 litellm
+llms
 lmstudio
 lobehub
 lockfiles
+logprobs
 lossily
 McCabe
 Mcpjson
@@ -96,6 +98,7 @@ Meridius
 Mistral
 Mobbin
 Moonshot
+musistudio
 negotiables
 nizos
 nofilter
@@ -167,6 +170,7 @@ Toggl
 toggleable
 togglefullscreen
 tokenless
+toolu
 topsecret
 tosorted
 trackpad
