@@ -14,18 +14,18 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] `index.ts` re-exports the module, and every consumer typechecks and passes again.
   - [x] Layers: unit, property, and type-level.
 
-- [ ] **Task 2: the engine probe.** Owns `packages/engine/src/`. Depends on task 1, whose directive and report schemas it reads. Runs beside tasks 3 and 4 on disjoint trees.
-  - [ ] Opens red in `provider/runtime-probe.test.ts`: an injected fetch answering 200 with `{"version":"0.5.1"}` folds to `answers` carrying the version, before the probe exists.
-  - [ ] `provider/runtime-probe.ts` lands as the pure fetch-injected probe: GET `/api/version`, refused redirects, a three-second bound. The folding table: ok status with a parsable version body answers `answers`; any other HTTP answer folds to `unrecognized` with the status; a thrown fetch, a timeout, or a refused redirect folds to `unreachable`. A property pins one verdict per outcome and `answers` only on an ok status with a version.
-  - [ ] `engine-child.ts` dispatches the `probe-runtime` directive and posts the `runtime-check` report. The `RECOMPOSE_RUNTIME_ORIGIN` override rides beside the probe-origin override, honored for loopback hosts only.
-  - [ ] Layers: unit, property, and integration over the fake parent port.
+- [x] **Task 2: the engine probe.** Owns `packages/engine/src/`. Depends on task 1, whose directive and report schemas it reads. Runs beside tasks 3 and 4 on disjoint trees.
+  - [x] Opens red in `provider/runtime-probe.test.ts`: an injected fetch answering 200 with `{"version":"0.5.1"}` folds to `answers` carrying the version, before the probe exists.
+  - [x] `provider/runtime-probe.ts` lands as the pure fetch-injected probe: GET `/api/version`, refused redirects, a three-second bound. The folding table: ok status with a parsable version body answers `answers`; any other HTTP answer folds to `unrecognized` with the status; a thrown fetch, a timeout, or a refused redirect folds to `unreachable`. A property pins one verdict per outcome and `answers` only on an ok status with a version.
+  - [x] `engine-child.ts` dispatches the `probe-runtime` directive and posts the `runtime-check` report. The `RECOMPOSE_RUNTIME_ORIGIN` override rides beside the probe-origin override, honored for loopback hosts only.
+  - [x] Layers: unit, property, and integration over the fake parent port.
 
-- [ ] **Task 3: main.** Owns `apps/desktop/src/main/` and `apps/desktop/src/preload/`. Depends on task 1 and runs beside tasks 2 and 4 on disjoint trees. Task 1 absorbed the handler skeleton, because the channel surface drives three total maps that live outside contracts, so this task wires the host into it.
+- [x] **Task 3: main.** Owns `apps/desktop/src/main/` and `apps/desktop/src/preload/`. Depends on task 1 and runs beside tasks 2 and 4 on disjoint trees. Task 1 absorbed the handler skeleton, because the channel surface drives three total maps that live outside contracts, so this task wires the host into it.
   - [x] Absorbed by task 1: `local-runtimes-ipc.ts` with the three handlers and the vault-never-created killer, the `storage-ipc.ts` remove branch, `dispatch.ts` totality at twenty-four, the three preload entries, and the version 4 fixture.
-  - [ ] Opens red by flipping the transitional probe's own spec: `main/index.ts` still answers every detect with `unreachable`, before the host learns to ask the child.
-  - [ ] `engine-host.ts` gains `probeRuntime` and routes the `runtime-check` report. A dead child folds to `unreachable` with a sanitized log line naming the fold, and the host's wait bound stands above the child's fetch bound.
-  - [ ] The one-line wire at `main/index.ts` replaces the transitional probe, and `probe-runtime-until-the-host-answers.ts` retires with its spec.
-  - [ ] Layers: unit, integration, and property.
+  - [x] Opens red by flipping the transitional probe's own spec: `main/index.ts` still answers every detect with `unreachable`, before the host learns to ask the child.
+  - [x] `engine-host.ts` gains `probeRuntime` and routes the `runtime-check` report. A dead child folds to `unreachable` with a sanitized log line naming the fold, and the host's wait bound stands above the child's fetch bound.
+  - [x] The one-line wire at `main/index.ts` replaces the transitional probe, and `probe-runtime-until-the-host-answers.ts` retires with its spec.
+  - [x] Layers: unit, integration, and property.
 
 - [ ] **Task 4: the catalog and the marks.** Owns `apps/desktop/package.json`, `pages/providers/model/`, `pages/providers/ui/catalog-list/`, `pages/providers/ui/providers-page/`, and `shared/ui/brand-mark/`. Depends on task 1 for types, and runs beside tasks 2 and 3 on disjoint trees.
   - [ ] Opens red in `provider-catalog.test.ts`: `offeredUnder('local')` answers the Ollama entry and `awaitedFor('aggregator')` answers six, before the catalog grows.
