@@ -212,6 +212,14 @@ test('a keys screen with nothing connected explains the kind and lists nothing',
   await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
 });
 
+test('the aggregators screen promises a hosted catalog rather than many providers', async () => {
+  const screen = await renderProviders('aggregator');
+
+  await expect
+    .element(screen.getByText('One key, many models, routed through a hosted catalog.'))
+    .toBeVisible();
+});
+
 test('an aggregators screen with nothing connected explains the kind and lists nothing', async () => {
   const screen = await renderProviders('aggregator');
 

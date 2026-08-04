@@ -10,6 +10,7 @@ import { ProvidersPage } from './providers-page';
 
 const subscriptionKind: AccountKind = 'subscription';
 const keyKind: AccountKind = 'api-key';
+const aggregatorKind: AccountKind = 'aggregator';
 const localKind: AccountKind = 'local';
 
 const connected: SubscriptionAccountView = {
@@ -55,6 +56,21 @@ export const Connected = meta.story({
 export const Keys = meta.story({
   args: { kind: keyKind },
   parameters: { bridge: { accounts: keys } },
+});
+
+/**
+ * The aggregators destination, whose subtitle promises what its cards actually sell.
+ *
+ * @summary Five of the six Soon entries host their own open-model catalogs rather than routing to
+ * other providers, so the line says catalog rather than claiming many providers.
+ */
+export const Aggregators = meta.story({
+  args: { kind: aggregatorKind },
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText('One key, many models, routed through a hosted catalog.'),
+    ).toBeVisible();
+  },
 });
 
 /** The fourth destination, which names what will stand there rather than showing an empty list. */

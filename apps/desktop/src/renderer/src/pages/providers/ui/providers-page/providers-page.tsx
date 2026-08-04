@@ -13,7 +13,7 @@ type ProvidersPageProps = {
 const subtitles: Record<AccountKind, string> = {
   subscription: "Plans each provider's own command-line tool signs in and spends.",
   'api-key': 'Keys a gateway reaches one provider with, charged request by request.',
-  aggregator: 'One key that reaches many providers through a single endpoint.',
+  aggregator: 'One key, many models, routed through a hosted catalog.',
   local: 'Models this machine serves itself.',
 };
 
