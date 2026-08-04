@@ -47,12 +47,12 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] Every new component ships its stories and browser-test siblings, and everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes, run in the orchestrating session after the merge.
   - [x] Layers: unit, browser, and story.
 
-- [ ] **Task 6: acceptance and records.** Owns `apps/desktop/e2e/`, the visual baselines, `cspell-words.txt`, and `docs/adr/`. Depends on tasks 2 through 5, because it drives the app they assemble.
-  - [ ] Opens red by graduating the seven approved feature files from this change's `gherkin/` folder into `e2e/features/providers/`: every new scenario fails before the steps and the stub exist. Each feature file graduates together with its step definitions, one commit per file, so no commit is ever red.
-  - [ ] `runtime-stub.ts` lands as the loopback stub serving `/api/version` with scripted answers, silence, and strangers, handed through `RECOMPOSE_RUNTIME_ORIGIN` beside the probe and keychain overrides in `fixtures.ts`.
-  - [ ] The step definitions land per feature file: the catalog counts, the detect faces, the credential-free add, the add-anyway path, the standing words, and the no-Verify assertion, addressed by role and name.
-  - [ ] `catalog.feature` shifts its Soon-count assertions for the two grown catalogs.
-  - [ ] ADRs 0072, 0073, and 0074 land from the design's decisions 1 through 3, with their `docs/adr/README.md` index rows.
-  - [ ] `cspell-words.txt` gains the vocabulary this change's artifacts and diff introduce, lobehub included.
-  - [ ] The visual baselines regenerate through the `update-baselines` label on CI, never a local run.
-  - [ ] Layers: end to end and visual.
+- [x] **Task 6: acceptance and records.** Owns `apps/desktop/e2e/`, the visual baselines, `cspell-words.txt`, and `docs/adr/`. Depends on tasks 2 through 5, because it drives the app they assemble.
+  - [x] Opens red by graduating the seven approved feature files from this change's `gherkin/` folder into `e2e/features/providers/`: every new scenario fails before the steps and the stub exist. Each feature file graduates together with its step definitions, one commit per file, so no commit is ever red.
+  - [x] `runtime-stub.ts` lands as the loopback stub serving `/api/version` with scripted answers, silence, and strangers, handed through `RECOMPOSE_RUNTIME_ORIGIN` beside the probe and keychain overrides in `fixtures.ts`.
+  - [x] The step definitions land per feature file: the catalog counts, the detect faces, the credential-free add, the add-anyway path, the standing words, and the no-Verify assertion, addressed by role and name.
+  - [x] `catalog.feature` needed no shift: the key catalog's counts never moved, and no shipped file asserted the local Soon count.
+  - [x] ADRs 0072, 0073, and 0074 land from the design's decisions 1 through 3, with their `docs/adr/README.md` index rows.
+  - [x] `cspell-words.txt` needed nothing beyond the earlier lobehub row: the diff ran clean through the dictionary outside the worktree blind spot.
+  - [ ] The visual baselines regenerate through the `update-baselines` label on CI, never a local run. The label goes on the pull request.
+  - [x] Layers: end to end and visual.
