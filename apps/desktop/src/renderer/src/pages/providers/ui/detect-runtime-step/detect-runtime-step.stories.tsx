@@ -51,7 +51,7 @@ export const AnotherServer = meta.story({
   },
 });
 
-/** The one knob: pointing the look at another port re-runs it there, and the sentence follows. */
+/** The one knob: a port typed and committed with Enter re-runs the look there. */
 export const MovedPort = meta.story({
   parameters: { bridge: { overrides: { 'accounts:detect-runtime': answersOnlyOnPort9000 } } },
   play: async ({ canvas }) => {
@@ -61,7 +61,7 @@ export const MovedPort = meta.story({
     await expect(await canvas.findByText(/isn't running at 127.0.0.1:11434/)).toBeVisible();
 
     await userEvent.clear(knob);
-    await userEvent.type(knob, '9000');
+    await userEvent.type(knob, '9000{enter}');
 
     await expect(await canvas.findByText('Ollama is running at 127.0.0.1:9000.')).toBeVisible();
   },
