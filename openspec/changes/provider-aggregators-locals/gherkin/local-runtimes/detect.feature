@@ -17,6 +17,7 @@ Feature: Detection before adding a local runtime
     And "Check again" leads, with "Add anyway" standing beside it as a plain act
     And no account joins the registry
 
+  @probes-the-minted-address
   Scenario: a runtime on a moved port answers through the port field
     Given Ollama answers on a port that isn't the documented one
     When the maintainer picks "Ollama" and points the look at that port
