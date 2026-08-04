@@ -32,7 +32,7 @@ The design turns the locked proposal into contracts, files, tests, and task boun
 - Acceptance A1, the public catalog: a models probe can't prove an aggregator key, which is the load-bearing fact behind ADR 0073.
 - Acceptance A2 and C1, the widened verdict vocabulary: consulted, not adopted. The proposal scopes the aggregator check out entirely rather than widening ADR 0070's triad for one vendor.
 - Acceptance B2, never store `localhost`: main mints `http://127.0.0.1:11434` from a contracts-owned table, and no field accepts another host.
-- Acceptance B3, base-URL normalization defects: consulted, no impact. No editable base URL exists, so the defect class has nothing to land on.
+- Acceptance B3, base-URL normalization defects: consulted. The port knob keeps hosts and paths in recompose's hands, so the class lands only on the port, which a schema bounds.
 - Acceptance B4, "not running" as an expected state: the silence face names the runtime, the address, and the remedy.
 - Acceptance C2, never store a verdict, harder for locals: the row re-reads its standing on every mount and the registry keeps nothing.
 - Acceptance C3, the probe as a server-side request forgery control: the loopback-only address schema enforces the aim at contract parse.
@@ -59,7 +59,7 @@ The design turns the locked proposal into contracts, files, tests, and task boun
 
 **Non-goals:**
 
-- No editable base URLs. Main mints the one documented address, and no field accepts another.
+- No editable hosts or paths. The port is the one knob, and main mints everything around it.
 - No optional tokens. A local row can't hold a credential, and no form asks for one.
 - No model enumeration and no pickers. A row says the server answers, never what it serves.
 - No gateway routing targets. Neither kind becomes routable here, so composition stays a later change.
@@ -130,7 +130,7 @@ detect step            main                       engine child           Ollama
 
 Picking Ollama looks at once, and no button asks permission to look. The shipped sign-in step set the precedent: it reads the machine on entry and reports what it found. The detect step inherits that grammar for a loopback GET that carries no secret and stores nothing.
 
-The step has three faces, and the verdict slot reserves its height while looking, so the sheet never jumps twice. Looking reads a quiet Checking line in the slot the verdict will fill. An answer reads "Ollama is running at 127.0.0.1:11434." with the version the runtime returned beneath, and the footer's primary is Add. A non-answer reads its own sentence: silence reads "Ollama isn't running at 127.0.0.1:11434. Start it, then check again." while a strange answer says another server answered there. On a non-answer the primary is Check again, and Add anyway stands beside it as a plain act. Deciding includes adding a server the person will start later, and the default on a failed look is never a write.
+The step has three faces, and the verdict slot reserves its height while looking, so the sheet never jumps twice. A Port field stands over the slot, prefilled with the documented 11434, and committing another port points the look there. Looking reads a quiet Checking line in the slot the verdict will fill. An answer reads "Ollama is running at 127.0.0.1:11434." with the version the runtime returned beneath, and the footer's primary is Add. A non-answer reads its own sentence: silence reads "Ollama isn't running at 127.0.0.1:11434. Start it, then check again." while a strange answer says another server answered there. On a non-answer the primary is Check again, and Add anyway stands beside it as a plain act. Deciding includes adding a server the person will start later, and the default on a failed look is never a write.
 
 Adding stores the `local` arm: the runtime id and the address main mints from the contracts-owned table. The renderer never supplies an address, so no row can ever hold `localhost`, the host behind the recorded defect where Node resolves it to IPv6 while Ollama listens on IPv4.
 
@@ -409,7 +409,7 @@ This is the local half's architectural decision, and it lands as ADR 0072. The d
 
 **Decision.** A local account is its own union arm: `{ id, provider, kind: 'local', address }`, parsed as a `strictObject` with no `label` and no `credentialRef`. `ACCOUNTS_VERSION` moves from 3 to 4 with a restamp-only migration, so an older build refuses the newer document readably instead of quarantining it. Main mints the stored address from a contracts-owned table, `http://127.0.0.1:11434` for Ollama, and the renderer never supplies one. A loopback-only schema guards the address at every parse, in the document and on the probe directive alike. Reachability is a probe the engine child runs through a `probe-runtime` directive beside the key probe: `GET /api/version`, redirects refused, a three-second bound. The child mints three verdicts disjoint from the key-check triad: `answers` with the version, `unrecognized` with the status, and `unreachable`. Main folds a dead child to `unreachable`. Detection runs before adding and stores nothing until the person decides. A stored row re-observes its standing on every mount, and no verdict is ever stored. The connect channel takes only the runtime id, so a local account with a secret is impossible by construction.
 
-**Alternatives.** A token-optional credentialed arm, rejected: it makes the required field optional and dissolves ADR 0069's parse-error gate into a review note. An editable base URL, rejected: the recorded defect classes are exactly `localhost` resolution and path normalization, and one documented address needs no field. Storing the standing beside the row, rejected: a local server stops between two renders far more often than a vendor revokes a key. The stored claim would lie faster than ADR 0070's case. A port sweep to find runtimes, rejected: it's a firewall-prompt generator and sits badly beside an offline-first posture.
+**Alternatives.** A token-optional credentialed arm, rejected: it makes the required field optional and dissolves ADR 0069's parse-error gate into a review note. An editable base URL, rejected: the recorded defect classes are exactly `localhost` resolution and path normalization. The port knob survives that test, because the host and the path never leave recompose's hands. Storing the standing beside the row, rejected: a local server stops between two renders far more often than a vendor revokes a key. The stored claim would lie faster than ADR 0070's case. A port sweep to find runtimes, rejected: it's a firewall-prompt generator and sits badly beside an offline-first posture.
 
 **Consequences.** **Good**: the forbidden states have no shape, so no test, review, or migration has to police a credential on a local row. The registry stores only what a person decided, and a squatting stranger never reads as Ollama. **Bad**: a row costs one loopback fetch per mount, and a standing can lag the truth by one observation. The fixed address means a relocated `OLLAMA_HOST` can't connect, and the design says so rather than offering a field. A dead engine child reads as Not running rather than as an error a person can act on, with the honest detail in main's log.
 
@@ -545,7 +545,7 @@ Run the desktop app from `apps/desktop` with `pnpm dev`, then walk the loop.
 2. Picking OpenRouter opens the two-field form. The empty key field hints `sk-or-v1-…`, an `sk-ant-` paste draws the warning and still connects, and the stored row lists under Aggregators.
 3. The OpenRouter row reads the product over the name and the mask, and no Verify act stands on the row or behind its overflow.
 4. The Local Runtimes destination opens without the placeholder note. Add provider opens a catalog of five: Ollama answers the pointer, and LM Studio, llama.cpp, vLLM, and Custom local server stand inert under Soon.
-5. With Ollama running, picking it reads Checking, then "Ollama is running at 127.0.0.1:11434." with the version beneath, and the slot never jumps. Add stores the row, and the sidebar count moves.
+5. With Ollama running, picking it reads Checking, then "Ollama is running at 127.0.0.1:11434." with the version beneath, and the slot never jumps. Add stores the row, and the sidebar count moves. With Ollama moved to another port, committing that port in the field reads the answer at that address, and adding stores it.
 6. With Ollama stopped, the same pick reads the silence sentence, Check again stands primary, and Add anyway stores the row all the same.
 7. The stored row reads Ollama over its mono address. Running shows the positive chip, stopping the server and remounting shows Not running on the inert tone, and a stranger on the port shows Another server answered.
 8. Remove deletes the row without touching the vault file. A seeded version 3 document lists its old rows unchanged at version 4.
@@ -557,9 +557,9 @@ A fresh-context reviewer diffs the result against these criteria:
 - `accountsDocumentSchema` sits at version 4 with the credential-free `local` arm, the pass-through migration, and the `accounts.test-d.ts` pins.
 - `ipcChannels` holds twenty-four entries, `ipcChannelNames` matches, the preload bridge matches, and no local request schema carries a secret field.
 - The local path performs no vault read and no vault write, and `local-runtimes-ipc.ts` imports nothing from `vault.ts`.
-- Every stored local address equals `http://127.0.0.1:11434`, and no code path can store `localhost`.
+- Every stored local address names the loopback host with the port the person chose, defaulting to the documented one, and no code path can store `localhost`.
 - The reachability verdicts stay disjoint from the key-check triad, and nothing stores either.
-- `pnpm run lint:deps` stays green: main still never imports `packages/engine`.
+- `pnpm run lint:boundaries` stays green: main still never imports `packages/engine`, and the local path never reaches the vault.
 - The placeholder leaves the tree, every new `ui/` component ships its stories, and `pnpm run lint:stories` and `pnpm run lint:fsd` pass.
 - The approved features pass against the runtime stub, the baselines regenerate through the label on three platforms, and no aggregator row offers a check.
 - ADRs 0072, 0073, and 0074 land from the drafts in decisions 1 through 3, and the index carries their rows.
