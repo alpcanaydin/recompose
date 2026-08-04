@@ -37,15 +37,15 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] Everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes. The pass ran in the orchestrating session after the merge, with the badge and mark contrasts measured from the page.
   - [x] Layers: unit, browser, and story.
 
-- [ ] **Task 5: the local surface.** Owns `pages/providers/ui/` except the folders task 4 names, `shared/ui/status-chip/`, `shared/api/accounts.ts`, and `shared/testing/`. Depends on tasks 1 and 4, because it reads the widened `ConnectionWay` and `localRuntimeOf`. Runs beside tasks 2 and 3 on disjoint trees.
-  - [ ] Opens red in `detect-runtime-step.browser.test.tsx`: a seeded answer reads "Ollama is running at 127.0.0.1:11434." with the version beneath, before the step exists.
-  - [ ] `detect-runtime-step.tsx` lands with the three faces: Checking in the reserved-height slot, the answer sentence with the version, the silence sentence with Check again primary and Add anyway as a plain act. The look fires on entry, and the sheet's height changes exactly once.
-  - [ ] `local-runtimes-surface.tsx` and `local-runtime-row.tsx` land: the account list suspends, the standings settle per row with a Checking chip, the row reads the name over the mono address, and the overflow carries Check again and Remove. `local-runtimes-empty-state.tsx` says what the destination holds before a runtime connects.
-  - [ ] `status-chip.tsx` gains the inert tone on tertiary ink. The words: Running on positive, Not running on inert, Another server answered on attention, Checking on inert with no dot.
-  - [ ] `catalog-flow.tsx` stops excluding local in `connectStepFor`, the local sheet description rewrites, and `provider-connect-way.tsx` forks the local way to the detect step. `local-runtimes-note/` retires with its stories.
-  - [ ] `shared/api/accounts.ts` gains `useConnectLocalRuntime`, `runtimeDetectionQueryOptions`, and `runtimeStandingQueryOptions`, both query options forgetting on remount. The fake bridge gains the local handlers and the seedable reachability answer.
-  - [ ] Every new component ships its stories and browser-test siblings, and everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes.
-  - [ ] Layers: unit, browser, and story.
+- [x] **Task 5: the local surface.** Owns `pages/providers/ui/` except the folders task 4 names, `shared/ui/status-chip/`, `shared/api/accounts.ts`, and `shared/testing/`. Depends on tasks 1 and 4, because it reads the widened `ConnectionWay` and `localRuntimeOf`. Runs beside tasks 2 and 3 on disjoint trees.
+  - [x] Opens red in `detect-runtime-step.browser.test.tsx`: a seeded answer reads "Ollama is running at 127.0.0.1:11434." with the version beneath, before the step exists.
+  - [x] `detect-runtime-step.tsx` lands with the three faces: Checking in the reserved-height slot, the answer sentence with the version, the silence sentence with Check again primary and Add anyway as a plain act. The look fires on entry, and the sheet's height changes exactly once.
+  - [x] `local-runtimes-surface.tsx` and `local-runtime-row.tsx` land: the account list suspends, the standings settle per row with a Checking chip, the row reads the name over the mono address, and the overflow carries Check again and Remove. `local-runtimes-empty-state.tsx` says what the destination holds before a runtime connects.
+  - [x] `status-chip.tsx` gains the inert tone on tertiary ink. The words: Running on positive, Not running on inert, Another server answered on attention, Checking on inert with no dot.
+  - [x] `catalog-flow.tsx` stops excluding local in `connectStepFor`, the local sheet description rewrites, and `provider-connect-way.tsx` forks the local way to the detect step. `local-runtimes-note/` retires with its stories.
+  - [x] `shared/api/accounts.ts` gains `useConnectLocalRuntime`, `runtimeDetectionQueryOptions`, and `runtimeStandingQueryOptions`, both query options forgetting on remount. The fake bridge gains the local handlers and the seedable reachability answer.
+  - [x] Every new component ships its stories and browser-test siblings, and everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes, run in the orchestrating session after the merge.
+  - [x] Layers: unit, browser, and story.
 
 - [ ] **Task 6: acceptance and records.** Owns `apps/desktop/e2e/`, the visual baselines, `cspell-words.txt`, and `docs/adr/`. Depends on tasks 2 through 5, because it drives the app they assemble.
   - [ ] Opens red by graduating the seven approved feature files from this change's `gherkin/` folder into `e2e/features/providers/`: every new scenario fails before the steps and the stub exist. Each feature file graduates together with its step definitions, one commit per file, so no commit is ever red.
