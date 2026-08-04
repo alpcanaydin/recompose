@@ -130,11 +130,27 @@ export async function openProviderWays(page: Page, provider: string): Promise<vo
   await expect(catalog(page).getByRole('button', { name: 'Back' })).toBeVisible();
 }
 
-/** Picks one key entry, which is the only route to the form that asks for a name and a key. */
-export async function pickKeyEntry(page: Page, entry: string): Promise<void> {
+/**
+ * Picks one entry, which is the only route to the way that entry connects under.
+ *
+ * @summary Which way opens is the entry's own business, so the pick waits only for the step to
+ * arrive and leaves what it asks for to the scenario reading it.
+ */
+export async function pickEntry(page: Page, entry: string): Promise<void> {
   await openCatalog(page);
   await catalogEntry(page, entry).click();
+  await expect(catalog(page).getByRole('button', { name: 'Back' })).toBeVisible();
+}
+
+/** Picks one key entry, which is the only route to the form that asks for a name and a key. */
+async function pickKeyEntry(page: Page, entry: string): Promise<void> {
+  await pickEntry(page, entry);
   await expect(keyField(page)).toBeVisible();
+}
+
+/** What the local connect step reports about its look, filling a slot that reserved its height. */
+export function detectReading(page: Page): Locator {
+  return catalog(page).getByRole('status');
 }
 
 /** A key plainly nobody's, ending in the four characters a scenario expects the mask to read. */
