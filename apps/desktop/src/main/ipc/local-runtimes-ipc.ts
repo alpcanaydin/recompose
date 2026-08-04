@@ -1,6 +1,6 @@
 import type { AccountsDocument, LocalRuntimeId, RuntimeReachability } from '@recompose/contracts';
 
-import { localRuntimeAddresses } from '@recompose/contracts';
+import { localRuntimes } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
@@ -21,8 +21,6 @@ type LocalRuntimesIpcHandlers = Pick<
   'accounts:connect-local' | 'accounts:detect-runtime' | 'accounts:check-runtime'
 >;
 
-const runtimeNames: Record<LocalRuntimeId, string> = { ollama: 'Ollama' };
-
 function runtimesStandingIn(accounts: AccountsDocument): Set<LocalRuntimeId> {
   return new Set(
     accounts.accounts.flatMap((held) => (held.kind === 'local' ? [held.provider] : [])),
@@ -38,7 +36,7 @@ function withTheRuntimeAppended(
     ...accounts,
     accounts: [
       ...accounts.accounts,
-      { id, provider: runtime, kind: 'local', address: localRuntimeAddresses[runtime] },
+      { id, provider: runtime, kind: 'local', address: localRuntimes[runtime].address },
     ],
   };
 }
@@ -56,7 +54,7 @@ async function connectRuntime(ctx: LocalRuntimesIpcContext, runtime: LocalRuntim
 
     return amended.accounts.some((held) => held.id === minted)
       ? { ok: true as const, value: amended }
-      : ipcFailure('name-conflict', `${runtimeNames[runtime]} is already connected.`);
+      : ipcFailure('name-conflict', `${localRuntimes[runtime].name} is already connected.`);
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);
   }
@@ -95,7 +93,7 @@ export function createLocalRuntimesIpcHandlers(
   return {
     'accounts:detect-runtime': async ({ runtime }) => ({
       ok: true as const,
-      value: await ctx.probeRuntime(localRuntimeAddresses[runtime]),
+      value: await ctx.probeRuntime(localRuntimes[runtime].address),
     }),
     'accounts:check-runtime': async ({ id }) => checkStoredRuntime(ctx, id),
     'accounts:connect-local': async ({ runtime }) => connectRuntime(ctx, runtime),

@@ -1,11 +1,11 @@
 import { fc, test } from '@fast-check/vitest';
-import { localRuntimeAddresses, type RuntimeReachability } from '@recompose/contracts';
+import { localRuntimes, type RuntimeReachability } from '@recompose/contracts';
 import { afterEach, describe, expect, vi } from 'vitest';
 
 import { createEngineHost, PROBE_TIMEOUT_MS } from './engine-host';
 import { hostOver, nothing, scriptedChild } from './engine-host.testkit';
 
-const ollama = localRuntimeAddresses.ollama;
+const ollama = localRuntimes.ollama.address;
 const key = 'sk-ant-api03-long-secret-7f2c';
 const runtimeFetchBoundMs = 3000;
 const answering = (): RuntimeReachability => ({ verdict: 'answers', version: '0.5.1' });

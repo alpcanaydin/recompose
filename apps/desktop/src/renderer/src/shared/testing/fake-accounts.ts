@@ -9,7 +9,7 @@ import type {
   SubscriptionAccountView,
 } from '@recompose/contracts';
 
-import { keyTail, localRuntimeAddresses, subscriptionProviders } from '@recompose/contracts';
+import { keyTail, localRuntimes, subscriptionProviders } from '@recompose/contracts';
 
 type AccountHandlers = Pick<
   RecomposeIpc,
@@ -42,7 +42,7 @@ function keyRow(id: string, request: IpcRequest<'accounts:connect'>): Account {
 }
 
 function localRow(id: string, runtime: LocalRuntimeId): Account {
-  return { id, provider: runtime, kind: 'local', address: localRuntimeAddresses[runtime] };
+  return { id, provider: runtime, kind: 'local', address: localRuntimes[runtime].address };
 }
 
 /**

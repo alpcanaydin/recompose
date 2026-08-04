@@ -6,9 +6,9 @@ export const localRuntimeIdSchema = z.enum(['ollama']);
 
 export type LocalRuntimeId = z.infer<typeof localRuntimeIdSchema>;
 
-export const localRuntimeAddresses = {
-  ollama: 'http://127.0.0.1:11434',
-} as const satisfies Record<LocalRuntimeId, string>;
+export const localRuntimes = {
+  ollama: { name: 'Ollama', address: 'http://127.0.0.1:11434' },
+} as const satisfies Record<LocalRuntimeId, { name: string; address: string }>;
 
 const loopbackHost = '127.0.0.1';
 
