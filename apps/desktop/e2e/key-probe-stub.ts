@@ -1,6 +1,8 @@
-import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { createServer } from 'node:http';
+
+import { bindToAFreePort } from './loopback-ports';
 
 const MODELS_PATH = '/v1/models';
 
@@ -46,23 +48,6 @@ function answerAsked(
   response.end(JSON.stringify({ data: [] }));
 }
 
-async function boundPort(server: Server, host: string): Promise<number> {
-  return new Promise<number>((settle, refuse) => {
-    server.once('error', refuse);
-    server.listen({ host, port: 0 }, () => {
-      const bound = server.address();
-
-      if (bound === null || typeof bound === 'string') {
-        refuse(new Error('the key probe stub bound no port the scenario could read'));
-
-        return;
-      }
-
-      settle(bound.port);
-    });
-  });
-}
-
 /**
  * A stand-in for both vendors' `/v1/models`, bound on loopback so the engine child will use it.
  *
@@ -76,7 +61,7 @@ export async function fakeKeyProbe(): Promise<KeyProbeStub> {
   const server = createServer((request, response) => {
     answerAsked(answer, request, response);
   });
-  const port = await boundPort(server, '127.0.0.1');
+  const port = await bindToAFreePort(server, '127.0.0.1');
 
   return {
     origin: `http://127.0.0.1:${String(port)}`,
