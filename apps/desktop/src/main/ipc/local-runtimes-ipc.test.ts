@@ -1,5 +1,5 @@
-import { localRuntimes, type RuntimeReachability } from '@recompose/contracts';
-import { mkdtemp, readdir } from 'node:fs/promises';
+import { ACCOUNTS_VERSION, localRuntimes, type RuntimeReachability } from '@recompose/contracts';
+import { mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -26,6 +26,21 @@ async function aFreshContext(
       return Promise.resolve(answer(address));
     },
   };
+}
+
+const aKeyStoredUnderTheRuntimeName = {
+  id: 'key-1',
+  provider: 'ollama',
+  kind: 'api-key',
+  label: 'their key',
+  credentialRef: 'c-key-1',
+} as const;
+
+async function seededWithTheKeyRow(ctx: LocalRuntimesIpcContext): Promise<void> {
+  await writeFile(
+    join(ctx.userDataPath, 'accounts.json'),
+    JSON.stringify({ schemaVersion: ACCOUNTS_VERSION, accounts: [aKeyStoredUnderTheRuntimeName] }),
+  );
 }
 
 describe('detecting a runtime before anything is stored', () => {
@@ -193,7 +208,70 @@ describe('checking a runtime the registry already holds', () => {
       id: 'ghost',
     });
 
-    expect(checked).toMatchObject({ ok: false, error: { code: 'storage-failed' } });
+    expect(checked).toEqual({
+      ok: false,
+      error: { code: 'storage-failed', message: 'no local runtime is held under ghost.' },
+    });
+    expect(ctx.looked).toEqual([]);
+  });
+});
+
+describe('a registry that already holds other kinds', () => {
+  test('a credentialed account under the runtime name never stands in for the runtime', async () => {
+    const ctx = await aFreshContext();
+
+    await seededWithTheKeyRow(ctx);
+
+    const connected = await createLocalRuntimesIpcHandlers(ctx)['accounts:connect-local']({
+      runtime: 'ollama',
+    });
+
+    if (!connected.ok) {
+      throw new Error('the add was refused, so the runtime never joined its neighbors');
+    }
+
+    expect(connected.value.accounts).toHaveLength(2);
+    expect(connected.value.accounts.at(-1)).toMatchObject({
+      kind: 'local',
+      address: localRuntimes.ollama.address,
+    });
+  });
+
+  test('a check finds its own row among neighbors and probes only that address', async () => {
+    const ctx = await aFreshContext();
+
+    await seededWithTheKeyRow(ctx);
+
+    const handlers = createLocalRuntimesIpcHandlers(ctx);
+    const connected = await handlers['accounts:connect-local']({ runtime: 'ollama' });
+
+    if (!connected.ok) {
+      throw new Error('the runtime was never stored, so nothing stands to be checked');
+    }
+
+    ctx.looked.length = 0;
+
+    const checked = await handlers['accounts:check-runtime']({
+      id: connected.value.accounts.at(-1)?.id ?? '',
+    });
+
+    expect(checked).toEqual({ ok: true, value: running });
+    expect(ctx.looked).toEqual([localRuntimes.ollama.address]);
+  });
+
+  test('a row that is no local runtime is refused by name rather than probed', async () => {
+    const ctx = await aFreshContext();
+
+    await seededWithTheKeyRow(ctx);
+
+    const checked = await createLocalRuntimesIpcHandlers(ctx)['accounts:check-runtime']({
+      id: aKeyStoredUnderTheRuntimeName.id,
+    });
+
+    expect(checked).toEqual({
+      ok: false,
+      error: { code: 'storage-failed', message: 'no local runtime is held under key-1.' },
+    });
     expect(ctx.looked).toEqual([]);
   });
 });

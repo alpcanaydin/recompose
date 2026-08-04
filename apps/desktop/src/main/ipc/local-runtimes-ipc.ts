@@ -22,9 +22,15 @@ type LocalRuntimesIpcHandlers = Pick<
 >;
 
 function runtimesStandingIn(accounts: AccountsDocument): Set<LocalRuntimeId> {
-  return new Set(
-    accounts.accounts.flatMap((held) => (held.kind === 'local' ? [held.provider] : [])),
-  );
+  const standing = new Set<LocalRuntimeId>();
+
+  for (const held of accounts.accounts) {
+    if (held.kind === 'local') {
+      standing.add(held.provider);
+    }
+  }
+
+  return standing;
 }
 
 function withTheRuntimeAppended(
