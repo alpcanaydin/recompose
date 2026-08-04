@@ -27,6 +27,22 @@ export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId) {
 }
 
 /**
+ * Whether a stored runtime answers at its stored address, read as of this look.
+ *
+ * @summary Reach for it from a local row on every mount and on every Check again. The standing is
+ * an observation rather than a stored fact, so nothing caches it past unmount and no row ever
+ * carries a claim older than its own screen.
+ */
+export function runtimeStandingQueryOptions(id: string) {
+  return queryOptions({
+    queryKey: ['runtime-standing', id],
+    queryFn: async () => unwrapIpcResult(await window.recompose['accounts:check-runtime']({ id })),
+    gcTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+/**
  * Stores a local runtime as the credential-free account the person decided on.
  *
  * @summary The request carries only the runtime id, because main mints the stored address from
