@@ -53,6 +53,6 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] The step definitions land per feature file: the catalog counts, the detect faces, the credential-free add, the add-anyway path, the standing words, and the no-Verify assertion, addressed by role and name.
   - [x] `catalog.feature` needed no shift: the key catalog's counts never moved, and no shipped file asserted the local Soon count.
   - [x] ADRs 0072, 0073, and 0074 land from the design's decisions 1 through 3, with their `docs/adr/README.md` index rows.
-  - [x] `cspell-words.txt` needed nothing beyond the earlier lobehub row: the diff ran clean through the dictionary outside the worktree blind spot.
+  - [x] `cspell-words.txt` gains the vocabulary the diff introduces: the runtime and vendor slugs plus the change documents' own words, verified with the gate run outside the worktree blind spot. The adversarial review caught the first sweep undercounting.
   - [ ] The visual baselines regenerate through the `update-baselines` label on CI, never a local run. The label goes on the pull request.
   - [x] Layers: end to end and visual.

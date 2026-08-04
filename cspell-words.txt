@@ -84,6 +84,7 @@ libvips
 lifecycles
 lintable
 litellm
+lmstudio
 lobehub
 lockfiles
 lossily
@@ -112,6 +113,8 @@ osascript
 overclaim
 overclaiming
 overclaims
+overpromise
+overpromises
 oxfmtrc
 oxlint
 oxlint's
@@ -137,6 +140,7 @@ scanline
 screencapture
 Scriptable
 scrollview
+seedable
 semgrep
 servernum
 setstate
@@ -152,6 +156,7 @@ streamable
 subline
 Substack
 Supabase
+surfaceless
 Syft
 Tauri
 TEAMID
@@ -167,6 +172,7 @@ tosorted
 trackpad
 triaging
 tsgolint
+Twingate
 typecheckable
 typecov
 Typeform
@@ -200,4 +206,5 @@ worktree
 worktrees
 WWDC
 xAI
+zhipu
 zizmor
