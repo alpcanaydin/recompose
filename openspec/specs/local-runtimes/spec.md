@@ -8,7 +8,7 @@ The behavioral contract of a local runtime account in recompose. A local runtime
 
 ### Requirement: Detection comes before adding a local runtime
 
-The Local Runtimes catalog MUST offer Ollama as its one connectable entry. The entries that lack a contract MUST stand inert under a Soon badge rather than hidden: LM Studio, llama.cpp, vLLM, and a Custom local server escape hatch. Picking Ollama MUST look for the runtime at its documented port and say what it found before recompose stores anything. The person MAY point the look at another port, because the runtime's own host variable moves it, and the host MUST stay the loopback address recompose mints. Adding the account MUST store the address it answers at and MUST NOT ask for a credential.
+The Local Runtimes catalog MUST offer Ollama as its one connectable entry. The entries that lack a contract MUST stand inert under a Soon badge rather than hidden: LM Studio, llama.cpp, vLLM, and a Custom local server escape hatch. Picking Ollama MUST look for the runtime at its documented port and say what it found before recompose stores anything. The look MUST ask the runtime's version endpoint and MUST report the runtime as running only on a successful answer carrying a version. Any other answer on the port MUST report as another server, so a collision never reads as the runtime. The person MAY point the look at another port, because the runtime's own host variable moves it, and the host MUST stay the loopback address recompose mints. A runtime bound off the loopback host therefore reads as not running, and recompose MUST NOT store a non-loopback address. Adding the account MUST store the address it answers at and MUST NOT ask for a credential.
 
 #### Scenario: a running runtime answers and joins the registry
 
@@ -30,6 +30,13 @@ The Local Runtimes catalog MUST offer Ollama as its one connectable entry. The e
 - When a person picks Ollama and points the look at that port
 - Then the surface says the runtime answered at the loopback host and that port
 - And adding it stores that address with no credential
+
+#### Scenario: another server on the port never reads as the runtime
+
+- Given a server that isn't Ollama answers on the documented port
+- When a person picks Ollama in the catalog
+- Then the surface says another server answered there
+- And the surface never claims the runtime is running
 
 ### Requirement: A row reads the runtime's standing as an observation
 
