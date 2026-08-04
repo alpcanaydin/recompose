@@ -497,7 +497,7 @@ Picking Ollama looks at once. The sign-in step set the precedent: it reads the m
 | The local path never touches the vault                 | the vault-never-created assertion in `local-runtimes-ipc.test.ts`      |
 | A dead child folds to `unreachable`                    | the child-death example in `engine-host-probe.test.ts`                 |
 
-One surviving mutant in `runtime-probe.ts` is equivalent by construction. Emptying the body-parse catch turns its `null` into `undefined`, and both readings fold to `unrecognized` with the status, because the design folds every unparsable body alike. No observable difference exists, so no test can kill it, and the mutation threshold stays untouched.
+The adversarial fix round retired the one equivalent mutant this table once recorded. The stalled-body specs now distinguish silence from a malformed body, so emptying the body-parse guard dies like any other mutant.
 
 ## Task decomposition hooks
 
