@@ -78,6 +78,17 @@ export function accountRow(page: Page, carrying: string): Locator {
   return accountRows(page).filter({ hasText: carrying });
 }
 
+/**
+ * The line of a row whose whole text is the given words.
+ *
+ * @summary A vendor's mark names itself in a title inside its own drawing, so a row that leads
+ * with a mark carries the provider's name twice. A row's words are read from the lines that print
+ * them, which leaves the drawing out of every reading.
+ */
+export function rowLine(row: Locator, words: string): Locator {
+  return row.getByText(words, { exact: true }).and(row.locator('span'));
+}
+
 export function nameField(page: Page): Locator {
   return catalog(page).getByLabel('Name', { exact: true });
 }
@@ -91,14 +102,15 @@ export function keyVerdict(page: Page): Locator {
   return accountRows(page).first().getByRole('status');
 }
 
-export async function openKeysScreen(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'API Keys' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
-}
-
-export async function openSubscriptionsScreen(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Subscriptions' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Subscriptions' })).toBeVisible();
+/**
+ * Walks the sidebar to one provider destination and waits for its screen to stand.
+ *
+ * @summary Every destination reads the same way, so the name a person clicks is also the name the
+ * screen answers to, and a scenario names its destination once.
+ */
+export async function openProviderScreen(page: Page, destination: string): Promise<void> {
+  await page.getByRole('link', { name: destination }).click();
+  await expect(page.getByRole('heading', { level: 1, name: destination })).toBeVisible();
 }
 
 /** Opens the catalog, or leaves it standing when an earlier step already opened it. */
@@ -118,11 +130,27 @@ export async function openProviderWays(page: Page, provider: string): Promise<vo
   await expect(catalog(page).getByRole('button', { name: 'Back' })).toBeVisible();
 }
 
-/** Picks one key entry, which is the only route to the form that asks for a name and a key. */
-export async function pickKeyEntry(page: Page, entry: string): Promise<void> {
+/**
+ * Picks one entry, which is the only route to the way that entry connects under.
+ *
+ * @summary Which way opens is the entry's own business, so the pick waits only for the step to
+ * arrive and leaves what it asks for to the scenario reading it.
+ */
+export async function pickEntry(page: Page, entry: string): Promise<void> {
   await openCatalog(page);
   await catalogEntry(page, entry).click();
+  await expect(catalog(page).getByRole('button', { name: 'Back' })).toBeVisible();
+}
+
+/** Picks one key entry, which is the only route to the form that asks for a name and a key. */
+async function pickKeyEntry(page: Page, entry: string): Promise<void> {
+  await pickEntry(page, entry);
   await expect(keyField(page)).toBeVisible();
+}
+
+/** What the local connect step reports about its look, filling a slot that reserved its height. */
+export function detectReading(page: Page): Locator {
+  return catalog(page).getByRole('status');
 }
 
 /** A key plainly nobody's, ending in the four characters a scenario expects the mask to read. */
@@ -158,6 +186,22 @@ export async function keyStandsConnected(page: Page, key: PastedKey): Promise<vo
   await connectKey(page, key);
   await expect(catalog(page)).toBeHidden();
   await expect(accountRow(page, key.entry).filter({ hasText: key.name })).toBeVisible();
+}
+
+async function runtimeSettlesTheLook(page: Page, runtime: string, act: string): Promise<void> {
+  await pickEntry(page, runtime);
+  await catalog(page).getByRole('button', { name: act }).click();
+  await expect(catalog(page)).toBeHidden();
+}
+
+/** Adds a runtime the look found, through the act an answering reading offers. */
+export async function runtimeStandsAdded(page: Page, runtime: string): Promise<void> {
+  await runtimeSettlesTheLook(page, runtime, `Add ${runtime}`);
+}
+
+/** Adds a runtime the look never found, through the plain act a silent reading offers. */
+export async function runtimeStandsAddedAnyway(page: Page, runtime: string): Promise<void> {
+  await runtimeSettlesTheLook(page, runtime, 'Add anyway');
 }
 
 export async function placementOf(locator: Locator): Promise<Placement> {

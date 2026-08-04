@@ -6,12 +6,15 @@ import { Given, Then, When } from '../fixtures';
 import {
   accountRows,
   catalog,
+  catalogEntry,
   keyAScenarioPastes,
   keyStandsConnected,
   openCatalog,
 } from '../provider-screen';
 import { rememberKeyEntry } from '../scenario-memory';
 import { secretsHeldInVault } from '../vault-file';
+
+const THE_ONE_ENTRY_AND_THE_ONE_DISMISSAL = 2;
 
 async function aKeyStandsUnder(page: Page, entry: string, name: string): Promise<void> {
   rememberKeyEntry(page, entry);
@@ -43,6 +46,16 @@ When('the maintainer removes the account', async ({ page }) => {
     .getByRole('button', { name: /^Actions for/u })
     .click();
   await page.getByRole('menuitem', { name: 'Remove' }).click();
+});
+
+Then('only {string} answers a pick', async ({ page }, entry: string) => {
+  const named = catalogEntry(page, entry);
+
+  await expect(named).toBeVisible();
+  await expect(named).not.toHaveAttribute('aria-disabled');
+  await expect(catalog(page).locator('button:not([aria-disabled])')).toHaveCount(
+    THE_ONE_ENTRY_AND_THE_ONE_DISMISSAL,
+  );
 });
 
 Then('the account connects', async ({ page }) => {
