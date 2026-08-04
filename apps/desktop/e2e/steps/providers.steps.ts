@@ -49,7 +49,10 @@ When('the maintainer removes the account', async ({ page }) => {
 });
 
 Then('only {string} answers a pick', async ({ page }, entry: string) => {
-  await expect(catalogEntry(page, entry)).not.toHaveAttribute('aria-disabled');
+  const named = catalogEntry(page, entry);
+
+  await expect(named).toBeVisible();
+  await expect(named).not.toHaveAttribute('aria-disabled');
   await expect(catalog(page).locator('button:not([aria-disabled])')).toHaveCount(
     THE_ONE_ENTRY_AND_THE_ONE_DISMISSAL,
   );
