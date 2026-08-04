@@ -31,10 +31,10 @@ const awaitedSubscriptions: readonly AwaitedProvider[] = [
 const awaitedLocals: readonly AwaitedProvider[] = [
   {
     name: providerNames.lmstudio,
-    benefit: 'localhost:1234, local server',
+    benefit: '127.0.0.1:1234, local server',
     lead: { mark: 'lmstudio' },
   },
-  { name: 'llama.cpp', benefit: 'llama-server on localhost:8080', lead: { glyph: 'monitor' } },
+  { name: 'llama.cpp', benefit: 'llama-server on 127.0.0.1:8080', lead: { glyph: 'monitor' } },
   { name: providerNames.vllm, benefit: 'High-throughput GPU serving', lead: { mark: 'vllm' } },
   {
     name: 'Custom local server',
