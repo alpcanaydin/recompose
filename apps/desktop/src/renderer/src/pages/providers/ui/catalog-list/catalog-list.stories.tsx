@@ -54,16 +54,48 @@ export const Keys = meta.story({
   },
 });
 
-/** The local grid, standing entirely on the servers that connect later. */
-export const Local = meta.story({
-  args: { kind: 'local' as const },
+/**
+ * The aggregator grid: the one hosted catalog that connects, then the six that follow.
+ *
+ * @summary Five of the six sell their own open-model catalogs rather than routing onward, so each
+ * Soon card says what it sells rather than repeating the destination's promise.
+ */
+export const Aggregators = meta.story({
+  args: { kind: 'aggregator' as const },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('button', { name: /Ollama/ })).toHaveAttribute(
+    await expect(await canvas.findByRole('button', { name: /^OpenRouter/ })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+    await expect(await canvas.findByRole('button', { name: /Cerebras/ })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
   },
 });
 
+/**
+ * The local grid: the one runtime this machine can serve, then the four that follow.
+ *
+ * @summary The destination reads like the other three now rather than standing entirely on Soon
+ * rows, so the reading asks for a live Ollama card beside an inert one.
+ */
+export const LocalRuntimes = meta.story({
+  args: { kind: 'local' as const },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('button', { name: /^Ollama/ })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+    await expect(
+      await canvas.findByRole('button', { name: /Custom local server/ }),
+    ).toHaveAttribute('aria-disabled', 'true');
+  },
+});
+
 /** The subscription grid in the dark scheme, where each card lifts off the sheet behind it. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });
+
+/** The local grid in the dark scheme, where a quiet mark has to hold against a dark card. */
+export const LocalDarkScheme = meta.story({
+  args: { kind: 'local' as const },
+  globals: { theme: 'dark' },
+});
