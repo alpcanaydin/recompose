@@ -56,13 +56,16 @@ function urlOf(input: Parameters<typeof fetch>[0]): string {
   return input instanceof URL ? input.href : input.url;
 }
 
-export function fetchAnswering(status: number): { urls: string[]; fetchLike: typeof fetch } {
+export function fetchAnswering(
+  status: number,
+  body: string | null = null,
+): { urls: string[]; fetchLike: typeof fetch } {
   const urls: string[] = [];
 
   const fetchLike: typeof fetch = async (input) => {
     urls.push(urlOf(input));
 
-    return Promise.resolve(new Response(null, { status }));
+    return Promise.resolve(new Response(body, { status }));
   };
 
   return { urls, fetchLike };

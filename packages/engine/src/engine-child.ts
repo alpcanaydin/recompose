@@ -9,6 +9,7 @@ import type { ParentPort } from './parent-port';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
 import { firstPartyProbeOrigins, probeKey } from './provider/key-probe';
+import { probeRuntime } from './provider/runtime-probe';
 
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
 
@@ -22,7 +23,7 @@ function loopbackOverrideOrNull(override: string | undefined): string | null {
   }
 
   console.error(
-    'The engine child ignored the probe origin override, because it does not name a loopback host.',
+    'The engine child ignored an origin override, because it does not name a loopback host.',
   );
 
   return null;
@@ -33,6 +34,10 @@ function probeOriginFor(provider: KeyProviderId): string {
     loopbackOverrideOrNull(process.env['RECOMPOSE_PROBE_ORIGIN']) ??
     firstPartyProbeOrigins[provider]
   );
+}
+
+function runtimeOriginFor(address: string): string {
+  return loopbackOverrideOrNull(process.env['RECOMPOSE_RUNTIME_ORIGIN']) ?? address;
 }
 
 function kindOf(directive: { kind: string }): string {
@@ -81,7 +86,11 @@ async function answerFor(
       };
 
     case 'probe-runtime':
-      throw new Error('the engine child takes no look at a runtime address yet');
+      return {
+        kind: 'runtime-check',
+        answers: directive.id,
+        reachability: await probeRuntime(fetchLike, runtimeOriginFor(directive.address)),
+      };
 
     default: {
       const unknownDirective: never = directive;
