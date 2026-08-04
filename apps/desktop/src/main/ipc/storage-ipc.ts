@@ -22,8 +22,9 @@ import {
 import { deleteSecret, saveVaultFile } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
 import { connectAccount } from './connect-account';
+import { openVault } from './open-vault';
 import { storagePathsFor, type StorageIpcContext, type StoragePaths } from './storage-context';
-import { ipcFailure, openVault, storageFailure } from './storage-envelope';
+import { ipcFailure, storageFailure } from './storage-envelope';
 
 async function readAccounts(
   ctx: StorageIpcContext,
