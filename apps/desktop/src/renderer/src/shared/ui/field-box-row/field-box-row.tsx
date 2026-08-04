@@ -1,6 +1,7 @@
 import type { Ref } from 'react';
 
 import { Field } from '@base-ui/react/field';
+import { useRef } from 'react';
 
 type FieldBoxRowProps = {
   /** Name of the field, leading its row and carried as the control's accessible name. */
@@ -13,7 +14,10 @@ type FieldBoxRowProps = {
   type?: 'password' | 'text' | undefined;
   /** Receives every keystroke, which also clears any refusal standing under the field. */
   onChangeValue: (value: string) => void;
-  /** Receives the value when the person settles it, on Enter and on leaving the field. */
+  /**
+   * Receives the value when the person settles it, on Enter and on leaving the field, once per
+   * value rather than once per act, so Enter followed by a blur settles the same value only once.
+   */
   onCommitValue?: ((value: string) => void) | undefined;
   /** Sentence explaining why the last save refused this field. */
   refusal?: string | undefined;
@@ -35,20 +39,31 @@ export function FieldBoxRow({
   controlClasses,
   ref,
 }: FieldBoxRowProps) {
+  const lastSettled = useRef(value);
+
+  const settle = (typed: string) => {
+    if (typed === lastSettled.current) {
+      return;
+    }
+
+    lastSettled.current = typed;
+    onCommitValue?.(typed);
+  };
+
   return (
     <Field.Root className="field-box-row">
       <Field.Label>{label}</Field.Label>
       <Field.Control
         className={`ms-auto sheet-field focus-ring placeholder:text-ink-tertiary ${controlClasses}`}
         onBlur={(event) => {
-          onCommitValue?.(event.currentTarget.value);
+          settle(event.currentTarget.value);
         }}
         onChange={(event) => {
           onChangeValue(event.currentTarget.value);
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
-            onCommitValue?.(event.currentTarget.value);
+            settle(event.currentTarget.value);
           }
         }}
         placeholder={placeholder}

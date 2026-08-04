@@ -1,4 +1,7 @@
-import { expect } from 'storybook/test';
+import type { ComponentProps } from 'react';
+
+import { useState } from 'react';
+import { expect, userEvent } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -20,6 +23,23 @@ const meta = preview.meta({
     ),
   ],
 });
+
+function ControlledFieldBoxRow(args: ComponentProps<typeof FieldBoxRow>) {
+  const [typed, setTyped] = useState(args.value);
+  const [settled, setSettled] = useState('');
+
+  return (
+    <>
+      <FieldBoxRow {...args} onChangeValue={setTyped} onCommitValue={setSettled} value={typed} />
+      <p>settled: {settled}</p>
+    </>
+  );
+}
+
+async function typeInto(control: HTMLElement, text: string): Promise<void> {
+  await userEvent.clear(control);
+  await userEvent.type(control, text);
+}
 
 /**
  * One labelled row of a field box.
@@ -56,6 +76,37 @@ export const SecretWithHint = meta.story({
   args: { label: 'Key', placeholder: 'sk-ant-…', type: 'password', value: '' },
   play: async ({ canvas }) => {
     await expect(await canvas.findByLabelText('Key')).toHaveAttribute('placeholder', 'sk-ant-…');
+  },
+});
+
+/**
+ * Pressing Enter settles what was typed, without leaving the field.
+ *
+ * @summary Enter is the act a person reaches for when the typed value is the whole answer, so the
+ * row takes it as the settle rather than asking for a button beside the field.
+ */
+export const CommitsOnEnter = meta.story({
+  render: ControlledFieldBoxRow,
+  play: async ({ canvas }) => {
+    await typeInto(await canvas.findByRole('textbox', { name: 'Name' }), 'Codex CLI{Enter}');
+
+    await expect(await canvas.findByText('settled: Codex CLI')).toBeInTheDocument();
+  },
+});
+
+/**
+ * Leaving the field settles what was typed, so a draft never goes quietly missing.
+ *
+ * @summary Moving on is the other way a person says they are done, and a value settles once per
+ * value, so Enter followed by a blur never settles the same thing twice.
+ */
+export const CommitsOnBlur = meta.story({
+  render: ControlledFieldBoxRow,
+  play: async ({ canvas }) => {
+    await typeInto(await canvas.findByRole('textbox', { name: 'Name' }), 'Codex CLI');
+    await userEvent.tab();
+
+    await expect(await canvas.findByText('settled: Codex CLI')).toBeInTheDocument();
   },
 });
 
