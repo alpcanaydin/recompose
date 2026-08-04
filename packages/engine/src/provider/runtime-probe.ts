@@ -24,7 +24,7 @@ function versionOf(body: unknown): string | null {
   return version.success ? version.data : null;
 }
 
-type BodyLook = { silenced: boolean; version: string | null };
+type BodyLook = { silenced: boolean; body: unknown };
 
 const silencingNames = new Set(['TimeoutError', 'AbortError']);
 
@@ -32,11 +32,11 @@ function boundCutItShort(reason: unknown): boolean {
   return reason instanceof Error && silencingNames.has(reason.name);
 }
 
-async function versionOrSilence(response: Response): Promise<BodyLook> {
+async function bodyOrSilence(response: Response): Promise<BodyLook> {
   try {
-    return { silenced: false, version: versionOf(await response.json()) };
+    return { silenced: false, body: await response.json() };
   } catch (reason) {
-    return { silenced: boundCutItShort(reason), version: null };
+    return { silenced: boundCutItShort(reason), body: null };
   }
 }
 
@@ -54,13 +54,15 @@ export async function probeRuntime(
     return { verdict: 'unrecognized', status: response.status };
   }
 
-  const look = await versionOrSilence(response);
+  const look = await bodyOrSilence(response);
 
   if (look.silenced) {
     return { verdict: 'unreachable' };
   }
 
-  return look.version === null
+  const version = versionOf(look.body);
+
+  return version === null
     ? { verdict: 'unrecognized', status: response.status }
-    : { verdict: 'answers', version: look.version };
+    : { verdict: 'answers', version };
 }
