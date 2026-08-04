@@ -21,6 +21,12 @@ if (anthropic === undefined) {
   throw new Error('the catalog offers no first entry');
 }
 
+const ollama = catalogEntries.find((entry) => entry.id === 'ollama');
+
+if (ollama === undefined) {
+  throw new Error('the catalog offers no ollama entry');
+}
+
 const meta = preview.meta({
   component: ProviderConnectWay,
   args: { entry: anthropic, way: 'subscription' as const, onConnected: () => undefined },
@@ -57,6 +63,22 @@ export const Key = meta.story({
   args: { way: 'api-key' as const },
   play: async ({ canvas }) => {
     await expect(await canvas.findByLabelText('Key', { exact: true })).toBeVisible();
+    await expect(canvas.queryByRole('button', { name: /Sign in/ })).toBeNull();
+  },
+});
+
+/**
+ * A local pick, standing the detect step that looks without asking.
+ *
+ * @summary The reading refuses both credential ways, because a local runtime holds no secret:
+ * the step reports whether the runtime answers and leaves the decision with the person.
+ */
+export const Local = meta.story({
+  args: { entry: ollama, way: 'local' as const },
+  parameters: { bridge: { reachability: { verdict: 'answers' as const, version: '0.5.1' } } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Ollama is running at 127.0.0.1:11434.')).toBeVisible();
+    await expect(canvas.queryByLabelText('Key', { exact: true })).toBeNull();
     await expect(canvas.queryByRole('button', { name: /Sign in/ })).toBeNull();
   },
 });

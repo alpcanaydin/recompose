@@ -40,22 +40,38 @@ export const NeedsAttention = meta.story({
   },
 });
 
-/** The two standings together, where the mark tells them apart without the color doing the work. */
-export const BothStandings = meta.story({
+/** A standing that is a quiet fact rather than an alarm, like a server that isn't running. */
+export const Quiet = meta.story({
+  args: { word: 'Not running', tone: 'inert' },
+  play: async ({ canvas }) => {
+    const chip = await canvas.findByText('Not running');
+
+    await expect(getComputedStyle(markOf(chip)).backgroundColor).not.toBe(transparent);
+  },
+});
+
+/** The three standings together, where the mark tells them apart without the color doing the work. */
+export const AllStandings = meta.story({
   render: () => (
     <div className="flex gap-4">
       <StatusChip tone="positive" word="Connected" />
       <StatusChip tone="attention" word="Needs sign-in" />
+      <StatusChip tone="inert" word="Not running" />
     </div>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const holding = markOf(await canvas.findByText('Connected'));
     const lapsed = markOf(await canvas.findByText('Needs sign-in'));
+    const quiet = markOf(await canvas.findByText('Not running'));
 
     await expect(getComputedStyle(holding).backgroundColor).not.toBe(
       getComputedStyle(lapsed).backgroundColor,
     );
+    await expect(getComputedStyle(quiet).backgroundColor).not.toBe(
+      getComputedStyle(holding).backgroundColor,
+    );
     await expect(getComputedStyle(holding).width).toBe(getComputedStyle(lapsed).width);
+    await expect(getComputedStyle(holding).width).toBe(getComputedStyle(quiet).width);
   },
 });

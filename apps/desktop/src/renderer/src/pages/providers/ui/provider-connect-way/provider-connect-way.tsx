@@ -1,7 +1,8 @@
 import type { CatalogEntry, ConnectionWay } from '../../model/provider-catalog';
 
-import { keyKindOf, signInProviderOf } from '../../model/provider-catalog';
+import { keyKindOf, localRuntimeOf, signInProviderOf } from '../../model/provider-catalog';
 import { ConnectKeyForm } from '../connect-key-form/connect-key-form';
+import { DetectRuntimeStep } from '../detect-runtime-step/detect-runtime-step';
 import { SignInWay } from '../sign-in-way/sign-in-way';
 
 type ProviderConnectWayProps = {
@@ -13,6 +14,30 @@ type ProviderConnectWayProps = {
   onConnected: () => void;
 };
 
+function signInArm(entry: CatalogEntry, onConnected: () => void) {
+  const provider = signInProviderOf(entry);
+
+  return provider === undefined ? null : (
+    <SignInWay name={entry.name} onConnected={onConnected} provider={provider} />
+  );
+}
+
+function detectArm(entry: CatalogEntry, onConnected: () => void) {
+  const runtime = localRuntimeOf(entry);
+
+  return runtime === undefined ? null : (
+    <DetectRuntimeStep onConnected={onConnected} runtime={runtime} />
+  );
+}
+
+function keyArm(entry: CatalogEntry, onConnected: () => void) {
+  const kind = keyKindOf(entry);
+
+  return kind === undefined ? null : (
+    <ConnectKeyForm kind={kind} onConnected={onConnected} provider={entry.id} />
+  );
+}
+
 /**
  * The one way a picked provider connects under the kind the catalog was opened for.
  *
@@ -22,16 +47,12 @@ type ProviderConnectWayProps = {
  */
 export function ProviderConnectWay({ entry, way, onConnected }: ProviderConnectWayProps) {
   if (way === 'subscription') {
-    const provider = signInProviderOf(entry);
-
-    return provider === undefined ? null : (
-      <SignInWay name={entry.name} onConnected={onConnected} provider={provider} />
-    );
+    return signInArm(entry, onConnected);
   }
 
-  const kind = keyKindOf(entry);
+  if (way === 'local') {
+    return detectArm(entry, onConnected);
+  }
 
-  return kind === undefined ? null : (
-    <ConnectKeyForm kind={kind} onConnected={onConnected} provider={entry.id} />
-  );
+  return keyArm(entry, onConnected);
 }

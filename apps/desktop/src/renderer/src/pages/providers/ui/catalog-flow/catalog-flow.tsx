@@ -22,14 +22,14 @@ function connectStepFor(
   picked: CatalogEntry | undefined,
   kind: AccountKind,
 ): ConnectStep | undefined {
-  return picked === undefined || kind === 'local' ? undefined : { entry: picked, way: kind };
+  return picked === undefined ? undefined : { entry: picked, way: kind };
 }
 
 const descriptions: Record<AccountKind, string> = {
   subscription: 'Sign in with a plan you already pay for.',
   'api-key': "Paste a key for one provider's endpoint.",
   aggregator: 'One key that reaches many providers.',
-  local: 'Servers on this machine, once recompose can run one.',
+  local: 'Servers this machine already runs.',
 };
 
 /**

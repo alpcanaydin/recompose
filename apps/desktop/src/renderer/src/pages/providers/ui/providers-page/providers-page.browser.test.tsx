@@ -227,9 +227,16 @@ test('an aggregators screen with nothing connected explains the kind and lists n
   await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
 });
 
-test('the local runtimes destination says its surface follows rather than standing blank', async () => {
-  const screen = await renderProviders('local');
+test('the local runtimes destination lists what the registry holds under it', async () => {
+  const screen = await renderProviders('local', {
+    accounts: {
+      schemaVersion: 4,
+      accounts: [
+        { id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' },
+      ],
+    },
+  });
 
-  await expect.element(screen.getByText(/A local runtime/)).toBeVisible();
-  await expect.poll(() => screen.getByRole('button').elements()).toEqual([]);
+  await expect.element(screen.getByText('http://127.0.0.1:11434')).toBeVisible();
+  await expect.element(screen.getByText(/arrive later/)).not.toBeInTheDocument();
 });

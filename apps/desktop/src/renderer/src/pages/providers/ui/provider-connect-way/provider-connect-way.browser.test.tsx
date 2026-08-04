@@ -127,6 +127,26 @@ test('an aggregator pick asks for its one key and nothing else', async () => {
   await expect.element(screen.getByRole('button', { name: /Sign in/ })).not.toBeInTheDocument();
 });
 
+test('a local pick stands the detect step, which looks without asking', async () => {
+  installFakeBridge({ reachability: { verdict: 'answers', version: '0.5.1' } });
+
+  const screen = await renderFork(offered('ollama'), 'local');
+
+  await expect.element(screen.getByText('Ollama is running at 127.0.0.1:11434.')).toBeVisible();
+  await expect.element(screen.getByLabelText('Key', { exact: true })).not.toBeInTheDocument();
+  await expect.element(screen.getByRole('button', { name: /Sign in/ })).not.toBeInTheDocument();
+});
+
+test('adding the detected runtime steps the fork aside like any other connect', async () => {
+  installFakeBridge({ reachability: { verdict: 'answers', version: '0.5.1' } });
+
+  const screen = await renderFork(offered('ollama'), 'local');
+
+  await screen.getByRole('button', { name: 'Add Ollama' }).click();
+
+  await expect.element(screen.getByText('The fork stepped aside.')).toBeVisible();
+});
+
 test('a tool that is not installed names itself and leaves no sign-in to begin', async () => {
   installFakeBridge({ tools: [{ ...claudeCode, present: false }] });
 
