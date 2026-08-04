@@ -71,6 +71,9 @@ export const AllStandings = meta.story({
     await expect(getComputedStyle(quiet).backgroundColor).not.toBe(
       getComputedStyle(holding).backgroundColor,
     );
+    await expect(getComputedStyle(quiet).backgroundColor).not.toBe(
+      getComputedStyle(lapsed).backgroundColor,
+    );
     await expect(getComputedStyle(holding).width).toBe(getComputedStyle(lapsed).width);
     await expect(getComputedStyle(holding).width).toBe(getComputedStyle(quiet).width);
   },
