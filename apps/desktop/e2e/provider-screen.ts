@@ -188,6 +188,22 @@ export async function keyStandsConnected(page: Page, key: PastedKey): Promise<vo
   await expect(accountRow(page, key.entry).filter({ hasText: key.name })).toBeVisible();
 }
 
+async function runtimeSettlesTheLook(page: Page, runtime: string, act: string): Promise<void> {
+  await pickEntry(page, runtime);
+  await catalog(page).getByRole('button', { name: act }).click();
+  await expect(catalog(page)).toBeHidden();
+}
+
+/** Adds a runtime the look found, through the act an answering reading offers. */
+export async function runtimeStandsAdded(page: Page, runtime: string): Promise<void> {
+  await runtimeSettlesTheLook(page, runtime, `Add ${runtime}`);
+}
+
+/** Adds a runtime the look never found, through the plain act a silent reading offers. */
+export async function runtimeStandsAddedAnyway(page: Page, runtime: string): Promise<void> {
+  await runtimeSettlesTheLook(page, runtime, 'Add anyway');
+}
+
 export async function placementOf(locator: Locator): Promise<Placement> {
   const box = await locator.boundingBox();
 
