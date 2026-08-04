@@ -78,6 +78,17 @@ export function accountRow(page: Page, carrying: string): Locator {
   return accountRows(page).filter({ hasText: carrying });
 }
 
+/**
+ * The line of a row whose whole text is the given words.
+ *
+ * @summary A vendor's mark names itself in a title inside its own drawing, so a row that leads
+ * with a mark carries the provider's name twice. A row's words are read from the lines that print
+ * them, which leaves the drawing out of every reading.
+ */
+export function rowLine(row: Locator, words: string): Locator {
+  return row.getByText(words, { exact: true }).and(row.locator('span'));
+}
+
 export function nameField(page: Page): Locator {
   return catalog(page).getByLabel('Name', { exact: true });
 }
