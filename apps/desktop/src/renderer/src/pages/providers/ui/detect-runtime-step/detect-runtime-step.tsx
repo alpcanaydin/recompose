@@ -191,7 +191,8 @@ export function DetectRuntimeStep({ runtime, onConnected }: DetectRuntimeStepPro
   const connect = withRefusal(useConnectLocalRuntime());
 
   const name = providerName(runtime);
-  const host = new URL(runtimeAddressFor(runtime, lookPort)).host;
+  const lookedAt = runtimeAddressFor(runtime, lookPort);
+  const host = lookedAt.slice(lookedAt.indexOf('//') + 2);
   const reading = readingOf(look);
 
   const add = () => {

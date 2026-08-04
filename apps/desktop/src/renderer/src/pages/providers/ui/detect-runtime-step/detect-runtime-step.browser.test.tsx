@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 
 import {
+  commitPort,
   lookAnsweringInTurn,
   lookAnsweringOnPort,
   lookRefusedAfterOne,
@@ -77,6 +78,14 @@ test('a moved port answers through the port field, and the sentence carries that
 
   await expect.element(screen.getByText('Ollama is running at 127.0.0.1:9000.')).toBeVisible();
   await expect.element(screen.getByText('Version 0.6.2')).toBeVisible();
+});
+
+test('port 80 keeps its :80 in the sentence the surface reads', async () => {
+  const screen = await renderStep({ reachability: { verdict: 'answers', version: '0.5.1' } });
+
+  await commitPort('80');
+
+  await expect.element(screen.getByText('Ollama is running at 127.0.0.1:80.')).toBeVisible();
 });
 
 test('silence at a moved port names the port the look went to', async () => {

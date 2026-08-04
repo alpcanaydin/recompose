@@ -21,7 +21,7 @@ const addressParts = fc.record({
   scheme: fc.constantFrom('http', 'https', 'ws', 'wss', 'ftp', 'file', 'HTTP'),
   credentials: fc.constantFrom('', 'someone@', 'someone:secret@'),
   host: fc.constantFrom('127.0.0.1', 'localhost', '0.0.0.0', '127.0.0.2', '[::1]', 'example.com'),
-  port: fc.constantFrom('', ':11434', ':1234'),
+  port: fc.constantFrom('', ':11434', ':1234', ':80', ':443'),
   trailing: fc.constantFrom('', '/', '/api/version', '?probe=1', '#top'),
 });
 
@@ -108,6 +108,16 @@ describe('the address main mints from the table and a chosen port', () => {
     expect(documentedRuntimePort('ollama')).toBe(11434);
   });
 
+  test('port 80 keeps its :80 rather than being normalized away', () => {
+    expect(runtimeAddressFor('ollama', 80)).toBe('http://127.0.0.1:80');
+  });
+
+  test('a number no port can be refuses loudly rather than minting anything', () => {
+    for (const outside of [0, -1, RUNTIME_PORT_RANGE.max + 1, 11434.5, Number.NaN]) {
+      expect(() => runtimeAddressFor('ollama', outside)).toThrow();
+    }
+  });
+
   test.prop([fc.integer({ min: RUNTIME_PORT_RANGE.min, max: RUNTIME_PORT_RANGE.max })])(
     'every minted address is one a stored row would admit, and none names localhost',
     (port) => {
@@ -134,8 +144,14 @@ describe('the address a stored row and a probe directive both parse through', ()
     expect(loopbackAddressSchema.parse('https://127.0.0.1:11434')).toBe('https://127.0.0.1:11434');
   });
 
+  test("a scheme's own default port is admitted spelled out, the way the mint spells it", () => {
+    for (const speltOut of ['http://127.0.0.1:80', 'https://127.0.0.1:443']) {
+      expect(loopbackAddressSchema.parse(speltOut)).toBe(speltOut);
+    }
+  });
+
   test.prop([addressParts])(
-    'an address is admitted exactly when it equals its own origin and names the loopback host',
+    'an address is admitted exactly when it is a bare loopback origin, default port spelled out or not',
     ({ scheme, credentials, host, port, trailing }) => {
       const address = `${scheme}://${credentials}${host}${port}${trailing}`;
       const isItsOwnLoopbackOrigin =

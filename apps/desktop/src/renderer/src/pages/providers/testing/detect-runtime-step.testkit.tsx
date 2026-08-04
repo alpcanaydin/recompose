@@ -95,6 +95,11 @@ export async function press(name: string) {
   await userEvent.keyboard('{Enter}');
 }
 
+export async function commitPort(port: string) {
+  await page.getByRole('textbox', { name: 'Port', exact: true }).fill(port);
+  await userEvent.keyboard('{Enter}');
+}
+
 export async function storedAccounts() {
   const registry = await window.recompose['accounts:list']();
 

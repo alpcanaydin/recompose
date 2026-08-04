@@ -8,7 +8,12 @@ import type {
   SubscriptionAccountView,
 } from '@recompose/contracts';
 
-import { keyTail, runtimeAddressFor, subscriptionProviders } from '@recompose/contracts';
+import {
+  keyTail,
+  runtimeAddressFor,
+  runtimePortSchema,
+  subscriptionProviders,
+} from '@recompose/contracts';
 
 type AccountHandlers = Pick<
   RecomposeIpc,
@@ -45,7 +50,7 @@ function localRow(id: string, request: IpcRequest<'accounts:connect-local'>): Ac
     id,
     provider: request.runtime,
     kind: 'local',
-    address: runtimeAddressFor(request.runtime, request.port),
+    address: runtimeAddressFor(request.runtime, runtimePortSchema.optional().parse(request.port)),
   };
 }
 

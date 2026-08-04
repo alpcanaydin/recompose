@@ -31,26 +31,38 @@ export function runtimeAddressFor(
   runtime: LocalRuntimeId,
   port: number = documentedRuntimePort(runtime),
 ): string {
-  const moved = new URL(localRuntimes[runtime].address);
+  const documented = new URL(localRuntimes[runtime].address);
 
-  moved.port = String(port);
-
-  return moved.origin;
+  return `${documented.protocol}//${documented.hostname}:${String(runtimePortSchema.parse(port))}`;
 }
 
 const loopbackHost = '127.0.0.1';
 
 const probeableProtocols = ['http:', 'https:'];
 
-function isItsOwnLoopbackOrigin(address: string): boolean {
-  const parsed = URL.parse(address);
+function defaultPortOf(protocol: string): string {
+  return protocol === 'https:' ? '443' : '80';
+}
 
+function aProbeableLoopbackUrl(parsed: URL | null): parsed is URL {
   return (
     parsed !== null &&
     probeableProtocols.includes(parsed.protocol) &&
-    parsed.hostname === loopbackHost &&
-    parsed.origin === address
+    parsed.hostname === loopbackHost
   );
+}
+
+function spellsItsOwnOrigin(parsed: URL, address: string): boolean {
+  return (
+    parsed.origin === address ||
+    (parsed.port === '' && address === `${parsed.origin}:${defaultPortOf(parsed.protocol)}`)
+  );
+}
+
+function isItsOwnLoopbackOrigin(address: string): boolean {
+  const parsed = URL.parse(address);
+
+  return aProbeableLoopbackUrl(parsed) && spellsItsOwnOrigin(parsed, address);
 }
 
 export const loopbackAddressSchema = z
