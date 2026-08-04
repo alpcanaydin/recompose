@@ -105,7 +105,7 @@ test('a key the catalog never offered stands under the provider it was stored as
 test('an aggregator key takes the same row and offers no check, because no probe knows it', async () => {
   const screen = await renderRow({ ...stored, provider: 'openrouter', kind: 'aggregator' });
 
-  await expect.element(screen.getByText('OpenRouter', { exact: true })).toBeVisible();
+  await expect.element(screen.getByRole('listitem')).toHaveTextContent('OpenRouter');
 
   await press('Actions for build');
 

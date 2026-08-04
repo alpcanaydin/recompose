@@ -150,13 +150,16 @@ test('an inert key entry opens nothing, by pointer or by keyboard', async () => 
   await expect.element(screen.getByRole('button', { name: /Anthropic API/ })).toBeVisible();
 });
 
-test('the local screen catalog names the servers that will connect later, all disabled', async () => {
+test('the local screen catalog leads with the runtime that connects, then the ones that follow', async () => {
   installFakeBridge({ tools: [claudeCode] });
 
   const screen = await renderCatalog('local');
 
   await expect
-    .element(screen.getByRole('button', { name: /Ollama/ }))
+    .element(screen.getByRole('button', { name: /^Ollama/ }))
+    .not.toHaveAttribute('aria-disabled');
+  await expect
+    .element(screen.getByRole('button', { name: /LM Studio/ }))
     .toHaveAttribute('aria-disabled', 'true');
 });
 

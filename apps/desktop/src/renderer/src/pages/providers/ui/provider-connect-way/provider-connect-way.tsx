@@ -1,6 +1,6 @@
 import type { CatalogEntry, ConnectionWay } from '../../model/provider-catalog';
 
-import { signInProviderOf } from '../../model/provider-catalog';
+import { keyKindOf, signInProviderOf } from '../../model/provider-catalog';
 import { ConnectKeyForm } from '../connect-key-form/connect-key-form';
 import { SignInWay } from '../sign-in-way/sign-in-way';
 
@@ -29,5 +29,9 @@ export function ProviderConnectWay({ entry, way, onConnected }: ProviderConnectW
     );
   }
 
-  return <ConnectKeyForm kind={way} onConnected={onConnected} provider={entry.id} />;
+  const kind = keyKindOf(entry);
+
+  return kind === undefined ? null : (
+    <ConnectKeyForm kind={kind} onConnected={onConnected} provider={entry.id} />
+  );
 }
