@@ -82,10 +82,9 @@ async function checkStoredRuntime(ctx: LocalRuntimesIpcContext, id: string) {
  *
  * @summary Detection answers from the address the runtime documents, before anything is stored.
  * Connecting mints that same address here rather than taking one from the renderer, so no stored
- * row can ever name localhost. The already-standing check and the append share one amend turn, and
- * the answer reads whether the row this turn minted survived it, so two racing adds cannot both
- * mint. Nothing on this path opens or references the vault, because a local runtime holds no
- * credential to keep.
+ * row can ever name localhost. The already-standing check and the append share one amend turn, so
+ * two racing adds cannot both mint. Nothing on this path opens or references the vault, because a
+ * local runtime holds no credential to keep.
  */
 export function createLocalRuntimesIpcHandlers(
   ctx: LocalRuntimesIpcContext,
