@@ -116,7 +116,7 @@ export const test = base.extend<ElectronFixtures>({
       await runtime.dispose();
     }
   },
-  electronApp: async ({ keyProbe, localRuntime, subscriptionTools }, use, testInfo) => {
+  electronApp: async ({ $tags, keyProbe, localRuntime, subscriptionTools }, use, testInfo) => {
     const userDataDir = join(homedir(), `.recompose-e2e-w${String(testInfo.parallelIndex)}`);
 
     await rm(userDataDir, { force: true, recursive: true });
@@ -129,7 +129,9 @@ export const test = base.extend<ElectronFixtures>({
         ELECTRON_RENDERER_URL: '',
         RECOMPOSE_USER_DATA_DIR: userDataDir,
         RECOMPOSE_PROBE_ORIGIN: keyProbe.origin,
-        RECOMPOSE_RUNTIME_ORIGIN: localRuntime.origin,
+        ...($tags.includes('@probes-the-minted-address')
+          ? {}
+          : { RECOMPOSE_RUNTIME_ORIGIN: localRuntime.origin }),
         ...(process.env['CI'] === undefined ? { RECOMPOSE_WINDOW_STAYS_BACK: '1' } : {}),
       }),
     });
