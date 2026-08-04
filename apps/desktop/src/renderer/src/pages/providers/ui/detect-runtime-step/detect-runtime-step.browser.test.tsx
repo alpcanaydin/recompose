@@ -138,14 +138,19 @@ test('a refused add says why in place rather than closing over it', async () => 
       'accounts:connect-local': async () =>
         Promise.resolve({
           ok: false,
-          error: { code: 'name-conflict', message: 'Ollama is already connected.' },
+          error: {
+            code: 'name-conflict',
+            message: 'Ollama is already connected. Remove the row to point it at another port.',
+          },
         }),
     },
   });
 
   await press('Add Ollama');
 
-  await expect.element(screen.getByRole('alert')).toHaveTextContent('Ollama is already connected.');
+  await expect
+    .element(screen.getByRole('alert'))
+    .toHaveTextContent('Ollama is already connected. Remove the row to point it at another port.');
   await expect.element(screen.getByText('The step stepped aside.')).not.toBeInTheDocument();
 });
 

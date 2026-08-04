@@ -160,7 +160,9 @@ describe('connecting a runtime that already stands', () => {
       throw new Error('the refusal never landed, so the first row cannot be compared');
     }
 
-    expect(second.error.message).toContain('Ollama');
+    expect(second.error.message).toBe(
+      'Ollama is already connected. Remove the row to point it at another port.',
+    );
 
     const listed = await handlers['accounts:check-runtime']({
       id: first.value.accounts[0]?.id ?? '',

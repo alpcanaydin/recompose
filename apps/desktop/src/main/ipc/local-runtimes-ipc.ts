@@ -62,7 +62,10 @@ async function connectRuntime(
 
     return amended.accounts.some((held) => held.id === minted)
       ? { ok: true as const, value: amended }
-      : ipcFailure('name-conflict', `${localRuntimes[runtime].name} is already connected.`);
+      : ipcFailure(
+          'name-conflict',
+          `${localRuntimes[runtime].name} is already connected. Remove the row to point it at another port.`,
+        );
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);
   }
