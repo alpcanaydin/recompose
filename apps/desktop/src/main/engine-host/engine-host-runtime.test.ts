@@ -155,7 +155,7 @@ describe('a runtime look that never draws an answer', () => {
   });
 
   test('a child that will not spawn folds the look to unreachable rather than throwing', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const host = createEngineHost({
       knownSlugs: [],
       spawnChild: () => {
@@ -164,6 +164,8 @@ describe('a runtime look that never draws an answer', () => {
     });
 
     await expect(host.probeRuntime(ollama)).resolves.toEqual({ verdict: 'unreachable' });
+
+    expect(complaint.mock.calls.flat().map(String).join(' ')).toContain(ollama);
   });
 });
 

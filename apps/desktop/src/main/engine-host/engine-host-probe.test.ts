@@ -141,7 +141,7 @@ describe('a probe that never draws an answer', () => {
   });
 
   test('a child that will not spawn folds to could-not-check rather than throwing', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const host = createEngineHost({
       knownSlugs: [],
       spawnChild: () => {
@@ -150,6 +150,11 @@ describe('a probe that never draws an answer', () => {
     });
 
     await expect(host.probe('anthropic', key)).resolves.toEqual({ verdict: 'could-not-check' });
+
+    const spoken = complaint.mock.calls.flat().map(String).join(' ');
+
+    expect(spoken).toContain('anthropic');
+    expect(spoken).not.toContain(key);
   });
 });
 
