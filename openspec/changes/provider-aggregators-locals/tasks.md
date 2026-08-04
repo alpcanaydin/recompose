@@ -34,7 +34,7 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] `brand-mark.tsx` rebuilds over `@lobehub/icons` with `variant: 'color' | 'mono'`, the letter monogram retires, and the inventory covers every vendor with llama.cpp and the Custom entries on glyphs. The stories and browser tests walk both variants in both schemes.
   - [x] `catalog-list.tsx` drops the local special case, leads awaited cards with a mark or a glyph, and stops dimming the subtree: connectable draws color, Soon draws mono on tertiary ink, and the badge keeps full opacity.
   - [x] `providers-page.tsx` takes the aggregator subtitle the design states.
-  - [ ] Everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes. The pass runs in the orchestrating session after the merge.
+  - [x] Everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes. The pass ran in the orchestrating session after the merge, with the badge and mark contrasts measured from the page.
   - [x] Layers: unit, browser, and story.
 
 - [ ] **Task 5: the local surface.** Owns `pages/providers/ui/` except the folders task 4 names, `shared/ui/status-chip/`, `shared/api/accounts.ts`, and `shared/testing/`. Depends on tasks 1 and 4, because it reads the widened `ConnectionWay` and `localRuntimeOf`. Runs beside tasks 2 and 3 on disjoint trees.
