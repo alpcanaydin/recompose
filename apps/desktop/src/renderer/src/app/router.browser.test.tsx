@@ -1,5 +1,6 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
 import { beforeEach, expect, test } from 'vitest';
@@ -36,7 +37,7 @@ const seededSubscription: SubscriptionAccountView = {
 
 function seededAccounts(): AccountsDocument {
   return {
-    schemaVersion: 4,
+    schemaVersion: ACCOUNTS_VERSION,
     accounts: [{ id: 'a1', provider: 'anthropic', kind: 'subscription', label: 'Claude Max' }],
   };
 }

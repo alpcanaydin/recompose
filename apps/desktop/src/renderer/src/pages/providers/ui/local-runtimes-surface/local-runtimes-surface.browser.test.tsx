@@ -1,5 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
@@ -11,7 +12,7 @@ import { installFakeBridge } from '../../../../shared/testing';
 import { LocalRuntimesSurface } from './local-runtimes-surface';
 
 const mixedRegistry: AccountsDocument = {
-  schemaVersion: 4,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [
     { id: 'k1', provider: 'anthropic', kind: 'api-key', label: 'Team key', credentialRef: 'c1' },
     { id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' },

@@ -1,5 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -8,7 +9,7 @@ import { inProvidersColumn } from '#.storybook/providers-column';
 import { CredentialedSurface } from './credentialed-surface';
 
 const keys: AccountsDocument = {
-  schemaVersion: 4,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [
     { id: 'a9', provider: 'anthropic', kind: 'api-key', label: 'Team key', credentialRef: 'c9' },
   ],

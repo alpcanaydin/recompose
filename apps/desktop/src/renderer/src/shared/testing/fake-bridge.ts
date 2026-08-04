@@ -12,12 +12,17 @@ import type {
   SystemState,
 } from '@recompose/contracts';
 
-import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/contracts';
+import {
+  ACCOUNTS_VERSION,
+  withSettingsPatch,
+  defaultSettings,
+  ipcChannels,
+} from '@recompose/contracts';
 
 import { accountHandlers } from './fake-accounts';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
-const emptyDocument: AccountsDocument = { schemaVersion: 4, accounts: [] };
+const emptyDocument: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
 
 const observedSystem: SystemState = {
   fileBrowser: 'finder',

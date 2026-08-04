@@ -1,5 +1,6 @@
 import type { AccountsDocument, LocalAccount } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect, screen, userEvent } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -13,7 +14,7 @@ const stored: LocalAccount = {
   address: 'http://127.0.0.1:11434',
 };
 
-const heldRegistry: AccountsDocument = { schemaVersion: 4, accounts: [stored] };
+const heldRegistry: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] };
 
 const meta = preview.meta({
   component: LocalRuntimeRow,

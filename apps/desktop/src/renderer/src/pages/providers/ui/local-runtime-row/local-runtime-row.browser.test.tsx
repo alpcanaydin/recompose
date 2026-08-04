@@ -1,5 +1,6 @@
 import type { LocalAccount, RuntimeReachability } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
@@ -25,7 +26,7 @@ function newQueryClient() {
 
 async function renderRow(parameters: BridgeParameters = {}, queryClient = newQueryClient()) {
   installFakeBridge({
-    accounts: { schemaVersion: 4, accounts: [stored] },
+    accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] },
     ...parameters,
   });
 

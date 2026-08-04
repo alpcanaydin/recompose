@@ -1,5 +1,6 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
@@ -31,7 +32,7 @@ const openai: SubscriptionAccountView = {
 };
 
 const keys: AccountsDocument = {
-  schemaVersion: 4,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [
     {
       id: 'a2',
@@ -230,7 +231,7 @@ test('an aggregators screen with nothing connected explains the kind and lists n
 test('the local runtimes destination lists what the registry holds under it', async () => {
   const screen = await renderProviders('local', {
     accounts: {
-      schemaVersion: 4,
+      schemaVersion: ACCOUNTS_VERSION,
       accounts: [
         { id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' },
       ],

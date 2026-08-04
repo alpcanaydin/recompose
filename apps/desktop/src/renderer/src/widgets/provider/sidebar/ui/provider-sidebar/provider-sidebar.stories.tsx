@@ -1,5 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -12,7 +13,7 @@ type StoredKind = Exclude<AccountsDocument['accounts'][number]['kind'], 'local'>
 
 function stored(kinds: StoredKind[]): AccountsDocument {
   return {
-    schemaVersion: 4,
+    schemaVersion: ACCOUNTS_VERSION,
     accounts: kinds.map((kind, index) =>
       kind === 'subscription'
         ? { id: `a${index}`, provider: 'anthropic' as const, kind, label: `Account ${index}` }

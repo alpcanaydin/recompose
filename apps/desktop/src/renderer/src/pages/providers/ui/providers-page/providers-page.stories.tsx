@@ -1,5 +1,6 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -24,7 +25,7 @@ const connected: SubscriptionAccountView = {
 };
 
 const keys: AccountsDocument = {
-  schemaVersion: 4,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [
     { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
   ],
@@ -74,7 +75,7 @@ export const Aggregators = meta.story({
 });
 
 const runtimes: AccountsDocument = {
-  schemaVersion: 4,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [{ id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' }],
 };
 
