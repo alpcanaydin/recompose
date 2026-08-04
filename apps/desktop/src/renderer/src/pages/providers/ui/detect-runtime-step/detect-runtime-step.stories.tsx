@@ -17,6 +17,15 @@ const answersOnlyOnPort9000: RecomposeIpc['accounts:detect-runtime'] = async ({ 
     value: port === 9000 ? { verdict: 'answers', version: '0.6.2' } : { verdict: 'unreachable' },
   });
 
+let releaseTheLook: () => void = () => undefined;
+
+const lookHeldOpen: RecomposeIpc['accounts:detect-runtime'] = async () =>
+  new Promise((resolve) => {
+    releaseTheLook = () => {
+      resolve({ ok: true, value: { verdict: 'answers', version: '0.5.1' } });
+    };
+  });
+
 /** The face a running server earns: the answer, its version, and Add as the one settle act. */
 export const Answering = meta.story({
   parameters: { bridge: { reachability: { verdict: 'answers', version: '0.5.1' } } },
@@ -67,26 +76,22 @@ export const MovedPort = meta.story({
   },
 });
 
-/** The verdict fills the slot the look reserved, so the step's height never moves twice. */
+/**
+ * The verdict fills the slot the look reserved, so the step's height never moves twice.
+ *
+ * @summary The look stays open until the reading has been measured, rather than until a timer
+ * elapses, so the Checking face is still on screen whatever the machine is busy with.
+ */
 export const SettlesWithoutMoving = meta.story({
-  parameters: {
-    bridge: {
-      overrides: {
-        'accounts:detect-runtime': async () =>
-          new Promise((resolve) => {
-            setTimeout(() => {
-              resolve({ ok: true, value: { verdict: 'answers', version: '0.5.1' } });
-            }, 250);
-          }),
-      },
-    },
-  },
+  parameters: { bridge: { overrides: { 'accounts:detect-runtime': lookHeldOpen } } },
   play: async ({ canvas }) => {
     const slot = await canvas.findByRole('status');
 
     await expect(slot).toHaveTextContent('Checking');
 
     const whileLooking = slot.getBoundingClientRect().height;
+
+    releaseTheLook();
 
     await canvas.findByText('Ollama is running at 127.0.0.1:11434.');
 
