@@ -172,6 +172,7 @@ describe('what the loopback address schema turns away', () => {
 
   test('a trailing slash is refused, because the address is then no longer its own origin', () => {
     expect(() => loopbackAddressSchema.parse('http://127.0.0.1:11434/')).toThrow();
+    expect(() => loopbackAddressSchema.parse('http://127.0.0.1/')).toThrow();
   });
 
   test('a path, a query, and a fragment are each refused', () => {

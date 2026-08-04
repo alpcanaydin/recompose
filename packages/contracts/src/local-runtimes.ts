@@ -54,8 +54,7 @@ function aProbeableLoopbackUrl(parsed: URL | null): parsed is URL {
 
 function spellsItsOwnOrigin(parsed: URL, address: string): boolean {
   return (
-    parsed.origin === address ||
-    (parsed.port === '' && address === `${parsed.origin}:${defaultPortOf(parsed.protocol)}`)
+    parsed.origin === address || address === `${parsed.origin}:${defaultPortOf(parsed.protocol)}`
   );
 }
 
