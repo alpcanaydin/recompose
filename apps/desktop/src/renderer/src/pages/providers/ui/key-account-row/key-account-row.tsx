@@ -27,6 +27,19 @@ const answered: Record<KeyCheckVerdict, { sentence: string; ink: string }> = {
 
 const maskedBullets = '••••';
 
+function keyMask(keyTail: string | undefined): ReactNode {
+  if (keyTail !== undefined) {
+    return <span className="font-mono text-mono-value">{`${maskedBullets}${keyTail}`}</span>;
+  }
+
+  return (
+    <span className="font-mono text-mono-value">
+      <span aria-hidden>{maskedBullets}</span>
+      <span className="sr-only">a stored key</span>
+    </span>
+  );
+}
+
 function keyIdentity(
   account: CredentialedAccount,
   refusal: string | undefined,
@@ -37,7 +50,7 @@ function keyIdentity(
       <span className="text-card-title text-ink">{keyTitleFor(account.provider)}</span>
       <span className="flex min-w-0 items-center gap-2 text-detail text-ink-secondary">
         <span className="truncate">{account.label}</span>
-        <span className="font-mono text-mono-value">{`${maskedBullets}${account.keyTail ?? ''}`}</span>
+        {keyMask(account.keyTail)}
       </span>
       {refusal === undefined ? null : (
         <span className="text-detail text-danger-ink" role="alert">

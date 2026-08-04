@@ -95,6 +95,12 @@ test('a key stored before the mask existed reads the name beside the bare bullet
   await expect.element(screen.getByText('••••', { exact: true })).toBeVisible();
 });
 
+test('the bare bullets still read as a stored key to a screen reader', async () => {
+  const screen = await renderRow(storedBeforeTheMask);
+
+  await expect.element(screen.getByText('a stored key')).toBeInTheDocument();
+});
+
 test('a key the catalog never offered stands under the provider it was stored as', async () => {
   const screen = await renderRow({ ...stored, provider: 'mistral' });
 
