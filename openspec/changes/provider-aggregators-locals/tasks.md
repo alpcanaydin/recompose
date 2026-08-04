@@ -27,15 +27,15 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] The one-line wire at `main/index.ts` replaces the transitional probe, and `probe-runtime-until-the-host-answers.ts` retires with its spec.
   - [x] Layers: unit, integration, and property.
 
-- [ ] **Task 4: the catalog and the marks.** Owns `apps/desktop/package.json`, `pages/providers/model/`, `pages/providers/ui/catalog-list/`, `pages/providers/ui/providers-page/`, and `shared/ui/brand-mark/`. Depends on task 1 for types, and runs beside tasks 2 and 3 on disjoint trees.
-  - [ ] Opens red in `provider-catalog.test.ts`: `offeredUnder('local')` answers the Ollama entry and `awaitedFor('aggregator')` answers six, before the catalog grows.
-  - [ ] `ConnectionWay` widens to every kind, `CatalogProviderId` decouples from the mark type, and `localRuntimeOf` lands beside `signInProviderOf`. `keyKindOf` and `keyTitleFor` gain local-skipping guards with specs pinning that the Ollama entry answers neither.
-  - [ ] The Ollama entry joins `catalogEntries` with its documented-address benefit line. The awaited lists take the confirmed Soon rows: Together AI, Fireworks AI, Groq, DeepInfra, Cerebras, and Custom aggregator; LM Studio, llama.cpp, vLLM, and Custom local server. The `sk-or-v1-` hint joins the shape hints.
-  - [ ] `brand-mark.tsx` rebuilds over `@lobehub/icons` with `variant: 'color' | 'mono'`, the letter monogram retires, and the inventory covers every vendor with llama.cpp and the Custom entries on glyphs. The stories and browser tests walk both variants in both schemes.
-  - [ ] `catalog-list.tsx` drops the local special case, leads awaited cards with a mark or a glyph, and stops dimming the subtree: connectable draws color, Soon draws mono on tertiary ink, and the badge keeps full opacity.
-  - [ ] `providers-page.tsx` takes the aggregator subtitle the design states.
-  - [ ] Everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes.
-  - [ ] Layers: unit, browser, and story.
+- [x] **Task 4: the catalog and the marks.** Owns `apps/desktop/package.json`, `pages/providers/model/`, `pages/providers/ui/catalog-list/`, `pages/providers/ui/providers-page/`, and `shared/ui/brand-mark/`. Depends on task 1 for types, and runs beside tasks 2 and 3 on disjoint trees.
+  - [x] Opens red in `provider-catalog.test.ts`: `offeredUnder('local')` answers the Ollama entry and `awaitedFor('aggregator')` answers six, before the catalog grows.
+  - [x] `ConnectionWay` widens to every kind, `CatalogProviderId` decouples from the mark type, and `localRuntimeOf` lands beside `signInProviderOf`. `keyKindOf` and `keyTitleFor` gain local-skipping guards with specs pinning that the Ollama entry answers neither.
+  - [x] The Ollama entry joins `catalogEntries` with its documented-address benefit line. The awaited lists take the confirmed Soon rows: Together AI, Fireworks AI, Groq, DeepInfra, Cerebras, and Custom aggregator; LM Studio, llama.cpp, vLLM, and Custom local server. The `sk-or-v1-` hint joins the shape hints.
+  - [x] `brand-mark.tsx` rebuilds over `@lobehub/icons` with `variant: 'color' | 'mono'`, the letter monogram retires, and the inventory covers every vendor with llama.cpp and the Custom entries on glyphs. The stories and browser tests walk both variants in both schemes.
+  - [x] `catalog-list.tsx` drops the local special case, leads awaited cards with a mark or a glyph, and stops dimming the subtree: connectable draws color, Soon draws mono on tertiary ink, and the badge keeps full opacity.
+  - [x] `providers-page.tsx` takes the aggregator subtitle the design states.
+  - [ ] Everything that reaches the screen gets the `claude-in-chrome` pass in both schemes before the task closes. The pass runs in the orchestrating session after the merge.
+  - [x] Layers: unit, browser, and story.
 
 - [ ] **Task 5: the local surface.** Owns `pages/providers/ui/` except the folders task 4 names, `shared/ui/status-chip/`, `shared/api/accounts.ts`, and `shared/testing/`. Depends on tasks 1 and 4, because it reads the widened `ConnectionWay` and `localRuntimeOf`. Runs beside tasks 2 and 3 on disjoint trees.
   - [ ] Opens red in `detect-runtime-step.browser.test.tsx`: a seeded answer reads "Ollama is running at 127.0.0.1:11434." with the version beneath, before the step exists.
