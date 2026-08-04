@@ -97,6 +97,11 @@ export function keyField(page: Page): Locator {
   return catalog(page).getByLabel('Key', { exact: true });
 }
 
+/** The one knob the detect step offers, which points the look at another loopback port. */
+export function portField(page: Page): Locator {
+  return catalog(page).getByLabel('Port', { exact: true });
+}
+
 /** The answer one row carries about its key, which stands only while the screen shows it. */
 export function keyVerdict(page: Page): Locator {
   return accountRows(page).first().getByRole('status');

@@ -1,8 +1,8 @@
 import { expect } from '@playwright/test';
 
-import { accountsHeldInRegistry } from '../accounts-document';
-import { Given, Then } from '../fixtures';
-import { catalog, detectReading, placementOf } from '../provider-screen';
+import { accountsHeldInRegistry, accountsStoredInRegistry } from '../accounts-document';
+import { Given, Then, When } from '../fixtures';
+import { catalog, detectReading, pickEntry, placementOf, portField } from '../provider-screen';
 
 /** The look reaches the runtime over a spawned child, rather than on the pick's own keystroke. */
 const RUNTIME_LOOK_WAIT_MS = 20_000;
@@ -59,3 +59,40 @@ Then(
 Then('no account joins the registry', async ({ electronApp }) => {
   expect(await accountsHeldInRegistry(electronApp)).toBe(0);
 });
+
+const DOCUMENTED_OLLAMA_PORT = '11434';
+
+Given("Ollama answers on a port that isn't the documented one", async ({ localRuntime }) => {
+  await localRuntime.answers();
+  expect(new URL(localRuntime.origin).port).not.toBe(DOCUMENTED_OLLAMA_PORT);
+});
+
+When(
+  'the maintainer picks {string} and points the look at that port',
+  async ({ localRuntime, page }, runtime: string) => {
+    await pickEntry(page, runtime);
+    await portField(page).fill(new URL(localRuntime.origin).port);
+  },
+);
+
+Then('the surface reads that Ollama is running at that port', async ({ localRuntime, page }) => {
+  await expect(detectReading(page).getByRole('paragraph').first()).toHaveText(
+    `Ollama is running at ${new URL(localRuntime.origin).host}.`,
+    { timeout: RUNTIME_LOOK_WAIT_MS },
+  );
+});
+
+Then(
+  'adding it stores that address with no credential',
+  async ({ electronApp, localRuntime, page }) => {
+    await catalog(page).getByRole('button', { name: 'Add Ollama' }).click();
+    await expect(catalog(page)).toBeHidden();
+
+    const stored = await accountsStoredInRegistry(electronApp);
+
+    expect(stored).toEqual([
+      expect.objectContaining({ kind: 'local', address: localRuntime.origin }),
+    ]);
+    expect(stored[0]).not.toHaveProperty('credentialRef');
+  },
+);

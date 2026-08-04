@@ -16,3 +16,9 @@ Feature: Detection before adding a local runtime
     Then the surface reads "Ollama isn't running at 127.0.0.1:11434. Start it, then check again."
     And "Check again" leads, with "Add anyway" standing beside it as a plain act
     And no account joins the registry
+
+  Scenario: a runtime on a moved port answers through the port field
+    Given Ollama answers on a port that isn't the documented one
+    When the maintainer picks "Ollama" and points the look at that port
+    Then the surface reads that Ollama is running at that port
+    And adding it stores that address with no credential

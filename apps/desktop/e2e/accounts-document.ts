@@ -12,20 +12,28 @@ function rowsIn(registry: unknown): unknown {
     : undefined;
 }
 
+function isRowList(rows: unknown): rows is unknown[] {
+  return Array.isArray(rows);
+}
+
 /**
- * How many accounts the registry holds, which is none while the app has stored nothing.
+ * The rows the registry holds, which is none while the app has stored nothing.
  *
  * @summary The registry only exists once something joins it, so its absence reads as an empty
  * registry rather than as a scenario that never ran.
  */
-export async function accountsHeldInRegistry(app: ElectronApplication): Promise<number> {
+export async function accountsStoredInRegistry(app: ElectronApplication): Promise<unknown[]> {
   const file = join(await userDataFolder(app), 'accounts.json');
 
   if (!existsSync(file)) {
-    return 0;
+    return [];
   }
 
   const rows = rowsIn(JSON.parse(await readFile(file, 'utf8')));
 
-  return Array.isArray(rows) ? rows.length : 0;
+  return isRowList(rows) ? rows : [];
+}
+
+export async function accountsHeldInRegistry(app: ElectronApplication): Promise<number> {
+  return (await accountsStoredInRegistry(app)).length;
 }
