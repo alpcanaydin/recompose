@@ -34,6 +34,18 @@ function fetchRefusing(reason: Error): typeof fetch {
   return async () => Promise.reject(reason);
 }
 
+function fetchWhoseBodyStalls(reason: Error): typeof fetch {
+  return async () => {
+    const stalled = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        controller.error(reason);
+      },
+    });
+
+    return Promise.resolve(new Response(stalled, { status: 200 }));
+  };
+}
+
 function onlyRequestOf(sent: SentRequest[]): SentRequest {
   const request = sent[0];
 
@@ -144,6 +156,24 @@ describe('the silence that reads as unreachable', () => {
   test('a timeout folds to unreachable', async () => {
     const reading = await probeRuntime(
       fetchRefusing(new DOMException('The operation was aborted', 'TimeoutError')),
+      ollamaAddress,
+    );
+
+    expect(reading).toStrictEqual({ verdict: 'unreachable' });
+  });
+
+  test('a body the bound cut off folds to unreachable rather than to a stranger', async () => {
+    const reading = await probeRuntime(
+      fetchWhoseBodyStalls(new DOMException('The operation was aborted', 'TimeoutError')),
+      ollamaAddress,
+    );
+
+    expect(reading).toStrictEqual({ verdict: 'unreachable' });
+  });
+
+  test('a body an abort cut off folds to unreachable too', async () => {
+    const reading = await probeRuntime(
+      fetchWhoseBodyStalls(new DOMException('The operation was aborted', 'AbortError')),
       ollamaAddress,
     );
 

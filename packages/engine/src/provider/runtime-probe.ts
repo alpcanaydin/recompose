@@ -14,14 +14,6 @@ async function answerOrSilence(fetchLike: typeof fetch, address: string): Promis
   }
 }
 
-async function parsedBodyOrNull(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
-
 function versionOf(body: unknown): string | null {
   if (typeof body !== 'object' || body === null || !('version' in body)) {
     return null;
@@ -30,6 +22,22 @@ function versionOf(body: unknown): string | null {
   const version = nonBlankString.safeParse(body.version);
 
   return version.success ? version.data : null;
+}
+
+type BodyLook = { silenced: boolean; body: unknown };
+
+const silencingNames = new Set(['TimeoutError', 'AbortError']);
+
+function boundCutItShort(reason: unknown): boolean {
+  return reason instanceof Error && silencingNames.has(reason.name);
+}
+
+async function bodyOrSilence(response: Response): Promise<BodyLook> {
+  try {
+    return { silenced: false, body: await response.json() };
+  } catch (reason) {
+    return { silenced: boundCutItShort(reason), body: null };
+  }
 }
 
 export async function probeRuntime(
@@ -46,7 +54,13 @@ export async function probeRuntime(
     return { verdict: 'unrecognized', status: response.status };
   }
 
-  const version = versionOf(await parsedBodyOrNull(response));
+  const look = await bodyOrSilence(response);
+
+  if (look.silenced) {
+    return { verdict: 'unreachable' };
+  }
+
+  const version = versionOf(look.body);
 
   return version === null
     ? { verdict: 'unrecognized', status: response.status }
