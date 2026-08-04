@@ -2,6 +2,7 @@ import {
   type EngineDirective,
   type GatewayEngineState,
   type KeyCheckReport,
+  type RuntimeReachability,
 } from '@recompose/contracts';
 
 import type { EngineChild } from './engine-host';
@@ -39,30 +40,56 @@ type Script = {
   send: (report: unknown) => void;
   answer: () => GatewayEngineState | null;
   answerProbe: () => KeyCheckReport | null;
+  answerRuntime: () => RuntimeReachability | null;
 };
 
-function answerLater(script: Script, directive: EngineDirective): void {
+function keyCheckFor(
+  script: Script,
+  directive: Extract<EngineDirective, { kind: 'probe' }>,
+): unknown {
+  const report = script.answerProbe();
+
+  return report === null ? null : { kind: 'key-check', answers: directive.id, ...report };
+}
+
+function runtimeCheckFor(
+  script: Script,
+  directive: Extract<EngineDirective, { kind: 'probe-runtime' }>,
+): unknown {
+  const reachability = script.answerRuntime();
+
+  return reachability === null
+    ? null
+    : { kind: 'runtime-check', answers: directive.id, reachability };
+}
+
+function stateFor(
+  script: Script,
+  directive: Extract<EngineDirective, { kind: 'start' | 'stop' }>,
+): unknown {
+  const state = script.answer();
+
+  return state === null ? null : reportOf(directive, state);
+}
+
+function reportFor(script: Script, directive: EngineDirective): unknown {
   if (directive.kind === 'probe') {
-    const report = script.answerProbe();
-
-    if (report !== null) {
-      void Promise.resolve().then(() => {
-        script.send({ kind: 'key-check', answers: directive.id, ...report });
-      });
-    }
-
-    return;
+    return keyCheckFor(script, directive);
   }
 
   if (directive.kind === 'probe-runtime') {
-    return;
+    return runtimeCheckFor(script, directive);
   }
 
-  const state = script.answer();
+  return stateFor(script, directive);
+}
 
-  if (state !== null) {
+function answerLater(script: Script, directive: EngineDirective): void {
+  const report = reportFor(script, directive);
+
+  if (report !== null) {
     void Promise.resolve().then(() => {
-      script.send(reportOf(directive, state));
+      script.send(report);
     });
   }
 }
@@ -70,6 +97,7 @@ function answerLater(script: Script, directive: EngineDirective): void {
 export function scriptedChild(
   answer: () => GatewayEngineState | null,
   answerProbe: () => KeyCheckReport | null = () => null,
+  answerRuntime: () => RuntimeReachability | null = () => null,
 ) {
   const directives: EngineDirective[] = [];
   const heard: ((message: unknown) => void)[] = [];
@@ -82,7 +110,7 @@ export function scriptedChild(
     }
   };
 
-  const script: Script = { send, answer, answerProbe };
+  const script: Script = { send, answer, answerProbe, answerRuntime };
 
   const child: EngineChild = {
     postMessage: (directive) => {
