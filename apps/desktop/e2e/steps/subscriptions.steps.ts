@@ -13,8 +13,8 @@ import {
   accountRows,
   activeToolHome,
   catalog,
+  openProviderScreen,
   openProviderWays,
-  openSubscriptionsScreen,
   planCard,
   screenTitle,
   toolBinaryFor,
@@ -40,7 +40,7 @@ async function connectSubscription(
   provider: string,
 ): Promise<void> {
   await tools.install(toolBinaryFor(provider));
-  await openSubscriptionsScreen(page);
+  await openProviderScreen(page, 'Subscriptions');
   await signInThroughTheTool(page, provider);
 }
 
@@ -83,7 +83,7 @@ Given(
     await subscriptionTools.revokeKeptCredentials();
     await rm(join(home, '.credentials.json'), { force: true });
     await page.reload();
-    await openSubscriptionsScreen(page);
+    await openProviderScreen(page, 'Subscriptions');
   },
 );
 

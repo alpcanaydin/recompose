@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 
 import { Given, Then, When } from '../fixtures';
-import { accountRows, keyVerdict, openKeysScreen } from '../provider-screen';
+import { accountRows, keyVerdict, openProviderScreen } from '../provider-screen';
 
 /** The probe reaches a provider and answers over a spawned child, rather than on a keystroke. */
 const CHECK_WAIT_MS = 20_000;
@@ -42,7 +42,7 @@ When('the maintainer verifies the key', async ({ page }) => {
 When('the maintainer leaves the screen and returns', async ({ page }) => {
   await page.getByRole('link', { name: 'Usage' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Usage' })).toBeVisible();
-  await openKeysScreen(page);
+  await openProviderScreen(page, 'API Keys');
 });
 
 Then('the surface reports that the key authenticates as of the check', async ({ page }) => {

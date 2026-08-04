@@ -91,14 +91,15 @@ export function keyVerdict(page: Page): Locator {
   return accountRows(page).first().getByRole('status');
 }
 
-export async function openKeysScreen(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'API Keys' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'API Keys' })).toBeVisible();
-}
-
-export async function openSubscriptionsScreen(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Subscriptions' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Subscriptions' })).toBeVisible();
+/**
+ * Walks the sidebar to one provider destination and waits for its screen to stand.
+ *
+ * @summary Every destination reads the same way, so the name a person clicks is also the name the
+ * screen answers to, and a scenario names its destination once.
+ */
+export async function openProviderScreen(page: Page, destination: string): Promise<void> {
+  await page.getByRole('link', { name: destination }).click();
+  await expect(page.getByRole('heading', { level: 1, name: destination })).toBeVisible();
 }
 
 /** Opens the catalog, or leaves it standing when an earlier step already opened it. */
