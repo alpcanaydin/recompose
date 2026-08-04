@@ -50,6 +50,18 @@ describe('detecting a runtime before anything is stored', () => {
     expect(detected).toEqual({ ok: true, value: { verdict: 'unreachable' } });
   });
 
+  test('a chosen port points the look at the loopback host on that port', async () => {
+    const ctx = await aFreshContext();
+
+    const detected = await createLocalRuntimesIpcHandlers(ctx)['accounts:detect-runtime']({
+      runtime: 'ollama',
+      port: 9000,
+    });
+
+    expect(detected).toEqual({ ok: true, value: running });
+    expect(ctx.looked).toEqual(['http://127.0.0.1:9000']);
+  });
+
   test('detecting stores nothing at all, because a look is not a decision', async () => {
     const ctx = await aFreshContext();
 
@@ -82,6 +94,25 @@ describe('connecting a runtime the person decided to add', () => {
     expect(row).not.toHaveProperty('credentialRef');
     expect(row).not.toHaveProperty('label');
     expect(row?.id).not.toBe('');
+  });
+
+  test('a chosen port stores the loopback address minted around it', async () => {
+    const ctx = await aFreshContext();
+
+    const connected = await createLocalRuntimesIpcHandlers(ctx)['accounts:connect-local']({
+      runtime: 'ollama',
+      port: 9000,
+    });
+
+    if (!connected.ok) {
+      throw new Error('the runtime was never stored, so no row stands to be read');
+    }
+
+    expect(connected.value.accounts[0]).toMatchObject({
+      provider: 'ollama',
+      kind: 'local',
+      address: 'http://127.0.0.1:9000',
+    });
   });
 
   test('connecting takes no look, because the person already decided', async () => {

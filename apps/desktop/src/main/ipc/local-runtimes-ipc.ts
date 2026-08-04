@@ -1,6 +1,6 @@
 import type { AccountsDocument, LocalRuntimeId, RuntimeReachability } from '@recompose/contracts';
 
-import { localRuntimes } from '@recompose/contracts';
+import { localRuntimes, runtimeAddressFor } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
 import type { IpcHandlers } from './dispatch';
@@ -31,17 +31,19 @@ function withTheRuntimeAppended(
   accounts: AccountsDocument,
   runtime: LocalRuntimeId,
   id: string,
+  address: string,
 ): AccountsDocument {
   return {
     ...accounts,
-    accounts: [
-      ...accounts.accounts,
-      { id, provider: runtime, kind: 'local', address: localRuntimes[runtime].address },
-    ],
+    accounts: [...accounts.accounts, { id, provider: runtime, kind: 'local', address }],
   };
 }
 
-async function connectRuntime(ctx: LocalRuntimesIpcContext, runtime: LocalRuntimeId) {
+async function connectRuntime(
+  ctx: LocalRuntimesIpcContext,
+  runtime: LocalRuntimeId,
+  port: number | undefined,
+) {
   const paths = storagePathsFor(ctx.userDataPath);
   const minted = `acc-${randomUUID()}`;
 
@@ -49,7 +51,7 @@ async function connectRuntime(ctx: LocalRuntimesIpcContext, runtime: LocalRuntim
     const amended = await amendAccountsFile(paths.accountsFile, ctx.onCorrupt, (fresh) =>
       runtimesStandingIn(fresh).has(runtime)
         ? fresh
-        : withTheRuntimeAppended(fresh, runtime, minted),
+        : withTheRuntimeAppended(fresh, runtime, minted, runtimeAddressFor(runtime, port)),
     );
 
     return amended.accounts.some((held) => held.id === minted)
@@ -80,9 +82,10 @@ async function checkStoredRuntime(ctx: LocalRuntimesIpcContext, id: string) {
 /**
  * The three channels a local runtime travels, none of which can carry a secret.
  *
- * @summary Detection answers from the address the runtime documents, before anything is stored.
- * Connecting mints that same address here rather than taking one from the renderer, so no stored
- * row can ever name localhost. The already-standing check and the append share one amend turn, so
+ * @summary Detection answers from the loopback address minted around the chosen port, defaulting
+ * to the documented one, before anything is stored. Connecting mints that same address here rather
+ * than taking one from the renderer, so no stored row can ever name localhost. The renderer's one
+ * knob stays the port. The already-standing check and the append share one amend turn, so
  * two racing adds cannot both mint. Nothing on this path opens or references the vault, because a
  * local runtime holds no credential to keep.
  */
@@ -90,11 +93,11 @@ export function createLocalRuntimesIpcHandlers(
   ctx: LocalRuntimesIpcContext,
 ): LocalRuntimesIpcHandlers {
   return {
-    'accounts:detect-runtime': async ({ runtime }) => ({
+    'accounts:detect-runtime': async ({ runtime, port }) => ({
       ok: true as const,
-      value: await ctx.probeRuntime(localRuntimes[runtime].address),
+      value: await ctx.probeRuntime(runtimeAddressFor(runtime, port)),
     }),
     'accounts:check-runtime': async ({ id }) => checkStoredRuntime(ctx, id),
-    'accounts:connect-local': async ({ runtime }) => connectRuntime(ctx, runtime),
+    'accounts:connect-local': async ({ runtime, port }) => connectRuntime(ctx, runtime, port),
   };
 }
