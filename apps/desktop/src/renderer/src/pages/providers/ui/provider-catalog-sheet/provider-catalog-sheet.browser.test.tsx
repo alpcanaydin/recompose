@@ -163,6 +163,29 @@ test('the local screen catalog leads with the runtime that connects, then the on
     .toHaveAttribute('aria-disabled', 'true');
 });
 
+test('the local catalog says what it offers in its own sentence', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog('local');
+
+  await expect.element(screen.getByText('Servers this machine already runs.')).toBeVisible();
+});
+
+test('picking the runtime stands the detect step where the grid was', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog('local');
+
+  await press(/^Ollama/);
+
+  await expect
+    .element(
+      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
+    )
+    .toBeVisible();
+  expect(closingActNames()).toEqual(['Add anyway', 'Check again']);
+});
+
 test('picking a provider stands its one way where the grid was', async () => {
   installFakeBridge({ tools: [claudeCode] });
 
