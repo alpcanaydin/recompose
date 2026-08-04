@@ -3,13 +3,12 @@ import type {
   AccountsDocument,
   IpcRequest,
   KeyCheckVerdict,
-  LocalRuntimeId,
   RecomposeIpc,
   RuntimeReachability,
   SubscriptionAccountView,
 } from '@recompose/contracts';
 
-import { keyTail, localRuntimes, subscriptionProviders } from '@recompose/contracts';
+import { keyTail, runtimeAddressFor, subscriptionProviders } from '@recompose/contracts';
 
 type AccountHandlers = Pick<
   RecomposeIpc,
@@ -41,8 +40,13 @@ function keyRow(id: string, request: IpcRequest<'accounts:connect'>): Account {
   };
 }
 
-function localRow(id: string, runtime: LocalRuntimeId): Account {
-  return { id, provider: runtime, kind: 'local', address: localRuntimes[runtime].address };
+function localRow(id: string, request: IpcRequest<'accounts:connect-local'>): Account {
+  return {
+    id,
+    provider: request.runtime,
+    kind: 'local',
+    address: runtimeAddressFor(request.runtime, request.port),
+  };
 }
 
 /**
@@ -64,8 +68,8 @@ function runtimeLookHandlers(reachability: RuntimeReachability): RuntimeLookHand
  * @summary The real main grows this registry when a sign-in lands, so the fake exposes the same
  * growth through landSubscription, and a screen that never re-asks the registry stays caught. A
  * connect mints the mask tail the way main does, and the check answers the verdict the scenario
- * seeded. A local connect mints the documented address the way main does, so no scenario can
- * supply one.
+ * seeded. A local connect mints the loopback address around the chosen port the way main does, so
+ * no scenario can supply one.
  */
 export function accountHandlers(
   seed: AccountsDocument,
@@ -102,8 +106,8 @@ export function accountHandlers(
     'accounts:list': async () => Promise.resolve({ ok: true, value: registry }),
     'accounts:connect': async (request) =>
       Promise.resolve({ ok: true, value: append(keyRow(nextId(), request)) }),
-    'accounts:connect-local': async ({ runtime }) =>
-      Promise.resolve({ ok: true, value: append(localRow(nextId(), runtime)) }),
+    'accounts:connect-local': async (request) =>
+      Promise.resolve({ ok: true, value: append(localRow(nextId(), request)) }),
     'accounts:check-key': async () => Promise.resolve({ ok: true as const, value: { verdict } }),
     'accounts:remove': async (request) => {
       registry = {

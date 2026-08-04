@@ -1,5 +1,6 @@
 import type { IpcRequest, LocalRuntimeId } from '@recompose/contracts';
 
+import { documentedRuntimePort } from '@recompose/contracts';
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { unwrapIpcResult } from './ipc-result';
@@ -10,19 +11,25 @@ export const accountsQueryOptions = queryOptions({
 });
 
 /**
- * Whether a runtime answers at its documented address, read before anything stores.
+ * Whether a runtime answers at the loopback host on the chosen port, read before anything stores.
  *
  * @summary Reach for it from the detect step the moment it opens, so the look never waits on a
- * button. The reading dies with the screen: nothing caches it past unmount, and every mount looks
- * again, because a server that stopped since the last look must never read as running. The look
- * runs whatever the machine says about the internet, because it reaches loopback over IPC: a
- * dropped Wi-Fi connection must never hold back a question about this machine.
+ * button. The port defaults to the documented one and keys the reading, so pointing the look at
+ * another port is a fresh question rather than a stale answer. The reading dies with the screen:
+ * nothing caches it past unmount, and every mount looks again, because a server that stopped since
+ * the last look must never read as running. The look runs whatever the machine says about the
+ * internet, because it reaches loopback over IPC: a dropped Wi-Fi connection must never hold back
+ * a question about this machine.
  */
-export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId) {
+export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId, port?: number) {
+  const lookedAt = port ?? documentedRuntimePort(runtime);
+
   return queryOptions({
-    queryKey: ['runtime-detection', runtime],
+    queryKey: ['runtime-detection', runtime, lookedAt],
     queryFn: async () =>
-      unwrapIpcResult(await window.recompose['accounts:detect-runtime']({ runtime })),
+      unwrapIpcResult(
+        await window.recompose['accounts:detect-runtime']({ runtime, port: lookedAt }),
+      ),
     gcTime: 0,
     networkMode: 'always',
     refetchOnMount: 'always',

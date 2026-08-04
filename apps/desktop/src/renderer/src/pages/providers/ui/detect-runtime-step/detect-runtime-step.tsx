@@ -1,8 +1,15 @@
 import type { LocalRuntimeId, RuntimeReachability } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
-import { localRuntimes } from '@recompose/contracts';
+import {
+  documentedRuntimePort,
+  RUNTIME_PORT_RANGE,
+  runtimeAddressFor,
+  runtimePortSchema,
+} from '@recompose/contracts';
+import { useForm, useSelector } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import {
   refusalSentence,
@@ -10,16 +17,22 @@ import {
   useConnectLocalRuntime,
   withRefusal,
 } from '../../../../shared/api';
-import { SheetActionSlot } from '../../../../shared/ui';
+import { FieldBoxRow, SheetActionSlot } from '../../../../shared/ui';
 import { providerName } from '../../model/provider-catalog';
 import { PickedIdentity } from '../picked-identity/picked-identity';
 
 type DetectRuntimeStepProps = {
-  /** The runtime the person picked, whose documented address is the one place the look aims. */
+  /** The runtime the person picked, whose loopback host is the one place the look aims. */
   runtime: LocalRuntimeId;
   /** Runs once the account is stored, so the catalog can close behind it. */
   onConnected: () => void;
 };
+
+const PORT_RANGE_REFUSAL = `Accepts ${String(RUNTIME_PORT_RANGE.min)} through ${String(RUNTIME_PORT_RANGE.max)}.`;
+
+function portRefusal(port: string): string | undefined {
+  return runtimePortSchema.safeParse(Number(port)).success ? undefined : PORT_RANGE_REFUSAL;
+}
 
 type Reading =
   | { face: 'looking' }
@@ -76,12 +89,12 @@ function readingFace(name: string, host: string, reading: Reading): ReactNode {
 type SettleActs = {
   name: string;
   reading: Reading;
-  adding: boolean;
+  addHeld: boolean;
   onAdd: () => void;
   onLookAgain: () => void;
 };
 
-function settleActs({ name, reading, adding, onAdd, onLookAgain }: SettleActs): ReactNode {
+function settleActs({ name, reading, addHeld, onAdd, onLookAgain }: SettleActs): ReactNode {
   if (reading.face === 'looking') {
     return null;
   }
@@ -91,7 +104,7 @@ function settleActs({ name, reading, adding, onAdd, onLookAgain }: SettleActs): 
       <SheetActionSlot>
         <button
           className="push-button-primary focus-ring"
-          disabled={adding}
+          disabled={addHeld}
           onClick={onAdd}
           type="button"
         >
@@ -103,7 +116,7 @@ function settleActs({ name, reading, adding, onAdd, onLookAgain }: SettleActs): 
 
   return (
     <SheetActionSlot>
-      <button className="push-button focus-ring" disabled={adding} onClick={onAdd} type="button">
+      <button className="push-button focus-ring" disabled={addHeld} onClick={onAdd} type="button">
         Add anyway
       </button>
       <button className="push-button-primary focus-ring" onClick={onLookAgain} type="button">
@@ -113,30 +126,82 @@ function settleActs({ name, reading, adding, onAdd, onLookAgain }: SettleActs): 
   );
 }
 
+function usePortDraftForm(runtime: LocalRuntimeId) {
+  return useForm({ defaultValues: { port: String(documentedRuntimePort(runtime)) } });
+}
+
+type PortKnob = {
+  form: ReturnType<typeof usePortDraftForm>;
+  onPortChosen: (port: number) => void;
+};
+
+function pointTheLook(
+  typed: string,
+  draft: { handleChange: (value: string) => void },
+  onPortChosen: (port: number) => void,
+): void {
+  draft.handleChange(typed);
+
+  const chosen = runtimePortSchema.safeParse(Number(typed));
+
+  if (chosen.success) {
+    onPortChosen(chosen.data);
+  }
+}
+
+function portKnob({ form, onPortChosen }: PortKnob): ReactNode {
+  return (
+    <div className="w-full field-box text-start">
+      <form.Field name="port" validators={{ onChange: (draft) => portRefusal(draft.value) }}>
+        {(field) => (
+          <FieldBoxRow
+            controlClasses="w-sheet-port text-end font-mono"
+            label="Port"
+            onChangeValue={(typed) => {
+              pointTheLook(typed, field, onPortChosen);
+            }}
+            refusal={field.state.meta.errors[0]}
+            value={field.state.value}
+          />
+        )}
+      </form.Field>
+    </div>
+  );
+}
+
 /**
  * The local connect step: it looks for the runtime on entry and reports what it found.
  *
  * @summary Reach for it under a catalog entry's local arm. No button asks permission to look,
  * because the look is a loopback read that stores nothing, and the verdict fills a slot that
- * reserved its height, so the sheet never jumps twice. The decision stays with the person: Add
+ * reserved its height, so the sheet never jumps twice. The person's one knob is the port,
+ * prefilled with the documented one: pointing it elsewhere re-runs the look there, and every
+ * sentence names the address it actually looked at. The decision stays with the person: Add
  * on an answer, Check again leading on anything else, and Add anyway beside it, because adding
- * a server that will be started later is a decision too.
+ * a server that will be started later is a decision too. Both adds store through the chosen port.
  */
 export function DetectRuntimeStep({ runtime, onConnected }: DetectRuntimeStepProps) {
-  const look = useQuery(runtimeDetectionQueryOptions(runtime));
+  const [lookPort, setLookPort] = useState(() => documentedRuntimePort(runtime));
+  const form = usePortDraftForm(runtime);
+  const portStands = useSelector(
+    form.store,
+    (state) => portRefusal(state.values.port) === undefined,
+  );
+  const look = useQuery(runtimeDetectionQueryOptions(runtime, lookPort));
   const connect = withRefusal(useConnectLocalRuntime());
 
   const name = providerName(runtime);
-  const host = new URL(localRuntimes[runtime].address).host;
+  const host = new URL(runtimeAddressFor(runtime, lookPort)).host;
   const reading = readingOf(look);
 
   const add = () => {
-    connect.mutate({ runtime }, { onSuccess: onConnected });
+    connect.mutate({ runtime, port: lookPort }, { onSuccess: onConnected });
   };
 
   return (
     <div className="mx-auto flex w-80 flex-col items-center gap-2.5 py-4 text-center">
       <PickedIdentity provider={runtime} title={name} />
+      {portKnob({ form, onPortChosen: setLookPort })}
       <div className="flex h-16 flex-col items-center justify-center gap-0.5" role="status">
         {readingFace(name, host, reading)}
       </div>
@@ -148,7 +213,7 @@ export function DetectRuntimeStep({ runtime, onConnected }: DetectRuntimeStepPro
       {settleActs({
         name,
         reading,
-        adding: connect.isPending,
+        addHeld: connect.isPending || !portStands,
         onAdd: add,
         onLookAgain: () => {
           void look.refetch();

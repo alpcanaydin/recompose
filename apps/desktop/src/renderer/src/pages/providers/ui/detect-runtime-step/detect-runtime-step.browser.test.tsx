@@ -1,94 +1,13 @@
-import type { RecomposeIpc, RuntimeReachability } from '@recompose/contracts';
-
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
 import { expect, test } from 'vitest';
-import { render } from 'vitest-browser-react';
-import { page, userEvent } from 'vitest/browser';
 
-import type { BridgeParameters } from '../../../../shared/testing';
-
-import { installFakeBridge } from '../../../../shared/testing';
-import { DetectRuntimeStep } from './detect-runtime-step';
-
-function Step() {
-  const [connected, setConnected] = useState(false);
-
-  return connected ? (
-    <p>The step stepped aside.</p>
-  ) : (
-    <DetectRuntimeStep
-      onConnected={() => {
-        setConnected(true);
-      }}
-      runtime="ollama"
-    />
-  );
-}
-
-async function renderStep(parameters: BridgeParameters = {}) {
-  installFakeBridge(parameters);
-
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <Step />
-    </QueryClientProvider>,
-  );
-}
-
-function lookAnsweringInTurn(...readings: readonly RuntimeReachability[]) {
-  let looksTaken = 0;
-
-  return async () => {
-    const reading = readings[Math.min(looksTaken, readings.length - 1)];
-
-    looksTaken += 1;
-
-    if (reading === undefined) {
-      throw new Error('the scripted look ran out of readings');
-    }
-
-    return Promise.resolve({ ok: true as const, value: reading });
-  };
-}
-
-function lookRefusedAfterOne(first: RuntimeReachability): RecomposeIpc['accounts:detect-runtime'] {
-  let looksTaken = 0;
-
-  return async () => {
-    looksTaken += 1;
-
-    return looksTaken === 1
-      ? Promise.resolve({ ok: true as const, value: first })
-      : Promise.resolve({
-          ok: false as const,
-          error: {
-            code: 'storage-failed' as const,
-            message: 'recompose could not read the registry.',
-          },
-        });
-  };
-}
-
-async function press(name: string) {
-  const control = page.getByRole('button', { name, exact: true });
-
-  await expect.element(control).toBeVisible();
-
-  control.element().focus();
-
-  await userEvent.keyboard('{Enter}');
-}
-
-async function storedAccounts() {
-  const registry = await window.recompose['accounts:list']();
-
-  return registry.ok ? registry.value.accounts : [];
-}
+import {
+  lookAnsweringInTurn,
+  lookAnsweringOnPort,
+  lookRefusedAfterOne,
+  press,
+  renderStep,
+  storedAccounts,
+} from './detect-runtime-step.testkit';
 
 test('picking the runtime looks at once and reports the running server', async () => {
   const screen = await renderStep({ reachability: { verdict: 'answers', version: '0.5.1' } });
@@ -135,6 +54,105 @@ test('a strange answer on the port never reads as the runtime', async () => {
     .toBeVisible();
   await expect.element(screen.getByText(/Ollama is running/)).not.toBeInTheDocument();
   await expect.element(screen.getByRole('button', { name: 'Check again' })).toBeVisible();
+});
+
+test('the port field stands prefilled with the documented port', async () => {
+  const screen = await renderStep({ reachability: { verdict: 'answers', version: '0.5.1' } });
+
+  await expect.element(screen.getByRole('textbox', { name: 'Port' })).toHaveValue('11434');
+});
+
+test('a moved port answers through the port field, and the sentence carries that port', async () => {
+  const screen = await renderStep({
+    overrides: { 'accounts:detect-runtime': lookAnsweringOnPort(9000, '0.6.2') },
+  });
+
+  await expect
+    .element(
+      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
+    )
+    .toBeVisible();
+
+  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
+
+  await expect.element(screen.getByText('Ollama is running at 127.0.0.1:9000.')).toBeVisible();
+  await expect.element(screen.getByText('Version 0.6.2')).toBeVisible();
+});
+
+test('silence at a moved port names the port the look went to', async () => {
+  const screen = await renderStep();
+
+  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
+
+  await expect
+    .element(
+      screen.getByText("Ollama isn't running at 127.0.0.1:9000. Start it, then check again."),
+    )
+    .toBeVisible();
+});
+
+test('a stranger at a moved port names the port it answered on', async () => {
+  const screen = await renderStep({ reachability: { verdict: 'unrecognized', status: 404 } });
+
+  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
+
+  await expect
+    .element(screen.getByText('Another server answered at 127.0.0.1:9000.'))
+    .toBeVisible();
+});
+
+test('Add stores the address the moved port answered at', async () => {
+  const screen = await renderStep({
+    overrides: { 'accounts:detect-runtime': lookAnsweringOnPort(9000, '0.6.2') },
+  });
+
+  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
+  await expect.element(screen.getByText('Ollama is running at 127.0.0.1:9000.')).toBeVisible();
+
+  await press('Add Ollama');
+
+  await expect.element(screen.getByText('The step stepped aside.')).toBeVisible();
+  expect(await storedAccounts()).toEqual([
+    { id: 'a1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:9000' },
+  ]);
+});
+
+test('Add anyway stores the address the person pointed the look at', async () => {
+  const screen = await renderStep();
+
+  await screen.getByRole('textbox', { name: 'Port' }).fill('9500');
+  await expect
+    .element(
+      screen.getByText("Ollama isn't running at 127.0.0.1:9500. Start it, then check again."),
+    )
+    .toBeVisible();
+
+  await press('Add anyway');
+
+  await expect.element(screen.getByText('The step stepped aside.')).toBeVisible();
+  expect(await storedAccounts()).toEqual([
+    { id: 'a1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:9500' },
+  ]);
+});
+
+test('a port no loopback server can bind refuses under the field and holds the adds', async () => {
+  const screen = await renderStep();
+
+  await expect
+    .element(
+      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
+    )
+    .toBeVisible();
+
+  await screen.getByRole('textbox', { name: 'Port' }).fill('70000');
+
+  await expect.element(screen.getByText('Accepts 1 through 65535.')).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: 'Add anyway' })).toBeDisabled();
+  await expect
+    .element(
+      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
+    )
+    .toBeVisible();
 });
 
 test('Check again re-runs the look and reports what it finds now', async () => {
