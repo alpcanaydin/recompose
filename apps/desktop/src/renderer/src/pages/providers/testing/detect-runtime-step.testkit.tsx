@@ -6,10 +6,10 @@ import { expect } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { page, userEvent } from 'vitest/browser';
 
-import type { BridgeParameters } from '../../../../shared/testing';
+import type { BridgeParameters } from '../../../shared/testing';
 
-import { installFakeBridge } from '../../../../shared/testing';
-import { DetectRuntimeStep } from './detect-runtime-step';
+import { installFakeBridge } from '../../../shared/testing';
+import { DetectRuntimeStep } from '../ui/detect-runtime-step/detect-runtime-step';
 
 function Step() {
   const [connected, setConnected] = useState(false);

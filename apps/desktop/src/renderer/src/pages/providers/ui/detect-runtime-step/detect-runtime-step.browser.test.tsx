@@ -7,7 +7,7 @@ import {
   press,
   renderStep,
   storedAccounts,
-} from './detect-runtime-step.testkit';
+} from '../../testing/detect-runtime-step.testkit';
 
 test('picking the runtime looks at once and reports the running server', async () => {
   const screen = await renderStep({ reachability: { verdict: 'answers', version: '0.5.1' } });
