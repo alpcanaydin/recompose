@@ -2,11 +2,16 @@ import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
 import {
-  localRuntimeAddresses,
   localRuntimeIdSchema,
+  localRuntimes,
   loopbackAddressSchema,
+  runtimeLookBoundMs,
   runtimeReachabilitySchema,
 } from './local-runtimes';
+import { nonBlankString } from './non-blank';
+
+const documentedAddresses = () =>
+  Object.values(localRuntimes).map((documented) => documented.address);
 
 const addressParts = fc.record({
   scheme: fc.constantFrom('http', 'https', 'ws', 'wss', 'ftp', 'file', 'HTTP'),
@@ -30,23 +35,41 @@ describe('the runtimes a local account can name', () => {
 
 describe('the address a runtime documents itself at', () => {
   test('Ollama stands at the loopback address its own documentation publishes', () => {
-    expect(localRuntimeAddresses.ollama).toBe('http://127.0.0.1:11434');
+    expect(localRuntimes.ollama.address).toBe('http://127.0.0.1:11434');
   });
 
   test('every runtime the vocabulary names has one address to reach it at', () => {
-    expect(Object.keys(localRuntimeAddresses)).toEqual(localRuntimeIdSchema.options);
+    expect(Object.keys(localRuntimes)).toEqual(localRuntimeIdSchema.options);
   });
 
   test('every documented address is one a stored row would admit', () => {
-    for (const address of Object.values(localRuntimeAddresses)) {
+    for (const address of documentedAddresses()) {
       expect(loopbackAddressSchema.parse(address)).toBe(address);
     }
   });
 
   test('no documented address names the host that resolves to the wrong family', () => {
-    for (const address of Object.values(localRuntimeAddresses)) {
+    for (const address of documentedAddresses()) {
       expect(address).not.toContain('localhost');
     }
+  });
+});
+
+describe('the name a runtime goes by on screen', () => {
+  test('Ollama reads as its own project spells it', () => {
+    expect(localRuntimes.ollama.name).toBe('Ollama');
+  });
+
+  test('every runtime the vocabulary names carries one name to read it by', () => {
+    for (const runtime of localRuntimeIdSchema.options) {
+      expect(nonBlankString.parse(localRuntimes[runtime].name)).toBe(localRuntimes[runtime].name);
+    }
+  });
+});
+
+describe('the bound a look at a runtime waits under', () => {
+  test('a look gives a loopback server three seconds before it counts as silence', () => {
+    expect(runtimeLookBoundMs).toBe(3_000);
   });
 });
 

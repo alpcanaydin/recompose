@@ -1,13 +1,12 @@
 import { fc, test } from '@fast-check/vitest';
-import { localRuntimeAddresses, type RuntimeReachability } from '@recompose/contracts';
+import { localRuntimes, runtimeLookBoundMs, type RuntimeReachability } from '@recompose/contracts';
 import { afterEach, describe, expect, vi } from 'vitest';
 
 import { createEngineHost, PROBE_TIMEOUT_MS } from './engine-host';
 import { hostOver, nothing, scriptedChild } from './engine-host.testkit';
 
-const ollama = localRuntimeAddresses.ollama;
+const ollama = localRuntimes.ollama.address;
 const key = 'sk-ant-api03-long-secret-7f2c';
-const runtimeFetchBoundMs = 3000;
 const answering = (): RuntimeReachability => ({ verdict: 'answers', version: '0.5.1' });
 
 const anyReading = fc.oneof(
@@ -171,6 +170,6 @@ describe('a runtime look that never draws an answer', () => {
 
 describe('the runtime wait bound', () => {
   test('the host waits on a runtime look longer than the child waits on its runtime fetch', () => {
-    expect(PROBE_TIMEOUT_MS).toBeGreaterThan(runtimeFetchBoundMs);
+    expect(PROBE_TIMEOUT_MS).toBeGreaterThan(runtimeLookBoundMs);
   });
 });

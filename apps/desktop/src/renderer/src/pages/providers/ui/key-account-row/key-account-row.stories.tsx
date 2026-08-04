@@ -1,5 +1,6 @@
 import type { CredentialedAccount } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect, screen, userEvent } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -35,7 +36,7 @@ const storedUnderAnUnknownProvider: CredentialedAccount = {
 const meta = preview.meta({
   component: KeyAccountRow,
   args: { account: stored },
-  parameters: { bridge: { accounts: { schemaVersion: 4 as const, accounts: [stored] } } },
+  parameters: { bridge: { accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] } } },
   decorators: [
     (Story) => (
       <ul className="mx-auto w-full max-w-column py-4">
@@ -70,7 +71,7 @@ export const Connected = meta.story({
 export const Checked = meta.story({
   parameters: {
     bridge: {
-      accounts: { schemaVersion: 4 as const, accounts: [stored] },
+      accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] },
       keyCheck: 'authenticates' as const,
     },
   },
@@ -91,7 +92,7 @@ export const Checked = meta.story({
 export const StoredBeforeTheMask = meta.story({
   args: { account: storedBeforeTheMask },
   parameters: {
-    bridge: { accounts: { schemaVersion: 4 as const, accounts: [storedBeforeTheMask] } },
+    bridge: { accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [storedBeforeTheMask] } },
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('release')).toBeVisible();
@@ -110,7 +111,7 @@ export const UnknownProvider = meta.story({
   args: { account: storedUnderAnUnknownProvider },
   parameters: {
     bridge: {
-      accounts: { schemaVersion: 4 as const, accounts: [storedUnderAnUnknownProvider] },
+      accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [storedUnderAnUnknownProvider] },
     },
   },
   play: async ({ canvas }) => {

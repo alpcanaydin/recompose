@@ -6,9 +6,18 @@ export const localRuntimeIdSchema = z.enum(['ollama']);
 
 export type LocalRuntimeId = z.infer<typeof localRuntimeIdSchema>;
 
-export const localRuntimeAddresses = {
-  ollama: 'http://127.0.0.1:11434',
-} as const satisfies Record<LocalRuntimeId, string>;
+export const localRuntimes = {
+  ollama: { name: 'Ollama', address: 'http://127.0.0.1:11434' },
+} as const satisfies Record<LocalRuntimeId, { name: string; address: string }>;
+
+/**
+ * How long a look at a runtime waits for the loopback answer before it counts as silence.
+ *
+ * @summary Both processes read it: the engine child bounds its fetch by it, and the host's own wait
+ * has to outlast it, so a look folds on the child's verdict rather than on the host giving up. The
+ * two sides sit behind a wall that lets neither import the other, so the bound stands here.
+ */
+export const runtimeLookBoundMs = 3_000;
 
 const loopbackHost = '127.0.0.1';
 

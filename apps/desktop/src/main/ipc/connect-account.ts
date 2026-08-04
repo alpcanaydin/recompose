@@ -7,7 +7,7 @@ import type { StorageIpcContext, StoragePaths } from './storage-context';
 
 import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
 import { saveVaultFile, setSecret, type VaultDocument } from '../storage/vault';
-import { openVaultForWrite } from './storage-context';
+import { openVaultForWrite } from './open-vault';
 import { ipcFailure, storageFailure } from './storage-envelope';
 
 type ConnectRequest = IpcRequest<'accounts:connect'>;

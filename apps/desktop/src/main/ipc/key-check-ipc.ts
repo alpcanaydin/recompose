@@ -9,8 +9,9 @@ import type { StoragePaths } from './storage-context';
 import { loadAccountsFile } from '../storage/accounts-store';
 import { getSecret } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
+import { openVault } from './open-vault';
 import { storagePathsFor } from './storage-context';
-import { ipcFailure, openVault, storageFailure } from './storage-envelope';
+import { ipcFailure, storageFailure } from './storage-envelope';
 
 export type KeyCheckIpcContext = {
   userDataPath: string;

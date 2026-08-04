@@ -1,4 +1,4 @@
-import { localRuntimeAddresses, type RuntimeReachability } from '@recompose/contracts';
+import { localRuntimes, type RuntimeReachability } from '@recompose/contracts';
 import { mkdtemp, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -37,7 +37,7 @@ describe('detecting a runtime before anything is stored', () => {
     });
 
     expect(detected).toEqual({ ok: true, value: running });
-    expect(ctx.looked).toEqual([localRuntimeAddresses.ollama]);
+    expect(ctx.looked).toEqual([localRuntimes.ollama.address]);
   });
 
   test('a runtime that answers nothing is a reading rather than a refusal', async () => {
@@ -77,7 +77,7 @@ describe('connecting a runtime the person decided to add', () => {
     expect(row).toMatchObject({
       provider: 'ollama',
       kind: 'local',
-      address: localRuntimeAddresses.ollama,
+      address: localRuntimes.ollama.address,
     });
     expect(row).not.toHaveProperty('credentialRef');
     expect(row).not.toHaveProperty('label');
@@ -152,7 +152,7 @@ describe('checking a runtime the registry already holds', () => {
     });
 
     expect(checked).toEqual({ ok: true, value: running });
-    expect(ctx.looked).toEqual([localRuntimeAddresses.ollama]);
+    expect(ctx.looked).toEqual([localRuntimes.ollama.address]);
   });
 
   test('a row nobody holds is refused rather than looked at', async () => {

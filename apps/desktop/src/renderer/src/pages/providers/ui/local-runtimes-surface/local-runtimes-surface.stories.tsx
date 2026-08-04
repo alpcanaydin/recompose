@@ -1,5 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -8,7 +9,7 @@ import { inProvidersColumn } from '#.storybook/providers-column';
 import { LocalRuntimesSurface } from './local-runtimes-surface';
 
 const runtimes: AccountsDocument = {
-  schemaVersion: 4,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [{ id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' }],
 };
 

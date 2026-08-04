@@ -1,6 +1,4 @@
-import { nonBlankString, type RuntimeReachability } from '@recompose/contracts';
-
-const runtimeFetchBoundMs = 3_000;
+import { nonBlankString, runtimeLookBoundMs, type RuntimeReachability } from '@recompose/contracts';
 
 const versionPath = '/api/version';
 
@@ -9,7 +7,7 @@ async function answerOrSilence(fetchLike: typeof fetch, address: string): Promis
     return await fetchLike(`${address}${versionPath}`, {
       method: 'GET',
       redirect: 'error',
-      signal: AbortSignal.timeout(runtimeFetchBoundMs),
+      signal: AbortSignal.timeout(runtimeLookBoundMs),
     });
   } catch {
     return null;

@@ -29,6 +29,14 @@ test('the local servers nothing runs yet stand beside the one that does', () => 
   ]);
 });
 
+test('a local server waiting its turn is addressed the way a runtime is reached', () => {
+  const lines = awaitedFor('local').map((awaited) => awaited.benefit);
+
+  expect(lines.filter((line) => line.includes('localhost'))).toEqual([]);
+  expect(lines).toContain('127.0.0.1:1234, local server');
+  expect(lines).toContain('llama-server on 127.0.0.1:8080');
+});
+
 test('the runtime that connects today never stands under a Soon badge as well', () => {
   expect(awaitedFor('local').map((awaited) => awaited.name)).not.toContain('Ollama');
 });

@@ -10,8 +10,8 @@ import type {
 import {
   credentialedAccountKindSchema,
   keyProviderIdSchema,
-  localRuntimeAddresses,
   localRuntimeIdSchema,
+  localRuntimes,
   recognizedKeyShapeSchema,
   subscriptionProviderIdSchema,
 } from '@recompose/contracts';
@@ -69,7 +69,7 @@ export const providerNames = {
   minimax: 'MiniMax',
   mistral: 'Mistral',
   moonshot: 'Moonshot AI',
-  ollama: 'Ollama',
+  ollama: localRuntimes.ollama.name,
   openai: 'OpenAI',
   openrouter: 'OpenRouter',
   qwen: 'Qwen',
@@ -94,7 +94,7 @@ const keyHosts: Record<KeyProviderId, string> = {
 };
 
 const runtimeHosts: Record<LocalRuntimeId, string> = {
-  ollama: new URL(localRuntimeAddresses.ollama).host,
+  ollama: new URL(localRuntimes.ollama.address).host,
 };
 
 /**

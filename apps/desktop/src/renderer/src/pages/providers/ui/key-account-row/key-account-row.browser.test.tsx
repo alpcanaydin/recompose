@@ -1,5 +1,6 @@
 import type { CredentialedAccount } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
@@ -28,7 +29,10 @@ const storedBeforeTheMask: CredentialedAccount = {
 };
 
 async function renderRow(account: CredentialedAccount, parameters: BridgeParameters = {}) {
-  installFakeBridge({ accounts: { schemaVersion: 4, accounts: [account] }, ...parameters });
+  installFakeBridge({
+    accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [account] },
+    ...parameters,
+  });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

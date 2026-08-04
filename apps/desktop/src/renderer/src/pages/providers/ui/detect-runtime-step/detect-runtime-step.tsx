@@ -1,7 +1,7 @@
 import type { LocalRuntimeId, RuntimeReachability } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
-import { localRuntimeAddresses } from '@recompose/contracts';
+import { localRuntimes } from '@recompose/contracts';
 import { useQuery } from '@tanstack/react-query';
 
 import {
@@ -31,7 +31,7 @@ function readingOf(look: ReturnType<typeof useQuery<RuntimeReachability>>): Read
     return { face: 'looking' };
   }
 
-  if (look.data !== undefined) {
+  if (look.error === null && look.data !== undefined) {
     return { face: 'reported', reachability: look.data };
   }
 
@@ -127,7 +127,7 @@ export function DetectRuntimeStep({ runtime, onConnected }: DetectRuntimeStepPro
   const connect = withRefusal(useConnectLocalRuntime());
 
   const name = providerName(runtime);
-  const host = new URL(localRuntimeAddresses[runtime]).host;
+  const host = new URL(localRuntimes[runtime].address).host;
   const reading = readingOf(look);
 
   const add = () => {

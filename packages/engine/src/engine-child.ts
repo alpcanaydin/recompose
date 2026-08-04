@@ -13,7 +13,7 @@ import { probeRuntime } from './provider/runtime-probe';
 
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-function loopbackOverrideOrNull(override: string | undefined): string | null {
+function loopbackOverrideOrNull(variable: string, override: string | undefined): string | null {
   if (override === undefined) {
     return null;
   }
@@ -22,22 +22,23 @@ function loopbackOverrideOrNull(override: string | undefined): string | null {
     return override;
   }
 
-  console.error(
-    'The engine child ignored an origin override, because it does not name a loopback host.',
-  );
+  console.error(`The engine child ignored ${variable}, because it does not name a loopback host.`);
 
   return null;
 }
 
 function probeOriginFor(provider: KeyProviderId): string {
   return (
-    loopbackOverrideOrNull(process.env['RECOMPOSE_PROBE_ORIGIN']) ??
+    loopbackOverrideOrNull('RECOMPOSE_PROBE_ORIGIN', process.env['RECOMPOSE_PROBE_ORIGIN']) ??
     firstPartyProbeOrigins[provider]
   );
 }
 
 function runtimeOriginFor(address: string): string {
-  return loopbackOverrideOrNull(process.env['RECOMPOSE_RUNTIME_ORIGIN']) ?? address;
+  return (
+    loopbackOverrideOrNull('RECOMPOSE_RUNTIME_ORIGIN', process.env['RECOMPOSE_RUNTIME_ORIGIN']) ??
+    address
+  );
 }
 
 function kindOf(directive: { kind: string }): string {

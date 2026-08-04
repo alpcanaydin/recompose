@@ -1,7 +1,13 @@
+import type { MockInstance } from 'vitest';
+
 import { describe, expect, test, vi } from 'vitest';
 
 import { attachEngineChild } from './engine-child';
 import { aLoopbackHolding, aParent, fetchAnswering, reportsReach } from './engine-child.testkit';
+
+function spokenBy(complaints: MockInstance<typeof console.error>): string {
+  return complaints.mock.calls.flat().map(String).join(' ');
+}
 
 describe('the origin a probe reaches', () => {
   test('each vendor is probed at its own first-party host by default, with nothing to complain about', async () => {
@@ -104,7 +110,12 @@ describe('the runtime override the child refuses to hear', () => {
       await reportsReach(parent, 1);
 
       expect(urls).toEqual(['http://127.0.0.1:11434/api/version']);
-      expect(complaints).toHaveBeenCalledWith(expect.stringContaining('loopback'));
+
+      const spoken = spokenBy(complaints);
+
+      expect(spoken).toContain('RECOMPOSE_RUNTIME_ORIGIN');
+      expect(spoken).toContain('loopback');
+      expect(spoken).not.toContain('collector.example');
     } finally {
       vi.unstubAllEnvs();
       complaints.mockRestore();
@@ -124,7 +135,12 @@ describe('the runtime override the child refuses to hear', () => {
       await reportsReach(parent, 1);
 
       expect(urls).toEqual(['http://127.0.0.1:11434/api/version']);
-      expect(complaints).toHaveBeenCalledWith(expect.stringContaining('loopback'));
+
+      const spoken = spokenBy(complaints);
+
+      expect(spoken).toContain('RECOMPOSE_RUNTIME_ORIGIN');
+      expect(spoken).toContain('loopback');
+      expect(spoken).not.toContain('not a url');
     } finally {
       vi.unstubAllEnvs();
       complaints.mockRestore();
@@ -165,7 +181,12 @@ describe('the override the child refuses to hear', () => {
       await reportsReach(parent, 1);
 
       expect(urls).toEqual(['https://api.anthropic.com/v1/models']);
-      expect(complaints).toHaveBeenCalledWith(expect.stringContaining('loopback'));
+
+      const spoken = spokenBy(complaints);
+
+      expect(spoken).toContain('RECOMPOSE_PROBE_ORIGIN');
+      expect(spoken).toContain('loopback');
+      expect(spoken).not.toContain('collector.example');
     } finally {
       vi.unstubAllEnvs();
       complaints.mockRestore();
@@ -190,7 +211,12 @@ describe('the override the child refuses to hear', () => {
       await reportsReach(parent, 1);
 
       expect(urls).toEqual(['https://api.openai.com/v1/models']);
-      expect(complaints).toHaveBeenCalledWith(expect.stringContaining('loopback'));
+
+      const spoken = spokenBy(complaints);
+
+      expect(spoken).toContain('RECOMPOSE_PROBE_ORIGIN');
+      expect(spoken).toContain('loopback');
+      expect(spoken).not.toContain('not a url');
     } finally {
       vi.unstubAllEnvs();
       complaints.mockRestore();

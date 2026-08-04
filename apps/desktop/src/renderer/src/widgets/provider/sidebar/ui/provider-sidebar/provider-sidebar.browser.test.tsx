@@ -1,5 +1,6 @@
 import type { AccountsDocument } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterContextProvider, createMemoryHistory } from '@tanstack/react-router';
 import { Suspense } from 'react';
@@ -15,7 +16,7 @@ type StoredKind = Exclude<AccountsDocument['accounts'][number]['kind'], 'local'>
 
 function stored(kinds: StoredKind[]): AccountsDocument {
   return {
-    schemaVersion: 4,
+    schemaVersion: ACCOUNTS_VERSION,
     accounts: kinds.map((kind, index) =>
       kind === 'subscription'
         ? { id: `a${index}`, provider: 'anthropic' as const, kind, label: `Account ${index}` }

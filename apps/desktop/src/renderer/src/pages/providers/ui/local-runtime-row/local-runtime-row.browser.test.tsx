@@ -1,5 +1,6 @@
 import type { LocalAccount, RuntimeReachability } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
@@ -25,7 +26,7 @@ function newQueryClient() {
 
 async function renderRow(parameters: BridgeParameters = {}, queryClient = newQueryClient()) {
   installFakeBridge({
-    accounts: { schemaVersion: 4, accounts: [stored] },
+    accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] },
     ...parameters,
   });
 
@@ -186,6 +187,22 @@ test('removing the runtime takes it out of the registry it was held in', async (
       return registry.ok ? registry.value.accounts : undefined;
     })
     .toEqual([]);
+});
+
+test('a refused look says why on the row rather than reading as no standing at all', async () => {
+  const screen = await renderRow({
+    overrides: {
+      'accounts:check-runtime': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'recompose could not read the registry.' },
+        }),
+    },
+  });
+
+  await expect
+    .element(screen.getByRole('alert'))
+    .toHaveTextContent('recompose could not read the registry.');
 });
 
 test('a refused removal says why on the row rather than failing in silence', async () => {
