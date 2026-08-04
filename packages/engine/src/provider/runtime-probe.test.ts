@@ -179,6 +179,20 @@ describe('the silence that reads as unreachable', () => {
 
     expect(reading).toStrictEqual({ verdict: 'unreachable' });
   });
+
+  const transportDeaths: [string, Error][] = [
+    ['the socket terminating mid-read', new TypeError('terminated')],
+    ['an encoding the body never honored', new Error('incorrect header check')],
+  ];
+
+  test.each(transportDeaths)(
+    'a body %s folds to unreachable, because no body ever arrived to judge',
+    async (_death, reason) => {
+      const reading = await probeRuntime(fetchWhoseBodyStalls(reason), ollamaAddress);
+
+      expect(reading).toStrictEqual({ verdict: 'unreachable' });
+    },
+  );
 });
 
 describe('the folding over every answer a port can give', () => {

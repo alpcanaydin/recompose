@@ -26,17 +26,15 @@ function versionOf(body: unknown): string | null {
 
 type BodyLook = { silenced: boolean; body: unknown };
 
-const silencingNames = new Set(['TimeoutError', 'AbortError']);
-
-function boundCutItShort(reason: unknown): boolean {
-  return reason instanceof Error && silencingNames.has(reason.name);
+function aBodyArrivedButWasNotJson(reason: unknown): boolean {
+  return reason instanceof SyntaxError;
 }
 
 async function bodyOrSilence(response: Response): Promise<BodyLook> {
   try {
     return { silenced: false, body: await response.json() };
   } catch (reason) {
-    return { silenced: boundCutItShort(reason), body: null };
+    return { silenced: !aBodyArrivedButWasNotJson(reason), body: null };
   }
 }
 
