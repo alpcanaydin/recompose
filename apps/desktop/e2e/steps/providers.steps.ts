@@ -52,10 +52,11 @@ Then('only {string} answers a pick', async ({ page }, entry: string) => {
   const named = catalogEntry(page, entry);
 
   await expect(named).toBeVisible();
+  await expect(named).toBeEnabled();
   await expect(named).not.toHaveAttribute('aria-disabled');
-  await expect(catalog(page).locator('button:not([aria-disabled])')).toHaveCount(
-    THE_ONE_ENTRY_AND_THE_ONE_DISMISSAL,
-  );
+  await expect(
+    catalog(page).locator('button:not([disabled]):not([aria-disabled="true"])'),
+  ).toHaveCount(THE_ONE_ENTRY_AND_THE_ONE_DISMISSAL);
 });
 
 Then('the account connects', async ({ page }) => {
