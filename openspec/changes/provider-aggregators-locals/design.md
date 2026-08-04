@@ -142,14 +142,14 @@ The standing is an observation, never a stored fact. The account list suspends o
 
 Each verdict owns one word, one tone, and one token, stated here so nobody decides it at the keyboard.
 
-| Reading      | Word                    | Tone                        | Mark                    |
-| ------------ | ----------------------- | --------------------------- | ----------------------- |
-| answers      | Running                 | positive                    | dot on `bg-running`     |
-| unreachable  | Not running             | inert, new, on tertiary ink | dot on the tertiary ink |
-| unrecognized | Another server answered | attention                   | dot on `bg-attention`   |
-| in flight    | Checking                | inert ink                   | no dot                  |
+| Reading      | Word                    | Tone       | Mark                    |
+| ------------ | ----------------------- | ---------- | ----------------------- |
+| answers      | Running                 | positive   | dot on `bg-running`     |
+| unreachable  | Not running             | inert, new | dot on the tertiary ink |
+| unrecognized | Another server answered | attention  | dot on `bg-attention`   |
+| in flight    | Checking                | inert ink  | no dot                  |
 
-The chip gains the one inert tone, drawn from the existing `ink-tertiary` token, because a stopped loopback server is a quiet fact rather than an alarm. Nothing borrows a neighbor's color. The in-flight reading isn't a standing yet, so it draws the inert ink as a plain line without the dot. The row's acts, Check again and Remove, live behind the overflow, matching the key row.
+The chip gains the one inert tone. The dot draws from the existing `ink-tertiary` token, and the word takes the standard secondary text ink, because tertiary text measured under the contrast gate. Nothing borrows a neighbor's color. The in-flight reading isn't a standing yet, so it draws the inert ink as a plain line without the dot. The row's acts, Check again and Remove, live behind the overflow, matching the key row.
 
 ### The probes stay side by side in the child
 
@@ -347,7 +347,7 @@ Three rules bind the handlers. No silent failures: every fold to `unreachable` l
 - `apps/desktop/src/renderer/src/pages/providers/ui/local-runtimes-empty-state/local-runtimes-empty-state.tsx`: what the destination holds before a runtime connects (create)
 - Stories and browser-test siblings for all four new components (create)
 - `apps/desktop/src/renderer/src/pages/providers/ui/local-runtimes-note/`: retires with its stories (delete)
-- `apps/desktop/src/renderer/src/shared/ui/status-chip/status-chip.tsx`: the inert tone on `ink-tertiary` (modify)
+- `apps/desktop/src/renderer/src/shared/ui/status-chip/status-chip.tsx`: the inert tone, a tertiary-ink dot beside a secondary-ink word (modify)
 - `apps/desktop/src/renderer/src/shared/ui/status-chip/status-chip.stories.tsx` and `status-chip.browser.test.tsx`: follow (modify)
 - `apps/desktop/src/renderer/src/shared/api/accounts.ts`: `useConnectLocalRuntime`, `runtimeDetectionQueryOptions`, and `runtimeStandingQueryOptions` (modify)
 - `apps/desktop/src/renderer/src/shared/testing/fake-accounts.ts` and `fake-bridge.ts`: the local handlers and the seedable reachability answer (modify)
@@ -453,7 +453,7 @@ Picking Ollama looks at once. The sign-in step set the precedent: it reads the m
 
 ### 5. The reachability verdicts speak their own vocabulary and never touch the key-check triad
 
-`answers`, `unrecognized`, and `unreachable` form their own union in the local-runtimes module. The key-check triad describes what a vendor said about a credential. A reachability reading describes whether a machine answered, and `unrecognized` exists precisely because a port can answer without being Ollama. Sharing a union would force one family's words onto the other's facts. The verdicts map to fixed words, tones, and tokens in the design section above. The chip gains one inert tone on the existing tertiary ink rather than borrowing a neighbor's color.
+`answers`, `unrecognized`, and `unreachable` form their own union in the local-runtimes module. The key-check triad describes what a vendor said about a credential. A reachability reading describes whether a machine answered, and `unrecognized` exists precisely because a port can answer without being Ollama. Sharing a union would force one family's words onto the other's facts. The verdicts map to fixed words, tones, and tokens in the design section above. The chip gains one inert tone drawn from the tertiary-ink token rather than borrowing a neighbor's color.
 
 **Alternatives considered:** widening `keyCheckVerdictSchema`, rejected because every consumer of the triad would gain arms it can never receive. A bare boolean of reachable, rejected because it folds the squatter case into a lie in one direction or the other.
 
