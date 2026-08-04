@@ -13,6 +13,8 @@ type FieldBoxRowProps = {
   type?: 'password' | 'text' | undefined;
   /** Receives every keystroke, which also clears any refusal standing under the field. */
   onChangeValue: (value: string) => void;
+  /** Receives the value when the person settles it, on Enter and on leaving the field. */
+  onCommitValue?: ((value: string) => void) | undefined;
   /** Sentence explaining why the last save refused this field. */
   refusal?: string | undefined;
   /** Width and family classes for the control, which sibling fields do not share. */
@@ -28,6 +30,7 @@ export function FieldBoxRow({
   placeholder,
   type = 'text',
   onChangeValue,
+  onCommitValue,
   refusal,
   controlClasses,
   ref,
@@ -37,8 +40,16 @@ export function FieldBoxRow({
       <Field.Label>{label}</Field.Label>
       <Field.Control
         className={`ms-auto sheet-field focus-ring placeholder:text-ink-tertiary ${controlClasses}`}
+        onBlur={(event) => {
+          onCommitValue?.(event.currentTarget.value);
+        }}
         onChange={(event) => {
           onChangeValue(event.currentTarget.value);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            onCommitValue?.(event.currentTarget.value);
+          }
         }}
         placeholder={placeholder}
         ref={ref}

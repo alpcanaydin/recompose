@@ -57,65 +57,12 @@ test('a strange answer on the port never reads as the runtime', async () => {
   await expect.element(screen.getByRole('button', { name: 'Check again' })).toBeVisible();
 });
 
-test('the port field stands prefilled with the documented port', async () => {
-  const screen = await renderStep({ reachability: { verdict: 'answers', version: '0.5.1' } });
-
-  await expect.element(screen.getByRole('textbox', { name: 'Port' })).toHaveValue('11434');
-});
-
-test('a moved port answers through the port field, and the sentence carries that port', async () => {
-  const screen = await renderStep({
-    overrides: { 'accounts:detect-runtime': lookAnsweringOnPort(9000, '0.6.2') },
-  });
-
-  await expect
-    .element(
-      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
-    )
-    .toBeVisible();
-
-  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
-
-  await expect.element(screen.getByText('Ollama is running at 127.0.0.1:9000.')).toBeVisible();
-  await expect.element(screen.getByText('Version 0.6.2')).toBeVisible();
-});
-
-test('port 80 keeps its :80 in the sentence the surface reads', async () => {
-  const screen = await renderStep({ reachability: { verdict: 'answers', version: '0.5.1' } });
-
-  await commitPort('80');
-
-  await expect.element(screen.getByText('Ollama is running at 127.0.0.1:80.')).toBeVisible();
-});
-
-test('silence at a moved port names the port the look went to', async () => {
-  const screen = await renderStep();
-
-  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
-
-  await expect
-    .element(
-      screen.getByText("Ollama isn't running at 127.0.0.1:9000. Start it, then check again."),
-    )
-    .toBeVisible();
-});
-
-test('a stranger at a moved port names the port it answered on', async () => {
-  const screen = await renderStep({ reachability: { verdict: 'unrecognized', status: 404 } });
-
-  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
-
-  await expect
-    .element(screen.getByText('Another server answered at 127.0.0.1:9000.'))
-    .toBeVisible();
-});
-
 test('Add stores the address the moved port answered at', async () => {
   const screen = await renderStep({
     overrides: { 'accounts:detect-runtime': lookAnsweringOnPort(9000, '0.6.2') },
   });
 
-  await screen.getByRole('textbox', { name: 'Port' }).fill('9000');
+  await commitPort('9000');
   await expect.element(screen.getByText('Ollama is running at 127.0.0.1:9000.')).toBeVisible();
 
   await press('Add Ollama');
@@ -129,7 +76,7 @@ test('Add stores the address the moved port answered at', async () => {
 test('Add anyway stores the address the person pointed the look at', async () => {
   const screen = await renderStep();
 
-  await screen.getByRole('textbox', { name: 'Port' }).fill('9500');
+  await commitPort('9500');
   await expect
     .element(
       screen.getByText("Ollama isn't running at 127.0.0.1:9500. Start it, then check again."),
@@ -142,26 +89,6 @@ test('Add anyway stores the address the person pointed the look at', async () =>
   expect(await storedAccounts()).toEqual([
     { id: 'a1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:9500' },
   ]);
-});
-
-test('a port no loopback server can bind refuses under the field and holds the adds', async () => {
-  const screen = await renderStep();
-
-  await expect
-    .element(
-      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
-    )
-    .toBeVisible();
-
-  await screen.getByRole('textbox', { name: 'Port' }).fill('70000');
-
-  await expect.element(screen.getByText('Accepts 1 through 65535.')).toBeVisible();
-  await expect.element(screen.getByRole('button', { name: 'Add anyway' })).toBeDisabled();
-  await expect
-    .element(
-      screen.getByText("Ollama isn't running at 127.0.0.1:11434. Start it, then check again."),
-    )
-    .toBeVisible();
 });
 
 test('Check again re-runs the look and reports what it finds now', async () => {

@@ -54,6 +54,18 @@ export function lookAnsweringInTurn(...readings: readonly RuntimeReachability[])
   };
 }
 
+export function lookRecordingPorts(reading: RuntimeReachability) {
+  const looked: (number | undefined)[] = [];
+
+  const look: RecomposeIpc['accounts:detect-runtime'] = async ({ port }) => {
+    looked.push(port);
+
+    return Promise.resolve({ ok: true as const, value: reading });
+  };
+
+  return { looked, look };
+}
+
 export function lookAnsweringOnPort(
   answeringPort: number,
   version: string,
@@ -98,6 +110,17 @@ export async function press(name: string) {
 export async function commitPort(port: string) {
   await page.getByRole('textbox', { name: 'Port', exact: true }).fill(port);
   await userEvent.keyboard('{Enter}');
+}
+
+export async function typePortDraft(digits: string) {
+  const field = page.getByRole('textbox', { name: 'Port', exact: true });
+
+  await field.fill('');
+  await userEvent.type(field, digits);
+}
+
+export async function walkAwayFromThePort() {
+  await userEvent.tab();
 }
 
 export async function storedAccounts() {

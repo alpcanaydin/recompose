@@ -72,6 +72,7 @@ When(
   async ({ localRuntime, page }, runtime: string) => {
     await pickEntry(page, runtime);
     await portField(page).fill(new URL(localRuntime.origin).port);
+    await portField(page).press('Enter');
   },
 );
 

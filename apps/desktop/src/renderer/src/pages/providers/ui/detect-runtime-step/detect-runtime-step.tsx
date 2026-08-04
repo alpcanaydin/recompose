@@ -135,14 +135,8 @@ type PortKnob = {
   onPortChosen: (port: number) => void;
 };
 
-function pointTheLook(
-  typed: string,
-  draft: { handleChange: (value: string) => void },
-  onPortChosen: (port: number) => void,
-): void {
-  draft.handleChange(typed);
-
-  const chosen = runtimePortSchema.safeParse(Number(typed));
+function pointTheLook(settled: string, onPortChosen: (port: number) => void): void {
+  const chosen = runtimePortSchema.safeParse(Number(settled));
 
   if (chosen.success) {
     onPortChosen(chosen.data);
@@ -157,8 +151,9 @@ function portKnob({ form, onPortChosen }: PortKnob): ReactNode {
           <FieldBoxRow
             controlClasses="w-sheet-port text-end font-mono"
             label="Port"
-            onChangeValue={(typed) => {
-              pointTheLook(typed, field, onPortChosen);
+            onChangeValue={field.handleChange}
+            onCommitValue={(settled) => {
+              pointTheLook(settled, onPortChosen);
             }}
             refusal={field.state.meta.errors[0]}
             value={field.state.value}
@@ -175,8 +170,10 @@ function portKnob({ form, onPortChosen }: PortKnob): ReactNode {
  * @summary Reach for it under a catalog entry's local arm. No button asks permission to look,
  * because the look is a loopback read that stores nothing, and the verdict fills a slot that
  * reserved its height, so the sheet never jumps twice. The person's one knob is the port,
- * prefilled with the documented one: pointing it elsewhere re-runs the look there, and every
- * sentence names the address it actually looked at. The decision stays with the person: Add
+ * prefilled with the documented one: a port lands on Enter or on leaving the field, never on a
+ * keystroke, so no look ever chases a half-typed number and the last reading holds the screen
+ * while one is typed. Every sentence names the address the look actually went to. The decision
+ * stays with the person: Add
  * on an answer, Check again leading on anything else, and Add anyway beside it, because adding
  * a server that will be started later is a decision too. Both adds store through the chosen port.
  */
