@@ -109,9 +109,9 @@ describe('what the loopback address schema turns away', () => {
     }
   });
 
-  test('text that is no address at all is refused', () => {
-    for (const nothing of ['', '   ', '127.0.0.1:11434', 'not an address']) {
-      expect(() => loopbackAddressSchema.parse(nothing)).toThrow();
+  test('text that is no address at all is refused rather than crashing the parse', () => {
+    for (const nothing of ['', '   ', '127.0.0.1:11434', 'not an address', '//127.0.0.1:11434']) {
+      expect(loopbackAddressSchema.safeParse(nothing)).toMatchObject({ success: false });
     }
   });
 });

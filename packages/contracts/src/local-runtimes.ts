@@ -14,19 +14,11 @@ const loopbackHost = '127.0.0.1';
 
 const probeableProtocols = ['http:', 'https:'];
 
-function addressOrNothing(address: string): URL | undefined {
-  try {
-    return new URL(address);
-  } catch {
-    return undefined;
-  }
-}
-
 function isItsOwnLoopbackOrigin(address: string): boolean {
-  const parsed = addressOrNothing(address);
+  const parsed = URL.parse(address);
 
   return (
-    parsed !== undefined &&
+    parsed !== null &&
     probeableProtocols.includes(parsed.protocol) &&
     parsed.hostname === loopbackHost &&
     parsed.origin === address
