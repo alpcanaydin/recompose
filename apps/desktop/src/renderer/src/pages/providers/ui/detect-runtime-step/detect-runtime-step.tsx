@@ -31,7 +31,7 @@ function readingOf(look: ReturnType<typeof useQuery<RuntimeReachability>>): Read
     return { face: 'looking' };
   }
 
-  if (look.data !== undefined) {
+  if (look.error === null && look.data !== undefined) {
     return { face: 'reported', reachability: look.data };
   }
 

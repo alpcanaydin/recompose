@@ -188,6 +188,22 @@ test('removing the runtime takes it out of the registry it was held in', async (
     .toEqual([]);
 });
 
+test('a refused look says why on the row rather than reading as no standing at all', async () => {
+  const screen = await renderRow({
+    overrides: {
+      'accounts:check-runtime': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'recompose could not read the registry.' },
+        }),
+    },
+  });
+
+  await expect
+    .element(screen.getByRole('alert'))
+    .toHaveTextContent('recompose could not read the registry.');
+});
+
 test('a refused removal says why on the row rather than failing in silence', async () => {
   const screen = await renderRow({
     overrides: {

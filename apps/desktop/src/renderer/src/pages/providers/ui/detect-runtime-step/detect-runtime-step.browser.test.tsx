@@ -1,4 +1,4 @@
-import type { RuntimeReachability } from '@recompose/contracts';
+import type { RecomposeIpc, RuntimeReachability } from '@recompose/contracts';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -53,6 +53,24 @@ function lookAnsweringInTurn(...readings: readonly RuntimeReachability[]) {
     }
 
     return Promise.resolve({ ok: true as const, value: reading });
+  };
+}
+
+function lookRefusedAfterOne(first: RuntimeReachability): RecomposeIpc['accounts:detect-runtime'] {
+  let looksTaken = 0;
+
+  return async () => {
+    looksTaken += 1;
+
+    return looksTaken === 1
+      ? Promise.resolve({ ok: true as const, value: first })
+      : Promise.resolve({
+          ok: false as const,
+          error: {
+            code: 'storage-failed' as const,
+            message: 'recompose could not read the registry.',
+          },
+        });
   };
 }
 
@@ -175,6 +193,21 @@ test('a refused add says why in place rather than closing over it', async () => 
 
   await expect.element(screen.getByRole('alert')).toHaveTextContent('Ollama is already connected.');
   await expect.element(screen.getByText('The step stepped aside.')).not.toBeInTheDocument();
+});
+
+test('a refused re-look reads the refusal rather than the verdict the last look reported', async () => {
+  const screen = await renderStep({
+    overrides: { 'accounts:detect-runtime': lookRefusedAfterOne({ verdict: 'unreachable' }) },
+  });
+
+  await expect.element(screen.getByText(/isn't running/)).toBeVisible();
+
+  await press('Check again');
+
+  await expect
+    .element(screen.getByRole('status'))
+    .toHaveTextContent('recompose could not read the registry.');
+  await expect.element(screen.getByText(/isn't running/)).not.toBeInTheDocument();
 });
 
 test('a look the bridge refused reads its reason and still offers both decisions', async () => {

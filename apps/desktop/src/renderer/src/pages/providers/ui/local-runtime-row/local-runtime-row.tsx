@@ -3,7 +3,12 @@ import type { ReactNode } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 
-import { runtimeStandingQueryOptions, useRemoveAccount, withRefusal } from '../../../../shared/api';
+import {
+  refusalSentence,
+  runtimeStandingQueryOptions,
+  useRemoveAccount,
+  withRefusal,
+} from '../../../../shared/api';
 import { BrandMark, OverflowMenu, StatusChip } from '../../../../shared/ui';
 import { providerName } from '../../model/provider-catalog';
 
@@ -51,6 +56,7 @@ export function LocalRuntimeRow({ account }: LocalRuntimeRowProps) {
   const forget = withRefusal(useRemoveAccount());
 
   const name = providerName(account.provider);
+  const refusal = standing.error === null ? forget.refusal : refusalSentence(standing.error);
 
   return (
     <li className="flex min-h-row items-center gap-3 rounded-card border border-line-subtle bg-surface-card px-4 py-2.5">
@@ -58,9 +64,9 @@ export function LocalRuntimeRow({ account }: LocalRuntimeRowProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-card-title text-ink">{name}</span>
         <span className="font-mono text-mono-value text-ink-secondary">{account.address}</span>
-        {forget.refusal === undefined ? null : (
+        {refusal === undefined ? null : (
           <span className="text-detail text-danger-ink" role="alert">
-            {forget.refusal}
+            {refusal}
           </span>
         )}
       </div>
