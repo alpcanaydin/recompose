@@ -112,6 +112,7 @@ describe('the answer that reads as a stranger on the port', () => {
     ['a version that is not a string', '{"version":123}'],
     ['a version that is blank', '{"version":"   "}'],
     ['a body that parses as null', 'null'],
+    ['a body that parses as a bare number', '42'],
   ];
 
   test.each(strangerBodyTable)(
