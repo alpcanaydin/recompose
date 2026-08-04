@@ -1,10 +1,16 @@
-import type { RuntimeReachability, SubscriptionTool } from '@recompose/contracts';
+import type { AccountsDocument, RuntimeReachability, SubscriptionTool } from '@recompose/contracts';
 
-import { onlineManager, QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
+import { onlineManager, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { Suspense } from 'react';
 import { afterEach, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { page, userEvent } from 'vitest/browser';
 
+import type { BridgeParameters } from '../testing';
+
+import { createQueryClient } from '../../app/query-client';
+import { ProvidersPage } from '../../pages/providers';
 import { installFakeBridge } from '../testing';
 import {
   runtimeDetectionQueryOptions,
@@ -21,6 +27,11 @@ const claudeCode: SubscriptionTool = {
   present: true,
   signInCommand: 'claude',
   shellSetupLine: 'export CLAUDE_CONFIG_DIR="/tmp/anthropic/active"',
+};
+
+const storedOllama: AccountsDocument = {
+  schemaVersion: ACCOUNTS_VERSION,
+  accounts: [{ id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' }],
 };
 
 function verdictOf(reachability: RuntimeReachability | undefined): string {
@@ -63,15 +74,36 @@ async function openProbeWithTheMachineOffline() {
 
   onlineManager.setOnline(false);
 
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-
   return render(
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={createQueryClient()}>
       <LoopbackProbe />
     </QueryClientProvider>,
   );
+}
+
+async function openLocalRuntimesWithTheMachineOffline(parameters: BridgeParameters = {}) {
+  installFakeBridge({ reachability: { verdict: 'answers', version: '0.5.1' }, ...parameters });
+
+  onlineManager.setOnline(false);
+
+  return render(
+    <QueryClientProvider client={createQueryClient()}>
+      <Suspense fallback={<p>The registry is still loading.</p>}>
+        <ProvidersPage kind="local" />
+      </Suspense>
+      <LoopbackProbe />
+    </QueryClientProvider>,
+  );
+}
+
+async function press(name: string) {
+  const control = page.getByRole('button', { name, exact: true });
+
+  await expect.element(control).toBeVisible();
+
+  control.element().focus();
+
+  await userEvent.keyboard('{Enter}');
 }
 
 async function storedKinds() {
@@ -108,4 +140,38 @@ test('Add anyway still stores the runtime while the machine reports itself offli
   await userEvent.click(page.getByRole('button', { name: 'Add anyway' }));
 
   await expect.poll(storedKinds).toEqual(['local']);
+});
+
+test('the registry list settles while the machine reports itself offline', async () => {
+  const screen = await openLocalRuntimesWithTheMachineOffline();
+
+  await expect.element(screen.getByText('Nothing connected yet')).toBeVisible();
+});
+
+test('adding Ollama while the machine reports itself offline stands its row in the list', async () => {
+  const screen = await openLocalRuntimesWithTheMachineOffline();
+
+  await expect.element(screen.getByText('Nothing connected yet')).toBeVisible();
+
+  await press('Add anyway');
+
+  await expect.element(screen.getByText('http://127.0.0.1:11434')).toBeVisible();
+});
+
+test('removing the runtime while the machine reports itself offline takes its row off', async () => {
+  const screen = await openLocalRuntimesWithTheMachineOffline({ accounts: storedOllama });
+
+  await expect.element(screen.getByText('http://127.0.0.1:11434')).toBeVisible();
+
+  await press('Actions for Ollama');
+
+  const remove = page.getByRole('menuitem', { name: 'Remove', exact: true });
+
+  await expect.element(remove).toBeVisible();
+
+  remove.element().focus();
+
+  await userEvent.keyboard('{Enter}');
+
+  await expect.element(screen.getByText('Nothing connected yet')).toBeVisible();
 });

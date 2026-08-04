@@ -29,7 +29,6 @@ export const subscriptionsQueryOptions = queryOptions({
 export const subscriptionToolsQueryOptions = queryOptions({
   queryKey: ['subscription-tools'],
   queryFn: async () => unwrapIpcResult(await window.recompose['subscriptions:tools']()),
-  networkMode: 'always',
   refetchOnMount: 'always',
 });
 

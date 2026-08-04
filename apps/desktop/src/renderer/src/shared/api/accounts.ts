@@ -31,7 +31,6 @@ export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId, port?: num
         await window.recompose['accounts:detect-runtime']({ runtime, port: lookedAt }),
       ),
     gcTime: 0,
-    networkMode: 'always',
     refetchOnMount: 'always',
   });
 }
@@ -49,7 +48,6 @@ export function runtimeStandingQueryOptions(id: string) {
     queryKey: ['runtime-standing', id],
     queryFn: async () => unwrapIpcResult(await window.recompose['accounts:check-runtime']({ id })),
     gcTime: 0,
-    networkMode: 'always',
     refetchOnMount: 'always',
   });
 }
@@ -68,7 +66,6 @@ export function useConnectLocalRuntime() {
   return useMutation({
     mutationFn: async (request: IpcRequest<'accounts:connect-local'>) =>
       unwrapIpcResult(await window.recompose['accounts:connect-local'](request)),
-    networkMode: 'always',
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['accounts'] });
     },

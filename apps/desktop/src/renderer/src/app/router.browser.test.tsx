@@ -1,9 +1,9 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
 import { ACCOUNTS_VERSION } from '@recompose/contracts';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
-import { beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
@@ -23,6 +23,10 @@ const claude = gatewaySeed({ slug: 'claude', displayName: 'Claude', port: 51235 
 
 beforeEach(() => {
   localStorage.clear();
+});
+
+afterEach(() => {
+  onlineManager.setOnline(true);
 });
 
 const seededSubscription: SubscriptionAccountView = {
@@ -97,6 +101,28 @@ test('the /providers route loader warms the query cache before any component ren
   const seeded = seededAccounts();
 
   installFakeBridge({ accounts: seeded, subscriptions: [seededSubscription] });
+
+  const queryClient = createQueryClient();
+  const router = createAppRouter({
+    queryClient,
+    history: createMemoryHistory({ initialEntries: ['/providers'] }),
+  });
+
+  await router.load();
+
+  expect(queryClient.getQueryData(accountsQueryOptions.queryKey)).toEqual(seeded);
+  expect(queryClient.getQueryData(subscriptionsQueryOptions.queryKey)).toEqual([
+    seededSubscription,
+  ]);
+  expect(queryClient.getQueryData(subscriptionToolsQueryOptions.queryKey)).toEqual([]);
+});
+
+test('the /providers route loader settles while the machine reports itself offline', async () => {
+  const seeded = seededAccounts();
+
+  installFakeBridge({ accounts: seeded, subscriptions: [seededSubscription] });
+
+  onlineManager.setOnline(false);
 
   const queryClient = createQueryClient();
   const router = createAppRouter({
