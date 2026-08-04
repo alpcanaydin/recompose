@@ -4,15 +4,15 @@ Six tasks. Task 1 runs first and alone, because the version 4 bump must exist be
 
 Every task opens with a named failing test, captures the red run it started from, and drives it to green. Test code changes if and only if behavior changes.
 
-- [ ] **Task 1: contracts.** Owns `packages/contracts/src/`. Depends on nothing, and runs alone: every other task imports what it hands off.
-  - [ ] Opens red in `local-runtimes.test.ts`: the loopback schema admits `http://127.0.0.1:11434` and refuses `http://localhost:11434`, before the module exists.
-  - [ ] `local-runtimes.ts` lands as the local vocabulary: `localRuntimeIdSchema` holding `ollama`, the documented address table, the loopback-only address schema, and the three reachability verdicts as a discriminated union: `answers` with the version, `unrecognized` with the status, `unreachable` alone. A fast-check property pins that the schema admits exactly the strings that equal their own origin and name `127.0.0.1`.
-  - [ ] The accounts document moves to version 4: the credential-free `local` arm lands as a `strictObject` with `id`, `provider`, `kind`, and `address`, and the migration restamps the version and touches no row. A property proves any version 3 document migrates with every row byte-identical. `accounts.test-d.ts` pins that the local arm carries no `credentialRef` and no `label`.
-  - [ ] The engine protocol gains the `probe-runtime` directive arm carrying the loopback-schema address and the `runtime-check` report arm. Admission and refusal specs ride in `engine-protocol.test.ts`, and the type spec pins the widened unions.
-  - [ ] The channel surface gains `accounts:connect-local` (request holds the runtime id and nothing else), `accounts:detect-runtime`, and `accounts:check-runtime`. `ipc.test.ts` moves the roster to twenty-four, and `ipc.test-d.ts` pins totality. No local request schema carries a secret field.
-  - [ ] `vendorShapeOf` widens one way: a trim opening `sk-or-v1-` recognizes as openrouter, the return widens past the first-party id set, and a property pins that every recognized string still passes `pastedKeySchema`.
-  - [ ] `index.ts` re-exports the module, and every consumer typechecks and passes again.
-  - [ ] Layers: unit, property, and type-level.
+- [x] **Task 1: contracts.** Owns `packages/contracts/src/`. Depends on nothing, and runs alone: every other task imports what it hands off.
+  - [x] Opens red in `local-runtimes.test.ts`: the loopback schema admits `http://127.0.0.1:11434` and refuses `http://localhost:11434`, before the module exists.
+  - [x] `local-runtimes.ts` lands as the local vocabulary: `localRuntimeIdSchema` holding `ollama`, the documented address table, the loopback-only address schema, and the three reachability verdicts as a discriminated union: `answers` with the version, `unrecognized` with the status, `unreachable` alone. A fast-check property pins that the schema admits exactly the strings that equal their own origin and name `127.0.0.1`.
+  - [x] The accounts document moves to version 4: the credential-free `local` arm lands as a `strictObject` with `id`, `provider`, `kind`, and `address`, and the migration restamps the version and touches no row. A property proves any version 3 document migrates with every row byte-identical. `accounts.test-d.ts` pins that the local arm carries no `credentialRef` and no `label`.
+  - [x] The engine protocol gains the `probe-runtime` directive arm carrying the loopback-schema address and the `runtime-check` report arm. Admission and refusal specs ride in `engine-protocol.test.ts`, and the type spec pins the widened unions.
+  - [x] The channel surface gains `accounts:connect-local` (request holds the runtime id and nothing else), `accounts:detect-runtime`, and `accounts:check-runtime`. `ipc.test.ts` moves the roster to twenty-four, and `ipc.test-d.ts` pins totality. No local request schema carries a secret field.
+  - [x] `vendorShapeOf` widens one way: a trim opening `sk-or-v1-` recognizes as openrouter, the return widens past the first-party id set, and a property pins that every recognized string still passes `pastedKeySchema`.
+  - [x] `index.ts` re-exports the module, and every consumer typechecks and passes again.
+  - [x] Layers: unit, property, and type-level.
 
 - [ ] **Task 2: the engine probe.** Owns `packages/engine/src/`. Depends on task 1, whose directive and report schemas it reads. Runs beside tasks 3 and 4 on disjoint trees.
   - [ ] Opens red in `provider/runtime-probe.test.ts`: an injected fetch answering 200 with `{"version":"0.5.1"}` folds to `answers` carrying the version, before the probe exists.
@@ -20,12 +20,11 @@ Every task opens with a named failing test, captures the red run it started from
   - [ ] `engine-child.ts` dispatches the `probe-runtime` directive and posts the `runtime-check` report. The `RECOMPOSE_RUNTIME_ORIGIN` override rides beside the probe-origin override, honored for loopback hosts only.
   - [ ] Layers: unit, property, and integration over the fake parent port.
 
-- [ ] **Task 3: main.** Owns `apps/desktop/src/main/` and `apps/desktop/src/preload/`. Depends on task 1, with a scripted probe standing in for task 2's real one, so it runs beside tasks 2 and 4 on disjoint trees.
-  - [ ] Opens red in `local-runtimes-ipc.test.ts`: a connect for a runtime already held refuses with `name-conflict` while no vault file exists, before the handlers do.
-  - [ ] `local-runtimes-ipc.ts` lands with the three handlers: detect answers from the contracts table, check loads the row and answers from its stored address, connect mints the canonical address and refuses a second row for the same runtime inside the one amend turn. The module imports nothing from `vault.ts`, and the vault-never-created assertion stands as a designated mutant killer.
+- [ ] **Task 3: main.** Owns `apps/desktop/src/main/` and `apps/desktop/src/preload/`. Depends on task 1 and runs beside tasks 2 and 4 on disjoint trees. Task 1 absorbed the handler skeleton, because the channel surface drives three total maps that live outside contracts, so this task wires the host into it.
+  - [x] Absorbed by task 1: `local-runtimes-ipc.ts` with the three handlers and the vault-never-created killer, the `storage-ipc.ts` remove branch, `dispatch.ts` totality at twenty-four, the three preload entries, and the version 4 fixture.
+  - [ ] Opens red by flipping the transitional probe's own spec: `main/index.ts` still answers every detect with `unreachable`, before the host learns to ask the child.
   - [ ] `engine-host.ts` gains `probeRuntime` and routes the `runtime-check` report. A dead child folds to `unreachable` with a sanitized log line naming the fold, and the host's wait bound stands above the child's fetch bound.
-  - [ ] `storage-ipc.ts` gains the remove branch that releases nothing for a local row, with its spec.
-  - [ ] `dispatch.ts` registers the three channels with the totality spec at twenty-four, `index.ts` composes the handlers over the engine host, the preload bridge gains its three entries, and the accounts-store fixture moves to version 4.
+  - [ ] The one-line wire at `main/index.ts` replaces the transitional probe, and `probe-runtime-until-the-host-answers.ts` retires with its spec.
   - [ ] Layers: unit, integration, and property.
 
 - [ ] **Task 4: the catalog and the marks.** Owns `apps/desktop/package.json`, `pages/providers/model/`, `pages/providers/ui/catalog-list/`, `pages/providers/ui/providers-page/`, and `shared/ui/brand-mark/`. Depends on task 1 for types, and runs beside tasks 2 and 3 on disjoint trees.
