@@ -181,6 +181,7 @@ uncoverable
 undeferred
 unjudged
 unlinted
+unmappable
 unpadded
 unscanned
 unstub
