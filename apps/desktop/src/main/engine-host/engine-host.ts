@@ -7,14 +7,17 @@ import {
   type GatewayEngineState,
   type KeyCheckReport,
   type KeyProviderId,
+  type RuntimeReachability,
 } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
 import {
   answerKeyCheck,
+  answerRuntimeCheck,
   createProbeDesk,
   foldEveryProbe,
   sendProbe,
+  sendRuntimeProbe,
   type ProbeDesk,
 } from './engine-probe';
 import { allStopped, foldEngineReport } from './engine-state-ledger';
@@ -41,6 +44,7 @@ export type EngineHost = {
   stop: (slug: string) => Promise<GatewayEngineState>;
   restart: (gateway: EngineGateway) => Promise<GatewayEngineState>;
   probe: (provider: KeyProviderId, key: string) => Promise<KeyCheckReport>;
+  probeRuntime: (address: string) => Promise<RuntimeReachability>;
   states: () => EngineStates;
   onStatesChanged: (listener: (states: EngineStates) => void) => () => void;
   dispose: () => void;
@@ -59,7 +63,8 @@ type Resident = {
   spawnChild: () => EngineChild;
   subscribers: Set<StateListener>;
   awaitingReport: Map<string, Waiter>;
-  awaitingKeyCheck: ProbeDesk;
+  awaitingKeyCheck: ProbeDesk<KeyCheckReport>;
+  awaitingRuntimeLook: ProbeDesk<RuntimeReachability>;
 };
 
 function publish(resident: Resident, next: EngineStates): void {
@@ -111,6 +116,12 @@ function receiveReport(resident: Resident, message: unknown): void {
     return;
   }
 
+  if (report.data.kind === 'runtime-check') {
+    answerRuntimeCheck(resident.awaitingRuntimeLook, report.data);
+
+    return;
+  }
+
   answerState(resident, report.data);
 }
 
@@ -126,8 +137,15 @@ function receiveExit(resident: Resident, code: number): void {
   refuseEveryWaiter(resident, death);
   foldEveryProbe(
     resident.awaitingKeyCheck,
+    { verdict: 'could-not-check' },
     (provider) =>
       `recompose could not check the ${provider} key, because the engine stopped before it answered.`,
+  );
+  foldEveryProbe(
+    resident.awaitingRuntimeLook,
+    { verdict: 'unreachable' },
+    (address) =>
+      `recompose could not look at the runtime at ${address}, because the engine stopped before it answered.`,
   );
 }
 
@@ -149,7 +167,7 @@ function runningChild(resident: Resident): EngineChild {
   return spawned;
 }
 
-type GatewayDirective = Exclude<EngineDirective, { kind: 'probe' }>;
+type GatewayDirective = Extract<EngineDirective, { kind: 'start' | 'stop' }>;
 
 function gatewayOf(directive: GatewayDirective): string {
   return directive.kind === 'start' ? directive.gateway.slug : directive.slug;
@@ -208,6 +226,26 @@ async function probeThroughTheChild(
   return sendProbe(resident.awaitingKeyCheck, engine, provider, key);
 }
 
+async function lookAtTheRuntimeThroughTheChild(
+  resident: Resident,
+  address: string,
+): Promise<RuntimeReachability> {
+  let engine: EngineChild;
+
+  try {
+    engine = runningChild(resident);
+  } catch (error) {
+    console.error(
+      `recompose could not look at the runtime at ${address}, because the engine would not spawn.`,
+      error,
+    );
+
+    return { verdict: 'unreachable' };
+  }
+
+  return sendRuntimeProbe(resident.awaitingRuntimeLook, engine, address);
+}
+
 export function createEngineHost(deps: EngineHostDeps): EngineHost {
   const resident: Resident = {
     states: allStopped(deps.knownSlugs),
@@ -216,6 +254,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
     subscribers: new Set(),
     awaitingReport: new Map(),
     awaitingKeyCheck: createProbeDesk(),
+    awaitingRuntimeLook: createProbeDesk(),
   };
   const inGatewayOrder = createGatewayOrder();
 
@@ -244,6 +283,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
         return sendDirective(resident, { kind: 'start', id: randomUUID(), gateway });
       }),
     probe: async (provider, key) => probeThroughTheChild(resident, provider, key),
+    probeRuntime: async (address) => lookAtTheRuntimeThroughTheChild(resident, address),
     states: () => resident.states,
     onStatesChanged: (listener) => {
       resident.subscribers.add(listener);

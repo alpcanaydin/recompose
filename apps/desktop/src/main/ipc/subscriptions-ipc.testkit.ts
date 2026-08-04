@@ -4,6 +4,7 @@ import type {
   SubscriptionProviderId,
 } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { chmod, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -130,7 +131,7 @@ export async function aFreshWorld(): Promise<SubscriptionsWorld> {
     storedAccounts: async () => loadAccountsFile(accountsFile, () => undefined),
 
     alreadyHolding: async (rows) => {
-      await saveAccountsFile(accountsFile, { schemaVersion: 3, accounts: rows });
+      await saveAccountsFile(accountsFile, { schemaVersion: ACCOUNTS_VERSION, accounts: rows });
     },
   };
 }

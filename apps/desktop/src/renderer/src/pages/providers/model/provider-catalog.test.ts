@@ -6,13 +6,13 @@ import { expect } from 'vitest';
 import type { CatalogEntry, ConnectionWay } from './provider-catalog';
 
 import {
-  awaitedFor,
   catalogEntries,
   checkableKey,
   keyHostFor,
   markFor,
   keyKindOf,
   keyTitleFor,
+  localRuntimeOf,
   offerFor,
   offeredUnder,
   signInProviderOf,
@@ -20,7 +20,7 @@ import {
   keyShapeHintFor,
 } from './provider-catalog';
 
-const anyWay = fc.constantFrom<ConnectionWay[]>('subscription', 'api-key', 'aggregator');
+const anyWay = fc.constantFrom<ConnectionWay[]>('subscription', 'api-key', 'aggregator', 'local');
 
 const anyOffer = fc.record({
   way: anyWay,
@@ -30,8 +30,14 @@ const anyOffer = fc.record({
 
 const anyCatalog = fc.uniqueArray(
   fc.record({
-    id: fc.constantFrom('anthropic' as const, 'openai' as const, 'openrouter' as const),
+    id: fc.constantFrom(
+      'anthropic' as const,
+      'openai' as const,
+      'openrouter' as const,
+      'ollama' as const,
+    ),
     name: fc.string(),
+    lead: fc.constant({ mark: 'anthropic' as const }),
     offers: fc.uniqueArray(anyOffer, { minLength: 1, selector: (offer) => offer.way }),
   }),
   { selector: (entry) => entry.id },
@@ -90,6 +96,16 @@ test('a provider that only ever takes a key offers no way to sign in', () => {
   expect(offered('openrouter').offers.map((offer) => offer.way)).toEqual(['aggregator']);
 });
 
+test('the one runtime this machine can serve offers the local way and nothing else', () => {
+  expect(offered('ollama').offers).toEqual([
+    {
+      way: 'local',
+      title: 'Ollama',
+      benefit: '127.0.0.1:11434, models on this machine',
+    },
+  ]);
+});
+
 test('a way keeps the providers that connect by it and drops the rest', () => {
   expect(offeredUnder(catalogEntries, 'subscription').map((entry) => entry.id)).toEqual([
     'anthropic',
@@ -98,6 +114,7 @@ test('a way keeps the providers that connect by it and drops the rest', () => {
   expect(offeredUnder(catalogEntries, 'aggregator').map((entry) => entry.id)).toEqual([
     'openrouter',
   ]);
+  expect(offeredUnder(catalogEntries, 'local').map((entry) => entry.id)).toEqual(['ollama']);
 });
 
 test('a stored subscription reads as the plan product its provider sells', () => {
@@ -112,6 +129,16 @@ test('a provider that signs in names the provider identity it signs in under', (
 
 test('a provider that never signs in names nobody to sign in as', () => {
   expect(signInProviderOf(offered('openrouter'))).toBeUndefined();
+  expect(signInProviderOf(offered('ollama'))).toBeUndefined();
+});
+
+test('a provider that serves this machine names the runtime it would be stored as', () => {
+  expect(localRuntimeOf(offered('ollama'))).toBe('ollama');
+});
+
+test('a provider that reaches off the machine names no runtime to detect', () => {
+  expect(localRuntimeOf(offered('anthropic'))).toBeUndefined();
+  expect(localRuntimeOf(offered('openrouter'))).toBeUndefined();
 });
 
 test('a provider that takes a key names the kind that key is held under', () => {
@@ -119,47 +146,21 @@ test('a provider that takes a key names the kind that key is held under', () => 
   expect(keyKindOf(offered('openrouter'))).toBe('aggregator');
 });
 
-test('the subscriptions nothing connects yet still stand in the catalog, named and explained', () => {
-  expect(awaitedFor('subscription').map((awaited) => awaited.name)).toEqual([
-    'GitHub Copilot',
-    'Kimi Code',
-    'GLM Coding Plan',
-    'Qwen Coding Plan',
-    'MiniMax Coding Plan',
-  ]);
-
-  for (const awaited of awaitedFor('subscription')) {
-    expect(awaited.benefit.length).toBeGreaterThan(0);
-  }
+test('a runtime that holds no credential names no kind to hold one under', () => {
+  expect(keyKindOf(offered('ollama'))).toBeUndefined();
 });
 
-test('the local servers nothing runs yet stand in the catalog the same way', () => {
-  expect(awaitedFor('local').map((awaited) => awaited.name)).toEqual([
-    'Ollama',
-    'LM Studio',
-    'llama.cpp',
-    'vLLM',
-  ]);
+test('a runtime that holds no credential reads as no key product either', () => {
+  expect(keyTitleFor('ollama')).toBe('ollama');
 });
 
-test('the key providers nothing connects yet stand in the catalog, each naming what it waits on', () => {
-  expect(awaitedFor('api-key').map((awaited) => awaited.name)).toEqual([
-    'Gemini API',
-    'Mistral',
-    'xAI Grok',
-    'DeepSeek',
-    'Moonshot AI',
-    'Qwen',
-    'Custom endpoint',
+test('every line the catalog prints stays clear of the dash this project never writes', () => {
+  const lines = catalogEntries.flatMap((entry) => [
+    entry.name,
+    ...entry.offers.flatMap((offer) => [offer.title, offer.benefit]),
   ]);
 
-  for (const awaited of awaitedFor('api-key')) {
-    expect(awaited.benefit).toMatch(/Waits on/);
-  }
-});
-
-test('the kind whose catalog is complete awaits nothing', () => {
-  expect(awaitedFor('aggregator')).toEqual([]);
+  expect(lines.filter((line) => line.includes('—'))).toEqual([]);
 });
 
 test('a stored key reads as the product its catalog entry was picked as', () => {
@@ -184,6 +185,7 @@ test('a provider whose key reaches many hosts names none of them', () => {
 test('a provider the catalog offers is drawn with its own mark', () => {
   expect(markFor('anthropic')).toBe('anthropic');
   expect(markFor('openrouter')).toBe('openrouter');
+  expect(markFor('ollama')).toBe('ollama');
 });
 
 test('a provider the catalog never offered is drawn with no mark at all', () => {
@@ -215,7 +217,11 @@ test('a key field hints at the shape the provider hands out', () => {
   expect(keyShapeHintFor('openai')).toBe('sk-proj-…');
 });
 
+test('the aggregator field hints at the one shape its vendor documents', () => {
+  expect(keyShapeHintFor('openrouter')).toBe('sk-or-v1-…');
+});
+
 test('a provider whose key shape the catalog never learned hints at nothing', () => {
-  expect(keyShapeHintFor('openrouter')).toBeUndefined();
+  expect(keyShapeHintFor('ollama')).toBeUndefined();
   expect(keyShapeHintFor('mistral')).toBeUndefined();
 });

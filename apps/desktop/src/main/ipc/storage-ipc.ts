@@ -1,4 +1,5 @@
 import type {
+  Account,
   AccountsDocument,
   GatewayConfig,
   IpcRequest,
@@ -21,8 +22,9 @@ import {
 import { deleteSecret, saveVaultFile } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
 import { connectAccount } from './connect-account';
+import { openVault } from './open-vault';
 import { storagePathsFor, type StorageIpcContext, type StoragePaths } from './storage-context';
-import { ipcFailure, openVault, storageFailure } from './storage-envelope';
+import { ipcFailure, storageFailure } from './storage-envelope';
 
 async function readAccounts(
   ctx: StorageIpcContext,
@@ -178,6 +180,23 @@ async function releaseKeyRow(
   return { ok: true as const };
 }
 
+async function releaseWhatTheRowHeld(
+  ctx: StorageIpcContext,
+  paths: StoragePaths,
+  row: Account,
+  survivors: AccountsDocument,
+) {
+  if (row.kind === 'subscription') {
+    return releaseSubscriptionRow(ctx, row, survivors);
+  }
+
+  if (row.kind === 'local') {
+    return { ok: true as const };
+  }
+
+  return releaseKeyRow(ctx, paths, row);
+}
+
 async function removeAccount(
   ctx: StorageIpcContext,
   paths: StoragePaths,
@@ -196,10 +215,7 @@ async function removeAccount(
       accounts: accounts.accounts.filter((candidate) => candidate.id !== request.id),
     };
 
-    const released =
-      row.kind === 'subscription'
-        ? await releaseSubscriptionRow(ctx, row, survivors)
-        : await releaseKeyRow(ctx, paths, row);
+    const released = await releaseWhatTheRowHeld(ctx, paths, row, survivors);
 
     if (!released.ok) {
       return released;

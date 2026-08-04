@@ -16,6 +16,7 @@ import { probeFreePort } from './engine-host/probe-free-port';
 import { spawnEngineChild } from './engine-host/spawn-engine';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
+import { createLocalRuntimesIpcHandlers } from './ipc/local-runtimes-ipc';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
 import { createSubscriptionsIpcHandlers } from './ipc/subscriptions-ipc';
@@ -181,6 +182,12 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
     }),
     ...createStorageIpcHandlers(storageContext(engineHost, custody)),
     ...createKeyCheckIpcHandlers(keyCheckContext(engineHost)),
+    ...createLocalRuntimesIpcHandlers({
+      userDataPath,
+      homeFolder,
+      onCorrupt: onStorageCorrupt,
+      probeRuntime: async (address) => engineHost.probeRuntime(address),
+    }),
     ...createSystemIpcHandlers({
       fileBrowser: fileBrowserFor(process.platform),
       loginItem: loginItemAvailability,

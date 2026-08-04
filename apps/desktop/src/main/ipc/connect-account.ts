@@ -1,4 +1,4 @@
-import type { AccountsDocument, IpcRequest } from '@recompose/contracts';
+import type { AccountsDocument, CredentialedAccount, IpcRequest } from '@recompose/contracts';
 
 import { keyTail } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
@@ -7,15 +7,15 @@ import type { StorageIpcContext, StoragePaths } from './storage-context';
 
 import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
 import { saveVaultFile, setSecret, type VaultDocument } from '../storage/vault';
-import { openVaultForWrite } from './storage-context';
+import { openVaultForWrite } from './open-vault';
 import { ipcFailure, storageFailure } from './storage-envelope';
 
 type ConnectRequest = IpcRequest<'accounts:connect'>;
 
 function nameHolderUnder(accounts: AccountsDocument, request: ConnectRequest) {
   return accounts.accounts.find(
-    (held) =>
-      held.kind !== 'subscription' &&
+    (held): held is CredentialedAccount =>
+      (held.kind === 'api-key' || held.kind === 'aggregator') &&
       held.provider === request.provider &&
       held.label === request.label,
   );

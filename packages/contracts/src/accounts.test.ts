@@ -31,6 +31,13 @@ const aggregatorRow = {
   credentialRef: 'cred-91bd',
 };
 
+const localRow = {
+  id: 'acc-ollama',
+  provider: 'ollama',
+  kind: 'local',
+  address: 'http://127.0.0.1:11434',
+};
+
 describe('the row the accounts registry stores', () => {
   test('a subscription row parses carrying identity alone', () => {
     const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [subscriptionRow] };
@@ -70,12 +77,6 @@ describe('the row the accounts registry stores', () => {
     expect(() => loadAccountsDocument(stored)).toThrow();
   });
 
-  test('a stored local row is refused, because no local provider connects yet', () => {
-    const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [{ ...keyRow, kind: 'local' }] };
-
-    expect(() => loadAccountsDocument(stored)).toThrow();
-  });
-
   test('the kind vocabulary names four kinds, and only two of them carry a credential', () => {
     expect(accountKindSchema.options).toEqual(['subscription', 'api-key', 'aggregator', 'local']);
     expect(credentialedAccountKindSchema.options).toEqual(['api-key', 'aggregator']);
@@ -83,6 +84,85 @@ describe('the row the accounts registry stores', () => {
 
   test('a kind outside the vocabulary is refused', () => {
     const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [{ ...keyRow, kind: 'oauth' }] };
+
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+});
+
+describe('the local row a runtime stands as', () => {
+  test('a local row parses carrying the runtime and the address it answers at', () => {
+    const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [localRow] };
+
+    expect(loadAccountsDocument(stored)).toEqual(stored);
+  });
+
+  test('a local row referencing the vault is refused, because nothing exists to reference', () => {
+    const stored = {
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [{ ...localRow, credentialRef: 'cred-7f3a' }],
+    };
+
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+
+  test('a local row carrying a label is refused, because the runtime name is the row name', () => {
+    const stored = {
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [{ ...localRow, label: 'My Ollama' }],
+    };
+
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+
+  test('a local row carrying a secret of any name is refused', () => {
+    for (const smuggled of [{ secret: 'sk-oops' }, { apiKey: 'sk-oops' }, { keyTail: '9f2c' }]) {
+      const stored = {
+        schemaVersion: ACCOUNTS_VERSION,
+        accounts: [{ ...localRow, ...smuggled }],
+      };
+
+      expect(() => loadAccountsDocument(stored)).toThrow();
+    }
+  });
+
+  test('a local row naming a runtime nothing reaches is refused', () => {
+    const stored = {
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [{ ...localRow, provider: 'vllm' }],
+    };
+
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+});
+
+describe('the address a local row is allowed to hold', () => {
+  test('a row at localhost is refused, so no stored row can name the wrong family', () => {
+    const stored = {
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [{ ...localRow, address: 'http://localhost:11434' }],
+    };
+
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+
+  test('a row aimed off this machine is refused', () => {
+    for (const address of ['http://example.com:11434', 'http://169.254.169.254:11434']) {
+      const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [{ ...localRow, address }] };
+
+      expect(() => loadAccountsDocument(stored)).toThrow();
+    }
+  });
+
+  test('a row with no address at all is refused, because there would be nothing to look at', () => {
+    const { address, ...withoutTheAddress } = localRow;
+    const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [withoutTheAddress] };
+
+    expect(address).toBe('http://127.0.0.1:11434');
+    expect(() => loadAccountsDocument(stored)).toThrow();
+  });
+
+  test('a key row relabelled local is refused, because the local arm carries neither', () => {
+    const stored = { schemaVersion: ACCOUNTS_VERSION, accounts: [{ ...keyRow, kind: 'local' }] };
 
     expect(() => loadAccountsDocument(stored)).toThrow();
   });
@@ -121,7 +201,7 @@ describe('the mask a key row publishes in place of its secret', () => {
 
 describe('what the accounts registry refuses to hold', () => {
   test('the default registry is empty and current-version', () => {
-    expect(defaultAccountsDocument()).toEqual({ schemaVersion: 3, accounts: [] });
+    expect(defaultAccountsDocument()).toEqual({ schemaVersion: 4, accounts: [] });
   });
 
   test('an account never carries a raw secret field', () => {

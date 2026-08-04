@@ -1,5 +1,6 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
@@ -31,7 +32,7 @@ const openai: SubscriptionAccountView = {
 };
 
 const keys: AccountsDocument = {
-  schemaVersion: 3,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [
     {
       id: 'a2',
@@ -212,6 +213,14 @@ test('a keys screen with nothing connected explains the kind and lists nothing',
   await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
 });
 
+test('the aggregators screen promises a hosted catalog rather than many providers', async () => {
+  const screen = await renderProviders('aggregator');
+
+  await expect
+    .element(screen.getByText('One key, many models, routed through a hosted catalog.'))
+    .toBeVisible();
+});
+
 test('an aggregators screen with nothing connected explains the kind and lists nothing', async () => {
   const screen = await renderProviders('aggregator');
 
@@ -219,9 +228,16 @@ test('an aggregators screen with nothing connected explains the kind and lists n
   await expect.element(screen.getByRole('list')).not.toBeInTheDocument();
 });
 
-test('the local runtimes destination says its surface follows rather than standing blank', async () => {
-  const screen = await renderProviders('local');
+test('the local runtimes destination lists what the registry holds under it', async () => {
+  const screen = await renderProviders('local', {
+    accounts: {
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [
+        { id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' },
+      ],
+    },
+  });
 
-  await expect.element(screen.getByText(/A local runtime/)).toBeVisible();
-  await expect.poll(() => screen.getByRole('button').elements()).toEqual([]);
+  await expect.element(screen.getByText('http://127.0.0.1:11434')).toBeVisible();
+  await expect.element(screen.getByText(/arrive later/)).not.toBeInTheDocument();
 });

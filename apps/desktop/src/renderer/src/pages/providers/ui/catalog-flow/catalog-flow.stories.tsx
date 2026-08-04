@@ -56,5 +56,26 @@ export const KeyStep = meta.story({
   },
 });
 
+/**
+ * The detect step of the flow, standing the verdict slot over the sheet's own foot acts.
+ *
+ * @summary The reading proves the pick trades the grid for the look without a button in between,
+ * and the settle acts ride the sheet's foot: Check again leads on silence, Add anyway stands
+ * beside it as a plain act.
+ */
+export const DetectStep = meta.story({
+  args: { kind: 'local' as const },
+  play: async ({ userEvent }) => {
+    await userEvent.click(await screen.findByRole('button', { name: /^Ollama/ }));
+
+    await waitFor(async () => {
+      await expect(await screen.findByText(/isn't running at 127.0.0.1:11434/)).toBeVisible();
+    });
+
+    await expect(await screen.findByRole('button', { name: 'Check again' })).toBeVisible();
+    await expect(await screen.findByRole('button', { name: 'Add anyway' })).toBeVisible();
+  },
+});
+
 /** The flow in the dark scheme, where the cards lift off the sheet behind them. */
 export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

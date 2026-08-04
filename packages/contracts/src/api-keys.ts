@@ -6,7 +6,14 @@ export type KeyProviderId = z.infer<typeof keyProviderIdSchema>;
 
 const controlCharacter = /\p{Cc}/u;
 
-const anthropicKeyOpening = 'sk-ant-';
+export const recognizedKeyShapeSchema = z.enum(['anthropic', 'openai', 'openrouter']);
+
+export type RecognizedKeyShape = z.infer<typeof recognizedKeyShapeSchema>;
+
+const documentedKeyOpenings = [
+  { opening: 'sk-ant-', shape: 'anthropic' },
+  { opening: 'sk-or-v1-', shape: 'openrouter' },
+] as const satisfies readonly { opening: string; shape: RecognizedKeyShape }[];
 
 const tailLength = 4;
 
@@ -24,8 +31,10 @@ export function keyTail(pasted: string): string | undefined {
   return trimmed.length >= shortestKeyThatPublishesATail ? trimmed.slice(-tailLength) : undefined;
 }
 
-export function vendorShapeOf(pasted: string): KeyProviderId | undefined {
-  return pasted.trim().startsWith(anthropicKeyOpening) ? 'anthropic' : undefined;
+export function vendorShapeOf(pasted: string): RecognizedKeyShape | undefined {
+  const trimmed = pasted.trim();
+
+  return documentedKeyOpenings.find(({ opening }) => trimmed.startsWith(opening))?.shape;
 }
 
 export const keyCheckVerdictSchema = z.enum(['authenticates', 'not-accepted', 'could-not-check']);

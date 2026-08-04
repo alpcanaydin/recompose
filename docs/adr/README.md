@@ -77,3 +77,6 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0069](0069-subscriptions-delegate-to-the-providers-tool.md)                | Subscriptions Delegate to the Provider's Tool, and Custody Follows Each Platform    | Accepted   | 2026-08-02 |
 | [0070](0070-key-checks-live-in-the-engine-child.md)                         | Key Checks Live in the Engine Child                                                 | Accepted   | 2026-08-03 |
 | [0071](0071-tanstack-form-carries-the-renderer-drafts.md)                   | TanStack Form Carries the Renderer Drafts                                           | Accepted   | 2026-08-03 |
+| [0072](0072-a-local-runtime-account-is-a-credential-free-observation.md)    | A Local Runtime Account Is a Credential-Free Observation                            | Accepted   | 2026-08-04 |
+| [0073](0073-the-aggregator-connects-as-a-key-and-offers-no-check.md)        | The Aggregator Connects as a Key and Offers No Check                                | Accepted   | 2026-08-04 |
+| [0074](0074-brand-marks-come-from-lobehub-icons.md)                         | Brand Marks Come From Lobe Icons, Drawn as Nominative Use                           | Accepted   | 2026-08-04 |

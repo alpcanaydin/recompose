@@ -5,18 +5,24 @@ import type {
   KeyCheckVerdict,
   RecomposeIpc,
   RecomposeIpcEvents,
+  RuntimeReachability,
   Settings,
   SubscriptionAccountView,
   SubscriptionTool,
   SystemState,
 } from '@recompose/contracts';
 
-import { withSettingsPatch, defaultSettings, ipcChannels } from '@recompose/contracts';
+import {
+  ACCOUNTS_VERSION,
+  withSettingsPatch,
+  defaultSettings,
+  ipcChannels,
+} from '@recompose/contracts';
 
 import { accountHandlers } from './fake-accounts';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
-const emptyDocument: AccountsDocument = { schemaVersion: 3, accounts: [] };
+const emptyDocument: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
 
 const observedSystem: SystemState = {
   fileBrowser: 'finder',
@@ -51,6 +57,8 @@ export type BridgeParameters = {
   accounts?: AccountsDocument;
   /** The verdict every key check answers, standing for what the provider says this run. */
   keyCheck?: KeyCheckVerdict;
+  /** The reading every runtime look answers, standing for what the machine says this run. */
+  reachability?: RuntimeReachability;
   settings?: Settings;
   gateways?: readonly GatewayConfig[];
   engineStates?: EngineStates;
@@ -225,12 +233,14 @@ function eventBridge(): RecomposeIpcEvents {
 const noGateways: readonly GatewayConfig[] = [];
 const noEngineStates: EngineStates = {};
 const unreachableProvider: KeyCheckVerdict = 'could-not-check';
+const silentRuntime: RuntimeReachability = { verdict: 'unreachable' };
 
 function seedsFrom(parameters: BridgeParameters) {
   return {
     settings: defaultSettings(),
     accounts: emptyDocument,
     keyCheck: unreachableProvider,
+    reachability: silentRuntime,
     gateways: noGateways,
     engineStates: noEngineStates,
     subscriptions: noSubscriptions,
@@ -244,7 +254,11 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
 
   engineStateListeners.clear();
 
-  const { landSubscription, ...accounts } = accountHandlers(seeds.accounts, seeds.keyCheck);
+  const { landSubscription, ...accounts } = accountHandlers(
+    seeds.accounts,
+    seeds.keyCheck,
+    seeds.reachability,
+  );
 
   window.recompose = {
     ...settingsHandlers(seeds.settings),

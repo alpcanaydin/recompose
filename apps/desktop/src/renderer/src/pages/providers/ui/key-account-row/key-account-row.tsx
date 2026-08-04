@@ -27,6 +27,19 @@ const answered: Record<KeyCheckVerdict, { sentence: string; ink: string }> = {
 
 const maskedBullets = '••••';
 
+function keyMask(keyTail: string | undefined): ReactNode {
+  if (keyTail !== undefined) {
+    return <span className="font-mono text-mono-value">{`${maskedBullets}${keyTail}`}</span>;
+  }
+
+  return (
+    <span className="font-mono text-mono-value">
+      <span aria-hidden>{maskedBullets}</span>
+      <span className="sr-only">a stored key</span>
+    </span>
+  );
+}
+
 function keyIdentity(
   account: CredentialedAccount,
   refusal: string | undefined,
@@ -37,9 +50,7 @@ function keyIdentity(
       <span className="text-card-title text-ink">{keyTitleFor(account.provider)}</span>
       <span className="flex min-w-0 items-center gap-2 text-detail text-ink-secondary">
         <span className="truncate">{account.label}</span>
-        {account.keyTail === undefined ? null : (
-          <span className="font-mono text-mono-value">{`${maskedBullets}${account.keyTail}`}</span>
-        )}
+        {keyMask(account.keyTail)}
       </span>
       {refusal === undefined ? null : (
         <span className="text-detail text-danger-ink" role="alert">
@@ -85,7 +96,8 @@ function quieterActions({ account, checking, onVerify, onRemove }: RowActs) {
  * @summary The row is the whole surface for a key, because a key is never edited once stored: it
  * is replaced. It holds two lines, the product its catalog entry was picked as and the name beside
  * the mask, so a person tells two keys of one provider apart without the secret reaching the
- * screen. A key stored before the mask existed shows its name alone. Both acts live behind the
+ * screen. The bullets stand on every key row, so a card always says a key stands there, and a key
+ * stored before the mask existed reads the name beside the bare bullets. Both acts live behind the
  * overflow, because neither is part of reading the row, and Verify appears there only where a
  * probe knows the provider well enough to answer.
  */

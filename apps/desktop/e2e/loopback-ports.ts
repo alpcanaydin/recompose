@@ -18,6 +18,24 @@ export async function holdPort(host: string, port: number): Promise<Server | nul
   });
 }
 
+/** Binds a stub's own server to a loopback port the machine had free, and reads that port back. */
+export async function bindToAFreePort(server: Server, host: string): Promise<number> {
+  return new Promise<number>((settle, refuse) => {
+    server.once('error', refuse);
+    server.listen({ host, port: 0 }, () => {
+      const bound = server.address();
+
+      if (bound === null || typeof bound === 'string') {
+        refuse(new Error('the stub bound no port the scenario could read'));
+
+        return;
+      }
+
+      settle(bound.port);
+    });
+  });
+}
+
 export async function dropServer(server: Server): Promise<void> {
   return new Promise<void>((settle) => {
     server.close(() => {

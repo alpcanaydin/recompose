@@ -3,7 +3,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { test } from './fixtures';
-import { keyAScenarioPastes, keyStandsConnected, openKeysScreen } from './provider-screen';
+import { keyAScenarioPastes, keyStandsConnected, openProviderScreen } from './provider-screen';
 
 const captureWidth = 1024;
 const captureHeight = 660;
@@ -58,7 +58,7 @@ test('the providers screen matches its baseline before any account exists', asyn
   page,
 }) => {
   await pinLightScheme(electronApp);
-  await openKeysScreen(page);
+  await openProviderScreen(page, 'API Keys');
   await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(0);
   await settleFonts(electronApp, page);
   await expect(page).toHaveScreenshot('providers-empty.png', capture);
@@ -69,7 +69,7 @@ test('the providers screen matches its baseline with a connected account', async
   page,
 }) => {
   await pinLightScheme(electronApp);
-  await openKeysScreen(page);
+  await openProviderScreen(page, 'API Keys');
   await keyStandsConnected(page, {
     entry: 'Anthropic API',
     name: 'build',

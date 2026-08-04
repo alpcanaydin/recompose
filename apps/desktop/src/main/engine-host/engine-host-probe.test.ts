@@ -141,7 +141,7 @@ describe('a probe that never draws an answer', () => {
   });
 
   test('a child that will not spawn folds to could-not-check rather than throwing', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const host = createEngineHost({
       knownSlugs: [],
       spawnChild: () => {
@@ -150,6 +150,33 @@ describe('a probe that never draws an answer', () => {
     });
 
     await expect(host.probe('anthropic', key)).resolves.toEqual({ verdict: 'could-not-check' });
+
+    const spoken = complaint.mock.calls.flat().map(String).join(' ');
+
+    expect(spoken).toContain('anthropic');
+    expect(spoken).not.toContain(key);
+  });
+});
+
+describe('a reading nobody asked for', () => {
+  test('a runtime reading arriving unasked is complained about rather than folded into a gateway', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const scripted = scriptedChild(running);
+    const { host } = hostOver(scripted, [codex.slug]);
+
+    await host.start(codex);
+
+    scripted.send({
+      kind: 'runtime-check',
+      answers: 'nobody',
+      reachability: { verdict: 'answers', version: '0.5.1' },
+    });
+
+    const spoken = complaint.mock.calls.flat().map(String).join(' ');
+
+    expect(spoken).toContain('runtime');
+    expect(spoken).not.toContain('undefined');
+    expect(host.states()[codex.slug]).toEqual({ status: 'running' });
   });
 });
 

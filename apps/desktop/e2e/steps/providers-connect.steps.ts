@@ -11,7 +11,7 @@ import {
   keyEndingIn,
   keyField,
   nameField,
-  pickKeyEntry,
+  pickEntry,
   submitConnect,
 } from '../provider-screen';
 import {
@@ -33,7 +33,7 @@ const TAIL_A_SCENARIO_EXPECTS = '7f2c';
 
 When('the maintainer picks {string} in the catalog', async ({ page }, entry: string) => {
   rememberKeyEntry(page, entry);
-  await pickKeyEntry(page, entry);
+  await pickEntry(page, entry);
 });
 
 When(

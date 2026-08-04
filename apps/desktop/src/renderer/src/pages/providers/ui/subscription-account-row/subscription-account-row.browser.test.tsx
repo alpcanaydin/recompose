@@ -1,5 +1,6 @@
 import type { SubscriptionAccountView, SubscriptionTool } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { expect, test } from 'vitest';
@@ -153,7 +154,7 @@ test('the overflow holds signing in again and removal, and nothing else', async 
 test('removing an account takes it out of the registry it was held in', async () => {
   await renderRow(connected, {
     accounts: {
-      schemaVersion: 3,
+      schemaVersion: ACCOUNTS_VERSION,
       accounts: [{ id: 's1', kind: 'subscription', label: 'Anthropic', provider: 'anthropic' }],
     },
   });

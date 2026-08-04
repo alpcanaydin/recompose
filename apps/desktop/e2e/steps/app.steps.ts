@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createBdd } from 'playwright-bdd';
 
 import { Given, inheritedEnv, test, Then, When } from '../fixtures';
-import { openKeysScreen, openSubscriptionsScreen } from '../provider-screen';
+import { openProviderScreen } from '../provider-screen';
 
 const { After } = createBdd(test);
 
@@ -80,11 +80,19 @@ Given('the app is on the gateways screen', async ({ page }) => {
 });
 
 Given('the app is on the API Keys screen', async ({ page }) => {
-  await openKeysScreen(page);
+  await openProviderScreen(page, 'API Keys');
 });
 
 Given('the app is on the subscriptions screen', async ({ page }) => {
-  await openSubscriptionsScreen(page);
+  await openProviderScreen(page, 'Subscriptions');
+});
+
+Given('the app is on the Aggregators screen', async ({ page }) => {
+  await openProviderScreen(page, 'Aggregators');
+});
+
+Given('the app is on the Local Runtimes screen', async ({ page }) => {
+  await openProviderScreen(page, 'Local Runtimes');
 });
 
 Given('the app is on the settings screen', async ({ page }) => {

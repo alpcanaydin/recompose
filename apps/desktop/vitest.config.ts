@@ -21,7 +21,7 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}', 'scripts/**/*.mts'],
       exclude: [
         'src/**/*.test.*',
-        'src/**/*.testkit.ts',
+        'src/**/*.testkit.{ts,tsx}',
         'src/**/*.browser.test.*',
         'scripts/**/*.test.mts',
         'scripts/generate-icons.mts',

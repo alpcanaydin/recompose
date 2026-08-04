@@ -2,20 +2,37 @@ import type {
   CredentialedAccount,
   CredentialedAccountKind,
   KeyProviderId,
+  LocalRuntimeId,
+  RecognizedKeyShape,
   SubscriptionProviderId,
 } from '@recompose/contracts';
 
 import {
   credentialedAccountKindSchema,
   keyProviderIdSchema,
+  localRuntimeIdSchema,
+  localRuntimes,
+  recognizedKeyShapeSchema,
   subscriptionProviderIdSchema,
 } from '@recompose/contracts';
 
 import type { AccountKind } from '../../../entities/account';
 import type { BrandMarkName, IconName } from '../../../shared/ui';
 
-/** A way an account reaches a provider, which is every kind but the one nothing connects as. */
-export type ConnectionWay = Exclude<AccountKind, 'local'>;
+/** A way an account reaches a provider, which is every kind the registry holds one under. */
+export type ConnectionWay = AccountKind;
+
+/** A provider identity the catalog offers a way to connect, which is narrower than the marks. */
+export type CatalogProviderId = 'anthropic' | 'openai' | 'openrouter' | 'ollama';
+
+/**
+ * What a row is drawn with: a vendor's own mark, or the glyph its category stands under.
+ *
+ * @summary A mark recompose can draw is not a provider recompose can connect, so the drawing is
+ * stated per row rather than derived from the identity. A category and a product publishing no
+ * mark both name a glyph here, which is the rule rather than a fallback.
+ */
+export type CatalogLead = { mark: BrandMarkName } | { glyph: IconName };
 
 export type CatalogOffer = {
   way: ConnectionWay;
@@ -26,27 +43,39 @@ export type CatalogOffer = {
 };
 
 export type CatalogEntry = {
-  /** The provider the entry stands for, which is also the mark it is drawn with. */
-  id: BrandMarkName;
+  /** The provider the entry stands for. */
+  id: CatalogProviderId;
   /** The name the provider goes by on screen. */
   name: string;
+  /** The mark or glyph the entry's cards lead with. */
+  lead: CatalogLead;
   /** Every way this provider can be connected, in the order they are offered. */
   offers: readonly CatalogOffer[];
 };
 
-export type AwaitedProvider = {
-  /** The product the row stands for. */
-  name: string;
-  /** One line saying what connecting it will give, once it can be connected. */
-  benefit: string;
-  /** The glyph the row leads with until the product carries a licensed mark. */
-  glyph: IconName;
-};
-
-const providerNames = {
+/** The name each vendor recompose draws a mark for goes by on screen. */
+export const providerNames = {
   anthropic: 'Anthropic',
+  cerebras: 'Cerebras',
+  deepinfra: 'DeepInfra',
+  deepseek: 'DeepSeek',
+  fireworks: 'Fireworks AI',
+  gemini: 'Gemini',
+  githubCopilot: 'GitHub Copilot',
+  grok: 'Grok',
+  groq: 'Groq',
+  kimi: 'Kimi',
+  lmstudio: 'LM Studio',
+  minimax: 'MiniMax',
+  mistral: 'Mistral',
+  moonshot: 'Moonshot AI',
+  ollama: localRuntimes.ollama.name,
   openai: 'OpenAI',
   openrouter: 'OpenRouter',
+  qwen: 'Qwen',
+  together: 'Together AI',
+  vllm: 'vLLM',
+  zhipu: 'Z.ai',
 } as const satisfies Record<BrandMarkName, string>;
 
 /**
@@ -64,6 +93,10 @@ const keyHosts: Record<KeyProviderId, string> = {
   openai: 'api.openai.com',
 };
 
+const runtimeHosts: Record<LocalRuntimeId, string> = {
+  ollama: new URL(localRuntimes.ollama.address).host,
+};
+
 /**
  * Every provider the catalog offers, with the ways each one connects.
  *
@@ -76,6 +109,7 @@ export const catalogEntries: readonly CatalogEntry[] = [
   {
     id: 'anthropic',
     name: providerNames.anthropic,
+    lead: { mark: 'anthropic' },
     offers: [
       { way: 'subscription', title: 'Claude', benefit: 'Sign in with your Pro or Max plan' },
       { way: 'api-key', title: 'Anthropic API', benefit: `${keyHosts.anthropic} with your key` },
@@ -84,6 +118,7 @@ export const catalogEntries: readonly CatalogEntry[] = [
   {
     id: 'openai',
     name: providerNames.openai,
+    lead: { mark: 'openai' },
     offers: [
       { way: 'subscription', title: 'Codex', benefit: 'Sign in with your ChatGPT plan' },
       { way: 'api-key', title: 'OpenAI API', benefit: `${keyHosts.openai} with your key` },
@@ -92,58 +127,36 @@ export const catalogEntries: readonly CatalogEntry[] = [
   {
     id: 'openrouter',
     name: providerNames.openrouter,
+    lead: { mark: 'openrouter' },
     offers: [{ way: 'aggregator', title: 'OpenRouter', benefit: 'One key, 300+ models' }],
   },
+  {
+    id: 'ollama',
+    name: providerNames.ollama,
+    lead: { mark: 'ollama' },
+    offers: [
+      {
+        way: 'local',
+        title: providerNames.ollama,
+        benefit: `${runtimeHosts.ollama}, models on this machine`,
+      },
+    ],
+  },
 ];
-
-const awaitedSubscriptions: readonly AwaitedProvider[] = [
-  { name: 'GitHub Copilot', benefit: 'Sign in with your GitHub account', glyph: 'github' },
-  { name: 'Kimi Code', benefit: 'Moonshot plan, K2 in your tools', glyph: 'moon' },
-  { name: 'GLM Coding Plan', benefit: 'Z.ai plan, GLM models', glyph: 'person' },
-  { name: 'Qwen Coding Plan', benefit: 'Alibaba Model Studio, multi-model', glyph: 'person' },
-  { name: 'MiniMax Coding Plan', benefit: 'M2 on a flat monthly quota', glyph: 'person' },
-];
-
-const awaitedLocals: readonly AwaitedProvider[] = [
-  { name: 'Ollama', benefit: 'localhost:11434, models on this machine', glyph: 'monitor' },
-  { name: 'LM Studio', benefit: 'localhost:1234, local server', glyph: 'monitor' },
-  { name: 'llama.cpp', benefit: 'llama-server on localhost:8080', glyph: 'monitor' },
-  { name: 'vLLM', benefit: 'High-throughput GPU serving', glyph: 'monitor' },
-];
-
-const awaitsAUrlAndADialect = 'Waits on a base URL and a dialect';
-
-const awaitedKeys: readonly AwaitedProvider[] = [
-  { name: 'Gemini API', benefit: 'Waits on a base URL, a dialect, and a header', glyph: 'spark' },
-  { name: 'Mistral', benefit: awaitsAUrlAndADialect, glyph: 'spark' },
-  { name: 'xAI Grok', benefit: awaitsAUrlAndADialect, glyph: 'spark' },
-  { name: 'DeepSeek', benefit: awaitsAUrlAndADialect, glyph: 'spark' },
-  { name: 'Moonshot AI', benefit: awaitsAUrlAndADialect, glyph: 'moon' },
-  { name: 'Qwen', benefit: awaitsAUrlAndADialect, glyph: 'person' },
-  { name: 'Custom endpoint', benefit: awaitsAUrlAndADialect, glyph: 'network' },
-];
-
-const awaitedUnderKind: Record<AccountKind, readonly AwaitedProvider[]> = {
-  subscription: awaitedSubscriptions,
-  'api-key': awaitedKeys,
-  aggregator: [],
-  local: awaitedLocals,
-};
-
-/**
- * The providers recompose will connect to later, standing in the catalog before they can.
- *
- * @summary The first release ends at Claude, Codex, and the two first-party keys, and the rows
- * that follow say what the catalog grows toward rather than hiding it. A row here cannot be
- * picked, so it carries no provider identity yet, and its line names what it waits on.
- */
-export function awaitedFor(kind: AccountKind): readonly AwaitedProvider[] {
-  return awaitedUnderKind[kind];
-}
 
 /** The copy an entry's row reads as under one way, or nothing when the way is not offered. */
 export function offerFor(entry: CatalogEntry, way: ConnectionWay): CatalogOffer | undefined {
   return entry.offers.find((offer) => offer.way === way);
+}
+
+/**
+ * The offer that hands over a secret, or nothing where the entry never asks for one.
+ *
+ * @summary Signing in and serving this machine both reach a provider without a stored secret, so
+ * the ways that do are named here once instead of being guessed at by each caller.
+ */
+function keyOfferIn(entry: CatalogEntry): CatalogOffer | undefined {
+  return entry.offers.find((offer) => offer.way !== 'subscription' && offer.way !== 'local');
 }
 
 /**
@@ -152,7 +165,7 @@ export function offerFor(entry: CatalogEntry, way: ConnectionWay): CatalogOffer 
  * @summary A person connected "Claude", so the row that lists the account keeps that word
  * rather than trading it for the vendor behind it.
  */
-export function subscriptionTitleFor(id: BrandMarkName): string {
+export function subscriptionTitleFor(id: CatalogProviderId): string {
   const entry = catalogEntries.find((candidate) => candidate.id === id);
   const title = entry === undefined ? undefined : offerFor(entry, 'subscription')?.title;
 
@@ -160,7 +173,7 @@ export function subscriptionTitleFor(id: BrandMarkName): string {
 }
 
 /**
- * The endpoint product a stored key reads as, which is what its catalog card read as.
+ * The endpoint product a stored key reads as, which is what its catalog entry was picked as.
  *
  * @summary A person picked "Anthropic API", so the row that lists the key keeps that word. A key
  * stored under a provider the catalog never offered keeps the provider it was stored under, so a
@@ -168,14 +181,15 @@ export function subscriptionTitleFor(id: BrandMarkName): string {
  */
 export function keyTitleFor(provider: string): string {
   const entry = catalogEntries.find((candidate) => candidate.id === provider);
-  const offer = entry?.offers.find((candidate) => candidate.way !== 'subscription');
+  const offer = entry === undefined ? undefined : keyOfferIn(entry);
 
   return offer?.title ?? provider;
 }
 
-const keyShapeHints: Record<KeyProviderId, string> = {
+const keyShapeHints: Record<RecognizedKeyShape, string> = {
   anthropic: 'sk-ant-…',
   openai: 'sk-proj-…',
+  openrouter: 'sk-or-v1-…',
 };
 
 /**
@@ -185,7 +199,7 @@ const keyShapeHints: Record<KeyProviderId, string> = {
  * prefix family per vendor, so a person pasting recognizes at a glance which key belongs here.
  */
 export function keyShapeHintFor(provider: string): string | undefined {
-  const known = keyProviderIdSchema.safeParse(provider);
+  const known = recognizedKeyShapeSchema.safeParse(provider);
 
   return known.success ? keyShapeHints[known.data] : undefined;
 }
@@ -203,9 +217,11 @@ export function keyHostFor(provider: string): string | undefined {
   return known.success ? keyHosts[known.data] : undefined;
 }
 
-/** The mark a stored provider is drawn with, or nothing when the catalog never offered it. */
+/** The mark a stored provider is drawn with, or nothing where the catalog draws a glyph. */
 export function markFor(provider: string): BrandMarkName | undefined {
-  return catalogEntries.find((entry) => entry.id === provider)?.id;
+  const lead = catalogEntries.find((entry) => entry.id === provider)?.lead;
+
+  return lead !== undefined && 'mark' in lead ? lead.mark : undefined;
 }
 
 /**
@@ -239,13 +255,23 @@ export function signInProviderOf(entry: CatalogEntry): SubscriptionProviderId | 
 }
 
 /**
- * The kind an entry's key would be held under, or nothing when it only ever signs in.
+ * The runtime an entry would be detected and stored as, or nothing when it reaches off the machine.
  *
- * @summary The catalog's other ways all hand over a secret, and the registry keeps them apart by
- * kind, so the claim is checked against the kinds that admit a secret rather than assumed.
+ * @summary An entry offering the local way is a claim that its identity is one the local-runtimes
+ * contract knows an address for, so the claim is checked here rather than trusted downstream.
+ */
+export function localRuntimeOf(entry: CatalogEntry): LocalRuntimeId | undefined {
+  return offerFor(entry, 'local') === undefined ? undefined : localRuntimeIdSchema.parse(entry.id);
+}
+
+/**
+ * The kind an entry's key would be held under, or nothing when it hands over no secret.
+ *
+ * @summary The catalog's ways that hand over a secret are kept apart by kind in the registry, so
+ * the claim is checked against the kinds that admit a secret rather than assumed.
  */
 export function keyKindOf(entry: CatalogEntry): CredentialedAccountKind | undefined {
-  const offer = entry.offers.find((candidate) => candidate.way !== 'subscription');
+  const offer = keyOfferIn(entry);
 
   return offer === undefined ? undefined : credentialedAccountKindSchema.parse(offer.way);
 }

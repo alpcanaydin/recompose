@@ -20,6 +20,7 @@ Braintrust
 BYOK
 Cabe
 ccproxy
+Cerebras
 chromaui
 cliproxyapi
 Codechecks
@@ -33,9 +34,10 @@ cyclonedx
 dagre
 dbus
 dedup
+DeepInfra
 DeepSeek
-değiştir
 depcruise
+değiştir
 diffable
 dmgbuild
 docblocks
@@ -62,6 +64,7 @@ Gemini
 gitdir
 glassmorphism
 Grok
+Groq
 IDAT
 idempotently
 IHDR
@@ -81,6 +84,8 @@ libvips
 lifecycles
 lintable
 litellm
+lmstudio
+lobehub
 lockfiles
 lossily
 McCabe
@@ -108,6 +113,8 @@ osascript
 overclaim
 overclaiming
 overclaims
+overpromise
+overpromises
 oxfmtrc
 oxlint
 oxlint's
@@ -133,6 +140,7 @@ scanline
 screencapture
 Scriptable
 scrollview
+seedable
 semgrep
 servernum
 setstate
@@ -148,6 +156,7 @@ streamable
 subline
 Substack
 Supabase
+surfaceless
 Syft
 Tauri
 TEAMID
@@ -163,6 +172,7 @@ tosorted
 trackpad
 triaging
 tsgolint
+Twingate
 typecheckable
 typecov
 Typeform
@@ -188,6 +198,7 @@ Vapi
 Veed
 versionless
 verysecret
+vLLM
 Weavy
 WHATWG
 winstaller
@@ -195,4 +206,5 @@ worktree
 worktrees
 WWDC
 xAI
+zhipu
 zizmor

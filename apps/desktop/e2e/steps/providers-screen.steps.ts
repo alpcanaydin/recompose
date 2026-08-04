@@ -9,6 +9,7 @@ import {
   keyEndingIn,
   keyStandsConnected,
   placementOf,
+  rowLine,
 } from '../provider-screen';
 import { keyEntryInFocus, rememberKeyEntry } from '../scenario-memory';
 
@@ -31,7 +32,7 @@ Given(
 );
 
 Then("the row's first line reads {string}", async ({ page }, product: string) => {
-  await expect(accountRows(page).first().getByText(product, { exact: true })).toBeVisible();
+  await expect(rowLine(accountRows(page).first(), product)).toBeVisible();
 });
 
 Then(
@@ -43,7 +44,7 @@ Then(
 
     await expect(masked).toBeVisible();
 
-    const product = await placementOf(row.getByText(keyEntryInFocus(page), { exact: true }));
+    const product = await placementOf(rowLine(row, keyEntryInFocus(page)));
     const secondLine = await placementOf(named);
     const tail = await placementOf(masked);
 

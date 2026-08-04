@@ -1,5 +1,6 @@
 import type { CredentialedAccount } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
@@ -28,7 +29,10 @@ const storedBeforeTheMask: CredentialedAccount = {
 };
 
 async function renderRow(account: CredentialedAccount, parameters: BridgeParameters = {}) {
-  installFakeBridge({ accounts: { schemaVersion: 3, accounts: [account] }, ...parameters });
+  installFakeBridge({
+    accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [account] },
+    ...parameters,
+  });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -84,11 +88,17 @@ test('the mask holds four bullets and four characters, with no vendor prefix in 
   await expect.element(screen.getByText('••••7f2c', { exact: true })).toBeVisible();
 });
 
-test('a key stored before the mask existed reads as its name alone', async () => {
+test('a key stored before the mask existed reads the name beside the bare bullets', async () => {
   const screen = await renderRow(storedBeforeTheMask);
 
   await expect.element(screen.getByText('build', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText(/••••/)).not.toBeInTheDocument();
+  await expect.element(screen.getByText('••••', { exact: true })).toBeVisible();
+});
+
+test('the bare bullets still read as a stored key to a screen reader', async () => {
+  const screen = await renderRow(storedBeforeTheMask);
+
+  await expect.element(screen.getByText('a stored key')).toBeInTheDocument();
 });
 
 test('a key the catalog never offered stands under the provider it was stored as', async () => {
@@ -105,7 +115,7 @@ test('a key the catalog never offered stands under the provider it was stored as
 test('an aggregator key takes the same row and offers no check, because no probe knows it', async () => {
   const screen = await renderRow({ ...stored, provider: 'openrouter', kind: 'aggregator' });
 
-  await expect.element(screen.getByText('OpenRouter', { exact: true })).toBeVisible();
+  await expect.element(screen.getByRole('listitem')).toHaveTextContent('OpenRouter');
 
   await press('Actions for build');
 

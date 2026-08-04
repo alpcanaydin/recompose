@@ -17,8 +17,7 @@ const titles: Record<AccountKind, string> = {
  * Every kind an account can be held as, in the order they are offered.
  *
  * @summary The contract is the one authority on which kinds exist, so the list reads from the
- * schema rather than repeating it and drifting from it. `local` browses to a destination that
- * holds nothing yet, because the document refuses to store a local row.
+ * schema rather than repeating it and drifting from it.
  */
 export const accountKinds: readonly AccountKind[] = accountKindSchema.options;
 

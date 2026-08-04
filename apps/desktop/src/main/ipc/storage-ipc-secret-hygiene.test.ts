@@ -1,5 +1,5 @@
 import { fc, test } from '@fast-check/vitest';
-import { defaultSettings, type KeyCheckReport } from '@recompose/contracts';
+import { ACCOUNTS_VERSION, defaultSettings, type KeyCheckReport } from '@recompose/contracts';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -47,6 +47,9 @@ function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
   return {
     ...storage,
     'accounts:check-key': absent,
+    'accounts:connect-local': absent,
+    'accounts:detect-runtime': absent,
+    'accounts:check-runtime': absent,
     'system:get': absent,
     'system:open-config-folder': absent,
     'system:window-band': absent,
@@ -91,7 +94,7 @@ describe('storage ipc handlers: a subscription never reaches the vault', () => {
 
     const removed = await createStorageIpcHandlers(ctx)['accounts:remove']({ id: 'sub-1' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: ACCOUNTS_VERSION, accounts: [] } });
   });
 });
 

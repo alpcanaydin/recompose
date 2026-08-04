@@ -103,7 +103,7 @@ describe('storage ipc handlers: removing a subscription account', () => {
 
     const removed = await handlers['accounts:remove']({ id: 'acc-one' });
 
-    expect(removed).toEqual({ ok: true, value: { schemaVersion: 3, accounts: [] } });
+    expect(removed).toEqual({ ok: true, value: { schemaVersion: ACCOUNTS_VERSION, accounts: [] } });
     await expect(stands(homes.homeFor('anthropic', 'acc-one'))).resolves.toBe(false);
   });
 
@@ -203,7 +203,9 @@ describe('the registry survives a removal racing a sign-in', () => {
       () => undefined,
     );
 
-    expect(held.accounts.map((row) => row.label)).toEqual(['grace@ex.com']);
+    expect(held.accounts.flatMap((row) => (row.kind === 'local' ? [] : [row.label]))).toEqual([
+      'grace@ex.com',
+    ]);
   });
 });
 

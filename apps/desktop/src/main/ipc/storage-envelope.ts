@@ -1,7 +1,6 @@
 import type { IpcError } from '@recompose/contracts';
 
 import { AccountsNewerSchemaError } from '../storage/accounts-store';
-import { loadVaultFile, VaultNewerSchemaError } from '../storage/vault';
 import { withoutHome } from '../system/home-relative';
 
 const unexplained = 'storage operation failed';
@@ -27,20 +26,4 @@ export function storageFailure(error: unknown, home: string) {
   }
 
   return ipcFailure('storage-failed', withoutHome(reason, home));
-}
-
-export async function openVault(
-  vaultFile: string,
-  onCorrupt: (quarantinedPath: string) => void,
-  home: string,
-) {
-  try {
-    return { ok: true as const, vault: await loadVaultFile(vaultFile, onCorrupt) };
-  } catch (error) {
-    if (error instanceof VaultNewerSchemaError) {
-      return ipcFailure('vault-newer-schema', withoutHome(error.message, home));
-    }
-
-    return storageFailure(error, home);
-  }
 }

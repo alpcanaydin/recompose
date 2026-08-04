@@ -38,6 +38,12 @@ module.exports = {
       to: { path: '^apps/desktop/src/renderer/', reachable: true },
     },
     {
+      name: 'local-runtimes-not-into-vault',
+      severity: 'error',
+      from: { path: '^apps/desktop/src/main/ipc/local-runtimes-ipc\\.ts$' },
+      to: { path: '^apps/desktop/src/main/storage/vault\\.ts$', reachable: true },
+    },
+    {
       name: 'preload-isolated',
       severity: 'error',
       from: { path: '^apps/desktop/src/preload/' },

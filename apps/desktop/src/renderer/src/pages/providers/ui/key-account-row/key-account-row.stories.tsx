@@ -1,5 +1,6 @@
 import type { CredentialedAccount } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect, screen, userEvent } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -35,7 +36,7 @@ const storedUnderAnUnknownProvider: CredentialedAccount = {
 const meta = preview.meta({
   component: KeyAccountRow,
   args: { account: stored },
-  parameters: { bridge: { accounts: { schemaVersion: 3 as const, accounts: [stored] } } },
+  parameters: { bridge: { accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] } } },
   decorators: [
     (Story) => (
       <ul className="mx-auto w-full max-w-column py-4">
@@ -70,7 +71,7 @@ export const Connected = meta.story({
 export const Checked = meta.story({
   parameters: {
     bridge: {
-      accounts: { schemaVersion: 3 as const, accounts: [stored] },
+      accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [stored] },
       keyCheck: 'authenticates' as const,
     },
   },
@@ -83,19 +84,20 @@ export const Checked = meta.story({
 });
 
 /**
- * A key stored before the mask existed, whose second line reads the name alone.
+ * A key stored before the mask existed, whose second line reads the name beside the bare bullets.
  *
  * @summary No migration can mint a tail from a secret it never reads, so the row says less rather
- * than guessing. The line stays honest until the person reconnects the key.
+ * than guessing. The bullets still stand, because a card must always say a key stands there, and
+ * the line stays tailless until the person reconnects the key.
  */
 export const StoredBeforeTheMask = meta.story({
   args: { account: storedBeforeTheMask },
   parameters: {
-    bridge: { accounts: { schemaVersion: 3 as const, accounts: [storedBeforeTheMask] } },
+    bridge: { accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [storedBeforeTheMask] } },
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('release')).toBeVisible();
-    await expect(canvas.queryByText(/••••/)).toBeNull();
+    await expect(await canvas.findByText('••••')).toBeVisible();
   },
 });
 
@@ -110,7 +112,7 @@ export const UnknownProvider = meta.story({
   args: { account: storedUnderAnUnknownProvider },
   parameters: {
     bridge: {
-      accounts: { schemaVersion: 3 as const, accounts: [storedUnderAnUnknownProvider] },
+      accounts: { schemaVersion: ACCOUNTS_VERSION, accounts: [storedUnderAnUnknownProvider] },
     },
   },
   play: async ({ canvas }) => {

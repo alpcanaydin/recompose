@@ -1,5 +1,6 @@
 import type { AccountsDocument, SubscriptionAccountView } from '@recompose/contracts';
 
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
@@ -10,6 +11,7 @@ import { ProvidersPage } from './providers-page';
 
 const subscriptionKind: AccountKind = 'subscription';
 const keyKind: AccountKind = 'api-key';
+const aggregatorKind: AccountKind = 'aggregator';
 const localKind: AccountKind = 'local';
 
 const connected: SubscriptionAccountView = {
@@ -23,7 +25,7 @@ const connected: SubscriptionAccountView = {
 };
 
 const keys: AccountsDocument = {
-  schemaVersion: 3,
+  schemaVersion: ACCOUNTS_VERSION,
   accounts: [
     { id: 'a2', provider: 'openai', kind: 'api-key', label: 'Work key', credentialRef: 'c2' },
   ],
@@ -57,8 +59,35 @@ export const Keys = meta.story({
   parameters: { bridge: { accounts: keys } },
 });
 
-/** The fourth destination, which names what will stand there rather than showing an empty list. */
-export const LocalRuntimes = meta.story({ args: { kind: localKind } });
+/**
+ * The aggregators destination, whose subtitle promises what its cards actually sell.
+ *
+ * @summary Five of the six Soon entries host their own open-model catalogs rather than routing to
+ * other providers, so the line says catalog rather than claiming many providers.
+ */
+export const Aggregators = meta.story({
+  args: { kind: aggregatorKind },
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText('One key, many models, routed through a hosted catalog.'),
+    ).toBeVisible();
+  },
+});
+
+const runtimes: AccountsDocument = {
+  schemaVersion: ACCOUNTS_VERSION,
+  accounts: [{ id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' }],
+};
+
+/** The fourth destination, listing each stored runtime under the screen's own subtitle. */
+export const LocalRuntimes = meta.story({
+  args: { kind: localKind },
+  parameters: { bridge: { accounts: runtimes } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Models this machine serves itself.')).toBeVisible();
+    await expect(await canvas.findByText('http://127.0.0.1:11434')).toBeVisible();
+  },
+});
 
 /** The connected screen in the dark scheme, where each row lifts off the screen behind it. */
 export const DarkScheme = meta.story({

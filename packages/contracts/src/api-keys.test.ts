@@ -7,6 +7,7 @@ import {
   keyProviderIdSchema,
   keyTail,
   pastedKeySchema,
+  recognizedKeyShapeSchema,
   vendorShapeOf,
   authoredRefusalIn,
 } from './api-keys';
@@ -102,23 +103,42 @@ describe('the tail a row publishes in place of the key', () => {
 });
 
 describe('the hint a form draws when a key looks like another vendor', () => {
-  test('the one documented family is the Anthropic opening', () => {
+  test('the Anthropic opening is one documented family', () => {
     expect(vendorShapeOf('sk-ant-api03-9f2c')).toBe('anthropic');
+  });
+
+  test('the OpenRouter opening is the other, so an aggregator key in a first-party field warns', () => {
+    expect(vendorShapeOf('sk-or-v1-9f2c')).toBe('openrouter');
   });
 
   test('the hint reads the trim, so a padded paste still draws it', () => {
     expect(vendorShapeOf('  sk-ant-api03-9f2c\n')).toBe('anthropic');
+    expect(vendorShapeOf('  sk-or-v1-9f2c\n')).toBe('openrouter');
   });
 
   test('an OpenAI key draws no hint, because that vendor documents no stable opening', () => {
     expect(vendorShapeOf('sk-proj-4d1e')).toBeUndefined();
   });
 
-  test.prop([keyBody])('a key outside the one documented family stays unremarked', (body) => {
-    fc.pre(!body.startsWith('sk-ant-'));
+  test('the shapes a recognizer can name are the three the catalog draws marks for', () => {
+    expect(recognizedKeyShapeSchema.options).toEqual(['anthropic', 'openai', 'openrouter']);
+  });
+
+  test.prop([keyBody])('a key outside the two documented families stays unremarked', (body) => {
+    fc.pre(!body.startsWith('sk-ant-') && !body.startsWith('sk-or-v1-'));
 
     expect(vendorShapeOf(body)).toBeUndefined();
   });
+
+  test.prop([surroundingWhitespace, keyBody, surroundingWhitespace])(
+    'however a paste pads an OpenRouter key, it recognizes as openrouter and still connects',
+    (before, body, after) => {
+      const pasted = `${before}sk-or-v1-${body}${after}`;
+
+      expect(vendorShapeOf(pasted)).toBe('openrouter');
+      expect(pastedKeySchema.parse(pasted)).toBe(`sk-or-v1-${body}`);
+    },
+  );
 });
 
 describe('the answer a key check carries back', () => {

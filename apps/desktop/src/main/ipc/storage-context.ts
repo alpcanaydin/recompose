@@ -5,8 +5,6 @@ import { join } from 'node:path';
 import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { SubscriptionRelease } from '../subscriptions/subscription-release';
 
-import { ipcFailure, openVault } from './storage-envelope';
-
 export type StorageIpcContext = {
   /** The home directory this process runs under, so no account name reaches the screen. */
   homeFolder: string;
@@ -36,12 +34,4 @@ export function storagePathsFor(userDataPath: string): StoragePaths {
     accountsFile: join(userDataPath, 'accounts.json'),
     vaultFile: join(userDataPath, 'vault.bin'),
   };
-}
-
-export async function openVaultForWrite(ctx: StorageIpcContext, paths: StoragePaths) {
-  if (!ctx.isEncryptionAvailable()) {
-    return ipcFailure('vault-unavailable', 'OS secret encryption is unavailable');
-  }
-
-  return openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 }

@@ -8,10 +8,12 @@ import { join } from 'node:path';
 import { createBdd, test as base } from 'playwright-bdd';
 
 import type { KeyProbeStub } from './key-probe-stub';
+import type { RuntimeStub } from './runtime-stub';
 import type { SubscriptionTools } from './subscription-tools';
 
 import { fakeKeyProbe } from './key-probe-stub';
 import { dropServer, holdPort, LOOPBACK_HOSTS } from './loopback-ports';
+import { fakeLocalRuntime } from './runtime-stub';
 import { fakeSubscriptionTools } from './subscription-tools';
 
 const appRoot = join(__dirname, '..');
@@ -33,6 +35,7 @@ export type PortSquatter = {
 type ElectronFixtures = {
   electronApp: ElectronApplication;
   keyProbe: KeyProbeStub;
+  localRuntime: RuntimeStub;
   page: Page;
   portSquatter: PortSquatter;
   subscriptionTools: SubscriptionTools;
@@ -104,7 +107,16 @@ export const test = base.extend<ElectronFixtures>({
       await probe.dispose();
     }
   },
-  electronApp: async ({ keyProbe, subscriptionTools }, use, testInfo) => {
+  localRuntime: async ({}, use) => {
+    const runtime = await fakeLocalRuntime();
+
+    try {
+      await use(runtime);
+    } finally {
+      await runtime.dispose();
+    }
+  },
+  electronApp: async ({ $tags, keyProbe, localRuntime, subscriptionTools }, use, testInfo) => {
     const userDataDir = join(homedir(), `.recompose-e2e-w${String(testInfo.parallelIndex)}`);
 
     await rm(userDataDir, { force: true, recursive: true });
@@ -117,6 +129,9 @@ export const test = base.extend<ElectronFixtures>({
         ELECTRON_RENDERER_URL: '',
         RECOMPOSE_USER_DATA_DIR: userDataDir,
         RECOMPOSE_PROBE_ORIGIN: keyProbe.origin,
+        ...($tags.includes('@probes-the-minted-address')
+          ? {}
+          : { RECOMPOSE_RUNTIME_ORIGIN: localRuntime.origin }),
         ...(process.env['CI'] === undefined ? { RECOMPOSE_WINDOW_STAYS_BACK: '1' } : {}),
       }),
     });

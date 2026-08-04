@@ -30,3 +30,9 @@ minimumReleaseAgeExclude:
 overrides:
   fast-check: 4.9.0
   'undici@>=7.0.0 <7.29.0': '^7.29.0'
+
+packageExtensions:
+  '@lobehub/icons':
+    peerDependenciesMeta:
+      '@lobehub/ui':
+        optional: true

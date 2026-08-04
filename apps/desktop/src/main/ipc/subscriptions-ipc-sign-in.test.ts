@@ -1,3 +1,4 @@
+import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { setTimeout as sleepFor } from 'node:timers/promises';
 import { beforeEach, describe, expect, test } from 'vitest';
 
@@ -93,7 +94,10 @@ describe('signing in when nobody finishes and when no terminal opens', () => {
 
     expect(refusalIn(answered).code).toBe('sign-in-timed-out');
     expect(refusalIn(answered).message).toContain('Claude Code');
-    await expect(world.storedAccounts()).resolves.toEqual({ schemaVersion: 3, accounts: [] });
+    await expect(world.storedAccounts()).resolves.toEqual({
+      schemaVersion: ACCOUNTS_VERSION,
+      accounts: [],
+    });
   });
 
   test('given a terminal that will not open, the sign-in still watches for the tool', async () => {

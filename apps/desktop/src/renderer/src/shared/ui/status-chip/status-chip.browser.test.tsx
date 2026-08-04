@@ -29,3 +29,11 @@ test('the two tones say their own word, so neither rests on color alone', async 
   await expect.element(page.getByText('Connected')).toBeVisible();
   await expect.element(page.getByText('Needs sign-in')).toBeVisible();
 });
+
+test('a quiet standing says its word and draws its mark like any other tone', async () => {
+  const screen = await render(<StatusChip tone="inert" word="Not running" />);
+
+  await expect.element(page.getByText('Not running')).toBeVisible();
+  expect(screen.container.textContent).toBe('Not running');
+  expect(screen.container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1);
+});

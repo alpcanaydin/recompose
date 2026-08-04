@@ -25,10 +25,13 @@ const channelNames: IpcChannel[] = [
   'subscriptions:sign-in',
   'subscriptions:restore',
   'subscriptions:activate',
+  'accounts:connect-local',
+  'accounts:detect-runtime',
+  'accounts:check-runtime',
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the twenty-one specified channels exist', () => {
+  test('exactly the twenty-four specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 
