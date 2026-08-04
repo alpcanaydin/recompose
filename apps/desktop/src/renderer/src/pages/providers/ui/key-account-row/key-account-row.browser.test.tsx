@@ -88,11 +88,11 @@ test('the mask holds four bullets and four characters, with no vendor prefix in 
   await expect.element(screen.getByText('••••7f2c', { exact: true })).toBeVisible();
 });
 
-test('a key stored before the mask existed reads as its name alone', async () => {
+test('a key stored before the mask existed reads the name beside the bare bullets', async () => {
   const screen = await renderRow(storedBeforeTheMask);
 
   await expect.element(screen.getByText('build', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText(/••••/)).not.toBeInTheDocument();
+  await expect.element(screen.getByText('••••', { exact: true })).toBeVisible();
 });
 
 test('a key the catalog never offered stands under the provider it was stored as', async () => {

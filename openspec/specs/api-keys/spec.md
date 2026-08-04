@@ -93,7 +93,7 @@ The pasted key MUST trim at the contract boundary, so surrounding whitespace nev
 
 ### Requirement: A row reports the product, the name, and the tail
 
-A row MUST read as two lines: the product title its catalog entry carried, then the name beside the masked key tail, and nothing more. The mask MUST hold the last four characters of the trimmed key and MUST carry no vendor prefix. A trim of eight or fewer characters MUST mint no tail, so a mask never holds the whole secret and the row reads the name alone. The main process MUST compute the mask at connect time and store it on the row as a non-secret field, so listing accounts never opens the vault.
+A row MUST read as two lines: the product title its catalog entry carried, then the name beside the masked key tail, and nothing more. The mask MUST hold the last four characters of the trimmed key and MUST carry no vendor prefix. A trim of eight or fewer characters MUST mint no tail, so a mask never holds the whole secret, and the row reads the name beside the bare bullets. The main process MUST compute the mask at connect time and store it on the row as a non-secret field, so listing accounts never opens the vault.
 
 #### Scenario: a connected key reads as two lines
 

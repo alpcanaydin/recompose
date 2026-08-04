@@ -84,10 +84,11 @@ export const Checked = meta.story({
 });
 
 /**
- * A key stored before the mask existed, whose second line reads the name alone.
+ * A key stored before the mask existed, whose second line reads the name beside the bare bullets.
  *
  * @summary No migration can mint a tail from a secret it never reads, so the row says less rather
- * than guessing. The line stays honest until the person reconnects the key.
+ * than guessing. The bullets still stand, because a card must always say a key stands there, and
+ * the line stays tailless until the person reconnects the key.
  */
 export const StoredBeforeTheMask = meta.story({
   args: { account: storedBeforeTheMask },
@@ -96,7 +97,7 @@ export const StoredBeforeTheMask = meta.story({
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('release')).toBeVisible();
-    await expect(canvas.queryByText(/••••/)).toBeNull();
+    await expect(await canvas.findByText('••••')).toBeVisible();
   },
 });
 
