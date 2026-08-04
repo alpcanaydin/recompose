@@ -73,8 +73,20 @@ export const Aggregators = meta.story({
   },
 });
 
-/** The fourth destination, which names what will stand there rather than showing an empty list. */
-export const LocalRuntimes = meta.story({ args: { kind: localKind } });
+const runtimes: AccountsDocument = {
+  schemaVersion: 4,
+  accounts: [{ id: 'l1', provider: 'ollama', kind: 'local', address: 'http://127.0.0.1:11434' }],
+};
+
+/** The fourth destination, listing each stored runtime under the screen's own subtitle. */
+export const LocalRuntimes = meta.story({
+  args: { kind: localKind },
+  parameters: { bridge: { accounts: runtimes } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Models this machine serves itself.')).toBeVisible();
+    await expect(await canvas.findByText('http://127.0.0.1:11434')).toBeVisible();
+  },
+});
 
 /** The connected screen in the dark scheme, where each row lifts off the screen behind it. */
 export const DarkScheme = meta.story({

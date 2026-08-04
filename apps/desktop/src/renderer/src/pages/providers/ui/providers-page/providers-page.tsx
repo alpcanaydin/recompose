@@ -2,7 +2,7 @@ import type { AccountKind } from '../../../../entities/account';
 
 import { accountKindTitle } from '../../../../entities/account';
 import { CredentialedSurface } from '../credentialed-surface/credentialed-surface';
-import { LocalRuntimesNote } from '../local-runtimes-note/local-runtimes-note';
+import { LocalRuntimesSurface } from '../local-runtimes-surface/local-runtimes-surface';
 import { SubscriptionsSurface } from '../subscriptions-surface/subscriptions-surface';
 
 type ProvidersPageProps = {
@@ -19,7 +19,7 @@ const subtitles: Record<AccountKind, string> = {
 
 function kindSurface(kind: AccountKind) {
   if (kind === 'local') {
-    return <LocalRuntimesNote />;
+    return <LocalRuntimesSurface />;
   }
 
   if (kind === 'subscription') {
