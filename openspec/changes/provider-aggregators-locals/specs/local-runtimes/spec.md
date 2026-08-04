@@ -4,7 +4,7 @@
 
 ### Requirement: Detection comes before adding a local runtime
 
-The Local Runtimes catalog MUST offer Ollama as its one connectable entry. The entries that lack a contract MUST stand inert under a Soon badge rather than hidden: LM Studio, llama.cpp, vLLM, and a Custom local server escape hatch. Picking Ollama MUST look for the runtime at its documented localhost port and say what it found before recompose stores anything. Adding the account MUST store the address it answers at and MUST NOT ask for a credential.
+The Local Runtimes catalog MUST offer Ollama as its one connectable entry. The entries that lack a contract MUST stand inert under a Soon badge rather than hidden: LM Studio, llama.cpp, vLLM, and a Custom local server escape hatch. Picking Ollama MUST look for the runtime at its documented port and say what it found before recompose stores anything. The person MAY point the look at another port, because the runtime's own host variable moves it, and the host MUST stay the loopback address recompose mints. Adding the account MUST store the address it answers at and MUST NOT ask for a credential.
 
 #### Scenario: a running runtime answers and joins the registry
 
@@ -19,6 +19,13 @@ The Local Runtimes catalog MUST offer Ollama as its one connectable entry. The e
 - When a person picks Ollama in the catalog
 - Then the surface says the runtime didn't answer
 - And recompose stores nothing until the person decides
+
+#### Scenario: a runtime on a moved port answers through the port field
+
+- Given Ollama answers on a port that isn't the documented one
+- When a person picks Ollama and points the look at that port
+- Then the surface says the runtime answered at the loopback host and that port
+- And adding it stores that address with no credential
 
 ### Requirement: A row reads the runtime's standing as an observation
 

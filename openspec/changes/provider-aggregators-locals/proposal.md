@@ -14,15 +14,19 @@ The two kinds also each break an assumption the shipped records rest on. Archite
 
 **An aggregator row claims no single host and offers no check.** The row reads the two-line key anatomy: the product title, then the name beside the masked tail. No Verify act stands anywhere on or behind the row. The reason is scope: a models probe can't answer about this key, because OpenRouter serves that catalog to anyone. The vendor's credential-scoped endpoint returns spend and limit data this surface has nowhere to put yet. So the row offers no check in this change, rather than half of one. The family rule underneath is worth stating once: a row carries a standing exactly when recompose can observe one without spending. That rule gives the subscription row its chip, gives the local row its chip, and leaves the key and aggregator rows quiet.
 
+**A key row always shows its mask.** The shipped row shows the bullets only beside a minted tail. A key too short to earn one reads as a bare name, and a person can't tell the card holds a key at all. The bullets now stand on every key row, with the tail beside them where one exists. The api-keys contract's short-trim sentence amends with it.
+
 **The key field learns OpenRouter's shape.** The empty field hints the `sk-or-v1-` prefix the way the first-party forms hint theirs, and the shipped shape recognizer learns it. The coverage runs one way, named here so nobody assumes symmetry. An OpenRouter-shaped key pasted into a first-party field now warns. A first-party key pasted into the OpenRouter field warns only where the recognizer knows that vendor's shape. The recognizer's return widens past the first-party id set. The warning still never refuses: a key shaped like another vendor's warns and connects, exactly as the api-keys contract grants.
 
 **The Local Runtimes catalog offers five entries, and one of them connects.** Ollama becomes detectable at its documented localhost address and addable as an account with no credential. LM Studio, llama.cpp, vLLM, and a Custom local server escape hatch stand inert under Soon badges beside it. Each carries its own benefit line: the local server on its known port, the llama-server port, high-throughput GPU serving, and anything serving models on a local port. The placeholder note that said the destination arrives later retires.
 
-**Detection fires on entry, and recompose stores nothing until the person decides.** Picking Ollama looks at once, and no button asks permission to look. The shipped sign-in step set this precedent: it reads the machine on entry and reports what it found, and the detect step inherits that grammar. The step has three faces, and its height changes exactly once. Looking reads a quiet Checking line in the slot the verdict will fill, so the sheet never jumps twice. An answer reads "Ollama is running at 127.0.0.1:11434." with the version the runtime returned beneath. Silence reads "Ollama isn't running at 127.0.0.1:11434. Start it, then check again." On an answer the footer's primary is Add. On silence the primary is Check again, and Add anyway stands beside it as a plain act. Deciding includes adding a server the person will start later, and the default on a failed look must never be a write.
+**Detection fires on entry, and recompose stores nothing until the person decides.** Picking Ollama looks at once, and no button asks permission to look. The shipped sign-in step set this precedent: it reads the machine on entry and reports what it found, and the detect step inherits that grammar. The step has three faces, and its height changes exactly once. Looking reads a quiet Checking line in the slot the verdict will fill, so the sheet never jumps twice. An answer reads "Ollama is running at 127.0.0.1:11434." with the version the runtime returned beneath. Silence reads "Ollama isn't running at 127.0.0.1:11434. Start it, then check again."
+
+**The person's one knob is the port.** A port field stands on the detect step, prefilled with the documented 11434, because the runtime's own host variable commonly moves the port. Changing it re-runs the look at the loopback host and that port, and adding stores the address that answered. The host never becomes a field: the recorded defect classes live in hosts and paths, and both stay in recompose's hands. On an answer the footer's primary is Add. On silence the primary is Check again, and Add anyway stands beside it as a plain act. Deciding includes adding a server the person will start later, and the default on a failed look must never be a write.
 
 **A local account joins the registry as its own union arm, and it holds no credential.** The `local` arm stores the runtime and its canonical address, `http://127.0.0.1:11434` for Ollama, and nothing else. It carries no label, because the runtime's name is the row's name, and no `credentialRef`, because nothing exists to reference. The arm parses as a `strictObject`, so a credential on a local row is a parse error rather than a review note, the mechanism ADR 0069 set. `ACCOUNTS_VERSION` moves from 3 to 4 with a no-op migration, so an older build refuses the newer document readably instead of quarantining it. The contracts commit lands first and alone, before anything can mint a local row.
 
-**The renderer never supplies an address.** The main process mints the stored address from a contracts-owned table. No row can ever hold `localhost`, the host behind the recorded defect where Node resolves it to IPv6 while Ollama listens on IPv4.
+**The renderer never supplies an address, only a port.** The main process mints the stored address from a contracts-owned host table and the port the person chose, defaulting to the documented one. No row can ever hold `localhost`, the host behind the recorded defect where Node resolves it to IPv6 while Ollama listens on IPv4.
 
 **Reachability speaks its own three verdicts, disjoint from the key-check triad.** `answers` carries the version Ollama's version endpoint returns. `unrecognized` names an HTTP answer that isn't a version body, and it carries the status, so a stranger squatting the port never reads as Ollama. `unreachable` means nothing answered. The engine child mints the verdicts, including the transport reading, and main folds a dead child to `unreachable`. Nothing stores a verdict, and a remount forgets the reading.
 
@@ -40,7 +44,7 @@ The two kinds also each break an assumption the shipped records rest on. Archite
 
 **What this change leaves out, on purpose.**
 
-- No editable base URLs: main mints the one documented address, and no field accepts another.
+- No editable hosts or paths: the port is the one knob, and main mints everything around it.
 - No optional tokens: a local row can't hold a credential, and no form asks for one.
 - No model enumeration and no pickers: a row says the server answers, never what it serves.
 - No gateway routing targets: neither kind becomes routable here, so composition stays a later change.
@@ -57,7 +61,8 @@ The two kinds also each break an assumption the shipped records rest on. Archite
 
 ### Modified capabilities
 
-- None. The `api-keys` contract already grants the warning this change extends: a key shaped like another vendor's may warn and must still connect, and teaching the recognizer one more shape changes no sentence. The `subscriptions` contract asks each row to carry the provider's mark, and a real logo satisfies that sentence better than a monogram did.
+- `api-keys`: one sentence changes. The shipped contract reads that a short trim mints no tail "and the row reads the name alone"; the row now reads the name beside the bare bullets, so a card always says a key stands there. The no-tail rule itself holds unchanged.
+- Nothing else moves. The `api-keys` warning rule already grants the shape this change teaches, and the `subscriptions` contract's mark sentence reads better under a real logo than under a monogram.
 
 ## Impact
 
