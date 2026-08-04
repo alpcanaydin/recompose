@@ -171,6 +171,16 @@ test('the local catalog says what it offers in its own sentence', async () => {
   await expect.element(screen.getByText('Servers this machine already runs.')).toBeVisible();
 });
 
+test('the aggregator catalog offers a hosted catalog rather than the providers themselves', async () => {
+  installFakeBridge({ tools: [claudeCode] });
+
+  const screen = await renderCatalog('aggregator');
+
+  await expect
+    .element(screen.getByText('One key, many models, routed through a hosted catalog.'))
+    .toBeVisible();
+});
+
 test('picking the runtime stands the detect step where the grid was', async () => {
   installFakeBridge({ tools: [claudeCode] });
 
