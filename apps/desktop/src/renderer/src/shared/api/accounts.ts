@@ -14,7 +14,9 @@ export const accountsQueryOptions = queryOptions({
  *
  * @summary Reach for it from the detect step the moment it opens, so the look never waits on a
  * button. The reading dies with the screen: nothing caches it past unmount, and every mount looks
- * again, because a server that stopped since the last look must never read as running.
+ * again, because a server that stopped since the last look must never read as running. The look
+ * runs whatever the machine says about the internet, because it reaches loopback over IPC: a
+ * dropped Wi-Fi connection must never hold back a question about this machine.
  */
 export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId) {
   return queryOptions({
@@ -22,6 +24,7 @@ export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId) {
     queryFn: async () =>
       unwrapIpcResult(await window.recompose['accounts:detect-runtime']({ runtime })),
     gcTime: 0,
+    networkMode: 'always',
     refetchOnMount: 'always',
   });
 }
@@ -31,13 +34,15 @@ export function runtimeDetectionQueryOptions(runtime: LocalRuntimeId) {
  *
  * @summary Reach for it from a local row on every mount and on every Check again. The standing is
  * an observation rather than a stored fact, so nothing caches it past unmount and no row ever
- * carries a claim older than its own screen.
+ * carries a claim older than its own screen. The look rides loopback over IPC, so it runs whatever
+ * the machine says about the internet rather than leaving the row without a chip.
  */
 export function runtimeStandingQueryOptions(id: string) {
   return queryOptions({
     queryKey: ['runtime-standing', id],
     queryFn: async () => unwrapIpcResult(await window.recompose['accounts:check-runtime']({ id })),
     gcTime: 0,
+    networkMode: 'always',
     refetchOnMount: 'always',
   });
 }
@@ -47,7 +52,8 @@ export function runtimeStandingQueryOptions(id: string) {
  *
  * @summary The request carries only the runtime id, because main mints the stored address from
  * the documented table and nothing on this path can hold a secret. The registry grew a row, so
- * the accounts reading is asked again.
+ * the accounts reading is asked again. The act runs whatever the machine says about the internet,
+ * because it writes a local registry row over IPC rather than reaching any provider.
  */
 export function useConnectLocalRuntime() {
   const queryClient = useQueryClient();
@@ -55,6 +61,7 @@ export function useConnectLocalRuntime() {
   return useMutation({
     mutationFn: async (request: IpcRequest<'accounts:connect-local'>) =>
       unwrapIpcResult(await window.recompose['accounts:connect-local'](request)),
+    networkMode: 'always',
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['accounts'] });
     },
