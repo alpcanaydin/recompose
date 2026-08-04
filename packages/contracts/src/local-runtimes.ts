@@ -27,11 +27,10 @@ export function documentedRuntimePort(runtime: LocalRuntimeId): number {
   return Number(new URL(localRuntimes[runtime].address).port);
 }
 
-export function runtimeAddressFor(runtime: LocalRuntimeId, port?: number): string {
-  if (port === undefined) {
-    return localRuntimes[runtime].address;
-  }
-
+export function runtimeAddressFor(
+  runtime: LocalRuntimeId,
+  port: number = documentedRuntimePort(runtime),
+): string {
   const moved = new URL(localRuntimes[runtime].address);
 
   moved.port = String(port);
