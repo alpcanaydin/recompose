@@ -11,9 +11,10 @@ import type {
 } from './index';
 
 describe('the channels that carry a local runtime', () => {
-  test('connecting a runtime names the runtime alone, so no secret can reach the registry', () => {
+  test('connecting a runtime names the runtime and at most a port, so no secret can reach the registry', () => {
     expectTypeOf<IpcRequest<'accounts:connect-local'>>().toEqualTypeOf<{
       runtime: LocalRuntimeId;
+      port?: number | undefined;
     }>();
     expectTypeOf<IpcRequest<'accounts:connect-local'>>().not.toHaveProperty('secret');
     expectTypeOf<IpcRequest<'accounts:connect-local'>>().not.toHaveProperty('key');
@@ -31,9 +32,10 @@ describe('the channels that carry a local runtime', () => {
     >();
   });
 
-  test('detecting names a runtime and checking names a stored row', () => {
+  test('detecting names a runtime and at most a port, and checking names a stored row', () => {
     expectTypeOf<IpcRequest<'accounts:detect-runtime'>>().toEqualTypeOf<{
       runtime: LocalRuntimeId;
+      port?: number | undefined;
     }>();
     expectTypeOf<IpcRequest<'accounts:check-runtime'>>().toEqualTypeOf<{ id: string }>();
   });

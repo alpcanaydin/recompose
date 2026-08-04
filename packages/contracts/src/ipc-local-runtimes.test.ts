@@ -33,6 +33,24 @@ describe('what the local runtime channels ask for', () => {
     }
   });
 
+  test('either look may point at another port, and no port at all means the documented one', () => {
+    for (const request of [connectLocal, detect]) {
+      expect(request.parse({ runtime: 'ollama', port: 9000 })).toEqual({
+        runtime: 'ollama',
+        port: 9000,
+      });
+      expect(request.parse({ runtime: 'ollama' })).toEqual({ runtime: 'ollama' });
+    }
+  });
+
+  test('a port outside what a loopback server can bind is refused', () => {
+    for (const request of [connectLocal, detect]) {
+      for (const port of [0, 65536, 11434.5, '9000']) {
+        expect(request.safeParse({ runtime: 'ollama', port }).success).toBe(false);
+      }
+    }
+  });
+
   test('connecting or detecting a runtime nothing reaches is refused', () => {
     for (const request of [connectLocal, detect]) {
       expect(request.safeParse({ runtime: 'vllm' }).success).toBe(false);

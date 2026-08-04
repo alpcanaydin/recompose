@@ -19,6 +19,26 @@ export const localRuntimes = {
  */
 export const runtimeLookBoundMs = 3_000;
 
+export const RUNTIME_PORT_RANGE = { min: 1, max: 65535 } as const;
+
+export const runtimePortSchema = z.int().min(RUNTIME_PORT_RANGE.min).max(RUNTIME_PORT_RANGE.max);
+
+export function documentedRuntimePort(runtime: LocalRuntimeId): number {
+  return Number(new URL(localRuntimes[runtime].address).port);
+}
+
+export function runtimeAddressFor(runtime: LocalRuntimeId, port?: number): string {
+  if (port === undefined) {
+    return localRuntimes[runtime].address;
+  }
+
+  const moved = new URL(localRuntimes[runtime].address);
+
+  moved.port = String(port);
+
+  return moved.origin;
+}
+
 const loopbackHost = '127.0.0.1';
 
 const probeableProtocols = ['http:', 'https:'];

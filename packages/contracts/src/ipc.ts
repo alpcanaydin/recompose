@@ -4,7 +4,11 @@ import { accountsDocumentSchema, credentialedAccountKindSchema } from './account
 import { keyCheckReportSchema, pastedKeySchema } from './api-keys';
 import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
 import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
-import { localRuntimeIdSchema, runtimeReachabilitySchema } from './local-runtimes';
+import {
+  localRuntimeIdSchema,
+  runtimePortSchema,
+  runtimeReachabilitySchema,
+} from './local-runtimes';
 import { nonBlankString } from './non-blank';
 import { settingsPatchSchema, settingsSchema } from './settings';
 import {
@@ -81,11 +85,11 @@ export const ipcChannels = {
     response: ipcResult(keyCheckReportSchema),
   },
   'accounts:connect-local': {
-    request: z.strictObject({ runtime: localRuntimeIdSchema }),
+    request: z.strictObject({ runtime: localRuntimeIdSchema, port: runtimePortSchema.optional() }),
     response: ipcResult(accountsDocumentSchema),
   },
   'accounts:detect-runtime': {
-    request: z.strictObject({ runtime: localRuntimeIdSchema }),
+    request: z.strictObject({ runtime: localRuntimeIdSchema, port: runtimePortSchema.optional() }),
     response: ipcResult(runtimeReachabilitySchema),
   },
   'accounts:check-runtime': {

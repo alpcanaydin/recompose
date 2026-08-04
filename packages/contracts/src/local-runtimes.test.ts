@@ -2,10 +2,14 @@ import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
 import {
+  documentedRuntimePort,
   localRuntimeIdSchema,
   localRuntimes,
   loopbackAddressSchema,
+  RUNTIME_PORT_RANGE,
+  runtimeAddressFor,
   runtimeLookBoundMs,
+  runtimePortSchema,
   runtimeReachabilitySchema,
 } from './local-runtimes';
 import { nonBlankString } from './non-blank';
@@ -65,6 +69,54 @@ describe('the name a runtime goes by on screen', () => {
       expect(nonBlankString.parse(localRuntimes[runtime].name)).toBe(localRuntimes[runtime].name);
     }
   });
+});
+
+describe('the port a person may point a look at', () => {
+  test('any port a loopback server can bind is admitted', () => {
+    for (const port of [RUNTIME_PORT_RANGE.min, 11434, 9000, RUNTIME_PORT_RANGE.max]) {
+      expect(runtimePortSchema.parse(port)).toBe(port);
+    }
+  });
+
+  test('a number no port can be is refused', () => {
+    for (const outside of [0, -1, RUNTIME_PORT_RANGE.max + 1, 11434.5, Number.NaN]) {
+      expect(runtimePortSchema.safeParse(outside).success).toBe(false);
+    }
+  });
+
+  test('a port arrives as a number rather than as text to coerce', () => {
+    expect(runtimePortSchema.safeParse('11434').success).toBe(false);
+  });
+});
+
+describe('the address main mints from the table and a chosen port', () => {
+  test('no chosen port mints the documented address', () => {
+    expect(runtimeAddressFor('ollama')).toBe(localRuntimes.ollama.address);
+  });
+
+  test('a chosen port mints the loopback host at that port', () => {
+    expect(runtimeAddressFor('ollama', 9000)).toBe('http://127.0.0.1:9000');
+  });
+
+  test('the documented port itself mints the documented address', () => {
+    expect(runtimeAddressFor('ollama', documentedRuntimePort('ollama'))).toBe(
+      localRuntimes.ollama.address,
+    );
+  });
+
+  test('the documented port reads out of the documented address', () => {
+    expect(documentedRuntimePort('ollama')).toBe(11434);
+  });
+
+  test.prop([fc.integer({ min: RUNTIME_PORT_RANGE.min, max: RUNTIME_PORT_RANGE.max })])(
+    'every minted address is one a stored row would admit, and none names localhost',
+    (port) => {
+      const minted = runtimeAddressFor('ollama', port);
+
+      expect(loopbackAddressSchema.parse(minted)).toBe(minted);
+      expect(minted).not.toContain('localhost');
+    },
+  );
 });
 
 describe('the bound a look at a runtime waits under', () => {
