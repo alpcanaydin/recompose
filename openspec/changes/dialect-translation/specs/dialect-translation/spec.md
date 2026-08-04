@@ -46,3 +46,21 @@ The library MUST translate a streaming answer between the dialects as it arrives
 - When the library translates it
 - Then the translated stream ends in the other dialect's error shape
 - And no synthetic success stands after the failure
+
+### Requirement: The Responses dialect joins the set
+
+The library MUST translate the OpenAI Responses dialect the same three ways: requests, responses, and the event stream, against each dialect the library holds. Codex speaks only this dialect, so a gateway serving Codex depends on it. The same fates discipline holds: carried, mapped, or refused typed, and never a silent drop.
+
+#### Scenario: a Codex request crosses to an Anthropic target
+
+- Given a Responses-dialect request carrying instructions and tool definitions
+- When the library translates it to the Anthropic shape
+- Then the instructions, the tools, and the input stand in the Anthropic shape
+- And nothing the source carried has vanished without a named fate
+
+#### Scenario: a loose history repairs with a named fate
+
+- Given a history carrying a tool call no tool result ever answered
+- When the library translates it to the Anthropic shape
+- Then the unanswered call leaves the history
+- And the translation names the repair as that call's fate
