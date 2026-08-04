@@ -5,6 +5,7 @@ import {
   localRuntimeIdSchema,
   localRuntimes,
   loopbackAddressSchema,
+  runtimeLookBoundMs,
   runtimeReachabilitySchema,
 } from './local-runtimes';
 import { nonBlankString } from './non-blank';
@@ -63,6 +64,12 @@ describe('the name a runtime goes by on screen', () => {
     for (const runtime of localRuntimeIdSchema.options) {
       expect(nonBlankString.parse(localRuntimes[runtime].name)).toBe(localRuntimes[runtime].name);
     }
+  });
+});
+
+describe('the bound a look at a runtime waits under', () => {
+  test('a look gives a loopback server three seconds before it counts as silence', () => {
+    expect(runtimeLookBoundMs).toBe(3_000);
   });
 });
 
