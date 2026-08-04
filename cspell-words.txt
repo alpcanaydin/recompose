@@ -84,6 +84,7 @@ libvips
 lifecycles
 lintable
 litellm
+lobehub
 lockfiles
 lossily
 McCabe
