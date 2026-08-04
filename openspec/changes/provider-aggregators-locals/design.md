@@ -497,6 +497,8 @@ Picking Ollama looks at once. The sign-in step set the precedent: it reads the m
 | The local path never touches the vault                 | the vault-never-created assertion in `local-runtimes-ipc.test.ts`      |
 | A dead child folds to `unreachable`                    | the child-death example in `engine-host-probe.test.ts`                 |
 
+One surviving mutant in `runtime-probe.ts` is equivalent by construction. Emptying the body-parse catch turns its `null` into `undefined`, and both readings fold to `unrecognized` with the status, because the design folds every unparsable body alike. No observable difference exists, so no test can kill it, and the mutation threshold stays untouched.
+
 ## Task decomposition hooks
 
 Tasks run in parallel by default. A dispatch serializes only for a named blocker: one task reads what another produces, two tasks own the same file, or one inspects what another writes. Every dispatch names its files and states that the others run on disjoint files.
