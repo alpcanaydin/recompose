@@ -221,3 +221,43 @@ describe('encodeRequest: images cross as input_image parts', () => {
     });
   });
 });
+
+describe('encodeRequest drops a tool-result image toward Responses', () => {
+  it('keeps the text of a tool result and names the dropped image with a cost-bearing fate', () => {
+    const request = aHubRequest({
+      messages: [
+        aHubMessage({
+          role: 'user',
+          content: [
+            aHubToolResultBlock({
+              content: [
+                { type: 'text', text: 'ok' },
+                { type: 'image', source: { type: 'url', url: 'https://example.test/y.png' } },
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const { value, fates } = expectTranslation(encodeRequest(request));
+
+    expect(JSON.stringify(value)).not.toContain('y.png');
+    expect(fateFor(fates, 'tool_result_image')).toEqual({
+      field: 'tool_result_image',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
+  });
+
+  it('records no image fate when a tool result carries only text', () => {
+    const request = aHubRequest({
+      messages: [aHubMessage({ role: 'user', content: [aHubToolResultBlock()] })],
+    });
+
+    const { fates } = expectTranslation(encodeRequest(request));
+
+    expect(fates.some((fate) => fate.field === 'tool_result_image')).toBe(false);
+  });
+});

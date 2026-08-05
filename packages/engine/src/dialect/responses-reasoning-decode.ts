@@ -1,5 +1,5 @@
 import type { Fate } from './fates';
-import type { HubContentBlock, HubMessage } from './hub';
+import type { HubContentBlock, HubMessage, HubThinkingBlock } from './hub';
 import type { ResponsesReasoningItem } from './responses-wire';
 
 import {
@@ -15,35 +15,37 @@ function assistantWith(content: HubContentBlock): HubMessage {
   return { role: 'assistant', content: [content] };
 }
 
-function foldForeignReasoning(item: ResponsesReasoningItem): FoldedReasoning {
-  const fates: Fate[] = [{ field: 'encrypted_content', disposition: 'mapped', to: 'absent' }];
-  const thinking = thinkingBlockOf(item);
-
-  if (thinking.text.length === 0) {
-    return { messages: [], fates };
+function keepOrDropThinking(block: HubThinkingBlock, carriedFates: Fate[]): FoldedReasoning {
+  if (block.text.length > 0) {
+    return { messages: [assistantWith(block)], fates: carriedFates };
   }
 
-  return { messages: [assistantWith(thinking)], fates };
+  return { messages: [], fates: carriedFates.map((fate) => ({ ...fate, to: 'absent' })) };
 }
+
+const encryptedContentAbsent: Fate = {
+  field: 'encrypted_content',
+  disposition: 'mapped',
+  to: 'absent',
+};
 
 export function foldReasoning(item: ResponsesReasoningItem): FoldedReasoning {
   const classified = classifyReasoningSignature(item.encrypted_content);
 
   switch (classified.kind) {
     case 'none':
-      return { messages: [assistantWith(thinkingBlockOf(item))], fates: [] };
+      return keepOrDropThinking(thinkingBlockOf(item), []);
     case 'compatible':
-      return {
-        messages: [assistantWith(signedThinkingBlockOf(item, classified.signature))],
-        fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' }],
-      };
+      return keepOrDropThinking(signedThinkingBlockOf(item, classified.signature), [
+        { field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' },
+      ]);
     case 'redacted':
       return {
         messages: [assistantWith(redactedThinkingBlockOf(classified.data))],
         fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'redacted_thinking' }],
       };
     case 'foreign':
-      return foldForeignReasoning(item);
+      return keepOrDropThinking(thinkingBlockOf(item), [encryptedContentAbsent]);
 
     default: {
       const unhandled: never = classified;

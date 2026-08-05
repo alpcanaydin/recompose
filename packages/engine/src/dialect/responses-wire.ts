@@ -119,10 +119,13 @@ export type ResponsesStreamResponse = {
   usage?: ResponsesUsage;
 };
 
-export type ResponsesStreamItem =
-  | { type: 'message'; role: 'assistant' }
-  | { type: 'function_call'; id?: string; call_id?: string; name: string }
-  | { type: 'reasoning'; id: string };
+export type ResponsesStreamItem = {
+  type: string;
+  role?: 'assistant';
+  id?: string;
+  call_id?: string;
+  name?: string;
+};
 
 export type ResponsesKnownStreamEvent =
   | { type: 'response.created'; response: ResponsesStreamResponse }

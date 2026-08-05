@@ -160,3 +160,32 @@ describe('decodeStream: a failure and the unknown pass through honestly', () => 
     expect(events.map((event) => event.type)).toEqual(['message-begin', 'message-end']);
   });
 });
+
+describe('decodeStream: an unknown output item is skipped rather than tearing the stream', () => {
+  it('skips an unknown output item and its later events, keeping the surrounding known ones', async () => {
+    const events: ResponsesStreamEvent[] = [
+      { type: 'response.created', response: { id: 'r', status: 'in_progress', output: [] } },
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { type: 'message', role: 'assistant' },
+      },
+      { type: 'response.output_text.delta', output_index: 0, delta: 'hi' },
+      { type: 'response.output_item.done', output_index: 0 },
+      { type: 'response.output_item.added', output_index: 1, item: { type: 'web_search_call' } },
+      { type: 'response.output_text.delta', output_index: 1, delta: 'ignored' },
+      { type: 'response.output_item.done', output_index: 1 },
+      { type: 'response.completed', response: { id: 'r', status: 'completed', output: [] } },
+    ];
+
+    const decoded = await decode(events);
+
+    expect(decoded).toContainEqual({
+      type: 'block-delta',
+      index: 0,
+      delta: { kind: 'text', text: 'hi' },
+    });
+    expect(decoded.some((event) => 'index' in event && event.index === 1)).toBe(false);
+    expect(JSON.stringify(decoded)).not.toContain('ignored');
+  });
+});

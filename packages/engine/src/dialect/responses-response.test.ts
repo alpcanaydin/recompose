@@ -43,7 +43,7 @@ describe('decodeResponse: an answer folds into the hub', () => {
     expect(value.stopReason).toBe('end');
   });
 
-  it('reads cached and reasoning token details into the hub usage', () => {
+  it('reads cached and reasoning token details into the hub usage, cache reads excluded from input', () => {
     const response = aResponsesResponse({
       usage: {
         input_tokens: 30,
@@ -56,10 +56,22 @@ describe('decodeResponse: an answer folds into the hub', () => {
     const { value } = expectTranslation(decodeResponse(response));
 
     expect(value.usage).toEqual({
-      inputTokens: 30,
+      inputTokens: 24,
       outputTokens: 10,
       cacheReadTokens: 6,
       reasoningTokens: 4,
+    });
+  });
+
+  it('clamps input tokens to zero when a provider reports more cache reads than input', () => {
+    const response = aResponsesResponse({
+      usage: { input_tokens: 3, output_tokens: 1, input_tokens_details: { cached_tokens: 5 } },
+    });
+
+    expect(expectTranslation(decodeResponse(response)).value.usage).toEqual({
+      inputTokens: 0,
+      outputTokens: 1,
+      cacheReadTokens: 5,
     });
   });
 });
@@ -163,7 +175,7 @@ describe('encodeResponse: a hub answer folds back out to Responses', () => {
     const { value } = expectTranslation(encodeResponse(response));
 
     expect(value.usage).toEqual({
-      input_tokens: 7,
+      input_tokens: 12,
       output_tokens: 3,
       input_tokens_details: { cached_tokens: 5 },
       output_tokens_details: { reasoning_tokens: 2 },

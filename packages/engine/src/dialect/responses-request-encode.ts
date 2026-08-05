@@ -74,7 +74,19 @@ function partOfBlock(
     : { type: 'input_text', text: block.text };
 }
 
-function functionCallOutputItemOf(block: HubToolResultBlock): ResponsesFunctionCallOutputItem {
+function functionCallOutputItemOf(
+  block: HubToolResultBlock,
+  fates: Fate[],
+): ResponsesFunctionCallOutputItem {
+  if (block.content.some((part) => part.type === 'image')) {
+    fates.push({
+      field: 'tool_result_image',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
+  }
+
   const output = block.content
     .flatMap((part) => (part.type === 'text' ? [part.text] : []))
     .join('');
@@ -82,12 +94,15 @@ function functionCallOutputItemOf(block: HubToolResultBlock): ResponsesFunctionC
   return { type: 'function_call_output', call_id: block.toolUseId, output };
 }
 
-function itemOfToolBlock(block: HubToolUseBlock | HubToolResultBlock): ResponsesInputItem {
+function itemOfToolBlock(
+  block: HubToolUseBlock | HubToolResultBlock,
+  fates: Fate[],
+): ResponsesInputItem {
   switch (block.type) {
     case 'tool_use':
       return functionCallItemOf(block);
     case 'tool_result':
-      return functionCallOutputItemOf(block);
+      return functionCallOutputItemOf(block, fates);
 
     default: {
       const unhandled: never = block;
@@ -133,7 +148,7 @@ function encodeBlockInto(block: HubMessage['content'][number], context: EncodeCo
   }
 
   flushParts(context);
-  context.items.push(itemOfToolBlock(block));
+  context.items.push(itemOfToolBlock(block, context.fates));
 }
 
 function encodeMessage(message: HubMessage): FoldedInput {

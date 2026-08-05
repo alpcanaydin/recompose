@@ -23,6 +23,8 @@ import type {
 import { imageBlockFromDataUri, imageSourceFromUrl, parseToolArguments } from './hub-build';
 import { sanitizeToolId } from './tool-id';
 
+export const translatedResponseId = 'resp_translated';
+
 function toHubContentBlock(part: ResponsesContentPart): HubTextBlock | HubImageBlock {
   switch (part.type) {
     case 'input_text':
@@ -144,12 +146,23 @@ function reasoningTokensOf(usage: ResponsesUsage): number | undefined {
   return usage.output_tokens_details?.reasoning_tokens;
 }
 
+function hubInputTokens(
+  usage: ResponsesUsage,
+  cached: number | undefined,
+): { inputTokens?: number } {
+  if (usage.input_tokens === undefined) {
+    return {};
+  }
+
+  return { inputTokens: Math.max(0, usage.input_tokens - (cached ?? 0)) };
+}
+
 function hubUsageOf(usage: ResponsesUsage): HubUsage {
   const cached = cachedTokensOf(usage);
   const reasoning = reasoningTokensOf(usage);
 
   return {
-    ...(usage.input_tokens === undefined ? {} : { inputTokens: usage.input_tokens }),
+    ...hubInputTokens(usage, cached),
     ...(usage.output_tokens === undefined ? {} : { outputTokens: usage.output_tokens }),
     ...(cached === undefined ? {} : { cacheReadTokens: cached }),
     ...(reasoning === undefined ? {} : { reasoningTokens: reasoning }),
@@ -160,9 +173,17 @@ export function toHubUsage(usage: ResponsesUsage | undefined): HubUsage {
   return usage === undefined ? {} : hubUsageOf(usage);
 }
 
+function responsesInputTokens(usage: HubUsage): { input_tokens?: number } {
+  if (usage.inputTokens === undefined) {
+    return {};
+  }
+
+  return { input_tokens: usage.inputTokens + (usage.cacheReadTokens ?? 0) };
+}
+
 export function toResponsesUsage(usage: HubUsage): ResponsesUsage {
   return {
-    ...(usage.inputTokens === undefined ? {} : { input_tokens: usage.inputTokens }),
+    ...responsesInputTokens(usage),
     ...(usage.outputTokens === undefined ? {} : { output_tokens: usage.outputTokens }),
     ...(usage.cacheReadTokens === undefined
       ? {}

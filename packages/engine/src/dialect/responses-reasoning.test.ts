@@ -67,6 +67,35 @@ describe('decodeRequest: a reasoning item crosses by the compatibility of its si
   });
 });
 
+describe('decodeRequest: an empty reasoning item never fabricates a thinking block', () => {
+  it('drops a summary-less reasoning item rather than emitting an empty thinking block', () => {
+    const { value } = expectTranslation(
+      decodeRequest(
+        aResponsesRequest({
+          input: [aResponsesUserMessage(), aResponsesReasoningItem({ summary: [] })],
+        }),
+      ),
+    );
+
+    expect(thinkingOf(value.messages)).toHaveLength(0);
+    expect(value.messages.map((message) => message.role)).toEqual(['user']);
+  });
+
+  it('drops an empty compatible reasoning item and marks its signature absent', () => {
+    const item = aCompatibleReasoningItem('sig-x', { summary: [] });
+    const { value, fates } = expectTranslation(
+      decodeRequest(aResponsesRequest({ input: [aResponsesUserMessage(), item] })),
+    );
+
+    expect(thinkingOf(value.messages)).toHaveLength(0);
+    expect(fateFor(fates, 'encrypted_content')).toEqual({
+      field: 'encrypted_content',
+      disposition: 'mapped',
+      to: 'absent',
+    });
+  });
+});
+
 describe('decodeRequest: a foreign reasoning turn still carries its readable summary', () => {
   it('keeps a foreign signature turn as thinking when it still carries a readable summary', () => {
     const { value, fates } = expectTranslation(

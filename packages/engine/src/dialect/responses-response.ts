@@ -17,9 +17,8 @@ import {
   toHubUsage,
   toolUseBlockOf,
   toResponsesUsage,
+  translatedResponseId,
 } from './responses-shared';
-
-const encodedResponseId = 'resp_translated';
 
 function outputBlocksOf(item: ResponsesOutputItem): HubContentBlock[] {
   switch (item.type) {
@@ -113,7 +112,7 @@ export function encodeResponse(
   const fates: Fate[] = [...encoded.fates, ...(outcome.lossy === true ? [lossyStopFate()] : [])];
 
   const value: ResponsesResponse = {
-    id: encodedResponseId,
+    id: translatedResponseId,
     status: outcome.status,
     output: encoded.output,
     ...(outcome.incompleteReason === undefined

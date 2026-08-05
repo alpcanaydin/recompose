@@ -117,9 +117,13 @@ export function aResponsesReasoningItem(
   };
 }
 
-export function aCompatibleReasoningItem(signature = 'sig-abc'): ResponsesReasoningItem {
+export function aCompatibleReasoningItem(
+  signature = 'sig-abc',
+  overrides: Partial<ResponsesReasoningItem> = {},
+): ResponsesReasoningItem {
   return aResponsesReasoningItem({
     encrypted_content: `${COMPATIBLE_SIGNATURE_PREFIX}${signature}`,
+    ...overrides,
   });
 }
 

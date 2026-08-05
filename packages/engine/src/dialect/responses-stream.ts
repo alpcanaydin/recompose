@@ -11,9 +11,8 @@ import {
   stopReasonFromResponse,
   toHubUsage,
   toResponsesUsage,
+  translatedResponseId,
 } from './responses-shared';
-
-const streamResponseId = 'resp_translated';
 
 const knownStreamTypes = new Set<string>([
   'response.created',
@@ -33,7 +32,7 @@ function synthesizedToolId(item: { id?: string; call_id?: string }, index: numbe
   return item.call_id ?? item.id ?? `toolu_stream_${index}`;
 }
 
-function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent {
+function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
   switch (item.type) {
     case 'message':
       return { type: 'block-open', index, opening: { kind: 'text' } };
@@ -41,16 +40,13 @@ function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent {
       return {
         type: 'block-open',
         index,
-        opening: { kind: 'tool', id: synthesizedToolId(item, index), name: item.name },
+        opening: { kind: 'tool', id: synthesizedToolId(item, index), name: item.name ?? '' },
       };
     case 'reasoning':
       return { type: 'block-open', index, opening: { kind: 'thinking' } };
 
-    default: {
-      const unhandled: never = item;
-
-      throw new Error(`unhandled responses stream item: ${JSON.stringify(unhandled)}`);
-    }
+    default:
+      return undefined;
   }
 }
 
@@ -89,10 +85,25 @@ type ResponsesBlockEvent = Extract<
   }
 >;
 
-function decodeBlockEvent(event: ResponsesBlockEvent): HubStreamEvent[] {
+function openBlock(
+  event: ResponsesBlockEvent & { type: 'response.output_item.added' },
+  skipped: Set<number>,
+): HubStreamEvent[] {
+  const open = blockOpenOf(event.output_index, event.item);
+
+  if (open === undefined) {
+    skipped.add(event.output_index);
+
+    return [];
+  }
+
+  return [open];
+}
+
+function decodeDeltaOrClose(
+  event: Exclude<ResponsesBlockEvent, { type: 'response.output_item.added' }>,
+): HubStreamEvent[] {
   switch (event.type) {
-    case 'response.output_item.added':
-      return [blockOpenOf(event.output_index, event.item)];
     case 'response.output_text.delta':
       return [
         {
@@ -120,7 +131,18 @@ function decodeBlockEvent(event: ResponsesBlockEvent): HubStreamEvent[] {
   }
 }
 
-function decodeKnownEvent(event: ResponsesKnownStreamEvent): HubStreamEvent[] {
+function decodeBlockEvent(event: ResponsesBlockEvent, skipped: Set<number>): HubStreamEvent[] {
+  if (event.type === 'response.output_item.added') {
+    return openBlock(event, skipped);
+  }
+
+  return skipped.has(event.output_index) ? [] : decodeDeltaOrClose(event);
+}
+
+function decodeKnownEvent(
+  event: ResponsesKnownStreamEvent,
+  skipped: Set<number>,
+): HubStreamEvent[] {
   if (event.type === 'response.created') {
     return [{ type: 'message-begin' }];
   }
@@ -133,15 +155,17 @@ function decodeKnownEvent(event: ResponsesKnownStreamEvent): HubStreamEvent[] {
     return [{ type: 'stream-error', error: { type: event.code, message: event.message } }];
   }
 
-  return decodeBlockEvent(event);
+  return decodeBlockEvent(event, skipped);
 }
 
 export async function* decodeStream(
   source: AsyncIterable<ResponsesStreamEvent>,
 ): AsyncIterable<HubStreamEvent> {
+  const skipped = new Set<number>();
+
   for await (const event of source) {
     if (isKnownStreamEvent(event)) {
-      yield* decodeKnownEvent(event);
+      yield* decodeKnownEvent(event, skipped);
     }
   }
 }
@@ -149,7 +173,7 @@ export async function* decodeStream(
 function createdEvent(): ResponsesStreamEvent {
   return {
     type: 'response.created',
-    response: { id: streamResponseId, status: 'in_progress', output: [] },
+    response: { id: translatedResponseId, status: 'in_progress', output: [] },
   };
 }
 
@@ -219,7 +243,7 @@ function completedEvent(
   return {
     type: 'response.completed',
     response: {
-      id: streamResponseId,
+      id: translatedResponseId,
       status: outcome.status,
       output: [],
       ...(outcome.incompleteReason === undefined
