@@ -15,11 +15,8 @@ export function hubStopFrom(reason: ChatFinishReason): HubStopReason {
     case 'content_filter':
       return 'refusal';
 
-    default: {
-      const unknownReason: never = reason;
-
-      throw new Error(`no hub stop reason for the finish reason: ${JSON.stringify(unknownReason)}`);
-    }
+    default:
+      return 'end';
   }
 }
 

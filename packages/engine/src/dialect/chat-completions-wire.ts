@@ -89,7 +89,7 @@ export type ChatCompletionsRequestCore = {
 
 export type ChatCompletionsRequest = ChatCompletionsRequestCore & ChatIgnoredFields;
 
-export type ChatFinishReason = 'stop' | 'length' | 'tool_calls' | 'content_filter';
+export type ChatFinishReason = 'stop' | 'length' | 'tool_calls' | 'content_filter' | (string & {});
 
 export type ChatUsage = {
   prompt_tokens: number;
