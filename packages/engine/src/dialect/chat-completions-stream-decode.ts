@@ -8,6 +8,7 @@ import type {
 import type { HubStopReason, HubStreamEvent, HubUsage } from './hub';
 
 import { hubStopFrom } from './chat-completions-stops';
+import { hubUsageFromChat } from './chat-completions-usage';
 
 type DecodeState = {
   begun: boolean;
@@ -204,10 +205,7 @@ function decodeChunk(
   }
 
   if (chunk.usage !== undefined && chunk.usage !== null) {
-    state.usage = {
-      inputTokens: chunk.usage.prompt_tokens,
-      outputTokens: chunk.usage.completion_tokens,
-    };
+    state.usage = hubUsageFromChat(chunk.usage);
   }
 }
 

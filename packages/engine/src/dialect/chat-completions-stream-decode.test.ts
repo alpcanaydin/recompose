@@ -78,6 +78,34 @@ describe('decodeStream folds Chat Completions chunks into hub events', () => {
   });
 });
 
+describe('decodeStream carries the chunk usage into the hub terminator', () => {
+  it('excludes cached prompt tokens from input and records them as cache reads', async () => {
+    const frames: readonly ChatStreamFrame[] = [
+      { type: 'chunk', chunk: { choices: [{ index: 0, delta: { content: 'hi' } }] } },
+      {
+        type: 'chunk',
+        chunk: {
+          choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+          usage: {
+            prompt_tokens: 100,
+            completion_tokens: 7,
+            prompt_tokens_details: { cached_tokens: 60 },
+          },
+        },
+      },
+      { type: 'done' },
+    ];
+
+    const end = (await collect(decodeStream(streamOf(frames)))).at(-1);
+
+    expect(end).toEqual({
+      type: 'message-end',
+      stopReason: 'end',
+      usage: { inputTokens: 40, outputTokens: 7, cacheReadTokens: 60 },
+    });
+  });
+});
+
 describe('decodeStream carries failures and unknown events without a synthetic success', () => {
   it('maps a mid-stream error to a terminal stream-error event and stops', async () => {
     const frames: readonly ChatStreamFrame[] = [

@@ -61,6 +61,25 @@ describe('decodeStream: block opens carry their kind, index, and identity', () =
   });
 });
 
+describe('decodeStream: a reasoning summary text delta crosses as a thinking delta', () => {
+  it('reads a reasoning summary text delta as a thinking block delta', async () => {
+    const events = await decode([
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { type: 'reasoning', id: 'rs_1' },
+      },
+      { type: 'response.reasoning_summary_text.delta', output_index: 0, delta: 'because' },
+    ]);
+
+    expect(events).toContainEqual({
+      type: 'block-delta',
+      index: 0,
+      delta: { kind: 'thinking', text: 'because' },
+    });
+  });
+});
+
 describe('decodeStream: an absent tool id is synthesized deterministically', () => {
   it('synthesizes a stable tool id from the item id when the call id is absent', async () => {
     const events = await decode([

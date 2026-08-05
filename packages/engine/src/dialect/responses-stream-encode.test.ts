@@ -107,7 +107,7 @@ describe('encodeStream: openings and terminators cross to Responses', () => {
     ]);
   });
 
-  it('adds a reasoning item for a thinking block open and skips its deltas', async () => {
+  it('adds a reasoning item for a thinking block and streams its text as a summary delta', async () => {
     const events = await encode([
       { type: 'block-open', index: 0, opening: { kind: 'thinking' } },
       { type: 'block-delta', index: 0, delta: { kind: 'thinking', text: 'ponder' } },
@@ -119,6 +119,11 @@ describe('encodeStream: openings and terminators cross to Responses', () => {
       type: 'response.output_item.added',
       output_index: 0,
       item: { type: 'reasoning', id: 'rs_stream_0' },
+    });
+    expect(events).toContainEqual({
+      type: 'response.reasoning_summary_text.delta',
+      output_index: 0,
+      delta: 'ponder',
     });
     expect(events.some((event) => event.type === 'response.output_text.delta')).toBe(false);
   });

@@ -131,6 +131,7 @@ export type ResponsesKnownStreamEvent =
   | { type: 'response.created'; response: ResponsesStreamResponse }
   | { type: 'response.output_item.added'; output_index: number; item: ResponsesStreamItem }
   | { type: 'response.output_text.delta'; output_index: number; delta: string }
+  | { type: 'response.reasoning_summary_text.delta'; output_index: number; delta: string }
   | { type: 'response.function_call_arguments.delta'; output_index: number; delta: string }
   | { type: 'response.output_item.done'; output_index: number }
   | { type: 'response.completed'; response: ResponsesStreamResponse }

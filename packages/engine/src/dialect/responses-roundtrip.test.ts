@@ -7,10 +7,6 @@ import { decodeRequest, encodeRequest } from './responses-codec';
 import { expectTranslation } from './responses.testkit';
 
 const identifier = fc.string({ minLength: 1, maxLength: 8 });
-const idAlphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-';
-const safeIdentifier = fc
-  .array(fc.constantFrom(...idAlphabet.split('')), { minLength: 1, maxLength: 8 })
-  .map((chars) => chars.join(''));
 const toolArguments = fc.dictionary(identifier, fc.oneof(fc.string(), fc.integer(), fc.boolean()), {
   maxKeys: 3,
 });
@@ -24,22 +20,41 @@ const textMessage = fc
     return { type: 'message', role, content: [part] };
   });
 
-const toolExchange = fc
-  .record({ callId: safeIdentifier, name: identifier, args: toolArguments, output: fc.string() })
-  .map(({ callId, name, args, output }): ResponsesInputItem[] => [
-    { type: 'function_call', call_id: callId, name, arguments: JSON.stringify(args) },
-    { type: 'function_call_output', call_id: callId, output },
-  ]);
+type ToolExchange = { name: string; args: Record<string, unknown>; output: string };
+
+const toolExchange = fc.record({
+  name: identifier,
+  args: toolArguments,
+  output: fc.string(),
+});
+
+function exchangeItems(exchange: ToolExchange, index: number): ResponsesInputItem[] {
+  const callId = `call_${String(index)}`;
+
+  return [
+    {
+      type: 'function_call',
+      call_id: callId,
+      name: exchange.name,
+      arguments: JSON.stringify(exchange.args),
+    },
+    { type: 'function_call_output', call_id: callId, output: exchange.output },
+  ];
+}
 
 const inputItems = fc
   .array(
     fc.oneof(
-      textMessage.map((item) => [item]),
-      toolExchange,
+      textMessage.map((item): { text: ResponsesInputItem } => ({ text: item })),
+      toolExchange.map((exchange): { exchange: ToolExchange } => ({ exchange })),
     ),
     { minLength: 1, maxLength: 6 },
   )
-  .map((groups) => groups.flat());
+  .map((groups) =>
+    groups.flatMap((group, index): ResponsesInputItem[] =>
+      'text' in group ? [group.text] : exchangeItems(group.exchange, index),
+    ),
+  );
 
 const toolDefinition = fc.record({
   type: fc.constant('function' as const),

@@ -56,6 +56,9 @@ function encodeDelta(index: number, delta: HubBlockDelta): ResponsesStreamEvent[
         },
       ];
     case 'thinking':
+      return [
+        { type: 'response.reasoning_summary_text.delta', output_index: index, delta: delta.text },
+      ];
     case 'signature':
       return [];
 

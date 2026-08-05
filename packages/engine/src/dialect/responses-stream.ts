@@ -13,6 +13,7 @@ const knownStreamTypes = new Set<string>([
   'response.created',
   'response.output_item.added',
   'response.output_text.delta',
+  'response.reasoning_summary_text.delta',
   'response.function_call_arguments.delta',
   'response.output_item.done',
   'response.completed',
@@ -76,6 +77,7 @@ type ResponsesBlockEvent = Extract<
     type:
       | 'response.output_item.added'
       | 'response.output_text.delta'
+      | 'response.reasoning_summary_text.delta'
       | 'response.function_call_arguments.delta'
       | 'response.output_item.done';
   }
@@ -106,6 +108,14 @@ function decodeDeltaOrClose(
           type: 'block-delta',
           index: event.output_index,
           delta: { kind: 'text', text: event.delta },
+        },
+      ];
+    case 'response.reasoning_summary_text.delta':
+      return [
+        {
+          type: 'block-delta',
+          index: event.output_index,
+          delta: { kind: 'thinking', text: event.delta },
         },
       ];
     case 'response.function_call_arguments.delta':
