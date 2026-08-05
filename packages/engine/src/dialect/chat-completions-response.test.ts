@@ -216,7 +216,9 @@ describe('decodeResponse handles the sparser answers', () => {
       'tool_use',
     ]);
   });
+});
 
+describe('encodeResponse counts the sparser answers', () => {
   it('reports zeroed usage when the hub answer counts none', () => {
     expect(encodedValue(aHubResponse({ usage: {} })).value.usage).toEqual({
       prompt_tokens: 0,

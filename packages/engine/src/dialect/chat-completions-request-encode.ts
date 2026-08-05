@@ -17,12 +17,12 @@ import type {
 } from './hub';
 
 import { droppedThinking, foldAssistantBlocks } from './chat-completions-blocks';
+import { systemMessageFrom } from './chat-completions-request-fields';
 import {
   chatSamplingInto,
   chatToolChoiceInto,
   chatToolsInto,
-  systemMessageFrom,
-} from './chat-completions-request-fields';
+} from './chat-completions-request-fields-encode';
 
 function imageUrl(block: HubImageBlock): string {
   const source = block.source;
