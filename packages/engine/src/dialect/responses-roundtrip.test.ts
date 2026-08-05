@@ -53,49 +53,21 @@ const responsesRequest = fc.record({
   tools: fc.array(toolDefinition, { maxLength: 3 }),
 });
 
-function textOf(content: string | readonly ResponsesContentPart[]): string {
-  if (typeof content === 'string') {
-    return content;
-  }
-
-  return content.map((part) => ('text' in part ? part.text : '')).join('');
-}
-
 function toolNames(tools: readonly { name: string }[] | undefined): string[] | undefined {
   return tools?.map((tool) => tool.name);
 }
 
-function inputSignature(input: readonly ResponsesInputItem[]): unknown[] {
-  return input.map((item) => {
-    switch (item.type) {
-      case 'message':
-        return { kind: 'message', role: item.role, text: textOf(item.content) };
-      case 'function_call':
-        return { kind: 'call', call_id: item.call_id, name: item.name };
-      case 'function_call_output':
-        return { kind: 'output', call_id: item.call_id, output: item.output };
-      case 'reasoning':
-        return { kind: 'reasoning' };
-
-      default: {
-        const unhandled: never = item;
-
-        throw new Error(`unhandled input item: ${JSON.stringify(unhandled)}`);
-      }
-    }
-  });
-}
-
-describe('the Responses request round trip preserves instructions, tools, and input', () => {
-  it('carries a decoded request back out unchanged in its instructions, tools, and input', () => {
+describe('the Responses request round trip settles the hub across a wire crossing', () => {
+  it('re-encodes a decoded request to the same hub, and keeps its instructions and tools', () => {
     fc.assert(
       fc.property(responsesRequest, (request: ResponsesRequest) => {
-        const { value } = expectTranslation(decodeRequest(request));
-        const encoded = expectTranslation(encodeRequest(value));
+        const once = expectTranslation(decodeRequest(request));
+        const encoded = expectTranslation(encodeRequest(once.value));
+        const twice = expectTranslation(decodeRequest(encoded.value));
 
+        expect(twice.value).toEqual(once.value);
         expect(encoded.value.instructions).toBe(request.instructions);
         expect(toolNames(encoded.value.tools)).toEqual(toolNames(request.tools));
-        expect(inputSignature(encoded.value.input)).toEqual(inputSignature(request.input));
       }),
     );
   });

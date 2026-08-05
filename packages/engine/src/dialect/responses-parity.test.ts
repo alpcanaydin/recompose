@@ -1,21 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import type { HubMessage } from './hub';
-
 import { decodeRequest } from './responses-codec';
 import {
   aResponsesFunctionCall,
   aResponsesFunctionCallOutput,
   aResponsesRequest,
   aResponsesTool,
+  expectRefusal,
   expectTranslation,
   toolResultsOf,
   toolUsesOf,
 } from './responses.testkit';
-
-function isToolResultTurn(message: HubMessage): boolean {
-  return message.role === 'user' && message.content.every((block) => block.type === 'tool_result');
-}
 
 describe('decodeRequest: a tool id crosses safely to a strict target', () => {
   it('sanitizes a tool id the same way on the tool_use and its answering tool_result', () => {
@@ -30,6 +25,20 @@ describe('decodeRequest: a tool id crosses safely to a strict target', () => {
 
     expect(toolUsesOf(value.messages)[0]?.id).toBe('call_x_1');
     expect(toolResultsOf(value.messages)[0]?.toolUseId).toBe('call_x_1');
+  });
+
+  it('refuses when a call and an output carry distinct ids that sanitize alike', () => {
+    const request = aResponsesRequest({
+      input: [
+        aResponsesFunctionCall({ call_id: 'a.1', name: 'a' }),
+        aResponsesFunctionCallOutput({ call_id: 'a:1' }),
+      ],
+    });
+
+    expect(expectRefusal(decodeRequest(request))).toEqual({
+      reason: 'tool-id-collision',
+      sanitizedId: 'a_1',
+    });
   });
 });
 
@@ -60,25 +69,18 @@ describe('decodeRequest: consecutive tool results reach a strict target grouped'
     });
 
     const { value } = expectTranslation(decodeRequest(request));
-    const resultTurns = value.messages.filter(isToolResultTurn);
 
-    expect(value.messages.map((message) => message.role)).toEqual([
-      'assistant',
-      'assistant',
-      'user',
-    ]);
-    expect(resultTurns).toHaveLength(1);
-    expect(resultTurns[0]?.content).toHaveLength(2);
+    expect(value.messages.map((message) => message.role)).toEqual(['assistant', 'user']);
+    expect(toolUsesOf(value.messages)).toHaveLength(2);
+    expect(toolResultsOf(value.messages)).toHaveLength(2);
   });
 });
 
-describe('decodeRequest: a request with no turn still reaches a valid target', () => {
-  it('injects a fallback user turn when the input yields no hub message', () => {
+describe('decodeRequest: a message-less request has no honest hub form', () => {
+  it('refuses a request whose input yields no hub message rather than fabricating a turn', () => {
     const request = aResponsesRequest({ instructions: 'be brief', input: [] });
 
-    const { value } = expectTranslation(decodeRequest(request));
-
-    expect(value.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: '' }] }]);
+    expect(expectRefusal(decodeRequest(request))).toEqual({ reason: 'empty-conversation' });
   });
 });
 

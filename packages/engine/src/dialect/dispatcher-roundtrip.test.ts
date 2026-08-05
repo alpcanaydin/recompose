@@ -102,19 +102,21 @@ function expectTranslatedRequest<Body>(
   return result;
 }
 
-describe('the round trip Anthropic to Chat Completions to Anthropic preserves content and tool pairing', () => {
-  it('carries every text block and tool-call pairing back to the Anthropic hub unchanged', () => {
+function throughChat(hub: HubRequest): HubRequest {
+  const toChat = expectTranslatedRequest(translateRequest('anthropic', 'chat-completions', hub));
+
+  return expectTranslatedRequest(translateRequest('chat-completions', 'anthropic', toChat.value))
+    .value;
+}
+
+describe('the round trip Anthropic to Chat Completions to Anthropic settles the hub', () => {
+  it('reaches a fixed point the chat crossing no longer drifts from', () => {
     fc.assert(
       fc.property(hubMessages, (messages: readonly HubMessage[]) => {
-        const source: HubRequest = { messages };
-        const toChat = expectTranslatedRequest(
-          translateRequest('anthropic', 'chat-completions', source),
-        );
-        const back = expectTranslatedRequest(
-          translateRequest('chat-completions', 'anthropic', toChat.value),
-        );
+        const settled = throughChat(throughChat({ messages }));
+        const again = throughChat(settled);
 
-        expect(hubSignature(back.value.messages)).toEqual(hubSignature(messages));
+        expect(hubSignature(again.messages)).toEqual(hubSignature(settled.messages));
       }),
     );
   });
@@ -175,17 +177,20 @@ const responsesInput = fc
   )
   .map((turns) => turns.flat());
 
-describe('the round trip Responses to Anthropic to Responses preserves content and tool pairing', () => {
-  it('carries every message and tool-call pairing back to the Responses input unchanged', () => {
+function throughAnthropic(responses: ResponsesRequest): ResponsesRequest {
+  const toHub = expectTranslatedRequest(translateRequest('responses', 'anthropic', responses));
+
+  return expectTranslatedRequest(translateRequest('anthropic', 'responses', toHub.value)).value;
+}
+
+describe('the round trip Responses to Anthropic to Responses settles the input', () => {
+  it('re-crosses a hub-normalized Responses input without drift, preserving pairing', () => {
     fc.assert(
       fc.property(responsesInput, (input: readonly ResponsesInputItem[]) => {
-        const source: ResponsesRequest = { input };
-        const toHub = expectTranslatedRequest(translateRequest('responses', 'anthropic', source));
-        const back = expectTranslatedRequest(
-          translateRequest('anthropic', 'responses', toHub.value),
-        );
+        const once = throughAnthropic({ input });
+        const twice = throughAnthropic(once);
 
-        expect(responsesSignature(back.value.input)).toEqual(responsesSignature(input));
+        expect(responsesSignature(twice.input)).toEqual(responsesSignature(once.input));
       }),
     );
   });

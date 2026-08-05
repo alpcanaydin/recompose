@@ -66,15 +66,26 @@ describe('decodeRequest folds a Chat Completions request into the hub', () => {
 
     expect(value.system).toEqual([{ text: 'Be concise\nAnswer in English' }]);
   });
+});
 
+describe('decodeRequest drops an empty text block from a Chat Completions turn', () => {
   it('drops an empty text block rather than forwarding it, recording a fate', () => {
-    const request = aChatRequest({ messages: [aChatUserMessage({ content: '' })] });
+    const request = aChatRequest({
+      messages: [
+        aChatUserMessage({
+          content: [
+            { type: 'text', text: '' },
+            { type: 'text', text: 'still here' },
+          ],
+        }),
+      ],
+    });
 
     const { value, fates } = decodedValue(request);
 
-    const userBlocks = value.messages.flatMap((message) => message.content);
-
-    expect(userBlocks).toHaveLength(0);
+    expect(value.messages.flatMap((message) => message.content)).toEqual([
+      { type: 'text', text: 'still here' },
+    ]);
     expect(fates).toContainEqual(expect.objectContaining({ disposition: 'mapped', to: 'absent' }));
   });
 });

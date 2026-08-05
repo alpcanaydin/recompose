@@ -5,10 +5,8 @@ function isJsonObject(value: unknown): value is HubJsonObject {
 }
 
 export function parseToolArguments(raw: string): HubJsonObject {
-  const source = raw === '' ? '{}' : raw;
-
   try {
-    const parsed: unknown = JSON.parse(source);
+    const parsed: unknown = JSON.parse(raw);
 
     return isJsonObject(parsed) ? parsed : {};
   } catch {

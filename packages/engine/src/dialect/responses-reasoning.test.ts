@@ -8,6 +8,7 @@ import {
   aRedactedReasoningItem,
   aResponsesReasoningItem,
   aResponsesRequest,
+  aResponsesUserMessage,
   expectTranslation,
   fateFor,
   redactedThinkingOf,
@@ -49,7 +50,11 @@ describe('decodeRequest: a reasoning item crosses by the compatibility of its si
 
   it('drops a foreign-provider signature rather than crossing it as a fabricated one', () => {
     const { value, fates } = expectTranslation(
-      decodeRequest(aResponsesRequest({ input: [aForeignReasoningItem({ summary: [] })] })),
+      decodeRequest(
+        aResponsesRequest({
+          input: [aResponsesUserMessage(), aForeignReasoningItem({ summary: [] })],
+        }),
+      ),
     );
 
     expect(thinkingOf(value.messages)).toHaveLength(0);

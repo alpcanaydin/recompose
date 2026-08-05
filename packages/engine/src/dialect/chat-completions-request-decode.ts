@@ -10,7 +10,7 @@ import type {
 import type { Fate, TranslateResult } from './fates';
 import type { HubCacheBreakpoint, HubContentBlock, HubMessage, HubRequest } from './hub';
 
-import { unrepairableToolCall } from '../refusals';
+import { emptyConversation, toolIdCollision, unrepairableToolCall } from '../refusals';
 import { hubToolUseFromChatCall } from './chat-completions-blocks';
 import { hubBreakpointFrom } from './chat-completions-cache';
 import {
@@ -23,6 +23,8 @@ import {
 } from './chat-completions-request-fields';
 import { toolResultBlockFrom } from './chat-completions-tool-result';
 import { userBlocks } from './chat-completions-user-decode';
+import { mergeAdjacentSameRole } from './hub-build';
+import { firstToolIdCollision } from './tool-id';
 
 type DecodeAcc = {
   systemTexts: string[];
@@ -205,15 +207,6 @@ function foldMessages(
   }
 }
 
-function ensureAtLeastOneMessage(acc: DecodeAcc): void {
-  if (acc.messages.length > 0) {
-    return;
-  }
-
-  acc.messages.push({ role: 'user', content: [] });
-  acc.fates.push({ field: 'messages', disposition: 'mapped', to: 'messages[user] (fallback)' });
-}
-
 function assembleHubRequest(request: ChatCompletionsRequest, acc: DecodeAcc): HubRequest {
   const system = systemFrom(acc.systemTexts, acc.systemBreakpoint);
   const tools = toolsFrom(request, acc.fates);
@@ -238,6 +231,12 @@ export function decodeRequest(
     return { refusal: unrepairableToolCall(orphan) };
   }
 
+  const collision = firstToolIdCollision([...callIds, ...resultIds]);
+
+  if (collision !== undefined) {
+    return { refusal: toolIdCollision(collision) };
+  }
+
   const acc: DecodeAcc = {
     systemTexts: [],
     systemBreakpoint: undefined,
@@ -246,7 +245,11 @@ export function decodeRequest(
   };
 
   foldMessages(request.messages, acc, resultIds);
-  ensureAtLeastOneMessage(acc);
+  acc.messages = mergeAdjacentSameRole(acc.messages);
+
+  if (acc.messages.length === 0) {
+    return { refusal: emptyConversation() };
+  }
 
   scanEnvelope(request, acc.fates);
   scanDrops(request, acc.fates);

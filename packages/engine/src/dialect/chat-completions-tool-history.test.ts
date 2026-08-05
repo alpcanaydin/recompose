@@ -157,19 +157,37 @@ describe('decodeRequest maps a structured tool result into hub blocks', () => {
   });
 });
 
-describe('decodeRequest guarantees Anthropic at least one message', () => {
-  it('injects a fallback user turn when only a system prompt remains, naming it in a fate', () => {
+describe('decodeRequest refuses a conversation with no message to translate', () => {
+  it('refuses a request that carries only a system prompt rather than fabricating a turn', () => {
     const request = aChatRequest({ messages: [aChatSystemMessage({ content: 'Be terse' })] });
 
-    const { value, fates } = translated(request);
+    const result = decodeRequest(request);
 
-    expect(value.system).toEqual([{ text: 'Be terse' }]);
-    expect(value.messages).toHaveLength(1);
-    expect(value.messages[0]?.role).toBe('user');
-    expect(fates).toContainEqual({
-      field: 'messages',
-      disposition: 'mapped',
-      to: 'messages[user] (fallback)',
+    if (!('refusal' in result)) {
+      throw new Error('expected a refusal, met a translation');
+    }
+
+    expect(result.refusal).toEqual({ reason: 'empty-conversation' });
+  });
+});
+
+describe('decodeRequest refuses tool ids that sanitize into an ambiguous pairing', () => {
+  it('refuses when two distinct tool-call ids sanitize to the same id', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatAssistantMessage({
+          content: null,
+          tool_calls: [aChatToolCall({ id: 'a.1' }), aChatToolCall({ id: 'a:1' })],
+        }),
+      ],
     });
+
+    const result = decodeRequest(request);
+
+    if (!('refusal' in result)) {
+      throw new Error('expected a refusal, met a translation');
+    }
+
+    expect(result.refusal).toEqual({ reason: 'tool-id-collision', sanitizedId: 'a_1' });
   });
 });

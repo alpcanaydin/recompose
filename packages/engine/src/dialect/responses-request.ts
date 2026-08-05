@@ -19,10 +19,17 @@ import type {
   ResponsesToolParameters,
 } from './responses-wire';
 
-import { unrepairableToolCall, unsupportedField } from '../refusals';
+import {
+  emptyConversation,
+  toolIdCollision,
+  unrepairableToolCall,
+  unsupportedField,
+} from '../refusals';
+import { mergeAdjacentSameRole } from './hub-build';
 import { responsesRequestDrops } from './responses-drops';
 import { foldReasoning } from './responses-reasoning-decode';
 import { toHubContentBlocks, toolResultBlockOf, toolUseBlockOf } from './responses-shared';
+import { firstToolIdCollision } from './tool-id';
 
 function normalizeSchema(parameters: ResponsesToolParameters): HubToolSchema {
   return {
@@ -233,39 +240,10 @@ function assembleHubRequest(
   return value;
 }
 
-function isToolResultTurn(message: HubMessage): boolean {
-  return (
-    message.role === 'user' &&
-    message.content.length > 0 &&
-    message.content.every((block) => block.type === 'tool_result')
+function toolIdsOf(input: readonly ResponsesInputItem[]): string[] {
+  return input.flatMap((item) =>
+    item.type === 'function_call' || item.type === 'function_call_output' ? [item.call_id] : [],
   );
-}
-
-function groupToolResults(messages: readonly HubMessage[]): HubMessage[] {
-  const grouped: HubMessage[] = [];
-
-  for (const message of messages) {
-    const last = grouped.at(-1);
-
-    if (last !== undefined && isToolResultTurn(last) && isToolResultTurn(message)) {
-      grouped[grouped.length - 1] = {
-        role: 'user',
-        content: [...last.content, ...message.content],
-      };
-
-      continue;
-    }
-
-    grouped.push(message);
-  }
-
-  return grouped;
-}
-
-function messagesForTarget(messages: readonly HubMessage[]): HubMessage[] {
-  const grouped = groupToolResults(messages);
-
-  return grouped.length > 0 ? grouped : [{ role: 'user', content: [{ type: 'text', text: '' }] }];
 }
 
 export function decodeRequest(
@@ -275,13 +253,25 @@ export function decodeRequest(
     return { refusal: unsupportedField('previous_response_id') };
   }
 
+  const collision = firstToolIdCollision(toolIdsOf(request.input));
+
+  if (collision !== undefined) {
+    return { refusal: toolIdCollision(collision) };
+  }
+
   const folded = foldInput(request);
 
   if ('refusal' in folded) {
     return folded;
   }
 
-  const value = assembleHubRequest(request, messagesForTarget(folded.messages));
+  const messages = mergeAdjacentSameRole(folded.messages);
+
+  if (messages.length === 0) {
+    return { refusal: emptyConversation() };
+  }
+
+  const value = assembleHubRequest(request, messages);
   const fates: Fate[] = [...topLevelFates(request), ...dropFates(request), ...folded.fates];
 
   return { value, fates };
