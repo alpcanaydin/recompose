@@ -4,10 +4,10 @@ Eight tasks. Task 1 runs first and alone, because the streaming spike that Archi
 
 Every task opens with a named failing test, captures the red run it started from, and drives it to green. Test code changes if and only if behavior changes.
 
-- [ ] **Task 1: the streaming spike.** Owns `packages/engine/src/dialect/stream-spike.test.ts`. Depends on nothing, and runs first: the stream legs of tasks 5 and 6 read the shape it confirms.
-  - [ ] Opens red with a spec that drives a pure async-iterable transform through `@hono/node-server` under Node and asserts the frames arrive in order and the stream ends clean, before the harness exists.
-  - [ ] The spike proves the async-iterable transform shape holds under the adapter, or names the reshape the stream codecs need. It carries no dialect logic, and it's the shape confirmation ADR 0057 required before any streaming promise.
-  - [ ] Layers: the spike is its own evidence, captured in the task report.
+- [x] **Task 1: the streaming spike.** Owns `packages/engine/src/dialect/stream-spike.test.ts`. Depends on nothing, and runs first: the stream legs of tasks 5 and 6 read the shape it confirms.
+  - [x] Opens red with a spec that drives a pure async-iterable transform through `@hono/node-server` under Node and asserts the frames arrive in order and the stream ends clean, before the harness exists.
+  - [x] The spike proves the async-iterable transform shape holds under the adapter, or names the reshape the stream codecs need. It carries no dialect logic, and it's the shape confirmation ADR 0057 required before any streaming promise.
+  - [x] Layers: the spike is its own evidence, captured in the task report.
 
 - [ ] **Task 2: the hub model.** Owns `packages/engine/src/dialect/hub.ts` and `hub.testkit.ts`. Depends on nothing, gates every codec, runs beside tasks 1, 3, and 4 on disjoint files.
   - [ ] Opens red in a type-level spec pinning the hub request, response, and event models before the module exists.
