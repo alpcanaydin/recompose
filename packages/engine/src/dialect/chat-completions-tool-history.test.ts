@@ -107,6 +107,19 @@ function firstToolResultContent(messages: readonly HubMessage[]) {
 }
 
 describe('decodeRequest maps a structured tool result into hub blocks', () => {
+  it('maps a plain string tool result into a single hub text block', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatAssistantMessage({ content: null, tool_calls: [aChatToolCall({ id: 'call_s' })] }),
+        aChatToolMessage({ tool_call_id: 'call_s', content: 'sunny, 21C' }),
+      ],
+    });
+
+    expect(firstToolResultContent(decoded(request))).toEqual([
+      { type: 'text', text: 'sunny, 21C' },
+    ]);
+  });
+
   it('maps a text part and a base64 data-uri image part into tool_result content', () => {
     const request = aChatRequest({
       messages: [

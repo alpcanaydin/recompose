@@ -75,3 +75,25 @@ describe('decodeRequest normalizes a root schema union to a bare object schema',
     expect(schemaOf(request)).toEqual({ type: 'object', properties: {} });
   });
 });
+
+describe('decodeRequest carries a plain object tool schema through unchanged', () => {
+  it('keeps the properties and required of a schema that names no union', () => {
+    const request = aChatRequest({
+      tools: [
+        aChatTool({
+          type: 'function',
+          function: {
+            name: 'pick',
+            parameters: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'] },
+          },
+        }),
+      ],
+    });
+
+    expect(schemaOf(request)).toEqual({
+      type: 'object',
+      properties: { a: { type: 'string' } },
+      required: ['a'],
+    });
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ChatCompletionsRequest } from './chat-completions-wire';
-import type { HubMessage, HubRequest, HubTextBlock } from './hub';
+import type { HubImageBlock, HubMessage, HubRequest, HubTextBlock } from './hub';
 
 import { decodeRequest, encodeRequest } from './chat-completions-request';
 import { aChatRequest, aChatSystemMessage, aChatUserMessage } from './chat-completions.testkit';
@@ -54,6 +54,28 @@ describe('decodeRequest carries an Anthropic cache_control breakpoint into the h
 
     expect(decodedValue(request).system?.at(-1)?.cacheBreakpoint).toEqual({ type: 'ephemeral' });
   });
+
+  it('leaves a plain user text block free of any cache breakpoint', () => {
+    const request = aChatRequest({ messages: [aChatUserMessage({ content: 'plain' })] });
+
+    expect(firstTextBlock(decodedValue(request))).toEqual({ type: 'text', text: 'plain' });
+  });
+
+  it('maps a user image part to a hub image url source', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatUserMessage({
+          content: [{ type: 'image_url', image_url: { url: 'https://x.test/p.png' } }],
+        }),
+      ],
+    });
+
+    const image = decodedValue(request)
+      .messages.flatMap((message) => message.content)
+      .find((block): block is HubImageBlock => block.type === 'image');
+
+    expect(image?.source).toEqual({ type: 'url', url: 'https://x.test/p.png' });
+  });
 });
 
 describe('encodeRequest carries a hub cache breakpoint back onto Chat Completions', () => {
@@ -78,5 +100,14 @@ describe('encodeRequest carries a hub cache breakpoint back onto Chat Completion
     const message = value.messages.find((entry) => entry.role === 'system');
 
     expect(message?.cache_control).toEqual({ type: 'ephemeral' });
+  });
+
+  it('omits cache_control from a user message whose text block carries no breakpoint', () => {
+    const user: HubMessage = { role: 'user', content: [aHubTextBlock({ text: 'plain' })] };
+
+    const { value } = encodeRequest(aHubRequest({ messages: [user] }));
+    const message = value.messages.find((entry) => entry.role === 'user');
+
+    expect(message).not.toHaveProperty('cache_control');
   });
 });

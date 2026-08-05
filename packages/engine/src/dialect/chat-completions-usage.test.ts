@@ -56,6 +56,20 @@ describe('the codec maps cache tokens through the response usage both ways', () 
       prompt_tokens_details: { cached_tokens: 4 },
     });
   });
+
+  it('folds the cache write into prompt tokens alongside the input and the cache read', () => {
+    expect(
+      encodedUsage(
+        aHubResponse({
+          usage: { inputTokens: 6, outputTokens: 8, cacheReadTokens: 4, cacheWriteTokens: 5 },
+        }),
+      ),
+    ).toEqual({
+      prompt_tokens: 15,
+      completion_tokens: 8,
+      prompt_tokens_details: { cached_tokens: 4 },
+    });
+  });
 });
 
 describe('encodeStream merges the opening usage with the closing usage', () => {
