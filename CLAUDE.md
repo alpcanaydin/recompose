@@ -69,8 +69,8 @@
 
 ## Linting and gates
 
-- **Never disable, override, or loosen any gate.** No `eslint-disable`, no oxlint override or `.oxlintrc` rule change, no lowered mutation or coverage threshold, no `--no-verify`, no silenced Vale or cspell rule. This covers every gate: max-lines, complexity, mutation, coverage, prose, spelling, dependency, and the rest.
-- A blocking gate is a design signal, not an obstacle. A file over `max-lines` wants splitting by single responsibility; a surviving mutant wants a better test; an unknown word wants the committed accept list. Fix the code to satisfy the rule.
+- **Never disable, override, loosen, or silence any gate.** No `eslint-disable`, no oxlint override that weakens a rule, no lowered mutation or coverage threshold, no hook bypass, no silenced Vale or cspell rule. This covers every gate: max-lines, complexity, mutation, coverage, prose, spelling, dependency, and the rest. Adding a rule or making one stricter is welcome; never weaken one.
+- A blocking gate is a design signal, not an obstacle. A file over `max-lines` wants splitting by single responsibility; a surviving mutant wants a better test; a real misspelling wants correcting, and only genuine project vocabulary joins the committed accept list. Fix the code to satisfy the rule.
 - When fixing the code genuinely can't satisfy a rule, stop and ask the maintainer before touching any gate config. Only the maintainer authorizes a gate change, and only after you ask.
 
 ## Clean Code
