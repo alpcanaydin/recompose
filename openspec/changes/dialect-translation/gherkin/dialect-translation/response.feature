@@ -16,3 +16,9 @@ Feature: A response crosses the dialects, stops and all
     When the library translates it for an OpenAI-dialect client
     Then the client receives a 200 answer carrying a documented finish reason
     And the translation records the lossy mapping
+
+  Scenario: a reasoning item crosses to a thinking block
+    Given a Responses request whose history carries a reasoning item with a compatible signature
+    When the library translates it to the Anthropic shape
+    Then the reasoning stands as a thinking block carrying its signature
+    And a foreign-provider signature drops rather than crossing as a fabricated one

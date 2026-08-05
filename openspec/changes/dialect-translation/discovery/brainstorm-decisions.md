@@ -14,9 +14,11 @@ Responses is ingress-only in today's matrix, so hub-to-Responses encode has no t
 
 An unknown model refuses 404. An unmappable stop reason, and a dangling tool call that can't be repaired, refuse 400 or 422. Upstream-sourced conditions carry their own status. Each refusal renders in the arriving dialect's error envelope through a `renderRefusal(dialect, refusal)` projector that extends `packages/engine/src/refusals.ts`, whose `AnthropicRefusal` and `OpenAiRefusal` types this change exports and beside which it adds a Responses envelope. This settles the question the parked gateway-virtual-models change left open.
 
-## 4. The thinking field drops toward OpenAI with a traced fate, and no signature is ever fabricated toward Anthropic
+## 4. Thinking crosses honestly in both directions, and no signature is ever fabricated
 
-Chat Completions and Responses carry no counterpart to Anthropic's thinking blocks, so encoding toward either drops the thinking block and records a cost-bearing fate the consumer's usage log can surface. Decoding from an OpenAI dialect toward Anthropic never fabricates a `signature`, because the signature is the integrity check on a thinking block the source never produced.
+Chat Completions has no counterpart to Anthropic's thinking blocks, so encoding toward it drops the thinking block and records a cost-bearing fate the consumer's usage log can surface. The Responses dialect does carry reasoning: a reasoning item holds an encrypted content signature and a summary. A reasoning item MUST map to an Anthropic thinking block when its signature is compatible, to a `redacted_thinking` block when the content is redacted, and drop when the signature belongs to another provider and can't cross. This is the reference implementation's behavior, and it's the point of serving Codex against a Claude target: the reasoning chain survives. A decode toward Anthropic never fabricates a `signature`, because the signature is the integrity check on a thinking block the source never produced. The one server-state field that still refuses typed is `previous_response_id`, the conversation handle the stateless hub can't model.
+
+The maintainer amended this decision on 2026-08-05, after reading the reference test suite, replacing the earlier "refuse the encrypted reasoning shape" stance. The reasoning-mapping behavior and the ported reference cases land in the acceptance task named in tasks.md.
 
 ## 5. Standing decisions carried from the panel and the briefs
 

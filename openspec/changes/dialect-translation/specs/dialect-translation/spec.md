@@ -49,7 +49,7 @@ The library MUST translate a streaming answer between the dialects as it arrives
 
 ### Requirement: The Responses dialect joins the set
 
-The library MUST translate the OpenAI Responses dialect the same three ways: requests, responses, and the event stream, against each dialect the library holds. Codex speaks only this dialect, so a gateway serving Codex depends on it. The same fates discipline holds: carried, mapped, or refused typed, and never a silent drop.
+The library MUST translate the OpenAI Responses dialect the same three ways: requests, responses, and the event stream, against each dialect the library holds. Codex speaks only this dialect, so a gateway serving Codex depends on it. The same fates discipline holds: carried, mapped, or refused typed, and never a silent drop. A reasoning item MUST cross to the Anthropic shape: a compatible signature becomes a thinking block, redacted content becomes a redacted thinking block, and a foreign-provider signature drops. Only the `previous_response_id` conversation handle refuses typed, because the stateless hub can't model server-held state.
 
 #### Scenario: a Codex request crosses to an Anthropic target
 
@@ -57,6 +57,13 @@ The library MUST translate the OpenAI Responses dialect the same three ways: req
 - When the library translates it to the Anthropic shape
 - Then the instructions, the tools, and the input stand in the Anthropic shape
 - And nothing the source carried has vanished without a named fate
+
+#### Scenario: a reasoning item crosses to a thinking block
+
+- Given a Responses-dialect request whose history carries a reasoning item with a compatible signature
+- When the library translates it to the Anthropic shape
+- Then the reasoning stands as a thinking block carrying its signature
+- And a foreign-provider signature drops rather than crossing as a fabricated one
 
 #### Scenario: a loose history repairs with a named fate
 

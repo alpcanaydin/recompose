@@ -45,3 +45,10 @@ Every task opens with a named failing test, captures the red run it started from
   - [ ] ADR 0075 lands from the design's decision 1 draft, with its `docs/adr/README.md` index row.
   - [ ] `cspell-words.txt` carries the vocabulary the diff introduces.
   - [ ] Layers: the barrel plus the records.
+
+- [ ] **Task 9: port the reference test suite and the reasoning mapping.** Owns the codec test and source files it extends (`chat-completions-codec.*`, `responses-codec.*`, their testkits and drops). Depends on tasks 5, 6, and 7, because it strengthens the codecs they land. Added on 2026-08-05 after the maintainer read the CLIProxyAPI reference tests.
+  - [ ] Port the reference request cases as fixtures and drive any missing behavior: tool-call id sanitization consistent across `tool_use` and `tool_result`, parallel tool-result grouping into one user turn, base64 and URL image blocks in tool results, system and developer roles collapsing to ordered system blocks, the system-only fallback user message, cache-control preservation with part-over-message and last-block precedence, and root schema union normalization.
+  - [ ] Port the reference response cases: the usage mapping where prompt tokens sum input and cache-read and cache-creation, cache-read maps to cached tokens, and a `message_start` usage merges with a later `message_delta` where output tokens overwrite rather than sum.
+  - [ ] Implement the reasoning mapping the amended decision 4 names: a Responses reasoning item crosses to an Anthropic thinking block on a compatible signature, to a redacted thinking block on redacted content, and drops on a foreign-provider signature. The `previous_response_id` handle stays a typed refusal. Remove any encrypted-reasoning refusal task 6 may have left.
+  - [ ] Every ported case reads as a Given/When/Then behavior spec, so the suite proves recompose passes the same cases the reference does.
+  - [ ] Layers: unit and property, with the ported fixtures.
