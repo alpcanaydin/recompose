@@ -1,7 +1,7 @@
 ---
 tier: full
-phase: discovery
-approvals: ['design']
+phase: implementation
+approvals: ['design', 'tasks']
 branch: worktree-dialect-translation
 ---
 
