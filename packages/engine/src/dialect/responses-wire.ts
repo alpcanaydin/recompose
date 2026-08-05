@@ -1,9 +1,11 @@
 import type { HubJsonObject } from './hub';
 
 export type ResponsesToolParameters = {
-  type: 'object';
+  type?: 'object';
   properties?: HubJsonObject;
   required?: readonly string[];
+  anyOf?: readonly unknown[];
+  oneOf?: readonly unknown[];
 };
 
 export type ResponsesTool = {

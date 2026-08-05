@@ -233,6 +233,41 @@ function assembleHubRequest(
   return value;
 }
 
+function isToolResultTurn(message: HubMessage): boolean {
+  return (
+    message.role === 'user' &&
+    message.content.length > 0 &&
+    message.content.every((block) => block.type === 'tool_result')
+  );
+}
+
+function groupToolResults(messages: readonly HubMessage[]): HubMessage[] {
+  const grouped: HubMessage[] = [];
+
+  for (const message of messages) {
+    const last = grouped.at(-1);
+
+    if (last !== undefined && isToolResultTurn(last) && isToolResultTurn(message)) {
+      grouped[grouped.length - 1] = {
+        role: 'user',
+        content: [...last.content, ...message.content],
+      };
+
+      continue;
+    }
+
+    grouped.push(message);
+  }
+
+  return grouped;
+}
+
+function messagesForTarget(messages: readonly HubMessage[]): HubMessage[] {
+  const grouped = groupToolResults(messages);
+
+  return grouped.length > 0 ? grouped : [{ role: 'user', content: [{ type: 'text', text: '' }] }];
+}
+
 export function decodeRequest(
   request: ResponsesRequest,
 ): TranslateResult<HubRequest, TranslationRefusal> {
@@ -246,7 +281,7 @@ export function decodeRequest(
     return folded;
   }
 
-  const value = assembleHubRequest(request, folded.messages);
+  const value = assembleHubRequest(request, messagesForTarget(folded.messages));
   const fates: Fate[] = [...topLevelFates(request), ...dropFates(request), ...folded.fates];
 
   return { value, fates };

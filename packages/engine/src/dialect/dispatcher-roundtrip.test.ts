@@ -14,6 +14,10 @@ import type { ResponsesContentPart, ResponsesInputItem, ResponsesRequest } from 
 import { translateRequest } from './dispatcher';
 
 const identifier = fc.string({ minLength: 1, maxLength: 8 });
+const idAlphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-';
+const safeIdentifier = fc
+  .array(fc.constantFrom(...idAlphabet.split('')), { minLength: 1, maxLength: 8 })
+  .map((chars) => chars.join(''));
 const prose = fc.string({ minLength: 1, maxLength: 16 });
 const toolInput = fc.dictionary(identifier, fc.oneof(fc.string(), fc.integer(), fc.boolean()), {
   maxKeys: 3,
@@ -66,7 +70,7 @@ const hubTextTurn = fc
   .map(({ role, text }): HubMessage => ({ role, content: [{ type: 'text', text }] }));
 
 const hubToolTurn = fc
-  .record({ id: identifier, name: identifier, input: toolInput, output: prose })
+  .record({ id: safeIdentifier, name: identifier, input: toolInput, output: prose })
   .map(({ id, name, input, output }): HubMessage[] => [
     { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] },
     {
@@ -155,7 +159,7 @@ const responsesTextTurn = fc
   });
 
 const responsesToolTurn = fc
-  .record({ callId: identifier, name: identifier, input: toolInput, output: prose })
+  .record({ callId: safeIdentifier, name: identifier, input: toolInput, output: prose })
   .map(({ callId, name, input, output }): ResponsesInputItem[] => [
     { type: 'function_call', call_id: callId, name, arguments: JSON.stringify(input) },
     { type: 'function_call_output', call_id: callId, output },
@@ -167,7 +171,7 @@ const responsesInput = fc
       responsesTextTurn.map((turn) => [turn]),
       responsesToolTurn,
     ),
-    { maxLength: 6 },
+    { minLength: 1, maxLength: 6 },
   )
   .map((turns) => turns.flat());
 

@@ -7,6 +7,10 @@ import { decodeRequest, encodeRequest } from './responses-codec';
 import { expectTranslation } from './responses.testkit';
 
 const identifier = fc.string({ minLength: 1, maxLength: 8 });
+const idAlphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-';
+const safeIdentifier = fc
+  .array(fc.constantFrom(...idAlphabet.split('')), { minLength: 1, maxLength: 8 })
+  .map((chars) => chars.join(''));
 const toolArguments = fc.dictionary(identifier, fc.oneof(fc.string(), fc.integer(), fc.boolean()), {
   maxKeys: 3,
 });
@@ -21,7 +25,7 @@ const textMessage = fc
   });
 
 const toolExchange = fc
-  .record({ callId: identifier, name: identifier, args: toolArguments, output: fc.string() })
+  .record({ callId: safeIdentifier, name: identifier, args: toolArguments, output: fc.string() })
   .map(({ callId, name, args, output }): ResponsesInputItem[] => [
     { type: 'function_call', call_id: callId, name, arguments: JSON.stringify(args) },
     { type: 'function_call_output', call_id: callId, output },
@@ -33,7 +37,7 @@ const inputItems = fc
       textMessage.map((item) => [item]),
       toolExchange,
     ),
-    { maxLength: 6 },
+    { minLength: 1, maxLength: 6 },
   )
   .map((groups) => groups.flat());
 
