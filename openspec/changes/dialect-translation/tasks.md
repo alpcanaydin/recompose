@@ -39,12 +39,12 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] `dispatcher.ts` composes a decoder with an encoder through the hub, exposes `translateRequest`, `translateResponse`, and `translateStream` over the dialect pair, and skips a same-dialect crossing. The round-trip property lands here: Anthropic to Chat Completions to Anthropic, and Responses to Anthropic to Responses, each preserving text content and tool-call pairing, with the `fast-check` calls inside `it` bodies.
   - [x] Layers: unit and property.
 
-- [ ] **Task 8: the barrel and records.** Owns `packages/engine/src/dialect/index.ts`, `knip.json`, `cspell-words.txt`, and `docs/adr/`. Depends on task 7.
-  - [ ] `index.ts` re-exports the dispatcher and the fate and refusal types the parked consumer imports.
-  - [ ] `knip.json` gains `src/dialect/index.ts` as an engine entry, so `lint:dead` stays green while the consumer stays parked.
-  - [ ] ADR 0075 lands from the design's decision 1 draft, with its `docs/adr/README.md` index row.
-  - [ ] `cspell-words.txt` carries the vocabulary the diff introduces.
-  - [ ] Layers: the barrel plus the records.
+- [x] **Task 8: the barrel and records.** Owns `packages/engine/src/dialect/index.ts`, `knip.json`, `cspell-words.txt`, and `docs/adr/`. Depends on task 7.
+  - [x] `index.ts` re-exports the dispatcher and the fate and refusal types the parked consumer imports.
+  - [x] `knip.json` gains `src/dialect/index.ts` as an engine entry, so `lint:dead` stays green while the consumer stays parked.
+  - [x] ADR 0075 lands from the design's decision 1 draft, with its `docs/adr/README.md` index row.
+  - [x] `cspell-words.txt` carries the vocabulary the diff introduces.
+  - [x] Layers: the barrel plus the records.
 
 - [ ] **Task 9: port the reference test suite and the reasoning mapping.** Owns the codec test and source files it extends (`chat-completions-codec.*`, `responses-codec.*`, their testkits and drops). Depends on tasks 5, 6, and 7, because it strengthens the codecs they land. Added on 2026-08-05 after the maintainer read the CLIProxyAPI reference tests.
   - [ ] Port the reference request cases as fixtures and drive any missing behavior: tool-call id sanitization consistent across `tool_use` and `tool_result`, parallel tool-result grouping into one user turn, base64 and URL image blocks in tool results, system and developer roles collapsing to ordered system blocks, the system-only fallback user message, cache-control preservation with part-over-message and last-block precedence, and root schema union normalization.
