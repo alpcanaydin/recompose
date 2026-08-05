@@ -54,7 +54,16 @@ function toolResultText(block: HubToolResultBlock): string {
   return block.content.map((part) => (part.type === 'text' ? part.text : '')).join('');
 }
 
-function chatToolMessageFrom(block: HubToolResultBlock): ChatToolMessage {
+function chatToolMessageFrom(block: HubToolResultBlock, fates: Fate[]): ChatToolMessage {
+  if (block.content.some((part) => part.type !== 'text')) {
+    fates.push({
+      field: 'tool_result_image',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
+  }
+
   return { role: 'tool', tool_call_id: block.toolUseId, content: toolResultText(block) };
 }
 
@@ -134,7 +143,7 @@ function chatUserFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {
   );
 
   if (toolResults.length > 0) {
-    return toolResults.map(chatToolMessageFrom);
+    return toolResults.map((block) => chatToolMessageFrom(block, fates));
   }
 
   const parts: ChatContentPart[] = [];
