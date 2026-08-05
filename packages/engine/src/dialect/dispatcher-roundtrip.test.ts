@@ -85,7 +85,7 @@ const hubMessages = fc
       hubTextTurn.map((turn) => [turn]),
       hubToolTurn,
     ),
-    { maxLength: 6 },
+    { minLength: 1, maxLength: 6 },
   )
   .map((turns) => turns.flat());
 
