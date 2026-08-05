@@ -67,6 +67,12 @@
 - Mutation testing keeps the suites honest: node-side logic changes must survive the diff-scoped Stryker gate, and non-trivial invariants pair a property-based test with it. Never silence a surviving mutant by weakening the threshold; kill it with a better test or record the exception in the ADR.
 - E2E tests: use the `e2e-testing-patterns` skill. Before writing any e2e test, step definition, or `.feature` file, always use the `playwright-best-practices` and `gherkin-best-practices` skills together. This pairing is mandatory, never optional.
 
+## Linting and gates
+
+- **Never disable, override, or loosen any gate.** No `eslint-disable`, no oxlint override or `.oxlintrc` rule change, no lowered mutation or coverage threshold, no `--no-verify`, no silenced Vale or cspell rule. This covers every gate: max-lines, complexity, mutation, coverage, prose, spelling, dependency, and the rest.
+- A blocking gate is a design signal, not an obstacle. A file over `max-lines` wants splitting by single responsibility; a surviving mutant wants a better test; an unknown word wants the committed accept list. Fix the code to satisfy the rule.
+- When fixing the code genuinely can't satisfy a rule, stop and ask the maintainer before touching any gate config. Only the maintainer authorizes a gate change, and only after you ask.
+
 ## Clean Code
 
 - Follow @.claude/rules/clean-code.md: intent-revealing names, single responsibility, no silent failures. It favors Keep It Simple, Stupid (KISS), You Aren't Gonna Need It (YAGNI), and Don't Repeat Yourself (DRY) for knowledge.
