@@ -16,7 +16,11 @@ import type {
   HubToolUseBlock,
 } from './hub';
 
-import { droppedThinking, foldAssistantBlocks } from './chat-completions-blocks';
+import {
+  droppedRedactedThinking,
+  droppedThinking,
+  foldAssistantBlocks,
+} from './chat-completions-blocks';
 import { systemMessageFrom } from './chat-completions-request-fields';
 import {
   chatSamplingInto,
@@ -84,6 +88,12 @@ function routeUserContentBlock(
 function routeUserBlock(block: HubContentBlock, parts: ChatContentPart[], fates: Fate[]): void {
   if (block.type === 'thinking') {
     droppedThinking(fates);
+
+    return;
+  }
+
+  if (block.type === 'redacted_thinking') {
+    droppedRedactedThinking(fates);
 
     return;
   }

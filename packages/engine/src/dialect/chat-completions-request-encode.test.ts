@@ -14,6 +14,7 @@ import {
 import {
   aHubImageBlock,
   aHubMessage,
+  aHubRedactedThinkingBlock,
   aHubRequest,
   aHubTextBlock,
   aHubThinkingBlock,
@@ -66,6 +67,30 @@ describe('encodeRequest folds the hub back into a Chat Completions request', () 
     expect(value.messages.find((message) => message.role === 'tool')).toMatchObject({
       tool_call_id: 'call_r',
     });
+  });
+});
+
+describe('encodeRequest drops a redacted thinking block toward Chat Completions', () => {
+  it('drops a redacted thinking block from a user turn with a cost-bearing fate', () => {
+    const user: HubMessage = {
+      role: 'user',
+      content: [
+        aHubRedactedThinkingBlock({ data: 'opaque-redacted-payload' }),
+        aHubTextBlock({ text: 'carry on' }),
+      ],
+    };
+
+    const { value, fates } = encodeRequest(aHubRequest({ messages: [user] }));
+
+    expect(JSON.stringify(value)).not.toContain('opaque-redacted-payload');
+    expect(fates).toContainEqual(
+      expect.objectContaining({
+        field: 'redacted_thinking',
+        disposition: 'mapped',
+        to: 'absent',
+        costBearing: true,
+      }),
+    );
   });
 });
 

@@ -46,6 +46,15 @@ export function droppedThinking(fates: Fate[]): void {
   fates.push({ field: 'thinking', disposition: 'mapped', to: 'absent', costBearing: true });
 }
 
+export function droppedRedactedThinking(fates: Fate[]): void {
+  fates.push({
+    field: 'redacted_thinking',
+    disposition: 'mapped',
+    to: 'absent',
+    costBearing: true,
+  });
+}
+
 function routeAssistantContentBlock(
   block: HubTextBlock | HubImageBlock | HubToolUseBlock | HubToolResultBlock,
   texts: string[],
@@ -88,6 +97,12 @@ function routeAssistantBlock(
 ): void {
   if (block.type === 'thinking') {
     droppedThinking(fates);
+
+    return;
+  }
+
+  if (block.type === 'redacted_thinking') {
+    droppedRedactedThinking(fates);
 
     return;
   }

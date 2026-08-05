@@ -3,6 +3,7 @@ import type { Fate, Translated } from './fates';
 import type {
   HubContentBlock,
   HubMessage,
+  HubRedactedThinkingBlock,
   HubThinkingBlock,
   HubToolResultBlock,
   HubToolUseBlock,
@@ -17,6 +18,8 @@ import type {
   ResponsesStreamEvent,
   ResponsesTool,
 } from './responses-wire';
+
+import { COMPATIBLE_SIGNATURE_PREFIX } from './responses-shared';
 
 export function expectTranslation<T>(
   result: Translated<T> | { refusal: TranslationRefusal },
@@ -68,6 +71,12 @@ export function thinkingOf(messages: readonly HubMessage[]): HubThinkingBlock[] 
   );
 }
 
+export function redactedThinkingOf(messages: readonly HubMessage[]): HubRedactedThinkingBlock[] {
+  return contentOf(messages).filter(
+    (block): block is HubRedactedThinkingBlock => block.type === 'redacted_thinking',
+  );
+}
+
 export function aResponsesUserMessage(
   text = 'What is the weather in Paris?',
 ): ResponsesMessageItem {
@@ -106,6 +115,22 @@ export function aResponsesReasoningItem(
     summary: [{ type: 'summary_text', text: 'weigh the two routes before answering' }],
     ...overrides,
   };
+}
+
+export function aCompatibleReasoningItem(signature = 'sig-abc'): ResponsesReasoningItem {
+  return aResponsesReasoningItem({
+    encrypted_content: `${COMPATIBLE_SIGNATURE_PREFIX}${signature}`,
+  });
+}
+
+export function aRedactedReasoningItem(data = 'redacted-reasoning-blob'): ResponsesReasoningItem {
+  return { type: 'reasoning', id: 'rs_1', encrypted_content: data };
+}
+
+export function aForeignReasoningItem(
+  overrides: Partial<ResponsesReasoningItem> = {},
+): ResponsesReasoningItem {
+  return aResponsesReasoningItem({ encrypted_content: 'gpt-oss-signature-xyz', ...overrides });
 }
 
 export function aResponsesTool(overrides: Partial<ResponsesTool> = {}): ResponsesTool {

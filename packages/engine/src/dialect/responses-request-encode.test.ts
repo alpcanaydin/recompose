@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   aHubImageBlock,
   aHubMessage,
+  aHubRedactedThinkingBlock,
   aHubRequest,
   aHubSystemText,
   aHubTextBlock,
@@ -112,6 +113,29 @@ describe('encodeRequest: content blocks render as Responses items', () => {
     expect(reasoning).toHaveLength(0);
     expect(fateFor(fates, 'thinking')).toEqual({
       field: 'thinking',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
+  });
+});
+
+describe('encodeRequest drops a redacted thinking block toward Responses', () => {
+  it('drops a redacted thinking block toward Responses with a cost-bearing fate', () => {
+    const request = aHubRequest({
+      messages: [
+        aHubMessage({
+          role: 'assistant',
+          content: [aHubRedactedThinkingBlock({ data: 'opaque-redacted-payload' })],
+        }),
+      ],
+    });
+
+    const { value, fates } = expectTranslation(encodeRequest(request));
+
+    expect(JSON.stringify(value)).not.toContain('opaque-redacted-payload');
+    expect(fateFor(fates, 'redacted_thinking')).toEqual({
+      field: 'redacted_thinking',
       disposition: 'mapped',
       to: 'absent',
       costBearing: true,

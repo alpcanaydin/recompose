@@ -4,6 +4,7 @@ import type {
   HubImageBlock,
   HubImageSource,
   HubJsonObject,
+  HubRedactedThinkingBlock,
   HubStopReason,
   HubTextBlock,
   HubThinkingBlock,
@@ -78,11 +79,57 @@ export function toolResultBlockOf(item: ResponsesFunctionCallOutputItem): HubToo
   };
 }
 
+export const COMPATIBLE_SIGNATURE_PREFIX = 'anthropic:';
+const REDACTED_CONTENT_PREFIX = 'redacted';
+
+export type ReasoningSignature =
+  | { kind: 'none' }
+  | { kind: 'compatible'; signature: string }
+  | { kind: 'redacted'; data: string }
+  | { kind: 'foreign' };
+
+export function classifyReasoningSignature(
+  encryptedContent: string | undefined,
+): ReasoningSignature {
+  if (encryptedContent === undefined) {
+    return { kind: 'none' };
+  }
+
+  if (encryptedContent.startsWith(REDACTED_CONTENT_PREFIX)) {
+    return { kind: 'redacted', data: encryptedContent };
+  }
+
+  if (encryptedContent.startsWith(COMPATIBLE_SIGNATURE_PREFIX)) {
+    return {
+      kind: 'compatible',
+      signature: encryptedContent.slice(COMPATIBLE_SIGNATURE_PREFIX.length),
+    };
+  }
+
+  return { kind: 'foreign' };
+}
+
+function summaryTextOf(item: ResponsesReasoningItem): string {
+  return (item.summary ?? []).map((part) => part.text).join('\n');
+}
+
 export function thinkingBlockOf(item: ResponsesReasoningItem): HubThinkingBlock {
-  return {
-    type: 'thinking',
-    text: (item.summary ?? []).map((part) => part.text).join('\n'),
-  };
+  return { type: 'thinking', text: summaryTextOf(item) };
+}
+
+export function signedThinkingBlockOf(
+  item: ResponsesReasoningItem,
+  signature: string,
+): HubThinkingBlock {
+  return { type: 'thinking', text: summaryTextOf(item), signature };
+}
+
+export function redactedThinkingBlockOf(data: string): HubRedactedThinkingBlock {
+  return { type: 'redacted_thinking', data };
+}
+
+export function redactedThinkingDropFate(): Fate {
+  return { field: 'redacted_thinking', disposition: 'mapped', to: 'absent', costBearing: true };
 }
 
 export function functionCallItemOf(block: HubToolUseBlock): ResponsesFunctionCallItem {

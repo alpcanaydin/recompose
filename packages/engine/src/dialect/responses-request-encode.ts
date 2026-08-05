@@ -21,7 +21,7 @@ import type {
   ResponsesToolParameters,
 } from './responses-wire';
 
-import { functionCallItemOf, thinkingDropFate } from './responses-shared';
+import { functionCallItemOf, redactedThinkingDropFate, thinkingDropFate } from './responses-shared';
 
 function toResponsesTool(tool: HubTool): ResponsesTool {
   const parameters: ResponsesToolParameters = {
@@ -99,32 +99,53 @@ function itemOfToolBlock(block: HubToolUseBlock | HubToolResultBlock): Responses
 
 type FoldedInput = { items: ResponsesInputItem[]; fates: Fate[] };
 
-function encodeMessage(message: HubMessage): FoldedInput {
-  const items: ResponsesInputItem[] = [];
-  const fates: Fate[] = [];
-  let parts: ResponsesContentPart[] = [];
+type EncodeContext = {
+  readonly role: 'user' | 'assistant';
+  parts: ResponsesContentPart[];
+  readonly items: ResponsesInputItem[];
+  readonly fates: Fate[];
+};
 
-  const flush = (): void => {
-    if (parts.length > 0) {
-      items.push({ type: 'message', role: message.role, content: parts });
-      parts = [];
-    }
-  };
+function flushParts(context: EncodeContext): void {
+  if (context.parts.length > 0) {
+    context.items.push({ type: 'message', role: context.role, content: context.parts });
+    context.parts = [];
+  }
+}
 
-  for (const block of message.content) {
-    if (block.type === 'text' || block.type === 'image') {
-      parts.push(partOfBlock(message.role, block));
-    } else if (block.type === 'thinking') {
-      fates.push(thinkingDropFate());
-    } else {
-      flush();
-      items.push(itemOfToolBlock(block));
-    }
+function encodeBlockInto(block: HubMessage['content'][number], context: EncodeContext): void {
+  if (block.type === 'text' || block.type === 'image') {
+    context.parts.push(partOfBlock(context.role, block));
+
+    return;
   }
 
-  flush();
+  if (block.type === 'thinking') {
+    context.fates.push(thinkingDropFate());
 
-  return { items, fates };
+    return;
+  }
+
+  if (block.type === 'redacted_thinking') {
+    context.fates.push(redactedThinkingDropFate());
+
+    return;
+  }
+
+  flushParts(context);
+  context.items.push(itemOfToolBlock(block));
+}
+
+function encodeMessage(message: HubMessage): FoldedInput {
+  const context: EncodeContext = { role: message.role, parts: [], items: [], fates: [] };
+
+  for (const block of message.content) {
+    encodeBlockInto(block, context);
+  }
+
+  flushParts(context);
+
+  return { items: context.items, fates: context.fates };
 }
 
 function encodeMessages(messages: readonly HubMessage[]): FoldedInput {

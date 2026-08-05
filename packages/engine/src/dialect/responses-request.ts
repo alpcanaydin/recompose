@@ -13,7 +13,6 @@ import type {
   ResponsesFunctionCallItem,
   ResponsesFunctionCallOutputItem,
   ResponsesInputItem,
-  ResponsesReasoningItem,
   ResponsesRequest,
   ResponsesTool,
   ResponsesToolChoice,
@@ -22,12 +21,8 @@ import type {
 
 import { unrepairableToolCall, unsupportedField } from '../refusals';
 import { responsesRequestDrops } from './responses-drops';
-import {
-  thinkingBlockOf,
-  toHubContentBlocks,
-  toolResultBlockOf,
-  toolUseBlockOf,
-} from './responses-shared';
+import { foldReasoning } from './responses-reasoning-decode';
+import { toHubContentBlocks, toolResultBlockOf, toolUseBlockOf } from './responses-shared';
 
 function normalizeSchema(parameters: ResponsesToolParameters): HubToolSchema {
   return {
@@ -108,15 +103,6 @@ function foldFunctionCallOutput(
   }
 
   return { messages: [{ role: 'user', content: [toolResultBlockOf(item)] }], fates: [] };
-}
-
-function foldReasoning(item: ResponsesReasoningItem): FoldedItems {
-  const traced: Fate[] =
-    item.encrypted_content === undefined
-      ? []
-      : [{ field: 'encrypted_content', disposition: 'mapped', to: 'absent' }];
-
-  return { messages: [{ role: 'assistant', content: [thinkingBlockOf(item)] }], fates: traced };
 }
 
 function foldInputItem(

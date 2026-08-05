@@ -44,6 +44,10 @@ function blockSignature(role: HubMessage['role'], block: HubContentBlock): unkno
     return { kind: 'thinking', text: block.text };
   }
 
+  if (block.type === 'redacted_thinking') {
+    return { kind: 'redacted_thinking', data: block.data };
+  }
+
   if (block.type === 'image') {
     return { kind: 'image', source: block.source.type };
   }

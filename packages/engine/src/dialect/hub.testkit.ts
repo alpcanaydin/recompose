@@ -1,6 +1,7 @@
 import type {
   HubImageBlock,
   HubMessage,
+  HubRedactedThinkingBlock,
   HubRequest,
   HubResponse,
   HubStreamEvent,
@@ -19,6 +20,12 @@ export function aHubTextBlock(overrides: Partial<HubTextBlock> = {}): HubTextBlo
 
 export function aHubThinkingBlock(overrides: Partial<HubThinkingBlock> = {}): HubThinkingBlock {
   return { type: 'thinking', text: 'weigh the two routes before answering', ...overrides };
+}
+
+export function aHubRedactedThinkingBlock(
+  overrides: Partial<HubRedactedThinkingBlock> = {},
+): HubRedactedThinkingBlock {
+  return { type: 'redacted_thinking', data: 'opaque-redacted-payload', ...overrides };
 }
 
 export function aHubImageBlock(overrides: Partial<HubImageBlock> = {}): HubImageBlock {

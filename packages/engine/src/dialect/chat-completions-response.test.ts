@@ -5,7 +5,13 @@ import type { HubToolUseBlock } from './hub';
 
 import { decodeResponse, encodeResponse } from './chat-completions-response';
 import { aChatResponse, aChatToolCall } from './chat-completions.testkit';
-import { aHubResponse, aHubTextBlock, aHubThinkingBlock, aHubToolUseBlock } from './hub.testkit';
+import {
+  aHubRedactedThinkingBlock,
+  aHubResponse,
+  aHubTextBlock,
+  aHubThinkingBlock,
+  aHubToolUseBlock,
+} from './hub.testkit';
 
 function encodedValue(hub: HubResponse) {
   const result = encodeResponse(hub);
@@ -134,6 +140,26 @@ describe('encodeResponse folds the hub answer back into Chat Completions', () =>
     expect(JSON.stringify(value)).not.toContain('weigh the two routes');
     expect(fates).toContainEqual(
       expect.objectContaining({ field: 'thinking', disposition: 'mapped', costBearing: true }),
+    );
+  });
+
+  it('drops a redacted thinking block from the answer with a cost-bearing fate', () => {
+    const hub = aHubResponse({
+      content: [
+        aHubRedactedThinkingBlock({ data: 'opaque-redacted-payload' }),
+        aHubTextBlock({ text: 'Sunny.' }),
+      ],
+    });
+
+    const { value, fates } = encodedValue(hub);
+
+    expect(JSON.stringify(value)).not.toContain('opaque-redacted-payload');
+    expect(fates).toContainEqual(
+      expect.objectContaining({
+        field: 'redacted_thinking',
+        disposition: 'mapped',
+        costBearing: true,
+      }),
     );
   });
 

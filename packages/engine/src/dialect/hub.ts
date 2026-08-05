@@ -14,6 +14,11 @@ export type HubThinkingBlock = {
   signature?: string;
 };
 
+export type HubRedactedThinkingBlock = {
+  type: 'redacted_thinking';
+  data: string;
+};
+
 export type HubImageSource =
   | { type: 'base64'; mediaType: string; data: string }
   | { type: 'url'; url: string };
@@ -42,6 +47,7 @@ export type HubToolResultBlock = {
 export type HubContentBlock =
   | HubTextBlock
   | HubThinkingBlock
+  | HubRedactedThinkingBlock
   | HubImageBlock
   | HubToolUseBlock
   | HubToolResultBlock;
