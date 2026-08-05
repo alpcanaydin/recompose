@@ -196,14 +196,13 @@ Three rules bind the codecs. No silent failures: the `never` default and the lef
 - `packages/engine/src/dialect/fates.ts`: the three-fate union, the ledger, and the translate-result shape (create)
 - `packages/engine/src/dialect/fates.test.ts`: the union's discrimination and the leftover-key diff (create)
 - `packages/engine/src/dialect/fates.test-d.ts`: the union's arms and the result shape at the type level (create)
-- `packages/engine/src/dialect/chat-completions-codec.ts`: the decode and encode over request, response, and stream, with the `never`-guarded fold (create)
-- `packages/engine/src/dialect/chat-completions-codec.test.ts`: the codec behavior, including the bare-object-schema normalization and the stream hazards (create)
-- `packages/engine/src/dialect/chat-completions.testkit.ts`: Chat Completions request, response, and chunk builders (create)
-- `packages/engine/src/dialect/chat-completions-drops.ts`: the vendor drop table for Chat Completions, lifted from Anthropic's compatibility table (create)
-- `packages/engine/src/dialect/responses-codec.ts`: the decode and encode over request, response, and stream, both directions shipping (create)
-- `packages/engine/src/dialect/responses-codec.test.ts`: the codec behavior, including the loose-history repair and the encode-leg tests (create)
-- `packages/engine/src/dialect/responses.testkit.ts`: Responses request, response, and event builders (create)
-- `packages/engine/src/dialect/responses-drops.ts`: the vendor drop table for Responses (create)
+- `packages/engine/src/dialect/chat-completions-*.ts`: the Chat Completions codec, split per concern to hold the max-lines gate: `chat-completions-wire.ts` (the wire types), `-request.ts`, `-response.ts`, `-stream.ts` (each with the `never`-guarded fold), `-drops.ts` (the vendor drop table lifted from Anthropic's compatibility table), and `-codec.ts` (a thin barrel re-exporting the public decode and encode functions the dispatcher imports) (create)
+- `packages/engine/src/dialect/chat-completions*.test.ts` and `chat-completions.testkit.ts`: the codec behavior including the bare-object-schema normalization and the stream hazards, and the shared builders, split to hold max-lines (create)
+- `packages/engine/src/dialect/responses-*.ts`: the Responses codec, split the same way, both directions shipping: `responses-wire.ts`, `-request.ts`, `-response.ts`, `-stream.ts`, `-drops.ts`, and `-codec.ts` (create)
+- `packages/engine/src/dialect/responses*.test.ts` and `responses.testkit.ts`: the codec behavior including the loose-history repair and the encode-leg tests, and the builders (create)
+
+A full bidirectional codec exceeds the repo's 300-line file gate. The clean-code single-responsibility rule already asks for the split, so each codec is a set of per-concern modules behind a thin `-codec.ts` barrel. No lint override lands.
+
 - `packages/engine/src/dialect/dispatcher.ts`: the facade composing a decoder with an encoder, with the same-dialect skip (create)
 - `packages/engine/src/dialect/dispatcher.test.ts`: the composition, the round-trip property, and the skip (create)
 - `packages/engine/src/dialect/index.ts`: the library barrel the knip entry names (create)
