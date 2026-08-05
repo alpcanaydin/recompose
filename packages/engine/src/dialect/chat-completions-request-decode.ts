@@ -9,7 +9,7 @@ import type {
   ChatUserMessage,
 } from './chat-completions-wire';
 import type { Fate, TranslateResult } from './fates';
-import type { HubContentBlock, HubMessage, HubRequest, HubToolResultBlock } from './hub';
+import type { HubContentBlock, HubMessage, HubRequest } from './hub';
 
 import { unrepairableToolCall } from '../refusals';
 import { hubToolUseFromChatCall } from './chat-completions-blocks';
@@ -21,7 +21,7 @@ import {
   toolChoiceFrom,
   toolsFrom,
 } from './chat-completions-request-fields';
-import { sanitizeToolId } from './tool-id';
+import { toolResultBlockFrom } from './chat-completions-tool-result';
 
 type DecodeAcc = {
   systemTexts: string[];
@@ -145,18 +145,8 @@ function foldAssistantMessage(
   }
 }
 
-function foldToolMessage(message: ChatToolMessage, acc: DecodeAcc): void {
-  const block: HubToolResultBlock = {
-    type: 'tool_result',
-    toolUseId: sanitizeToolId(message.tool_call_id),
-    content: [{ type: 'text', text: message.content }],
-  };
-
-  acc.messages.push({ role: 'user', content: [block] });
-}
-
 function foldTurnMessage(
-  message: ChatUserMessage | ChatAssistantMessage | ChatToolMessage,
+  message: ChatUserMessage | ChatAssistantMessage,
   acc: DecodeAcc,
   answered: Set<string>,
 ): void {
@@ -169,10 +159,6 @@ function foldTurnMessage(
       foldAssistantMessage(message, acc, answered);
 
       return;
-    case 'tool':
-      foldToolMessage(message, acc);
-
-      return;
 
     default: {
       const unknownRole: never = message;
@@ -182,7 +168,11 @@ function foldTurnMessage(
   }
 }
 
-function foldMessage(message: ChatMessage, acc: DecodeAcc, answered: Set<string>): void {
+function foldNonToolMessage(
+  message: Exclude<ChatMessage, ChatToolMessage>,
+  acc: DecodeAcc,
+  answered: Set<string>,
+): void {
   if (message.role === 'system' || message.role === 'developer') {
     acc.systemTexts.push(message.content);
 
@@ -190,6 +180,49 @@ function foldMessage(message: ChatMessage, acc: DecodeAcc, answered: Set<string>
   }
 
   foldTurnMessage(message, acc, answered);
+}
+
+function foldToolRun(messages: readonly ChatMessage[], start: number, acc: DecodeAcc): number {
+  const blocks: HubContentBlock[] = [];
+  let index = start;
+
+  while (index < messages.length) {
+    const message = messages[index];
+
+    if (message?.role !== 'tool') {
+      break;
+    }
+
+    blocks.push(toolResultBlockFrom(message));
+    index += 1;
+  }
+
+  acc.messages.push({ role: 'user', content: blocks });
+
+  return index;
+}
+
+function foldMessages(
+  messages: readonly ChatMessage[],
+  acc: DecodeAcc,
+  answered: Set<string>,
+): void {
+  let index = 0;
+
+  while (index < messages.length) {
+    const message = messages[index];
+
+    if (message === undefined) {
+      break;
+    }
+
+    if (message.role === 'tool') {
+      index = foldToolRun(messages, index, acc);
+    } else {
+      foldNonToolMessage(message, acc, answered);
+      index += 1;
+    }
+  }
 }
 
 function assembleHubRequest(request: ChatCompletionsRequest, acc: DecodeAcc): HubRequest {
@@ -218,9 +251,7 @@ export function decodeRequest(
 
   const acc: DecodeAcc = { systemTexts: [], messages: [], fates: [] };
 
-  for (const message of request.messages) {
-    foldMessage(message, acc, resultIds);
-  }
+  foldMessages(request.messages, acc, resultIds);
 
   scanEnvelope(request, acc.fates);
   scanDrops(request, acc.fates);
