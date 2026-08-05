@@ -9,7 +9,7 @@ export function hubUsageFromChat(usage: ChatUsage | undefined): HubUsage {
   const cached = usage.prompt_tokens_details?.cached_tokens;
 
   return {
-    inputTokens: usage.prompt_tokens - (cached ?? 0),
+    inputTokens: Math.max(0, usage.prompt_tokens - (cached ?? 0)),
     outputTokens: usage.completion_tokens,
     ...(cached === undefined ? {} : { cacheReadTokens: cached }),
   };
