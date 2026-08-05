@@ -3,8 +3,13 @@ import type { ChatFinishReason, ChatStreamError, ChatStreamFrame } from './chat-
 import type { HubBlockOpening, HubStreamEvent, HubUsage } from './hub';
 
 import { chatFinishFrom } from './chat-completions-stops';
+import { chatUsageFromHub, mergedStreamUsage } from './chat-completions-usage';
 
-type EncodeState = { toolChatIndex: Map<number, number>; toolCounter: number };
+type EncodeState = {
+  toolChatIndex: Map<number, number>;
+  toolCounter: number;
+  beginUsage: HubUsage;
+};
 
 type ToolOpening = Extract<HubBlockOpening, { kind: 'tool' }>;
 type BlockOpenEvent = Extract<HubStreamEvent, { type: 'block-open' }>;
@@ -16,7 +21,7 @@ type ActiveEvent = Extract<
 >;
 
 function initialEncodeState(): EncodeState {
-  return { toolChatIndex: new Map(), toolCounter: 0 };
+  return { toolChatIndex: new Map(), toolCounter: 0, beginUsage: {} };
 }
 
 function beginChunk(): ChatStreamFrame {
@@ -136,13 +141,7 @@ function finishChunk(finish: ChatFinishReason): ChatStreamFrame {
 }
 
 function usageChunk(usage: HubUsage): ChatStreamFrame {
-  return {
-    type: 'chunk',
-    chunk: {
-      choices: [],
-      usage: { prompt_tokens: usage.inputTokens ?? 0, completion_tokens: usage.outputTokens ?? 0 },
-    },
-  };
+  return { type: 'chunk', chunk: { choices: [], usage: chatUsageFromHub(usage) } };
 }
 
 function streamErrorFromRefusal(refusal: TranslationRefusal): ChatStreamError {
@@ -152,7 +151,11 @@ function streamErrorFromRefusal(refusal: TranslationRefusal): ChatStreamError {
   };
 }
 
-function encodeMessageEnd(event: MessageEndEvent, frames: ChatStreamFrame[]): void {
+function encodeMessageEnd(
+  state: EncodeState,
+  event: MessageEndEvent,
+  frames: ChatStreamFrame[],
+): void {
   const finish = chatFinishFrom(event.stopReason);
 
   if ('refusal' in finish) {
@@ -162,7 +165,7 @@ function encodeMessageEnd(event: MessageEndEvent, frames: ChatStreamFrame[]): vo
   }
 
   frames.push(finishChunk(finish.finish));
-  frames.push(usageChunk(event.usage));
+  frames.push(usageChunk(mergedStreamUsage(state.beginUsage, event.usage)));
   frames.push({ type: 'done' });
 }
 
@@ -181,7 +184,7 @@ function encodeActiveEvent(
 
       return false;
     case 'message-end':
-      encodeMessageEnd(event, frames);
+      encodeMessageEnd(state, event, frames);
 
       return true;
     case 'stream-error':
@@ -203,6 +206,7 @@ function encodeEvent(
   frames: ChatStreamFrame[],
 ): boolean {
   if (event.type === 'message-begin') {
+    state.beginUsage = event.usage ?? {};
     frames.push(beginChunk());
 
     return false;

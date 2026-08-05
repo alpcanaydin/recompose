@@ -1,14 +1,11 @@
 import type { TranslationRefusal } from '../refusals';
-import type {
-  ChatCompletionsResponse,
-  ChatResponseMessage,
-  ChatUsage,
-} from './chat-completions-wire';
+import type { ChatCompletionsResponse, ChatResponseMessage } from './chat-completions-wire';
 import type { Fate, TranslateResult, Translated } from './fates';
-import type { HubContentBlock, HubResponse, HubUsage } from './hub';
+import type { HubContentBlock, HubResponse } from './hub';
 
 import { foldAssistantBlocks, hubToolUseFromChatCall } from './chat-completions-blocks';
 import { chatFinishFrom, hubStopFrom } from './chat-completions-stops';
+import { chatUsageFromHub, hubUsageFromChat } from './chat-completions-usage';
 
 function hubContentFromMessage(message: ChatResponseMessage): readonly HubContentBlock[] {
   const blocks: HubContentBlock[] = [];
@@ -24,14 +21,6 @@ function hubContentFromMessage(message: ChatResponseMessage): readonly HubConten
   return blocks;
 }
 
-function hubUsageFrom(usage: ChatUsage | undefined): HubUsage {
-  if (usage === undefined) {
-    return {};
-  }
-
-  return { inputTokens: usage.prompt_tokens, outputTokens: usage.completion_tokens };
-}
-
 export function decodeResponse(response: ChatCompletionsResponse): Translated<HubResponse> {
   const choice = response.choices[0];
   const fates: Fate[] = [
@@ -41,11 +30,7 @@ export function decodeResponse(response: ChatCompletionsResponse): Translated<Hu
   const content = choice ? hubContentFromMessage(choice.message) : [];
   const stopReason = choice ? hubStopFrom(choice.finish_reason) : 'end';
 
-  return { value: { content, stopReason, usage: hubUsageFrom(response.usage) }, fates };
-}
-
-function chatUsageFrom(usage: HubUsage): ChatUsage {
-  return { prompt_tokens: usage.inputTokens ?? 0, completion_tokens: usage.outputTokens ?? 0 };
+  return { value: { content, stopReason, usage: hubUsageFromChat(response.usage) }, fates };
 }
 
 function lossyFate(lossy: boolean, fates: Fate[]): void {
@@ -75,7 +60,7 @@ export function encodeResponse(
   };
   const response: ChatCompletionsResponse = {
     choices: [{ index: 0, message, finish_reason: finish.finish }],
-    usage: chatUsageFrom(hub.usage),
+    usage: chatUsageFromHub(hub.usage),
   };
 
   return { value: response, fates };

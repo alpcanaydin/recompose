@@ -91,7 +91,11 @@ export type ChatCompletionsRequest = ChatCompletionsRequestCore & ChatIgnoredFie
 
 export type ChatFinishReason = 'stop' | 'length' | 'tool_calls' | 'content_filter';
 
-export type ChatUsage = { prompt_tokens: number; completion_tokens: number };
+export type ChatUsage = {
+  prompt_tokens: number;
+  completion_tokens: number;
+  prompt_tokens_details?: { cached_tokens?: number };
+};
 
 export type ChatResponseMessage = {
   role: 'assistant';
