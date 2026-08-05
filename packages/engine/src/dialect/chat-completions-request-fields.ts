@@ -100,8 +100,12 @@ export function samplingFrom(request: ChatCompletionsRequest, fates: Fate[]): Hu
   return stopInto(request, withTopP, fates);
 }
 
+function hasRootSchemaUnion(parameters: ChatTool['function']['parameters']): boolean {
+  return parameters.anyOf !== undefined || parameters.oneOf !== undefined;
+}
+
 function hubToolSchemaFrom(parameters: ChatTool['function']['parameters']): HubToolSchema {
-  if (parameters.anyOf !== undefined || parameters.oneOf !== undefined) {
+  if (hasRootSchemaUnion(parameters)) {
     return { type: 'object', properties: {} };
   }
 
@@ -129,6 +133,10 @@ export function toolsFrom(
   }
 
   fates.push({ field: 'tools', disposition: 'carried' });
+
+  if (request.tools.some((tool) => hasRootSchemaUnion(tool.function.parameters))) {
+    fates.push({ field: 'tools[schema union]', disposition: 'mapped', to: 'absent' });
+  }
 
   return request.tools.map(hubToolFromChat);
 }
