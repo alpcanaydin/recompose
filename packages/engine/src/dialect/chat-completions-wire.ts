@@ -43,7 +43,11 @@ export type ChatAssistantMessage = {
   tool_calls?: readonly ChatToolCall[];
 };
 
-export type ChatToolMessage = { role: 'tool'; tool_call_id: string; content: string };
+export type ChatToolMessage = {
+  role: 'tool';
+  tool_call_id: string;
+  content: string | readonly ChatContentPart[];
+};
 
 export type ChatMessage =
   | ChatSystemMessage

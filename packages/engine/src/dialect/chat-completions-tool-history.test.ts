@@ -100,6 +100,50 @@ describe('decodeRequest groups parallel tool results into one Anthropic user tur
   });
 });
 
+function firstToolResultContent(messages: readonly HubMessage[]) {
+  const user = messages.find((message) => message.role === 'user');
+
+  return toolResultsOf(user)[0]?.content ?? [];
+}
+
+describe('decodeRequest maps a structured tool result into hub blocks', () => {
+  it('maps a text part and a base64 data-uri image part into tool_result content', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatAssistantMessage({ content: null, tool_calls: [aChatToolCall({ id: 'call_img' })] }),
+        aChatToolMessage({
+          tool_call_id: 'call_img',
+          content: [
+            { type: 'text', text: 'here' },
+            { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+          ],
+        }),
+      ],
+    });
+
+    expect(firstToolResultContent(decoded(request))).toEqual([
+      { type: 'text', text: 'here' },
+      { type: 'image', source: { type: 'base64', mediaType: 'image/png', data: 'AAA' } },
+    ]);
+  });
+
+  it('maps a plain url image part into an image url source', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatAssistantMessage({ content: null, tool_calls: [aChatToolCall({ id: 'call_img' })] }),
+        aChatToolMessage({
+          tool_call_id: 'call_img',
+          content: [{ type: 'image_url', image_url: { url: 'https://x.test/p.png' } }],
+        }),
+      ],
+    });
+
+    expect(firstToolResultContent(decoded(request))).toEqual([
+      { type: 'image', source: { type: 'url', url: 'https://x.test/p.png' } },
+    ]);
+  });
+});
+
 describe('decodeRequest guarantees Anthropic at least one message', () => {
   it('injects a fallback user turn when only a system prompt remains, naming it in a fate', () => {
     const request = aChatRequest({ messages: [aChatSystemMessage({ content: 'Be terse' })] });
