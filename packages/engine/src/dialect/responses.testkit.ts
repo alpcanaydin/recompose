@@ -14,6 +14,7 @@ import type {
   ResponsesReasoningItem,
   ResponsesRequest,
   ResponsesResponse,
+  ResponsesStreamEvent,
   ResponsesTool,
 } from './responses-wire';
 
@@ -160,4 +161,51 @@ export function aResponsesToolCallResponse(): ResponsesResponse {
     ],
     usage: { input_tokens: 20, output_tokens: 5 },
   };
+}
+
+export async function* streamOf<T>(events: readonly T[]): AsyncIterable<T> {
+  await Promise.resolve();
+
+  for (const event of events) {
+    yield event;
+  }
+}
+
+export async function collect<T>(source: AsyncIterable<T>): Promise<T[]> {
+  const items: T[] = [];
+
+  for await (const item of source) {
+    items.push(item);
+  }
+
+  return items;
+}
+
+export function aResponsesToolCallStream(): readonly ResponsesStreamEvent[] {
+  return [
+    { type: 'response.created', response: { id: 'resp_3', status: 'in_progress', output: [] } },
+    {
+      type: 'response.output_item.added',
+      output_index: 0,
+      item: { type: 'function_call', call_id: 'call_weather', name: 'get_weather' },
+    },
+    { type: 'response.function_call_arguments.delta', output_index: 0, delta: '{"city":"Paris"}' },
+    { type: 'response.output_item.done', output_index: 0 },
+    {
+      type: 'response.completed',
+      response: {
+        id: 'resp_3',
+        status: 'completed',
+        output: [
+          {
+            type: 'function_call',
+            call_id: 'call_weather',
+            name: 'get_weather',
+            arguments: '{"city":"Paris"}',
+          },
+        ],
+        usage: { input_tokens: 20, output_tokens: 5 },
+      },
+    },
+  ];
 }

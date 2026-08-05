@@ -108,3 +108,29 @@ export type ResponsesResponse = {
   incomplete_details?: { reason: string };
   usage?: ResponsesUsage;
 };
+
+export type ResponsesStreamResponse = {
+  id: string;
+  status: ResponsesStatus | 'in_progress';
+  output: readonly ResponsesOutputItem[];
+  incomplete_details?: { reason: string };
+  usage?: ResponsesUsage;
+};
+
+export type ResponsesStreamItem =
+  | { type: 'message'; role: 'assistant' }
+  | { type: 'function_call'; id?: string; call_id?: string; name: string }
+  | { type: 'reasoning'; id: string };
+
+export type ResponsesKnownStreamEvent =
+  | { type: 'response.created'; response: ResponsesStreamResponse }
+  | { type: 'response.output_item.added'; output_index: number; item: ResponsesStreamItem }
+  | { type: 'response.output_text.delta'; output_index: number; delta: string }
+  | { type: 'response.function_call_arguments.delta'; output_index: number; delta: string }
+  | { type: 'response.output_item.done'; output_index: number }
+  | { type: 'response.completed'; response: ResponsesStreamResponse }
+  | { type: 'error'; code: string; message: string };
+
+type ResponsesUnknownStreamEvent = { type: string };
+
+export type ResponsesStreamEvent = ResponsesKnownStreamEvent | ResponsesUnknownStreamEvent;

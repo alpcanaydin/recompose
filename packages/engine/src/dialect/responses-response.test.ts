@@ -43,23 +43,6 @@ describe('decodeResponse: an answer folds into the hub', () => {
     expect(value.stopReason).toBe('end');
   });
 
-  it('reads a reasoning output item as a thinking block with no fabricated signature', () => {
-    const response = aResponsesResponse({
-      output: [
-        { type: 'reasoning', id: 'rs_1', summary: [{ type: 'summary_text', text: 'ponder' }] },
-      ],
-    });
-
-    const { value } = expectTranslation(decodeResponse(response));
-
-    const thinking = value.content.find(
-      (block): block is HubThinkingBlock => block.type === 'thinking',
-    );
-
-    expect(thinking?.text).toBe('ponder');
-    expect(thinking?.signature).toBeUndefined();
-  });
-
   it('reads cached and reasoning token details into the hub usage', () => {
     const response = aResponsesResponse({
       usage: {
@@ -78,6 +61,25 @@ describe('decodeResponse: an answer folds into the hub', () => {
       cacheReadTokens: 6,
       reasoningTokens: 4,
     });
+  });
+});
+
+describe('decodeResponse: a reasoning output crosses as a thinking block', () => {
+  it('reads a reasoning output item as a thinking block with no fabricated signature', () => {
+    const response = aResponsesResponse({
+      output: [
+        { type: 'reasoning', id: 'rs_1', summary: [{ type: 'summary_text', text: 'ponder' }] },
+      ],
+    });
+
+    const { value } = expectTranslation(decodeResponse(response));
+
+    const thinking = value.content.find(
+      (block): block is HubThinkingBlock => block.type === 'thinking',
+    );
+
+    expect(thinking?.text).toBe('ponder');
+    expect(thinking?.signature).toBeUndefined();
   });
 });
 
