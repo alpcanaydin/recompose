@@ -6,19 +6,24 @@ import { decodeRequest } from './chat-completions-request';
 import {
   aChatAssistantMessage,
   aChatRequest,
+  aChatSystemMessage,
   aChatToolCall,
   aChatToolMessage,
   aChatUserMessage,
 } from './chat-completions.testkit';
 
-function decoded(request: Parameters<typeof decodeRequest>[0]): HubMessage[] {
+function translated(request: Parameters<typeof decodeRequest>[0]) {
   const result = decodeRequest(request);
 
   if ('refusal' in result) {
     throw new Error(`expected a translation, met a refusal: ${JSON.stringify(result.refusal)}`);
   }
 
-  return [...result.value.messages];
+  return result;
+}
+
+function decoded(request: Parameters<typeof decodeRequest>[0]): HubMessage[] {
+  return [...translated(request).value.messages];
 }
 
 function blocksOf(messages: readonly HubMessage[]) {
@@ -92,5 +97,22 @@ describe('decodeRequest groups parallel tool results into one Anthropic user tur
     const userTurns = decoded(request).filter((message) => message.role === 'user');
 
     expect(userTurns.map(toolIdsOf)).toEqual([['call_a'], ['call_b']]);
+  });
+});
+
+describe('decodeRequest guarantees Anthropic at least one message', () => {
+  it('injects a fallback user turn when only a system prompt remains, naming it in a fate', () => {
+    const request = aChatRequest({ messages: [aChatSystemMessage({ content: 'Be terse' })] });
+
+    const { value, fates } = translated(request);
+
+    expect(value.system).toEqual([{ text: 'Be terse' }]);
+    expect(value.messages).toHaveLength(1);
+    expect(value.messages[0]?.role).toBe('user');
+    expect(fates).toContainEqual({
+      field: 'messages',
+      disposition: 'mapped',
+      to: 'messages[user] (fallback)',
+    });
   });
 });

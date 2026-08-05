@@ -225,6 +225,15 @@ function foldMessages(
   }
 }
 
+function ensureAtLeastOneMessage(acc: DecodeAcc): void {
+  if (acc.messages.length > 0) {
+    return;
+  }
+
+  acc.messages.push({ role: 'user', content: [] });
+  acc.fates.push({ field: 'messages', disposition: 'mapped', to: 'messages[user] (fallback)' });
+}
+
 function assembleHubRequest(request: ChatCompletionsRequest, acc: DecodeAcc): HubRequest {
   const system = systemFrom(acc.systemTexts);
   const tools = toolsFrom(request, acc.fates);
@@ -252,6 +261,7 @@ export function decodeRequest(
   const acc: DecodeAcc = { systemTexts: [], messages: [], fates: [] };
 
   foldMessages(request.messages, acc, resultIds);
+  ensureAtLeastOneMessage(acc);
 
   scanEnvelope(request, acc.fates);
   scanDrops(request, acc.fates);
