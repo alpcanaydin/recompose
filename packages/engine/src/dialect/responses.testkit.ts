@@ -13,6 +13,7 @@ import type {
   ResponsesMessageItem,
   ResponsesReasoningItem,
   ResponsesRequest,
+  ResponsesResponse,
   ResponsesTool,
 } from './responses-wire';
 
@@ -130,5 +131,33 @@ export function aCodexRequestWithTools(
     tools: [aResponsesTool()],
     tool_choice: 'auto',
     ...overrides,
+  };
+}
+
+export function aResponsesResponse(overrides: Partial<ResponsesResponse> = {}): ResponsesResponse {
+  return {
+    id: 'resp_1',
+    status: 'completed',
+    output: [
+      { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Sunny.' }] },
+    ],
+    usage: { input_tokens: 12, output_tokens: 8 },
+    ...overrides,
+  };
+}
+
+export function aResponsesToolCallResponse(): ResponsesResponse {
+  return {
+    id: 'resp_2',
+    status: 'completed',
+    output: [
+      {
+        type: 'function_call',
+        call_id: 'call_weather',
+        name: 'get_weather',
+        arguments: '{"city":"Paris"}',
+      },
+    ],
+    usage: { input_tokens: 20, output_tokens: 5 },
   };
 }

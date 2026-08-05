@@ -13,7 +13,6 @@ import type {
 } from './hub';
 import type {
   ResponsesContentPart,
-  ResponsesFunctionCallItem,
   ResponsesFunctionCallOutputItem,
   ResponsesInputItem,
   ResponsesRequest,
@@ -21,6 +20,8 @@ import type {
   ResponsesToolChoice,
   ResponsesToolParameters,
 } from './responses-wire';
+
+import { functionCallItemOf, thinkingDropFate } from './responses-shared';
 
 function toResponsesTool(tool: HubTool): ResponsesTool {
   const parameters: ResponsesToolParameters = {
@@ -73,15 +74,6 @@ function partOfBlock(
     : { type: 'input_text', text: block.text };
 }
 
-function functionCallItemOf(block: HubToolUseBlock): ResponsesFunctionCallItem {
-  return {
-    type: 'function_call',
-    call_id: block.id,
-    name: block.name,
-    arguments: JSON.stringify(block.input),
-  };
-}
-
 function functionCallOutputItemOf(block: HubToolResultBlock): ResponsesFunctionCallOutputItem {
   const output = block.content
     .flatMap((part) => (part.type === 'text' ? [part.text] : []))
@@ -106,10 +98,6 @@ function itemOfToolBlock(block: HubToolUseBlock | HubToolResultBlock): Responses
 }
 
 type FoldedInput = { items: ResponsesInputItem[]; fates: Fate[] };
-
-function thinkingDropFate(): Fate {
-  return { field: 'thinking', disposition: 'mapped', to: 'absent', costBearing: true };
-}
 
 function encodeMessage(message: HubMessage): FoldedInput {
   const items: ResponsesInputItem[] = [];

@@ -17,7 +17,7 @@ export type ResponsesTool = {
 export type ResponsesToolChoice = 'auto' | 'none' | 'required' | { type: 'function'; name: string };
 
 type ResponsesInputTextPart = { type: 'input_text'; text: string };
-type ResponsesOutputTextPart = { type: 'output_text'; text: string };
+export type ResponsesOutputTextPart = { type: 'output_text'; text: string };
 type ResponsesInputImagePart = { type: 'input_image'; image_url: string };
 
 export type ResponsesContentPart =
@@ -77,4 +77,34 @@ export type ResponsesRequest = {
   user?: string;
   parallel_tool_calls?: boolean;
   prompt_cache_key?: string;
+};
+
+export type ResponsesUsage = {
+  input_tokens?: number;
+  output_tokens?: number;
+  input_tokens_details?: { cached_tokens?: number };
+  output_tokens_details?: { reasoning_tokens?: number };
+};
+
+type ResponsesOutputMessageItem = {
+  type: 'message';
+  role: 'assistant';
+  content: readonly ResponsesOutputTextPart[];
+};
+
+export type ResponsesOutputItem =
+  | ResponsesOutputMessageItem
+  | ResponsesFunctionCallItem
+  | ResponsesReasoningItem;
+
+export type ResponsesStatus = 'completed' | 'incomplete' | 'failed';
+
+export type ResponsesIncompleteReason = 'max_output_tokens' | 'content_filter';
+
+export type ResponsesResponse = {
+  id: string;
+  status: ResponsesStatus;
+  output: readonly ResponsesOutputItem[];
+  incomplete_details?: { reason: string };
+  usage?: ResponsesUsage;
 };
