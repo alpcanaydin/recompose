@@ -100,18 +100,23 @@ export function samplingFrom(request: ChatCompletionsRequest, fates: Fate[]): Hu
   return stopInto(request, withTopP, fates);
 }
 
-function hubToolFromChat(tool: ChatTool): HubTool {
-  const parameters = tool.function.parameters;
-  const schema: HubToolSchema = {
+function hubToolSchemaFrom(parameters: ChatTool['function']['parameters']): HubToolSchema {
+  if (parameters.anyOf !== undefined || parameters.oneOf !== undefined) {
+    return { type: 'object', properties: {} };
+  }
+
+  return {
     type: 'object',
     properties: parameters.properties ?? {},
     ...(parameters.required ? { required: parameters.required } : {}),
   };
+}
 
+function hubToolFromChat(tool: ChatTool): HubTool {
   return {
     name: tool.function.name,
     ...(tool.function.description !== undefined ? { description: tool.function.description } : {}),
-    inputSchema: schema,
+    inputSchema: hubToolSchemaFrom(tool.function.parameters),
   };
 }
 

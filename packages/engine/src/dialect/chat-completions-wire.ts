@@ -53,9 +53,11 @@ export type ChatMessage =
   | ChatToolMessage;
 
 type ChatFunctionSchema = {
-  type: 'object';
+  type?: 'object';
   properties?: HubJsonObject;
   required?: readonly string[];
+  anyOf?: readonly unknown[];
+  oneOf?: readonly unknown[];
 };
 
 export type ChatTool = {
