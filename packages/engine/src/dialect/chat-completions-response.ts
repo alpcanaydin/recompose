@@ -33,12 +33,6 @@ export function decodeResponse(response: ChatCompletionsResponse): Translated<Hu
   return { value: { content, stopReason, usage: hubUsageFromChat(response.usage) }, fates };
 }
 
-function lossyFate(lossy: boolean, fates: Fate[]): void {
-  if (lossy) {
-    fates.push({ field: 'stopReason', disposition: 'mapped', to: 'finish_reason (lossy)' });
-  }
-}
-
 export function encodeResponse(
   hub: HubResponse,
 ): TranslateResult<ChatCompletionsResponse, TranslationRefusal> {
@@ -50,7 +44,9 @@ export function encodeResponse(
 
   const fates: Fate[] = [];
 
-  lossyFate(finish.lossy, fates);
+  if (finish.lossy) {
+    fates.push({ field: 'stopReason', disposition: 'mapped', to: 'finish_reason (lossy)' });
+  }
 
   const { text, toolCalls } = foldAssistantBlocks(hub.content, fates);
   const message: ChatResponseMessage = {
