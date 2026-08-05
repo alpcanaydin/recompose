@@ -274,3 +274,24 @@ describe('encodeResponse counts the sparser answers', () => {
     expect(toolUse?.input).toEqual({});
   });
 });
+
+describe('decodeResponse accounts for discarded extra choices', () => {
+  it('keeps the first choice and records a cost-bearing drop fate for the rest', () => {
+    const response = aChatResponse({
+      choices: [
+        { index: 0, message: { role: 'assistant', content: 'a' }, finish_reason: 'stop' },
+        { index: 1, message: { role: 'assistant', content: 'b' }, finish_reason: 'stop' },
+      ],
+    });
+
+    const { value, fates } = decodeResponse(response);
+
+    expect(value.content).toEqual([{ type: 'text', text: 'a' }]);
+    expect(fates).toContainEqual({
+      field: 'choices[extra]',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
+  });
+});

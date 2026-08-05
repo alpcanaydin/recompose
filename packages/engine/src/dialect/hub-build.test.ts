@@ -64,6 +64,10 @@ describe('imageBlockFromDataUri: an arbitrary output becomes an image only when 
     expect(imageBlockFromDataUri('blob:image/png;base64,AAA')).toBeUndefined();
     expect(imageBlockFromDataUri('data:;base64,AAA')).toBeUndefined();
   });
+
+  it('leaves a non-image data uri media type unclaimed', () => {
+    expect(imageBlockFromDataUri('data:application/pdf;base64,AAA')).toBeUndefined();
+  });
 });
 
 describe('mergeAdjacentSameRole: a strict target reads strictly alternating turns', () => {

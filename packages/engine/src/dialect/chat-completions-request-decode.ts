@@ -61,10 +61,43 @@ function callAndResultIds(messages: readonly ChatMessage[]): {
   return { callIds, resultIds };
 }
 
-function orphanResultId(callIds: Set<string>, resultIds: Set<string>): string | undefined {
-  for (const id of resultIds) {
-    if (!callIds.has(id)) {
-      return id;
+function recordStandingCalls(message: ChatMessage, standing: Set<string>): void {
+  if (message.role !== 'assistant') {
+    return;
+  }
+
+  for (const call of message.tool_calls ?? []) {
+    standing.add(call.id);
+  }
+}
+
+function toolResultViolation(
+  id: string,
+  standing: Set<string>,
+  consumed: Set<string>,
+): string | undefined {
+  if (!standing.has(id) || consumed.has(id)) {
+    return id;
+  }
+
+  consumed.add(id);
+
+  return undefined;
+}
+
+function firstToolHistoryViolation(messages: readonly ChatMessage[]): string | undefined {
+  const standing = new Set<string>();
+  const consumed = new Set<string>();
+
+  for (const message of messages) {
+    recordStandingCalls(message, standing);
+
+    if (message.role === 'tool') {
+      const violation = toolResultViolation(message.tool_call_id, standing, consumed);
+
+      if (violation !== undefined) {
+        return violation;
+      }
     }
   }
 
@@ -225,10 +258,10 @@ export function decodeRequest(
   request: ChatCompletionsRequest,
 ): TranslateResult<HubRequest, TranslationRefusal> {
   const { callIds, resultIds } = callAndResultIds(request.messages);
-  const orphan = orphanResultId(callIds, resultIds);
+  const violation = firstToolHistoryViolation(request.messages);
 
-  if (orphan !== undefined) {
-    return { refusal: unrepairableToolCall(orphan) };
+  if (violation !== undefined) {
+    return { refusal: unrepairableToolCall(violation) };
   }
 
   const collision = firstToolIdCollision([...callIds, ...resultIds]);

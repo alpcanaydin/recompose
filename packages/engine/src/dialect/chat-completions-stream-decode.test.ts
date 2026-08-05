@@ -1,7 +1,11 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect, it } from 'vitest';
 
-import type { ChatStreamFrame, ChatToolCallDelta } from './chat-completions-wire';
+import type {
+  ChatCompletionChunk,
+  ChatStreamFrame,
+  ChatToolCallDelta,
+} from './chat-completions-wire';
 import type { HubStreamEvent } from './hub';
 
 import { decodeStream } from './chat-completions-stream';
@@ -207,4 +211,47 @@ describe('a decoded stream never opens a tool block without a name and an id', (
       }
     },
   );
+});
+
+function chunkFrame(delta: ChatCompletionChunk['choices'][number]['delta']): ChatStreamFrame {
+  return { type: 'chunk', chunk: { choices: [{ index: 0, delta }] } };
+}
+
+describe('decodeStream never emits a delta for a closed hub block', () => {
+  it('opens a fresh text block when text follows a tool block', async () => {
+    const events = await collect(
+      decodeStream(
+        streamOf([
+          chunkFrame({ content: 'before' }),
+          chunkFrame({
+            tool_calls: [{ index: 0, id: 'call_a', function: { name: 'f', arguments: '{}' } }],
+          }),
+          chunkFrame({ content: 'after' }),
+          { type: 'done' },
+        ]),
+      ),
+    );
+
+    const textDeltaIndices = events.flatMap((event) =>
+      event.type === 'block-delta' && event.delta.kind === 'text' ? [event.index] : [],
+    );
+    const toolBlockOpens = toolOpens(events).filter((event) => event.opening.kind === 'tool');
+
+    expect(toolBlockOpens).toHaveLength(1);
+    expect(textDeltaIndices).toEqual([0, 2]);
+  });
+
+  it('gives two unindexed tool calls with distinct ids their own blocks', async () => {
+    const events = await collect(
+      decodeStream(
+        streamOf([
+          chunkFrame({ tool_calls: [{ id: 'call_a', function: { name: 'a', arguments: '{}' } }] }),
+          chunkFrame({ tool_calls: [{ id: 'call_b', function: { name: 'b', arguments: '{}' } }] }),
+          { type: 'done' },
+        ]),
+      ),
+    );
+
+    expect(toolOpens(events).filter((event) => event.opening.kind === 'tool')).toHaveLength(2);
+  });
 });

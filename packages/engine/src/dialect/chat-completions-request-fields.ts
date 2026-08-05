@@ -21,6 +21,12 @@ function recordTokenSource(request: ChatCompletionsRequest, fates: Fate[]): void
       disposition: 'mapped',
       to: 'sampling.maxOutputTokens',
     });
+
+    if (request.max_tokens !== undefined) {
+      fates.push({ field: 'max_tokens', disposition: 'mapped', to: 'absent' });
+    }
+
+    return;
   }
 
   if (request.max_tokens !== undefined) {
@@ -220,6 +226,19 @@ export function systemMessageFrom(
   }
 
   fates.push({ field: 'system', disposition: 'mapped', to: 'messages[system]' });
+
+  const droppedBreakpoints = system
+    .slice(0, -1)
+    .filter((text) => text.cacheBreakpoint !== undefined);
+
+  if (droppedBreakpoints.length > 0) {
+    fates.push({
+      field: 'system[cacheBreakpoint]',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
+  }
 
   return {
     role: 'system',

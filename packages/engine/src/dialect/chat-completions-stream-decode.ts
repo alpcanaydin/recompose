@@ -14,7 +14,7 @@ type DecodeState = {
   nextIndex: number;
   currentOpen: number | undefined;
   textIndex: number | undefined;
-  toolIndexMap: Map<number, number>;
+  toolIndexMap: Map<string, number>;
   syntheticIdCount: number;
   stopReason: HubStopReason;
   usage: HubUsage;
@@ -33,9 +33,22 @@ function initialDecodeState(): DecodeState {
   };
 }
 
+function forgetClosedBlock(state: DecodeState, closedIndex: number): void {
+  if (state.textIndex === closedIndex) {
+    state.textIndex = undefined;
+  }
+
+  for (const [key, hubIndex] of state.toolIndexMap) {
+    if (hubIndex === closedIndex) {
+      state.toolIndexMap.delete(key);
+    }
+  }
+}
+
 function closeCurrent(state: DecodeState, events: HubStreamEvent[]): void {
   if (state.currentOpen !== undefined) {
     events.push({ type: 'block-close', index: state.currentOpen });
+    forgetClosedBlock(state, state.currentOpen);
     state.currentOpen = undefined;
   }
 }
@@ -84,13 +97,25 @@ function toolId(state: DecodeState, delta: ChatToolCallDelta): string {
   return `toolu_${state.syntheticIdCount++}`;
 }
 
+function toolCorrelationKey(state: DecodeState, delta: ChatToolCallDelta): string {
+  if (delta.index !== undefined) {
+    return `idx:${String(delta.index)}`;
+  }
+
+  if (delta.id !== undefined && delta.id !== '') {
+    return `id:${delta.id}`;
+  }
+
+  return `syn:${String(state.syntheticIdCount++)}`;
+}
+
 function openToolBlock(
   state: DecodeState,
-  chatIndex: number,
+  key: string,
   delta: ChatToolCallDelta,
   events: HubStreamEvent[],
 ): number {
-  const existing = state.toolIndexMap.get(chatIndex);
+  const existing = state.toolIndexMap.get(key);
 
   if (existing !== undefined) {
     return existing;
@@ -100,7 +125,7 @@ function openToolBlock(
 
   const hubIndex = state.nextIndex++;
 
-  state.toolIndexMap.set(chatIndex, hubIndex);
+  state.toolIndexMap.set(key, hubIndex);
   state.currentOpen = hubIndex;
   events.push({
     type: 'block-open',
@@ -108,7 +133,7 @@ function openToolBlock(
     opening: {
       kind: 'tool',
       id: toolId(state, delta),
-      name: toolName(delta) ?? `tool_${hubIndex}`,
+      name: toolName(delta) ?? `tool_${String(hubIndex)}`,
     },
   });
 
@@ -120,7 +145,7 @@ function applyToolDelta(
   delta: ChatToolCallDelta,
   events: HubStreamEvent[],
 ): void {
-  const hubIndex = openToolBlock(state, delta.index ?? -1, delta, events);
+  const hubIndex = openToolBlock(state, toolCorrelationKey(state, delta), delta, events);
   const args = delta.function?.arguments;
 
   if (args !== undefined && args !== '') {

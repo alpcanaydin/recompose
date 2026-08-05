@@ -191,3 +191,40 @@ describe('decodeRequest refuses tool ids that sanitize into an ambiguous pairing
     expect(result.refusal).toEqual({ reason: 'tool-id-collision', sanitizedId: 'a_1' });
   });
 });
+
+describe('decodeRequest rejects tool history that breaks call-then-result order', () => {
+  it('refuses a tool result that arrives before its call', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatToolMessage({ tool_call_id: 'call_x', content: 'early' }),
+        aChatAssistantMessage({ content: null, tool_calls: [aChatToolCall({ id: 'call_x' })] }),
+      ],
+    });
+
+    const result = decodeRequest(request);
+
+    if (!('refusal' in result)) {
+      throw new Error('expected a refusal, met a translation');
+    }
+
+    expect(result.refusal).toEqual({ reason: 'unrepairable-tool-call', unmatchedId: 'call_x' });
+  });
+
+  it('refuses a second tool result for one call', () => {
+    const request = aChatRequest({
+      messages: [
+        aChatAssistantMessage({ content: null, tool_calls: [aChatToolCall({ id: 'call_x' })] }),
+        aChatToolMessage({ tool_call_id: 'call_x', content: 'one' }),
+        aChatToolMessage({ tool_call_id: 'call_x', content: 'two' }),
+      ],
+    });
+
+    const result = decodeRequest(request);
+
+    if (!('refusal' in result)) {
+      throw new Error('expected a refusal, met a translation');
+    }
+
+    expect(result.refusal).toEqual({ reason: 'unrepairable-tool-call', unmatchedId: 'call_x' });
+  });
+});

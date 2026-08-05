@@ -43,9 +43,11 @@ export function imageSourceFromUrl(url: string): HubImageSource {
 export function imageBlockFromDataUri(text: string): HubImageBlock | undefined {
   const parsed = parseBase64DataUri(text);
 
-  return parsed === undefined
-    ? undefined
-    : { type: 'image', source: { type: 'base64', ...parsed } };
+  if (parsed === undefined || !parsed.mediaType.startsWith('image/')) {
+    return undefined;
+  }
+
+  return { type: 'image', source: { type: 'base64', ...parsed } };
 }
 
 export function mergeAdjacentSameRole(messages: readonly HubMessage[]): HubMessage[] {

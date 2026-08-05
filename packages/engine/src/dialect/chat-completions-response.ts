@@ -27,6 +27,11 @@ export function decodeResponse(response: ChatCompletionsResponse): Translated<Hu
     { field: 'choices', disposition: 'mapped', to: 'content' },
     { field: 'usage', disposition: 'mapped', to: 'usage' },
   ];
+
+  if (response.choices.length > 1) {
+    fates.push({ field: 'choices[extra]', disposition: 'mapped', to: 'absent', costBearing: true });
+  }
+
   const content = choice ? hubContentFromMessage(choice.message) : [];
   const stopReason = choice ? hubStopFrom(choice.finish_reason) : 'end';
 

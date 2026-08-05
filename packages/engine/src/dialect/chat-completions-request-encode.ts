@@ -141,20 +141,20 @@ function chatUserFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {
   const toolResults = message.content.filter(
     (block): block is HubToolResultBlock => block.type === 'tool_result',
   );
-
-  if (toolResults.length > 0) {
-    return toolResults.map((block) => chatToolMessageFrom(block, fates));
-  }
-
+  const toolMessages = toolResults.map((block) => chatToolMessageFrom(block, fates));
   const parts: ChatContentPart[] = [];
 
   for (const block of message.content) {
     routeUserBlock(block, parts, fates);
   }
 
+  if (parts.length === 0) {
+    return toolMessages;
+  }
+
   const content = userContent(parts);
 
-  return [{ role: 'user', content, ...collapsedCacheControl(content, parts) }];
+  return [...toolMessages, { role: 'user', content, ...collapsedCacheControl(content, parts) }];
 }
 
 function chatMessagesFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {
