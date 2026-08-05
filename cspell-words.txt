@@ -69,6 +69,7 @@ IDAT
 idempotently
 IHDR
 inspectable
+jcnlwd
 kapi
 Kapı
 karpathy
@@ -88,6 +89,7 @@ llms
 lmstudio
 lobehub
 lockfiles
+logit
 logprobs
 lossily
 McCabe
@@ -107,6 +109,7 @@ noninteractive
 nsis
 Ollama
 Ollama's
+ONETWOTHREE
 openclaw
 opencodex
 openrouter
@@ -164,6 +167,7 @@ Syft
 Tauri
 TEAMID
 testkit
+testkits
 textboxes
 textnodes
 Toggl
@@ -187,6 +191,7 @@ unjudged
 unlinted
 unmappable
 unpadded
+unrouted
 unscanned
 unstub
 untypes
