@@ -9,20 +9,20 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] The spike proves the async-iterable transform shape holds under the adapter, or names the reshape the stream codecs need. It carries no dialect logic, and it's the shape confirmation ADR 0057 required before any streaming promise.
   - [x] Layers: the spike is its own evidence, captured in the task report.
 
-- [ ] **Task 2: the hub model.** Owns `packages/engine/src/dialect/hub.ts` and `hub.testkit.ts`. Depends on nothing, gates every codec, runs beside tasks 1, 3, and 4 on disjoint files.
-  - [ ] Opens red in a type-level spec pinning the hub request, response, and event models before the module exists.
-  - [ ] `hub.ts` lands the canonical hub message model and event model as plain types: the block union (text, thinking, image, tool_use, tool_result), the request shape (system, messages, tools, tool choice, sampling), the response shape (content, stop reason, usage), and the event model whose tool block open requires a name and an id. The testkit ships hub-shape builders the codec specs share.
-  - [ ] Layers: type-level.
+- [x] **Task 2: the hub model.** Owns `packages/engine/src/dialect/hub.ts` and `hub.testkit.ts`. Depends on nothing, gates every codec, runs beside tasks 1, 3, and 4 on disjoint files.
+  - [x] Opens red in a type-level spec pinning the hub request, response, and event models before the module exists.
+  - [x] `hub.ts` lands the canonical hub message model and event model as plain types: the block union (text, thinking, image, tool_use, tool_result), the request shape (system, messages, tools, tool choice, sampling), the response shape (content, stop reason, usage), and the event model whose tool block open requires a name and an id. The testkit ships hub-shape builders the codec specs share.
+  - [x] Layers: type-level.
 
-- [ ] **Task 3: the fates.** Owns `packages/engine/src/dialect/fates.ts`, `fates.test.ts`, and `fates.test-d.ts`. Depends on nothing, gates every codec, runs beside tasks 1, 2, and 4 on disjoint files.
-  - [ ] Opens red in `fates.test.ts`: a translation carrying a leftover source key the fold never routed records a fate for it, before the leftover-key diff exists.
-  - [ ] `fates.ts` lands the three-fate discriminated union (carried, mapped, refused), the `Translated<T>` envelope carrying a value and a fate ledger, the `TranslateResult<T>` union over a translation or a typed refusal, and the leftover-key diff that emits a fate for any source key the fold left unrouted. A property pins that every source field lands exactly one fate. `fates.test-d.ts` pins the union arms and the result shape at the type level.
-  - [ ] Layers: unit, property, and type-level.
+- [x] **Task 3: the fates.** Owns `packages/engine/src/dialect/fates.ts`, `fates.test.ts`, and `fates.test-d.ts`. Depends on nothing, gates every codec, runs beside tasks 1, 2, and 4 on disjoint files.
+  - [x] Opens red in `fates.test.ts`: a translation carrying a leftover source key the fold never routed records a fate for it, before the leftover-key diff exists.
+  - [x] `fates.ts` lands the three-fate discriminated union (carried, mapped, refused), the `Translated<T>` envelope carrying a value and a fate ledger, the `TranslateResult<T>` union over a translation or a typed refusal, and the leftover-key diff that emits a fate for any source key the fold left unrouted. A property pins that every source field lands exactly one fate. `fates.test-d.ts` pins the union arms and the result shape at the type level.
+  - [x] Layers: unit, property, and type-level.
 
-- [ ] **Task 4: the refusals.** Owns `packages/engine/src/refusals.ts` and `refusals.test.ts`. Depends on nothing, runs beside tasks 1, 2, and 3 on disjoint files.
-  - [ ] Opens red in `refusals.test.ts`: `renderRefusal('responses', refusal)` answers the Responses error envelope, before the envelope or the projector exists.
-  - [ ] `refusals.ts` exports the shipped `AnthropicRefusal` and `OpenAiRefusal` types, adds a `ResponsesRefusal` envelope beside them, adds the typed translation-refusal union, and adds `renderRefusal(dialect, refusal)` projecting each refusal into the arriving dialect's envelope with the split-by-meaning status (unknown model 404, unmappable stop reason or unrepairable dangling tool 400 or 422, upstream carries its own). The shipped `gateway-app.test.ts` 404 specs stay green.
-  - [ ] Layers: unit.
+- [x] **Task 4: the refusals.** Owns `packages/engine/src/refusals.ts` and `refusals.test.ts`. Depends on nothing, runs beside tasks 1, 2, and 3 on disjoint files.
+  - [x] Opens red in `refusals.test.ts`: `renderRefusal('responses', refusal)` answers the Responses error envelope, before the envelope or the projector exists.
+  - [x] `refusals.ts` exports the shipped `AnthropicRefusal` and `OpenAiRefusal` types, adds a `ResponsesRefusal` envelope beside them, adds the typed translation-refusal union, and adds `renderRefusal(dialect, refusal)` projecting each refusal into the arriving dialect's envelope with the split-by-meaning status (unknown model 404, unmappable stop reason or unrepairable dangling tool 400 or 422, upstream carries its own). The shipped `gateway-app.test.ts` 404 specs stay green.
+  - [x] Layers: unit.
 
 - [ ] **Task 5: the Chat Completions codec.** Owns `packages/engine/src/dialect/chat-completions-codec.ts`, its spec, its testkit, and `chat-completions-drops.ts`. Depends on tasks 1, 2, 3, and 4. Runs beside task 6 on disjoint files.
   - [ ] Opens red in `chat-completions-codec.test.ts`: a tool-calling request decodes to the hub keeping tools, choice, and system, before the codec exists.
