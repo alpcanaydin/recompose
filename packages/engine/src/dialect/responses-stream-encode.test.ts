@@ -35,11 +35,43 @@ describe('encodeStream: hub events fold back out to Responses events', () => {
       delta: '{"city":"Paris"}',
     });
   });
+});
 
-  it('ends on the Responses completed terminator', async () => {
+describe('encodeStream: the whole tool-call stream folds event for event', () => {
+  it('folds the hub tool-call stream into the Responses event sequence', async () => {
     const events = await encode(aHubStreamOfAToolCall());
 
-    expect(events.at(-1)?.type).toBe('response.completed');
+    expect(events).toEqual([
+      {
+        type: 'response.created',
+        response: { id: 'resp_translated', status: 'in_progress', output: [] },
+      },
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: {
+          type: 'function_call',
+          id: 'toolu_weather',
+          call_id: 'toolu_weather',
+          name: 'get_weather',
+        },
+      },
+      {
+        type: 'response.function_call_arguments.delta',
+        output_index: 0,
+        delta: '{"city":"Paris"}',
+      },
+      { type: 'response.output_item.done', output_index: 0 },
+      {
+        type: 'response.completed',
+        response: {
+          id: 'resp_translated',
+          status: 'completed',
+          output: [],
+          usage: { input_tokens: 12, output_tokens: 8 },
+        },
+      },
+    ]);
   });
 });
 

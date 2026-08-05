@@ -71,6 +71,64 @@ describe('decodeRequest: a Codex request folds into the Anthropic hub', () => {
   });
 });
 
+describe('decodeRequest: the top-level fates name each destination', () => {
+  it('maps every top-level field to its hub destination', () => {
+    const request = aCodexRequestWithTools({
+      temperature: 0.4,
+      top_p: 0.9,
+      max_output_tokens: 512,
+    });
+
+    const { fates } = expectTranslation(decodeRequest(request));
+    const mapped = (field: string, to: string) => ({ field, disposition: 'mapped', to });
+
+    expect(fateFor(fates, 'input')).toEqual(mapped('input', 'messages'));
+    expect(fateFor(fates, 'model')).toEqual(mapped('model', 'routing'));
+    expect(fateFor(fates, 'instructions')).toEqual(mapped('instructions', 'system'));
+    expect(fateFor(fates, 'tools')).toEqual(mapped('tools', 'tools'));
+    expect(fateFor(fates, 'tool_choice')).toEqual(mapped('tool_choice', 'toolChoice'));
+    expect(fateFor(fates, 'temperature')).toEqual(mapped('temperature', 'sampling.temperature'));
+    expect(fateFor(fates, 'top_p')).toEqual(mapped('top_p', 'sampling.topP'));
+    expect(fateFor(fates, 'max_output_tokens')).toEqual(
+      mapped('max_output_tokens', 'sampling.maxOutputTokens'),
+    );
+  });
+});
+
+describe('decodeRequest: the vendor drop table traces every ignored field', () => {
+  it('names each ignored field a mapped-to-absent fate with its own cost flag', () => {
+    const request = aResponsesRequest({
+      store: true,
+      metadata: {},
+      service_tier: 'default',
+      top_logprobs: 1,
+      truncation: 'auto',
+      user: 'someone',
+      parallel_tool_calls: true,
+      prompt_cache_key: 'session-7',
+    });
+
+    const { fates } = expectTranslation(decodeRequest(request));
+    const absent = { disposition: 'mapped', to: 'absent' } as const;
+
+    expect(fateFor(fates, 'store')).toEqual({ field: 'store', ...absent });
+    expect(fateFor(fates, 'metadata')).toEqual({ field: 'metadata', ...absent });
+    expect(fateFor(fates, 'service_tier')).toEqual({ field: 'service_tier', ...absent });
+    expect(fateFor(fates, 'top_logprobs')).toEqual({ field: 'top_logprobs', ...absent });
+    expect(fateFor(fates, 'truncation')).toEqual({ field: 'truncation', ...absent });
+    expect(fateFor(fates, 'user')).toEqual({ field: 'user', ...absent });
+    expect(fateFor(fates, 'parallel_tool_calls')).toEqual({
+      field: 'parallel_tool_calls',
+      ...absent,
+    });
+    expect(fateFor(fates, 'prompt_cache_key')).toEqual({
+      field: 'prompt_cache_key',
+      ...absent,
+      costBearing: true,
+    });
+  });
+});
+
 describe('decodeRequest: an assistant turn crosses to a hub assistant message', () => {
   it('carries an assistant text message item into a hub assistant message', () => {
     const request = aResponsesRequest({

@@ -37,6 +37,11 @@ describe('decodeStream: block opens carry their kind, index, and identity', () =
 
     expect(events).toContainEqual({ type: 'block-open', index: 0, opening: { kind: 'text' } });
     expect(events).toContainEqual({
+      type: 'block-delta',
+      index: 0,
+      delta: { kind: 'text', text: 'Hi' },
+    });
+    expect(events).toContainEqual({
       type: 'block-open',
       index: 1,
       opening: { kind: 'tool', id: 'call_x', name: 'lookup' },
@@ -90,15 +95,25 @@ describe('decodeStream: an absent tool id is synthesized deterministically', () 
   });
 });
 
-describe('decodeStream: the terminator carries the stop reason and usage', () => {
-  it('ends on the hub message-end terminator carrying the stop reason and usage', async () => {
+describe('decodeStream: the whole tool-call stream maps event for event', () => {
+  it('folds the created, added, delta, done, and completed events into hub events', async () => {
     const events = await decode(aResponsesToolCallStream());
 
-    expect(events.at(-1)).toEqual({
-      type: 'message-end',
-      stopReason: 'tool_use',
-      usage: { inputTokens: 20, outputTokens: 5 },
-    });
+    expect(events).toEqual([
+      { type: 'message-begin' },
+      {
+        type: 'block-open',
+        index: 0,
+        opening: { kind: 'tool', id: 'call_weather', name: 'get_weather' },
+      },
+      {
+        type: 'block-delta',
+        index: 0,
+        delta: { kind: 'json-args', partialJson: '{"city":"Paris"}' },
+      },
+      { type: 'block-close', index: 0 },
+      { type: 'message-end', stopReason: 'tool_use', usage: { inputTokens: 20, outputTokens: 5 } },
+    ]);
   });
 });
 
