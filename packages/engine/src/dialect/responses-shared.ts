@@ -2,8 +2,6 @@ import type { Fate } from './fates';
 import type {
   HubContentBlock,
   HubImageBlock,
-  HubImageSource,
-  HubJsonObject,
   HubRedactedThinkingBlock,
   HubStopReason,
   HubTextBlock,
@@ -22,21 +20,8 @@ import type {
   ResponsesUsage,
 } from './responses-wire';
 
+import { imageBlockFromDataUri, imageSourceFromUrl, parseToolArguments } from './hub-build';
 import { sanitizeToolId } from './tool-id';
-
-function isJsonObject(value: unknown): value is HubJsonObject {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function parseArguments(raw: string): HubJsonObject {
-  const parsed: unknown = JSON.parse(raw);
-
-  return isJsonObject(parsed) ? parsed : {};
-}
-
-function imageSourceOf(imageUrl: string): HubImageSource {
-  return { type: 'url', url: imageUrl };
-}
 
 function toHubContentBlock(part: ResponsesContentPart): HubTextBlock | HubImageBlock {
   switch (part.type) {
@@ -44,7 +29,7 @@ function toHubContentBlock(part: ResponsesContentPart): HubTextBlock | HubImageB
     case 'output_text':
       return { type: 'text', text: part.text };
     case 'input_image':
-      return { type: 'image', source: imageSourceOf(part.image_url) };
+      return { type: 'image', source: imageSourceFromUrl(part.image_url) };
 
     default: {
       const unhandled: never = part;
@@ -69,36 +54,12 @@ export function toolUseBlockOf(item: ResponsesFunctionCallItem): HubToolUseBlock
     type: 'tool_use',
     id: sanitizeToolId(item.call_id),
     name: item.name,
-    input: parseArguments(item.arguments),
+    input: parseToolArguments(item.arguments),
   };
 }
 
-const dataUriPrefix = 'data:';
-const base64Marker = ';base64,';
-
-function imageFromDataUri(output: string): HubImageBlock | undefined {
-  if (!output.startsWith(dataUriPrefix)) {
-    return undefined;
-  }
-
-  const markerAt = output.indexOf(base64Marker);
-
-  if (markerAt < 0) {
-    return undefined;
-  }
-
-  const mediaType = output.slice(dataUriPrefix.length, markerAt);
-  const data = output.slice(markerAt + base64Marker.length);
-
-  if (mediaType.length === 0) {
-    return undefined;
-  }
-
-  return { type: 'image', source: { type: 'base64', mediaType, data } };
-}
-
 function toolResultContentOf(output: string): HubTextBlock | HubImageBlock {
-  return imageFromDataUri(output) ?? { type: 'text', text: output };
+  return imageBlockFromDataUri(output) ?? { type: 'text', text: output };
 }
 
 export function toolResultBlockOf(item: ResponsesFunctionCallOutputItem): HubToolResultBlock {

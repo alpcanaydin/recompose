@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  emptyConversation,
   missingModelInAnthropicDialect,
   missingModelInOpenAiDialect,
   renderRefusal,
+  toolIdCollision,
   unmappableStopReason,
   unknownModel,
   unrepairableToolCall,
@@ -107,6 +109,35 @@ describe('renderRefusal splits the other refusals by meaning', () => {
       error: {
         type: 'invalid_request_error',
         message: 'This dialect cannot carry the field "previous_response_id".',
+      },
+    });
+  });
+});
+
+describe('renderRefusal refuses a structurally invalid conversation as a 400', () => {
+  it('renders an empty conversation as a 400 in the OpenAI envelope', () => {
+    const rendered = renderRefusal('chat-completions', emptyConversation());
+
+    expect(rendered.status).toBe(400);
+    expect(rendered.body).toEqual({
+      error: {
+        message: 'The request carries no message to translate.',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'empty_conversation',
+      },
+    });
+  });
+
+  it('renders a tool-id collision as a 400 naming the shared id', () => {
+    const rendered = renderRefusal('anthropic', toolIdCollision('a_1'));
+
+    expect(rendered.status).toBe(400);
+    expect(rendered.body).toEqual({
+      type: 'error',
+      error: {
+        type: 'invalid_request_error',
+        message: 'Two tool calls share the sanitized id "a_1", so their pairing is ambiguous.',
       },
     });
   });

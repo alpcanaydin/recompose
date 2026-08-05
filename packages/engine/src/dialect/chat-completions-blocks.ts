@@ -3,29 +3,13 @@ import type { Fate } from './fates';
 import type {
   HubContentBlock,
   HubImageBlock,
-  HubJsonObject,
   HubTextBlock,
   HubToolResultBlock,
   HubToolUseBlock,
 } from './hub';
 
+import { parseToolArguments } from './hub-build';
 import { sanitizeToolId } from './tool-id';
-
-function isJsonObject(value: unknown): value is HubJsonObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function parseToolArguments(raw: string): HubJsonObject {
-  const source = raw === '' ? '{}' : raw;
-
-  try {
-    const parsed: unknown = JSON.parse(source);
-
-    return isJsonObject(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
 
 export function hubToolUseFromChatCall(call: ChatToolCall): HubToolUseBlock {
   return {

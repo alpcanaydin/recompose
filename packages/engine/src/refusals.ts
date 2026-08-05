@@ -12,7 +12,9 @@ type OpenAiCode =
   | 'model_not_found'
   | 'unmappable_stop_reason'
   | 'unrepairable_tool_call'
-  | 'unsupported_field';
+  | 'unsupported_field'
+  | 'empty_conversation'
+  | 'tool_id_collision';
 
 export type OpenAiRefusal = {
   error: {
@@ -36,7 +38,9 @@ export type TranslationRefusal =
   | { reason: 'unknown-model'; model: string }
   | { reason: 'unmappable-stop-reason'; stopReason: string }
   | { reason: 'unrepairable-tool-call'; unmatchedId: string }
-  | { reason: 'unsupported-field'; field: string };
+  | { reason: 'unsupported-field'; field: string }
+  | { reason: 'empty-conversation' }
+  | { reason: 'tool-id-collision'; sanitizedId: string };
 
 export type RenderedRefusal = {
   status: number;
@@ -112,6 +116,14 @@ export function unsupportedField(field: string): TranslationRefusal {
   return { reason: 'unsupported-field', field };
 }
 
+export function emptyConversation(): TranslationRefusal {
+  return { reason: 'empty-conversation' };
+}
+
+export function toolIdCollision(sanitizedId: string): TranslationRefusal {
+  return { reason: 'tool-id-collision', sanitizedId };
+}
+
 type RefusalFacts = {
   status: number;
   message: string;
@@ -119,29 +131,13 @@ type RefusalFacts = {
   anthropicType: AnthropicRefusal['error']['type'];
 };
 
-function factsOf(refusal: TranslationRefusal): RefusalFacts {
+type ClientErrorRefusal = Extract<
+  TranslationRefusal,
+  { reason: 'unsupported-field' | 'empty-conversation' | 'tool-id-collision' }
+>;
+
+function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
   switch (refusal.reason) {
-    case 'unknown-model':
-      return {
-        status: 404,
-        message: `No model named "${refusal.model}" is defined.`,
-        code: 'model_not_found',
-        anthropicType: 'not_found_error',
-      };
-    case 'unmappable-stop-reason':
-      return {
-        status: 422,
-        message: `The stop reason "${refusal.stopReason}" has no counterpart in this dialect.`,
-        code: 'unmappable_stop_reason',
-        anthropicType: 'invalid_request_error',
-      };
-    case 'unrepairable-tool-call':
-      return {
-        status: 422,
-        message: `The tool call "${refusal.unmatchedId}" has no matching tool result, and no repair is possible.`,
-        code: 'unrepairable_tool_call',
-        anthropicType: 'invalid_request_error',
-      };
     case 'unsupported-field':
       return {
         status: 400,
@@ -149,9 +145,58 @@ function factsOf(refusal: TranslationRefusal): RefusalFacts {
         code: 'unsupported_field',
         anthropicType: 'invalid_request_error',
       };
-    default:
-      throw new Error(`unhandled translation refusal: ${JSON.stringify(refusal)}`);
+    case 'empty-conversation':
+      return {
+        status: 400,
+        message: 'The request carries no message to translate.',
+        code: 'empty_conversation',
+        anthropicType: 'invalid_request_error',
+      };
+    case 'tool-id-collision':
+      return {
+        status: 400,
+        message: `Two tool calls share the sanitized id "${refusal.sanitizedId}", so their pairing is ambiguous.`,
+        code: 'tool_id_collision',
+        anthropicType: 'invalid_request_error',
+      };
+
+    default: {
+      const unhandled: never = refusal;
+
+      throw new Error(`unhandled client-error refusal: ${JSON.stringify(unhandled)}`);
+    }
   }
+}
+
+function factsOf(refusal: TranslationRefusal): RefusalFacts {
+  if (refusal.reason === 'unknown-model') {
+    return {
+      status: 404,
+      message: `No model named "${refusal.model}" is defined.`,
+      code: 'model_not_found',
+      anthropicType: 'not_found_error',
+    };
+  }
+
+  if (refusal.reason === 'unmappable-stop-reason') {
+    return {
+      status: 422,
+      message: `The stop reason "${refusal.stopReason}" has no counterpart in this dialect.`,
+      code: 'unmappable_stop_reason',
+      anthropicType: 'invalid_request_error',
+    };
+  }
+
+  if (refusal.reason === 'unrepairable-tool-call') {
+    return {
+      status: 422,
+      message: `The tool call "${refusal.unmatchedId}" has no matching tool result, and no repair is possible.`,
+      code: 'unrepairable_tool_call',
+      anthropicType: 'invalid_request_error',
+    };
+  }
+
+  return clientErrorFacts(refusal);
 }
 
 function anthropicBody(facts: RefusalFacts): AnthropicRefusal {

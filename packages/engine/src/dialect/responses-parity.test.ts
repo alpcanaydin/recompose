@@ -33,6 +33,21 @@ describe('decodeRequest: a tool id crosses safely to a strict target', () => {
   });
 });
 
+describe('decodeRequest: a malformed tool argument degrades rather than crashing', () => {
+  it('reads unparseable function-call arguments as an empty object', () => {
+    const request = aResponsesRequest({
+      input: [
+        aResponsesFunctionCall({ call_id: 'call_bad', arguments: '{' }),
+        aResponsesFunctionCallOutput({ call_id: 'call_bad' }),
+      ],
+    });
+
+    const { value } = expectTranslation(decodeRequest(request));
+
+    expect(toolUsesOf(value.messages)[0]?.input).toEqual({});
+  });
+});
+
 describe('decodeRequest: consecutive tool results reach a strict target grouped', () => {
   it('folds consecutive tool results into a single user turn carrying each block', () => {
     const request = aResponsesRequest({
