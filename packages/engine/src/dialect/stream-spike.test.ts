@@ -141,7 +141,7 @@ describe('the streaming spike: a pure async-iterable transform serves through th
 
     const frames = await readFrames(await fetch(running.url), 0);
 
-    expect(frames.join('')).toBe('ONETWOTHREE');
+    expect(frames).toEqual(['ONE', 'TWO', 'THREE']);
   });
 
   it('holds backpressure so a slow consumer never deadlocks', async () => {

@@ -221,7 +221,7 @@ describe('decodeRequest: a reasoning item passes through as a thinking block', (
 
   it('traces an encrypted reasoning payload with a mapped fate rather than refusing it', () => {
     const request = aResponsesRequest({
-      input: [aResponsesReasoningItem({ encrypted_content: 'ZW5jcnlwdGVk' })],
+      input: [aResponsesReasoningItem({ encrypted_content: 'opaque-encrypted-reasoning-payload' })],
     });
 
     const { fates } = expectTranslation(decodeRequest(request));
