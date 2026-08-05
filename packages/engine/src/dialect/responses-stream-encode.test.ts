@@ -88,14 +88,14 @@ describe('encodeStream: openings and terminators cross to Responses', () => {
     ]);
   });
 
-  it('ends a truncated answer on an incomplete completed event', async () => {
+  it('ends a truncated answer on a response.incomplete event', async () => {
     const events = await encode([
       { type: 'message-end', stopReason: 'max_output', usage: { outputTokens: 9 } },
     ]);
 
     expect(events).toEqual([
       {
-        type: 'response.completed',
+        type: 'response.incomplete',
         response: {
           id: 'resp_translated',
           status: 'incomplete',
@@ -128,6 +128,15 @@ describe('encodeStream: a failure crosses as an error event', () => {
   it('maps a hub stream error to a Responses error event', async () => {
     const events = await encode([
       { type: 'stream-error', error: { type: 'overloaded_error', message: 'slow down' } },
+    ]);
+
+    expect(events).toEqual([{ type: 'error', code: 'overloaded_error', message: 'slow down' }]);
+  });
+
+  it('stops after a stream error and encodes no later hub event', async () => {
+    const events = await encode([
+      { type: 'stream-error', error: { type: 'overloaded_error', message: 'slow down' } },
+      { type: 'block-open', index: 0, opening: { kind: 'text' } },
     ]);
 
     expect(events).toEqual([{ type: 'error', code: 'overloaded_error', message: 'slow down' }]);

@@ -11,6 +11,7 @@ import {
 } from './hub.testkit';
 import { decodeResponse, encodeResponse } from './responses-codec';
 import {
+  aCompatibleReasoningItem,
   aResponsesResponse,
   aResponsesToolCallResponse,
   expectRefusal,
@@ -253,5 +254,23 @@ describe('encodeResponse: the stop reason maps or refuses', () => {
         stopReason: 'context_overflow',
       },
     );
+  });
+});
+
+describe('decodeResponse maps a reasoning output item by its signature', () => {
+  it('carries a compatible reasoning signature into the hub thinking block, naming the fate', () => {
+    const response = aResponsesResponse({ output: [aCompatibleReasoningItem('sig-r')] });
+
+    const { value, fates } = expectTranslation(decodeResponse(response));
+    const thinking = value.content.find(
+      (block): block is HubThinkingBlock => block.type === 'thinking',
+    );
+
+    expect(thinking?.signature).toBe('sig-r');
+    expect(fateFor(fates, 'encrypted_content')).toEqual({
+      field: 'encrypted_content',
+      disposition: 'mapped',
+      to: 'thinking.signature',
+    });
   });
 });

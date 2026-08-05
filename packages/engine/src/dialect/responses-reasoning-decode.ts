@@ -9,18 +9,15 @@ import {
   thinkingBlockOf,
 } from './responses-shared';
 
+export type ReasoningOutcome = { blocks: HubContentBlock[]; fates: Fate[] };
 export type FoldedReasoning = { messages: HubMessage[]; fates: Fate[] };
 
-function assistantWith(content: HubContentBlock): HubMessage {
-  return { role: 'assistant', content: [content] };
-}
-
-function keepOrDropThinking(block: HubThinkingBlock, carriedFates: Fate[]): FoldedReasoning {
+function thinkingOutcome(block: HubThinkingBlock, carriedFates: Fate[]): ReasoningOutcome {
   if (block.text.length > 0) {
-    return { messages: [assistantWith(block)], fates: carriedFates };
+    return { blocks: [block], fates: carriedFates };
   }
 
-  return { messages: [], fates: carriedFates.map((fate) => ({ ...fate, to: 'absent' })) };
+  return { blocks: [], fates: carriedFates.map((fate) => ({ ...fate, to: 'absent' })) };
 }
 
 const encryptedContentAbsent: Fate = {
@@ -29,23 +26,23 @@ const encryptedContentAbsent: Fate = {
   to: 'absent',
 };
 
-export function foldReasoning(item: ResponsesReasoningItem): FoldedReasoning {
+export function reasoningOutcome(item: ResponsesReasoningItem): ReasoningOutcome {
   const classified = classifyReasoningSignature(item.encrypted_content);
 
   switch (classified.kind) {
     case 'none':
-      return keepOrDropThinking(thinkingBlockOf(item), []);
+      return thinkingOutcome(thinkingBlockOf(item), []);
     case 'compatible':
-      return keepOrDropThinking(signedThinkingBlockOf(item, classified.signature), [
+      return thinkingOutcome(signedThinkingBlockOf(item, classified.signature), [
         { field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' },
       ]);
     case 'redacted':
       return {
-        messages: [assistantWith(redactedThinkingBlockOf(classified.data))],
+        blocks: [redactedThinkingBlockOf(classified.data)],
         fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'redacted_thinking' }],
       };
     case 'foreign':
-      return keepOrDropThinking(thinkingBlockOf(item), [encryptedContentAbsent]);
+      return thinkingOutcome(thinkingBlockOf(item), [encryptedContentAbsent]);
 
     default: {
       const unhandled: never = classified;
@@ -53,4 +50,10 @@ export function foldReasoning(item: ResponsesReasoningItem): FoldedReasoning {
       throw new Error(`unhandled reasoning signature: ${JSON.stringify(unhandled)}`);
     }
   }
+}
+
+export function foldReasoning(item: ResponsesReasoningItem): FoldedReasoning {
+  const { blocks, fates } = reasoningOutcome(item);
+
+  return { messages: blocks.length > 0 ? [{ role: 'assistant', content: blocks }] : [], fates };
 }

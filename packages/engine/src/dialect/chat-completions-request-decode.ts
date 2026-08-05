@@ -71,33 +71,14 @@ function recordStandingCalls(message: ChatMessage, standing: Set<string>): void 
   }
 }
 
-function toolResultViolation(
-  id: string,
-  standing: Set<string>,
-  consumed: Set<string>,
-): string | undefined {
-  if (!standing.has(id) || consumed.has(id)) {
-    return id;
-  }
-
-  consumed.add(id);
-
-  return undefined;
-}
-
 function firstToolHistoryViolation(messages: readonly ChatMessage[]): string | undefined {
   const standing = new Set<string>();
-  const consumed = new Set<string>();
 
   for (const message of messages) {
     recordStandingCalls(message, standing);
 
-    if (message.role === 'tool') {
-      const violation = toolResultViolation(message.tool_call_id, standing, consumed);
-
-      if (violation !== undefined) {
-        return violation;
-      }
+    if (message.role === 'tool' && !standing.delete(message.tool_call_id)) {
+      return message.tool_call_id;
     }
   }
 

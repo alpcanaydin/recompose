@@ -134,6 +134,7 @@ export type ResponsesKnownStreamEvent =
   | { type: 'response.function_call_arguments.delta'; output_index: number; delta: string }
   | { type: 'response.output_item.done'; output_index: number }
   | { type: 'response.completed'; response: ResponsesStreamResponse }
+  | { type: 'response.incomplete'; response: ResponsesStreamResponse }
   | { type: 'error'; code: string; message: string };
 
 type ResponsesUnknownStreamEvent = { type: string };

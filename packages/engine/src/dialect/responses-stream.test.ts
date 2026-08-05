@@ -93,6 +93,22 @@ describe('decodeStream: an absent tool id is synthesized deterministically', () 
       opening: { kind: 'tool', id: 'toolu_stream_0', name: 'lookup' },
     });
   });
+
+  it('sanitizes a punctuated streamed call id so it matches the decoded request id', async () => {
+    const events = await decode([
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { type: 'function_call', call_id: 'call.x:1', name: 'lookup' },
+      },
+    ]);
+
+    expect(events).toContainEqual({
+      type: 'block-open',
+      index: 0,
+      opening: { kind: 'tool', id: 'call_x_1', name: 'lookup' },
+    });
+  });
 });
 
 describe('decodeStream: the whole tool-call stream maps event for event', () => {
@@ -118,10 +134,11 @@ describe('decodeStream: the whole tool-call stream maps event for event', () => 
 });
 
 describe('decodeStream: a failure and the unknown pass through honestly', () => {
-  it('carries a mid-stream error as a terminal stream-error with no synthetic success after', async () => {
+  it('carries a mid-stream error as a terminal stream-error and stops before a later completed', async () => {
     const events = await decode([
       { type: 'response.created', response: { id: 'r', status: 'in_progress', output: [] } },
       { type: 'error', code: 'overloaded_error', message: 'slow down' },
+      { type: 'response.completed', response: { id: 'r', status: 'completed', output: [] } },
     ]);
 
     expect(events.at(-1)).toEqual({

@@ -48,7 +48,7 @@ function bodyFrom(transformed: AsyncIterable<string>): ReadableStream<Uint8Array
           return;
         }
 
-        controller.enqueue(encoder.encode(step.value));
+        controller.enqueue(encoder.encode(`${step.value}\n`));
       } catch (error) {
         controller.error(error);
       }
@@ -106,10 +106,24 @@ function bodyOf(response: Response): ReadableStream<Uint8Array> {
   return response.body;
 }
 
+function drainFrames(buffer: string, frames: string[]): string {
+  let rest = buffer;
+  let newlineAt = rest.indexOf('\n');
+
+  while (newlineAt >= 0) {
+    frames.push(rest.slice(0, newlineAt));
+    rest = rest.slice(newlineAt + 1);
+    newlineAt = rest.indexOf('\n');
+  }
+
+  return rest;
+}
+
 async function readFrames(response: Response, gapMs: number): Promise<string[]> {
   const reader = bodyOf(response).getReader();
   const decoder = new TextDecoder();
   const frames: string[] = [];
+  let buffer = '';
 
   for (;;) {
     const step = await reader.read();
@@ -118,7 +132,7 @@ async function readFrames(response: Response, gapMs: number): Promise<string[]> 
       break;
     }
 
-    frames.push(decoder.decode(step.value));
+    buffer = drainFrames(buffer + decoder.decode(step.value, { stream: true }), frames);
 
     if (gapMs > 0) {
       await pause(gapMs);

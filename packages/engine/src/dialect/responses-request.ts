@@ -88,8 +88,6 @@ function toHubSampling(request: ResponsesRequest): HubSampling | undefined {
 
 type FoldedItems = { messages: HubMessage[]; fates: Fate[] };
 
-type ItemOutcome = FoldedItems | { refusal: TranslationRefusal };
-
 function foldFunctionCall(
   item: ResponsesFunctionCallItem,
   answeredCalls: ReadonlySet<string>,
@@ -101,22 +99,11 @@ function foldFunctionCall(
   return { messages: [], fates: [{ field: item.call_id, disposition: 'mapped', to: 'absent' }] };
 }
 
-function foldFunctionCallOutput(
-  item: ResponsesFunctionCallOutputItem,
-  standingCalls: ReadonlySet<string>,
-): ItemOutcome {
-  if (!standingCalls.has(item.call_id)) {
-    return { refusal: unrepairableToolCall(item.call_id) };
-  }
-
+function foldFunctionCallOutput(item: ResponsesFunctionCallOutputItem): FoldedItems {
   return { messages: [{ role: 'user', content: [toolResultBlockOf(item)] }], fates: [] };
 }
 
-function foldInputItem(
-  item: ResponsesInputItem,
-  answeredCalls: ReadonlySet<string>,
-  standingCalls: ReadonlySet<string>,
-): ItemOutcome {
+function foldInputItem(item: ResponsesInputItem, answeredCalls: ReadonlySet<string>): FoldedItems {
   switch (item.type) {
     case 'message':
       return {
@@ -126,7 +113,7 @@ function foldInputItem(
     case 'function_call':
       return foldFunctionCall(item, answeredCalls);
     case 'function_call_output':
-      return foldFunctionCallOutput(item, standingCalls);
+      return foldFunctionCallOutput(item);
     case 'reasoning':
       return foldReasoning(item);
 
@@ -173,38 +160,42 @@ function dropFates(request: ResponsesRequest): Fate[] {
   return responsesRequestDrops.flatMap((drop) => (drop.field in request ? [dropFateOf(drop)] : []));
 }
 
-function callSetsOf(input: readonly ResponsesInputItem[]): {
-  standingCalls: Set<string>;
-  answeredCalls: Set<string>;
-} {
-  const standingCalls = new Set<string>();
-  const answeredCalls = new Set<string>();
+function answeredCallsOf(input: readonly ResponsesInputItem[]): Set<string> {
+  const answered = new Set<string>();
 
   for (const item of input) {
-    if (item.type === 'function_call') {
-      standingCalls.add(item.call_id);
-    }
-
     if (item.type === 'function_call_output') {
-      answeredCalls.add(item.call_id);
+      answered.add(item.call_id);
     }
   }
 
-  return { standingCalls, answeredCalls };
+  return answered;
 }
 
-function foldInput(request: ResponsesRequest): ItemOutcome {
-  const { standingCalls, answeredCalls } = callSetsOf(request.input);
+function firstOutputViolation(input: readonly ResponsesInputItem[]): string | undefined {
+  const standing = new Set<string>();
+
+  for (const item of input) {
+    if (item.type === 'function_call') {
+      standing.add(item.call_id);
+    }
+
+    if (item.type === 'function_call_output' && !standing.delete(item.call_id)) {
+      return item.call_id;
+    }
+  }
+
+  return undefined;
+}
+
+function foldInput(request: ResponsesRequest): FoldedItems {
+  const answeredCalls = answeredCallsOf(request.input);
 
   const messages: HubMessage[] = [];
   const fates: Fate[] = [];
 
   for (const item of request.input) {
-    const outcome = foldInputItem(item, answeredCalls, standingCalls);
-
-    if ('refusal' in outcome) {
-      return outcome;
-    }
+    const outcome = foldInputItem(item, answeredCalls);
 
     messages.push(...outcome.messages);
     fates.push(...outcome.fates);
@@ -259,12 +250,13 @@ export function decodeRequest(
     return { refusal: toolIdCollision(collision) };
   }
 
-  const folded = foldInput(request);
+  const violation = firstOutputViolation(request.input);
 
-  if ('refusal' in folded) {
-    return folded;
+  if (violation !== undefined) {
+    return { refusal: unrepairableToolCall(violation) };
   }
 
+  const folded = foldInput(request);
   const messages = mergeAdjacentSameRole(folded.messages);
 
   if (messages.length === 0) {

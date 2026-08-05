@@ -236,7 +236,7 @@ export type StatusOutcome =
 const statusByStopReason: Record<HubStopReason, StatusOutcome> = {
   end: { status: 'completed' },
   tool_use: { status: 'completed' },
-  stop_sequence: { status: 'completed' },
+  stop_sequence: { status: 'completed', lossy: true },
   max_output: { status: 'incomplete', incompleteReason: 'max_output_tokens' },
   refusal: { status: 'incomplete', incompleteReason: 'content_filter', lossy: true },
   paused: { unmappable: 'paused' },

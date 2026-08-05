@@ -181,3 +181,34 @@ describe('decodeRequest: a malformed data uri stays text rather than an image', 
     });
   });
 });
+
+describe('decodeRequest rejects Responses tool output that breaks call-then-result order', () => {
+  it('refuses a function_call_output that arrives before its function_call', () => {
+    const request = aResponsesRequest({
+      input: [
+        aResponsesFunctionCallOutput({ call_id: 'call_x' }),
+        aResponsesFunctionCall({ call_id: 'call_x' }),
+      ],
+    });
+
+    expect(expectRefusal(decodeRequest(request))).toEqual({
+      reason: 'unrepairable-tool-call',
+      unmatchedId: 'call_x',
+    });
+  });
+
+  it('refuses a second function_call_output for one call', () => {
+    const request = aResponsesRequest({
+      input: [
+        aResponsesFunctionCall({ call_id: 'call_x' }),
+        aResponsesFunctionCallOutput({ call_id: 'call_x' }),
+        aResponsesFunctionCallOutput({ call_id: 'call_x' }),
+      ],
+    });
+
+    expect(expectRefusal(decodeRequest(request))).toEqual({
+      reason: 'unrepairable-tool-call',
+      unmatchedId: 'call_x',
+    });
+  });
+});

@@ -8,11 +8,11 @@ import type {
 } from './responses-wire';
 
 import { unmappableStopReason } from '../refusals';
+import { reasoningOutcome } from './responses-reasoning-decode';
 import {
   functionCallItemOf,
   statusFromStopReason,
   stopReasonFromResponse,
-  thinkingBlockOf,
   thinkingDropFate,
   toHubUsage,
   toolUseBlockOf,
@@ -20,14 +20,16 @@ import {
   translatedResponseId,
 } from './responses-shared';
 
-function outputBlocksOf(item: ResponsesOutputItem): HubContentBlock[] {
+type OutputOutcome = { blocks: HubContentBlock[]; fates: Fate[] };
+
+function outputOutcomeOf(item: ResponsesOutputItem): OutputOutcome {
   switch (item.type) {
     case 'message':
-      return item.content.map((part) => ({ type: 'text', text: part.text }));
+      return { blocks: item.content.map((part) => ({ type: 'text', text: part.text })), fates: [] };
     case 'function_call':
-      return [toolUseBlockOf(item)];
+      return { blocks: [toolUseBlockOf(item)], fates: [] };
     case 'reasoning':
-      return [thinkingBlockOf(item)];
+      return reasoningOutcome(item);
 
     default: {
       const unhandled: never = item;
@@ -51,11 +53,15 @@ export function decodeResponse(
     return { refusal: unmappableStopReason(outcome.unmappable) };
   }
 
-  const content = response.output.flatMap(outputBlocksOf);
+  const outcomes = response.output.map(outputOutcomeOf);
 
   return {
-    value: { content, stopReason: outcome.stopReason, usage: toHubUsage(response.usage) },
-    fates: [],
+    value: {
+      content: outcomes.flatMap((entry) => entry.blocks),
+      stopReason: outcome.stopReason,
+      usage: toHubUsage(response.usage),
+    },
+    fates: outcomes.flatMap((entry) => entry.fates),
   };
 }
 
