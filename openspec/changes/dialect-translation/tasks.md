@@ -34,10 +34,10 @@ Every task opens with a named failing test, captures the red run it started from
   - [x] The codec decodes and encodes the Responses dialect both ways over request, response, and stream, as exhaustive folds with a `never` default. Both directions ship, and the encode leg carries its own tests though no target speaks Responses today. The server-state shape (a prior-response reference, an encrypted reasoning payload) refuses typed toward another dialect, naming the field, rather than inventing a hub slot. `responses-drops.ts` holds its vendor drop table.
   - [x] Layers: unit, property, and stream.
 
-- [ ] **Task 7: the dispatcher.** Owns `packages/engine/src/dialect/dispatcher.ts` and `dispatcher.test.ts`. Depends on tasks 5 and 6, because it composes both codec pairs.
-  - [ ] Opens red in `dispatcher.test.ts`: a same-dialect crossing skips translation and reports passthrough, before the facade exists.
-  - [ ] `dispatcher.ts` composes a decoder with an encoder through the hub, exposes `translateRequest`, `translateResponse`, and `translateStream` over the dialect pair, and skips a same-dialect crossing. The round-trip property lands here: Anthropic to Chat Completions to Anthropic, and Responses to Anthropic to Responses, each preserving text content and tool-call pairing, with the `fast-check` calls inside `it` bodies.
-  - [ ] Layers: unit and property.
+- [x] **Task 7: the dispatcher.** Owns `packages/engine/src/dialect/dispatcher.ts` and `dispatcher.test.ts`. Depends on tasks 5 and 6, because it composes both codec pairs.
+  - [x] Opens red in `dispatcher.test.ts`: a same-dialect crossing skips translation and reports passthrough, before the facade exists.
+  - [x] `dispatcher.ts` composes a decoder with an encoder through the hub, exposes `translateRequest`, `translateResponse`, and `translateStream` over the dialect pair, and skips a same-dialect crossing. The round-trip property lands here: Anthropic to Chat Completions to Anthropic, and Responses to Anthropic to Responses, each preserving text content and tool-call pairing, with the `fast-check` calls inside `it` bodies.
+  - [x] Layers: unit and property.
 
 - [ ] **Task 8: the barrel and records.** Owns `packages/engine/src/dialect/index.ts`, `knip.json`, `cspell-words.txt`, and `docs/adr/`. Depends on task 7.
   - [ ] `index.ts` re-exports the dispatcher and the fate and refusal types the parked consumer imports.
