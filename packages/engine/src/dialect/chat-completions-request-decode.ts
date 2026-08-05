@@ -21,6 +21,7 @@ import {
   toolChoiceFrom,
   toolsFrom,
 } from './chat-completions-request-fields';
+import { sanitizeToolId } from './tool-id';
 
 type DecodeAcc = {
   systemTexts: string[];
@@ -147,7 +148,7 @@ function foldAssistantMessage(
 function foldToolMessage(message: ChatToolMessage, acc: DecodeAcc): void {
   const block: HubToolResultBlock = {
     type: 'tool_result',
-    toolUseId: message.tool_call_id,
+    toolUseId: sanitizeToolId(message.tool_call_id),
     content: [{ type: 'text', text: message.content }],
   };
 

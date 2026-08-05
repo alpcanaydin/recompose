@@ -9,6 +9,8 @@ import type {
   HubToolUseBlock,
 } from './hub';
 
+import { sanitizeToolId } from './tool-id';
+
 function isJsonObject(value: unknown): value is HubJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -28,7 +30,7 @@ function parseToolArguments(raw: string): HubJsonObject {
 export function hubToolUseFromChatCall(call: ChatToolCall): HubToolUseBlock {
   return {
     type: 'tool_use',
-    id: call.id,
+    id: sanitizeToolId(call.id),
     name: call.function.name,
     input: parseToolArguments(call.function.arguments),
   };
