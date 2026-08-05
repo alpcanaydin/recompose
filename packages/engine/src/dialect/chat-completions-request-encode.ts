@@ -1,5 +1,6 @@
 import type {
   ChatAssistantMessage,
+  ChatCacheControl,
   ChatCompletionsRequest,
   ChatContentPart,
   ChatMessage,
@@ -21,6 +22,7 @@ import {
   droppedThinking,
   foldAssistantBlocks,
 } from './chat-completions-blocks';
+import { chatCacheControlFrom } from './chat-completions-cache';
 import { systemMessageFrom } from './chat-completions-request-fields';
 import {
   chatSamplingInto,
@@ -63,7 +65,11 @@ function routeUserContentBlock(
 ): void {
   switch (block.type) {
     case 'text':
-      parts.push({ type: 'text', text: block.text });
+      parts.push({
+        type: 'text',
+        text: block.text,
+        ...chatCacheControlFrom(block.cacheBreakpoint),
+      });
 
       return;
     case 'image':
@@ -109,6 +115,19 @@ function userContent(parts: readonly ChatContentPart[]): string | readonly ChatC
   return parts.map((part) => (part.type === 'text' ? part.text : '')).join('');
 }
 
+function collapsedCacheControl(
+  content: string | readonly ChatContentPart[],
+  parts: readonly ChatContentPart[],
+): { cache_control?: ChatCacheControl } {
+  if (typeof content !== 'string') {
+    return {};
+  }
+
+  const control = parts.find((part) => part.cache_control !== undefined)?.cache_control;
+
+  return control === undefined ? {} : { cache_control: control };
+}
+
 function chatUserFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {
   const toolResults = message.content.filter(
     (block): block is HubToolResultBlock => block.type === 'tool_result',
@@ -124,7 +143,9 @@ function chatUserFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {
     routeUserBlock(block, parts, fates);
   }
 
-  return [{ role: 'user', content: userContent(parts) }];
+  const content = userContent(parts);
+
+  return [{ role: 'user', content, ...collapsedCacheControl(content, parts) }];
 }
 
 function chatMessagesFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {

@@ -1,9 +1,15 @@
 import type { ChatDropField } from './chat-completions-drops';
 import type { HubJsonObject } from './hub';
 
-type ChatTextPart = { type: 'text'; text: string };
+export type ChatCacheControl = { type: 'ephemeral' };
 
-type ChatImagePart = { type: 'image_url'; image_url: { url: string } };
+type ChatTextPart = { type: 'text'; text: string; cache_control?: ChatCacheControl };
+
+type ChatImagePart = {
+  type: 'image_url';
+  image_url: { url: string };
+  cache_control?: ChatCacheControl;
+};
 
 export type ChatContentPart = ChatTextPart | ChatImagePart;
 
@@ -13,11 +19,23 @@ export type ChatToolCall = {
   function: { name: string; arguments: string };
 };
 
-export type ChatSystemMessage = { role: 'system'; content: string };
+export type ChatSystemMessage = {
+  role: 'system';
+  content: string;
+  cache_control?: ChatCacheControl;
+};
 
-export type ChatDeveloperMessage = { role: 'developer'; content: string };
+export type ChatDeveloperMessage = {
+  role: 'developer';
+  content: string;
+  cache_control?: ChatCacheControl;
+};
 
-export type ChatUserMessage = { role: 'user'; content: string | readonly ChatContentPart[] };
+export type ChatUserMessage = {
+  role: 'user';
+  content: string | readonly ChatContentPart[];
+  cache_control?: ChatCacheControl;
+};
 
 export type ChatAssistantMessage = {
   role: 'assistant';

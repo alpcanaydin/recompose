@@ -1,7 +1,15 @@
 import type { ChatCompletionsRequest, ChatSystemMessage, ChatTool } from './chat-completions-wire';
 import type { Fate } from './fates';
-import type { HubSampling, HubSystemText, HubTool, HubToolChoice, HubToolSchema } from './hub';
+import type {
+  HubCacheBreakpoint,
+  HubSampling,
+  HubSystemText,
+  HubTool,
+  HubToolChoice,
+  HubToolSchema,
+} from './hub';
 
+import { chatCacheControlFrom } from './chat-completions-cache';
 import { chatCompletionsDrops } from './chat-completions-drops';
 
 export const injectedMaxOutputTokensDefault = 4096;
@@ -177,12 +185,17 @@ export function scanEnvelope(request: ChatCompletionsRequest, fates: Fate[]): vo
   fates.push({ field: 'messages', disposition: 'mapped', to: 'messages' });
 }
 
-export function systemFrom(texts: readonly string[]): readonly HubSystemText[] | undefined {
+export function systemFrom(
+  texts: readonly string[],
+  breakpoint?: HubCacheBreakpoint,
+): readonly HubSystemText[] | undefined {
   if (texts.length === 0) {
     return undefined;
   }
 
-  return [{ text: texts.join('\n') }];
+  const text = texts.join('\n');
+
+  return [{ text, ...(breakpoint === undefined ? {} : { cacheBreakpoint: breakpoint }) }];
 }
 
 export function systemMessageFrom(
@@ -195,5 +208,9 @@ export function systemMessageFrom(
 
   fates.push({ field: 'system', disposition: 'mapped', to: 'messages[system]' });
 
-  return { role: 'system', content: system.map((text) => text.text).join('\n') };
+  return {
+    role: 'system',
+    content: system.map((text) => text.text).join('\n'),
+    ...chatCacheControlFrom(system.at(-1)?.cacheBreakpoint),
+  };
 }

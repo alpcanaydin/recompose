@@ -2,17 +2,17 @@ import type { TranslationRefusal } from '../refusals';
 import type {
   ChatAssistantMessage,
   ChatCompletionsRequest,
-  ChatContentPart,
   ChatMessage,
   ChatToolCall,
   ChatToolMessage,
   ChatUserMessage,
 } from './chat-completions-wire';
 import type { Fate, TranslateResult } from './fates';
-import type { HubContentBlock, HubMessage, HubRequest } from './hub';
+import type { HubCacheBreakpoint, HubContentBlock, HubMessage, HubRequest } from './hub';
 
 import { unrepairableToolCall } from '../refusals';
 import { hubToolUseFromChatCall } from './chat-completions-blocks';
+import { hubBreakpointFrom } from './chat-completions-cache';
 import {
   samplingFrom,
   scanDrops,
@@ -22,9 +22,11 @@ import {
   toolsFrom,
 } from './chat-completions-request-fields';
 import { toolResultBlockFrom } from './chat-completions-tool-result';
+import { userBlocks } from './chat-completions-user-decode';
 
 type DecodeAcc = {
   systemTexts: string[];
+  systemBreakpoint: HubCacheBreakpoint | undefined;
   messages: HubMessage[];
   fates: Fate[];
 };
@@ -65,32 +67,6 @@ function orphanResultId(callIds: Set<string>, resultIds: Set<string>): string | 
   }
 
   return undefined;
-}
-
-function textBlock(text: string, fates: Fate[]): readonly HubContentBlock[] {
-  if (text === '') {
-    fates.push({ field: 'content', disposition: 'mapped', to: 'absent' });
-
-    return [];
-  }
-
-  return [{ type: 'text', text }];
-}
-
-function partBlock(part: ChatContentPart, fates: Fate[]): readonly HubContentBlock[] {
-  if (part.type === 'text') {
-    return textBlock(part.text, fates);
-  }
-
-  return [{ type: 'image', source: { type: 'url', url: part.image_url.url } }];
-}
-
-function userBlocks(message: ChatUserMessage, fates: Fate[]): readonly HubContentBlock[] {
-  if (typeof message.content === 'string') {
-    return textBlock(message.content, fates);
-  }
-
-  return message.content.flatMap((part) => partBlock(part, fates));
 }
 
 function foldUserMessage(message: ChatUserMessage, acc: DecodeAcc): void {
@@ -176,6 +152,10 @@ function foldNonToolMessage(
   if (message.role === 'system' || message.role === 'developer') {
     acc.systemTexts.push(message.content);
 
+    if (message.cache_control !== undefined) {
+      acc.systemBreakpoint = hubBreakpointFrom(message.cache_control);
+    }
+
     return;
   }
 
@@ -235,7 +215,7 @@ function ensureAtLeastOneMessage(acc: DecodeAcc): void {
 }
 
 function assembleHubRequest(request: ChatCompletionsRequest, acc: DecodeAcc): HubRequest {
-  const system = systemFrom(acc.systemTexts);
+  const system = systemFrom(acc.systemTexts, acc.systemBreakpoint);
   const tools = toolsFrom(request, acc.fates);
   const toolChoice = toolChoiceFrom(request, acc.fates);
 
@@ -258,7 +238,12 @@ export function decodeRequest(
     return { refusal: unrepairableToolCall(orphan) };
   }
 
-  const acc: DecodeAcc = { systemTexts: [], messages: [], fates: [] };
+  const acc: DecodeAcc = {
+    systemTexts: [],
+    systemBreakpoint: undefined,
+    messages: [],
+    fates: [],
+  };
 
   foldMessages(request.messages, acc, resultIds);
   ensureAtLeastOneMessage(acc);
