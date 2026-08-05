@@ -21,7 +21,7 @@
       "ignoreDependencies": ["fast-check"]
     },
     "packages/engine": {
-      "entry": ["vitest.mutation.config.ts"],
+      "entry": ["src/dialect/index.ts", "src/**/*.test-d.ts", "vitest.mutation.config.ts"],
       "ignoreDependencies": ["fast-check"]
     },
     ".": {

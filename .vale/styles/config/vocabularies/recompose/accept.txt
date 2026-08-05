@@ -25,7 +25,7 @@
 [Cc]alendly
 [Cc]cproxy
 [Cc]hainable
-[Cc]liproxyapi
+(?i)CLIProxyAPI
 [Cc]odebase
 [Cc]odec
 [Cc]odechecks

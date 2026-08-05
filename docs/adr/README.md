@@ -80,3 +80,5 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0072](0072-a-local-runtime-account-is-a-credential-free-observation.md)    | A Local Runtime Account Is a Credential-Free Observation                            | Accepted   | 2026-08-04 |
 | [0073](0073-the-aggregator-connects-as-a-key-and-offers-no-check.md)        | The Aggregator Connects as a Key and Offers No Check                                | Accepted   | 2026-08-04 |
 | [0074](0074-brand-marks-come-from-lobehub-icons.md)                         | Brand Marks Come From Lobe Icons, Drawn as Nominative Use                           | Accepted   | 2026-08-04 |
+| [0075](0075-dialect-translation-folds-through-an-anthropic-messages-hub.md) | Dialect Translation Folds Through an Anthropic-Messages Hub                         | Accepted   | 2026-08-05 |
+| [0076](0076-dialect-translation-reaches-a-valid-target-or-refuses-typed.md) | Dialect Translation Reaches a Valid Target or Refuses Typed                         | Accepted   | 2026-08-05 |
