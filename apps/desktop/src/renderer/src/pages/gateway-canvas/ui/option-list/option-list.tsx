@@ -109,6 +109,8 @@ function gatheredOptions(
  * @summary Reach for it wherever a field holds a value nobody types: a stored account, a model a
  * provider serves. The search appears only once the list outgrows a glance, so a short list reads
  * whole and a long one narrows, and a search matching nothing says so rather than emptying itself.
+ * A query narrows only while its field is on screen, so a short list that replaces a long one always
+ * reads whole rather than staying filtered by words a person can no longer see or clear.
  */
 export function OptionList({
   groups,
@@ -120,11 +122,12 @@ export function OptionList({
   const [typed, setTyped] = useState('');
 
   const offered = groups.reduce((count, group) => count + group.options.length, 0);
-  const shown = matching(groups, typed);
+  const searchable = offered > SEARCH_APPEARS_ABOVE;
+  const shown = searchable ? matching(groups, typed) : groups;
 
   return (
     <div className="flex flex-col gap-1">
-      {offered > SEARCH_APPEARS_ABOVE ? (
+      {searchable ? (
         <input
           aria-label={searchLabel}
           className="field-control w-full focus-ring placeholder:text-ink-tertiary"

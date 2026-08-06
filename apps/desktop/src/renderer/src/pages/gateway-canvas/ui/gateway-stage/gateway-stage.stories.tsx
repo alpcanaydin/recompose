@@ -2,7 +2,7 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { gatewaySeed } from '../../../../shared/testing';
+import { gatewaySeed, paintedStyle } from '../../../../shared/testing';
 import { GatewayStage } from './gateway-stage';
 
 const twoDefinitions = ['quick', 'deep'].map((name) => ({
@@ -51,6 +51,21 @@ export const ServingNothing = meta.story({
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText(':8397 · no virtual models yet')).toBeVisible();
+  },
+});
+
+/**
+ * The dotted field the stage paints, which is what says nodes belong here.
+ *
+ * @summary The grid moved out of the gateway page and into the stage when the drawer arrived, so
+ * the reading that pinned its 22px pitch and its radial dot follows it rather than lapsing.
+ */
+export const DottedCanvas = meta.story({
+  play: async ({ canvasElement }) => {
+    const surface = canvasElement.firstElementChild?.firstElementChild;
+
+    await expect(paintedStyle(surface).backgroundSize).toBe('22px 22px');
+    await expect(paintedStyle(surface).backgroundImage).toContain('radial-gradient(circle,');
   },
 });
 

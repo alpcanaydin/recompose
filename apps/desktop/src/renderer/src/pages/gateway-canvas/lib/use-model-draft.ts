@@ -4,8 +4,6 @@ import { useForm, useSelector } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import type { ModelDraftRefusals } from './model-draft';
-
 import {
   providerModelsQueryOptions,
   refusalSentence,
@@ -32,10 +30,11 @@ function useOfferedModels(accountId: string) {
  *
  * @summary The model list belongs to the picked target, so it is asked for the moment one is
  * picked and never before, and a look that answered nothing refuses where the models would stand
- * rather than leaving the field looking empty for no stated reason.
+ * rather than leaving the field looking empty for no stated reason. A refused save keeps its
+ * sentence apart from that one, so the flow says each thing once and in the place it belongs.
  */
 export function useModelDraft(gateway: GatewayConfig, onDefined: () => void) {
-  const [mainRefusals, setMainRefusals] = useState<ModelDraftRefusals>({});
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
   const define = useDefineVirtualModel();
 
   const form = useForm({
@@ -46,7 +45,7 @@ export function useModelDraft(gateway: GatewayConfig, onDefined: () => void) {
           onDefined();
         },
         onError: (failure) => {
-          setMainRefusals(refusalFromMain(failure));
+          setRefusal(refusalFromMain(failure));
         },
       });
     },
@@ -66,7 +65,7 @@ export function useModelDraft(gateway: GatewayConfig, onDefined: () => void) {
       providerModel: values.providerModel,
     },
     settled: values.accountId !== '' && values.providerModel !== '',
-    refusals: { ...mainRefusals, sheet: mainRefusals.sheet ?? models.refusal },
+    refusal,
     pickTarget: (picked: string) => {
       form.setFieldValue('accountId', picked);
       form.setFieldValue('providerModel', '');
@@ -78,8 +77,8 @@ export function useModelDraft(gateway: GatewayConfig, onDefined: () => void) {
       void form.handleSubmit();
     },
     saving: define.isPending,
-    clearNameRefusal: () => {
-      setMainRefusals((held) => ({ ...held, name: undefined }));
+    clearRefusal: () => {
+      setRefusal(undefined);
     },
   };
 }

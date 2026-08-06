@@ -186,6 +186,12 @@ test('a valid gateway slug opens the stage and the inspector for that gateway', 
   await expect.element(screen.getByText('Virtual models serve from the drawer')).toBeVisible();
 });
 
+test('a gateway slug nothing is stored under lands on the not-found state', async () => {
+  const screen = await renderAt('/gateways/codex', { gateways: [] });
+
+  await expect.element(screen.getByText('Not found')).toBeVisible();
+});
+
 test('an invalid gateway slug lands on the not-found state', async () => {
   const screen = await renderAt('/gateways/Not%20A%20Slug');
 

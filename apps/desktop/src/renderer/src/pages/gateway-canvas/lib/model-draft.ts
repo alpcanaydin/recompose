@@ -9,6 +9,8 @@ import { IpcResultError, refusalSentence } from '../../../shared/api';
 const MISSING_NAME_REFUSAL = 'Give the virtual model a name.';
 const UNSERVABLE_NAME_REFUSAL = 'recompose cannot serve a virtual model under this name.';
 const MALFORMED_DEFINITION_REFUSAL = 'recompose cannot store this virtual model as it stands.';
+const UNSTORABLE_ON_STORED_GATEWAY =
+  'recompose cannot add a virtual model to a stored gateway yet.';
 const SKIPPED_ID_HINT = 'Claude Code lists only ids starting with claude or anthropic.';
 const DISCOVERED_PREFIXES = ['claude', 'anthropic'];
 
@@ -132,24 +134,24 @@ export function modelListReading(answer: ProviderModelList | undefined): ModelLi
     : { offered: [], refusal: answer.refusal };
 }
 
-/** Where each refusal the draft can draw stands: under the name, or under the sheet itself. */
-export type ModelDraftRefusals = { name?: string | undefined; sheet?: string | undefined };
-
 /**
- * Where a refusal the main process sent belongs on the sheet.
+ * The sentence a refused save reads as, in words about the virtual model a person was defining.
  *
- * @summary A refusal about a name travels in main's own words and lands under the name, which is
- * the one thing a person can retype. A schema refusal trades its words for a sentence, because the
- * schema writes for a developer. Everything else belongs to the sheet rather than to a field.
+ * @summary The save rides the channel that stores a whole gateway, so a gateway already on disk
+ * comes back as a name conflict written about the gateway. That sentence would send a person to
+ * rename their virtual model over a collision it never had, so it is traded for the one true thing:
+ * nothing can be added to a stored gateway until the lane that redefines one lands. A schema refusal
+ * trades its words too, because the schema writes for a developer. Everything else travels as main
+ * wrote it, because main writes its refusals for a person to read.
  */
-export function refusalFromMain(failure: unknown): ModelDraftRefusals {
+export function refusalFromMain(failure: unknown): string {
   if (!(failure instanceof IpcResultError)) {
-    return { sheet: refusalSentence(failure) };
+    return refusalSentence(failure);
   }
 
   if (failure.code === 'validation-failed') {
-    return { sheet: MALFORMED_DEFINITION_REFUSAL };
+    return MALFORMED_DEFINITION_REFUSAL;
   }
 
-  return failure.code === 'name-conflict' ? { name: failure.message } : { sheet: failure.message };
+  return failure.code === 'name-conflict' ? UNSTORABLE_ON_STORED_GATEWAY : failure.message;
 }

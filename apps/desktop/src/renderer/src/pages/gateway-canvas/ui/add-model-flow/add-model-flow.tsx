@@ -92,12 +92,10 @@ function draftFields(view: FlowView): ReactNode {
           modelRefusal={draft.models.refusal}
           name={field.state.value}
           nameField={view.nameField}
-          nameRefusal={
-            spokenAfterAsking(view.attempted, field.state.meta.errors[0]) ?? draft.refusals.name
-          }
+          nameRefusal={spokenAfterAsking(view.attempted, field.state.meta.errors[0])}
           onNameChange={(typed) => {
             field.handleChange(typed);
-            draft.clearNameRefusal();
+            draft.clearRefusal();
           }}
           onPickModel={onPickModel}
           onPickTarget={onPickTarget}
@@ -122,6 +120,14 @@ function servesLine(preview: string | undefined): ReactNode {
   return preview === undefined ? null : (
     <p className="border-t border-line-faint bg-surface-inert px-3.5 py-2 font-mono text-mono-value text-ink-secondary">
       {preview}
+    </p>
+  );
+}
+
+function refusedSave(refusal: string | undefined): ReactNode {
+  return refusal === undefined ? null : (
+    <p className="border-t border-line-faint px-3.5 py-2 text-caption text-danger-ink" role="alert">
+      {refusal}
     </p>
   );
 }
@@ -161,6 +167,7 @@ export function AddModelFlow({ gateway, onBack }: AddModelFlowProps) {
         })}
       </div>
       {servesLine(servesPreview({ ...draft.picked, target: targetName }))}
+      {refusedSave(draft.refusal)}
       {flowFoot(draft, draft.settled, onBack)}
     </>
   );

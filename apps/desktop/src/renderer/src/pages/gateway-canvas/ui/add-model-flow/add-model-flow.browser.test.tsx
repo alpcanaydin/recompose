@@ -186,16 +186,77 @@ test('a name the gateway already serves refuses under the name field', async () 
     .toHaveTextContent('already serves a virtual model');
 });
 
-test('a refused save keeps the draft standing and says why, rather than throwing it away', async () => {
-  const screen = await renderFlow({ providerModels: listed });
-
-  await screen.getByRole('textbox', { name: 'Name' }).fill('Fast');
+async function settleADraft(screen: Awaited<ReturnType<typeof renderFlow>>, named: string) {
+  await screen.getByRole('textbox', { name: 'Name' }).fill(named);
   await userEvent.click(screen.getByRole('button', { name: /work/ }));
   await userEvent.click(screen.getByRole('button', { name: 'claude-haiku-4-5' }));
   await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
+}
 
-  await expect.element(screen.getByRole('alert')).toBeVisible();
+test('a save the gateway already on disk refuses says so about the virtual model', async () => {
+  const screen = await renderFlow({ providerModels: listed });
+
+  await settleADraft(screen, 'Fast');
+
+  await expect
+    .element(screen.getByText('recompose cannot add a virtual model to a stored gateway yet.'))
+    .toBeVisible();
   await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Fast');
+});
+
+test('a save the disk refuses reads the words main wrote, rather than changing nothing', async () => {
+  const screen = await renderFlow({
+    providerModels: listed,
+    overrides: {
+      'gateways:save': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage-failed', message: 'EACCES: permission denied, open gateways' },
+        }),
+    },
+  });
+
+  await settleADraft(screen, 'Fast');
+
+  await expect.element(screen.getByText('EACCES: permission denied, open gateways')).toBeVisible();
+});
+
+test('a save the stored shape refuses trades developer words for a sentence', async () => {
+  const screen = await renderFlow({
+    providerModels: listed,
+    overrides: {
+      'gateways:save': async () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'validation-failed', message: 'invalid_type at virtualModels[0].id' },
+        }),
+    },
+  });
+
+  await settleADraft(screen, 'Fast');
+
+  await expect
+    .element(screen.getByText('recompose cannot store this virtual model as it stands.'))
+    .toBeVisible();
+});
+
+test('a query typed against a long list never strands the short list that replaces it', async () => {
+  const screen = await renderFlow({
+    providerModels: {
+      k1: ['a-one', 'a-two', 'a-three', 'a-four', 'b-one', 'b-two', 'b-three'],
+      g1: ['router-one', 'router-two'],
+    },
+  });
+
+  await userEvent.click(screen.getByRole('button', { name: /work/ }));
+  await screen.getByRole('searchbox', { name: 'Search models' }).fill('zzz');
+  await userEvent.click(screen.getByRole('button', { name: /openrouter/ }));
+
+  await expect.element(screen.getByRole('button', { name: 'router-one' })).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: 'router-two' })).toBeVisible();
+  await expect
+    .element(screen.getByText('No model matches that.', { exact: true }))
+    .not.toBeInTheDocument();
 });
 
 test('leaving the flow hands the drawer back without storing anything', async () => {

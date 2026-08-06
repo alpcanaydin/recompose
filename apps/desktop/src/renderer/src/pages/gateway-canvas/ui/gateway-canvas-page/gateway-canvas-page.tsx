@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { notFound } from '@tanstack/react-router';
 
 import { gatewaysQueryOptions } from '../../../../shared/api';
 import { GatewayDrawer } from '../gateway-drawer/gateway-drawer';
@@ -10,7 +11,8 @@ import { GatewayStage } from '../gateway-stage/gateway-stage';
  * @summary Reach for it from the gateway route. The stage carries the gateway itself and the drawer
  * carries everything a person reads or changes about it, so the surface reads the way it will once
  * the canvas grows nodes rather than being rearranged when it does. A slug no stored gateway holds
- * renders nothing, because the route it came from is the only thing that can answer for it.
+ * lands on the same not-found state a mistyped address does, because a gateway that was deleted and
+ * one that never existed are the same fact to the person reading, and a blank surface says neither.
  */
 export function GatewayCanvasPage({ slug }: { slug: string }) {
   const { data: gateways } = useSuspenseQuery(gatewaysQueryOptions);
@@ -18,7 +20,7 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
   const gateway = gateways.find((held) => held.slug === slug);
 
   if (gateway === undefined) {
-    return null;
+    throw notFound();
   }
 
   return (

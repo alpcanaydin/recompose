@@ -96,22 +96,25 @@ test('a definition joins the ones the gateway already holds rather than replacin
   expect(defining.virtualModels.map((model) => model.id)).toEqual(['fast', 'slow']);
 });
 
-test('a refusal naming a name lands under the name field, where a person can fix it', () => {
-  const refused = new IpcResultError({ code: 'name-conflict', message: 'Something holds "fast".' });
+test('a gateway already on disk refuses in words about the virtual model, not the gateway', () => {
+  const refused = new IpcResultError({
+    code: 'name-conflict',
+    message: 'Another gateway already holds the name "Codex".',
+  });
 
-  expect(refusalFromMain(refused)).toEqual({ name: 'Something holds "fast".' });
+  expect(refusalFromMain(refused)).toBe(
+    'recompose cannot add a virtual model to a stored gateway yet.',
+  );
 });
 
-test('a schema refusal trades its developer words for a sentence under the sheet', () => {
+test('a schema refusal trades its developer words for a sentence', () => {
   const refused = new IpcResultError({ code: 'validation-failed', message: 'invalid_type at [0]' });
 
-  expect(refusalFromMain(refused)).toEqual({
-    sheet: 'recompose cannot store this virtual model as it stands.',
-  });
+  expect(refusalFromMain(refused)).toBe('recompose cannot store this virtual model as it stands.');
 });
 
-test('a refusal belonging to no field reads under the sheet in the words main wrote', () => {
-  expect(refusalFromMain(new Error('the disk is full'))).toEqual({ sheet: 'the disk is full' });
+test('every other refusal reads in the words main wrote', () => {
+  expect(refusalFromMain(new Error('the disk is full'))).toBe('the disk is full');
 });
 
 test('a look that answered a list offers those ids and refuses nothing', () => {
