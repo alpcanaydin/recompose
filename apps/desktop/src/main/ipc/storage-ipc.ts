@@ -11,7 +11,6 @@ import { withSettingsPatch } from '@recompose/contracts';
 import type { IpcHandlers } from './dispatch';
 
 import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
-import { oneAtATime } from '../storage/one-at-a-time';
 import {
   loadSettingsFile,
   saveSettingsFile,
@@ -194,7 +193,7 @@ export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHand
   const paths = storagePathsFor(ctx.userDataPath);
 
   return {
-    ...createGatewayStorageHandlers(ctx, paths, oneAtATime()),
+    ...createGatewayStorageHandlers(ctx, paths),
     'settings:get': async () => getSettings(ctx, paths),
     'settings:save': async (settings) => saveSettings(ctx, paths, settings),
     'accounts:list': async () => listAccounts(ctx, paths),

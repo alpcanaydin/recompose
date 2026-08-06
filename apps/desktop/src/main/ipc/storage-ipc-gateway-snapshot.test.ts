@@ -59,6 +59,7 @@ async function contextHolding(
     restartGateway: (gateway) => {
       started.push(gateway);
     },
+    isServing: () => true,
     releaseSubscription: async () => Promise.resolve({ ok: true }),
   };
 }

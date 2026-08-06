@@ -19,6 +19,8 @@ export type StorageIpcContext = {
   startGateway: (gateway: EngineGateway) => void;
   /** A rewritten gateway serves its fresh snapshot, which only a restart puts in front of it. */
   restartGateway: (gateway: EngineGateway) => void;
+  /** Whether the engine is serving this gateway right now, so a rewrite never undoes a stop. */
+  isServing: (slug: string) => boolean;
   releaseSubscription: SubscriptionRelease;
 };
 

@@ -37,6 +37,7 @@ async function freshContext(
     readLoginItem: () => false,
     startGateway: () => undefined,
     restartGateway: () => undefined,
+    isServing: () => true,
     releaseSubscription: async () => Promise.resolve({ ok: true }),
     ...overrides,
   };

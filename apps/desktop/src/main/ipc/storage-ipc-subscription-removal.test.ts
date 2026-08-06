@@ -44,6 +44,7 @@ function contextOver(userDataPath: string): StorageIpcContext {
     readLoginItem: () => false,
     startGateway: () => undefined,
     restartGateway: () => undefined,
+    isServing: () => true,
     releaseSubscription: subscriptionRelease(homesUnder(userDataPath), null),
   };
 }

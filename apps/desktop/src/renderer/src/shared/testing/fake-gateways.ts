@@ -44,9 +44,6 @@ export function gatewaySeed({
 
 const FIRST_OFFERED_PORT = 51234;
 
-const PORT_MOVES_ELSEWHERE =
-  'The port a gateway serves on changes through the move, never through a definition.';
-
 type EngineStatesListener = (states: EngineStates) => void;
 
 const engineStateListeners = new Set<EngineStatesListener>();
@@ -107,20 +104,11 @@ function malformed(channel: 'gateways:save' | 'gateways:update', arriving: Gatew
     : { code: 'validation-failed' as const, message: parsed.error.message };
 }
 
-function refusalRewriting(
-  held: GatewayConfig | undefined,
-  arriving: GatewayConfig,
-): { code: 'storage-failed' | 'port-conflict'; message: string } | undefined {
-  if (held === undefined) {
-    return {
-      code: 'storage-failed',
-      message: `recompose stores no gateway under the slug "${arriving.slug}", so it has nothing to rewrite.`,
-    };
-  }
-
-  return held.port === arriving.port
-    ? undefined
-    : { code: 'port-conflict', message: PORT_MOVES_ELSEWHERE };
+function unheldSlug(slug: string): { code: 'storage-failed'; message: string } {
+  return {
+    code: 'storage-failed',
+    message: `recompose stores no gateway under the slug "${slug}", so it has nothing to rewrite.`,
+  };
 }
 
 type GatewayStore = {
@@ -179,20 +167,25 @@ function savingGateway(store: GatewayStore): GatewayHandlers['gateways:save'] {
 
 function rewritingGateway(store: GatewayStore): GatewayHandlers['gateways:update'] {
   return async (gateway) => {
-    const refused =
-      malformed('gateways:update', gateway) ??
-      refusalRewriting(
-        store.held().find((held) => held.slug === gateway.slug),
-        gateway,
-      );
+    const malformation = malformed('gateways:update', gateway);
+
+    if (malformation !== undefined) {
+      return Promise.resolve({ ok: false, error: malformation });
+    }
+
+    const held = store.held().find((one) => one.slug === gateway.slug);
+
+    if (held === undefined) {
+      return Promise.resolve({ ok: false, error: unheldSlug(gateway.slug) });
+    }
+
+    const rewritten = { ...gateway, port: held.port };
 
     return Promise.resolve(
-      refused === undefined
-        ? store.land(
-            store.held().map((held) => (held.slug === gateway.slug ? gateway : held)),
-            gateway.slug,
-          )
-        : { ok: false, error: refused },
+      store.land(
+        store.held().map((one) => (one.slug === gateway.slug ? rewritten : one)),
+        gateway.slug,
+      ),
     );
   };
 }

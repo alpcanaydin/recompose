@@ -152,6 +152,7 @@ function storageContext(
     },
     startGateway: startStoredGateway(engineHost),
     restartGateway: serveRewrittenGateway(engineHost),
+    isServing: (slug) => engineHost.states()[slug]?.status === 'running',
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(reach.userDataPath, process.platform),
       custody,

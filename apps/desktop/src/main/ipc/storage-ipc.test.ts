@@ -39,6 +39,7 @@ async function freshContext(
     readLoginItem: () => false,
     startGateway: () => undefined,
     restartGateway: () => undefined,
+    isServing: () => true,
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(userDataPath, process.platform),
       null,

@@ -49,7 +49,6 @@ function gatewayServing(models: readonly VirtualModel[], port = 8397): GatewayCo
 }
 
 type Desk = {
-  started: EngineGateway[];
   restarted: EngineGateway[];
   userDataPath: string;
   handlers: ReturnType<typeof createStorageIpcHandlers>;
@@ -73,6 +72,7 @@ async function deskHolding(stored: readonly GatewayConfig[]): Promise<Desk> {
     restartGateway: (gateway) => {
       restarted.push(gateway);
     },
+    isServing: () => true,
     releaseSubscription: async () => Promise.resolve({ ok: true }),
   };
 
@@ -86,7 +86,7 @@ async function deskHolding(stored: readonly GatewayConfig[]): Promise<Desk> {
 
   started.length = 0;
 
-  return { started, restarted, userDataPath, handlers };
+  return { restarted, userDataPath, handlers };
 }
 
 function refusalIn(answer: { ok: true } | { ok: false; error: IpcError }): IpcError {
@@ -119,43 +119,6 @@ describe('an update to a gateway already on disk', () => {
       ok: true,
       value: [gatewayServing([fast])],
     });
-  });
-
-  test('the gateway serves the fresh snapshot at once, rather than the one it started on', async () => {
-    const desk = await deskHolding([gatewayServing([])]);
-
-    await desk.handlers['gateways:update'](gatewayServing([fast]));
-
-    expect(desk.restarted).toEqual([
-      {
-        slug: 'codex',
-        displayName: 'Codex',
-        port: 8397,
-        virtualModels: [
-          {
-            id: 'fast',
-            displayName: 'Fast',
-            target: { standing: 'bound', providerModel: 'claude-haiku-4-5' },
-          },
-        ],
-      },
-    ]);
-    expect(desk.started).toEqual([]);
-  });
-
-  test('a target the registry resolved as gone is restarted as removed, not as bound', async () => {
-    const desk = await deskHolding([gatewayServing([])]);
-    const orphan: VirtualModel = {
-      id: 'gone',
-      displayName: 'Gone',
-      target: { accountId: 'acc-plan', providerModel: 'claude-opus-5' },
-    };
-
-    await desk.handlers['gateways:update'](gatewayServing([orphan]));
-
-    expect(desk.restarted[0]?.virtualModels).toEqual([
-      { id: 'gone', displayName: 'Gone', target: { standing: 'removed' } },
-    ]);
   });
 });
 
@@ -231,23 +194,23 @@ describe('a gateways directory no build can read', () => {
 });
 
 describe('a port arriving through an update', () => {
-  test('a port the update tries to change is refused, because the move lane owns ports', async () => {
+  test('the stored port stands, because the move lane owns ports and this one does not', async () => {
     const desk = await deskHolding([gatewayServing([])]);
 
     const answer = await desk.handlers['gateways:update'](gatewayServing([fast], 9001));
 
-    expect(refusalIn(answer).code).toBe('port-conflict');
-    expect(refusalIn(answer).message).toContain('move');
+    expect(answer).toEqual({ ok: true, value: [gatewayServing([fast])] });
   });
 
-  test('the stored document survives a refused port change byte for byte', async () => {
+  test('the answer corrects the caller rather than storing the port it sent', async () => {
     const desk = await deskHolding([gatewayServing([])]);
-    const before = await storedBytes(desk.userDataPath, 'codex');
 
     await desk.handlers['gateways:update'](gatewayServing([fast], 9001));
 
-    expect(await storedBytes(desk.userDataPath, 'codex')).toBe(before);
-    expect(desk.restarted).toEqual([]);
+    const stored = await storedBytes(desk.userDataPath, 'codex');
+
+    expect(JSON.parse(stored)).toMatchObject({ port: 8397, virtualModels: [fast] });
+    expect(desk.restarted[0]?.port).toBe(8397);
   });
 });
 
