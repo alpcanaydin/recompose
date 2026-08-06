@@ -83,7 +83,7 @@ function spelledFor(account: CredentialedAccount, credential: string): LookCusto
 
   return firstParty.success
     ? { custody: 'provider-key', provider: firstParty.data, credential }
-    : { custody: 'bearer', credential };
+    : { custody: 'bearer', provider: account.provider, credential };
 }
 
 async function credentialedTarget(

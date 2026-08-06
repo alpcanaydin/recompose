@@ -13,7 +13,7 @@ const bearerLook = {
   kind: 'list-models',
   id: 'd1',
   origin: 'https://openrouter.ai/api',
-  custody: { custody: 'bearer', credential: 'sk-or-7f2c' },
+  custody: { custody: 'bearer', provider: 'openrouter', credential: 'sk-or-7f2c' },
 };
 
 const openLook = {
@@ -39,7 +39,11 @@ describe('the directive that asks an account what models it serves', () => {
   test('a look with no custody is refused, because absence would read as open', () => {
     const { custody, ...withoutCustody } = bearerLook;
 
-    expect(custody).toEqual({ custody: 'bearer', credential: 'sk-or-7f2c' });
+    expect(custody).toEqual({
+      custody: 'bearer',
+      provider: 'openrouter',
+      credential: 'sk-or-7f2c',
+    });
     expect(() => engineDirectiveSchema.parse(withoutCustody)).toThrow();
   });
 
@@ -47,7 +51,7 @@ describe('the directive that asks an account what models it serves', () => {
     expect(() =>
       engineDirectiveSchema.parse({
         ...bearerLook,
-        custody: { custody: 'bearer', credential: '   ' },
+        custody: { custody: 'bearer', provider: 'openrouter', credential: '   ' },
       }),
     ).toThrow();
   });

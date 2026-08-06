@@ -11,7 +11,7 @@ const credentialedLook = {
   kind: 'list-models',
   id: 'd1',
   origin: 'https://api.openai.com',
-  custody: { custody: 'bearer', credential },
+  custody: { custody: 'bearer', provider: 'openrouter', credential },
 };
 
 describe('a model-list directive the parent sends', () => {

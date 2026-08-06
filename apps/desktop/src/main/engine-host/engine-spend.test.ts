@@ -16,7 +16,7 @@ const asked: EngineSpendRequest = {
 const credentialed: SpendGrant = {
   verdict: 'resolved',
   providerOrigin: 'https://api.anthropic.com',
-  spend: { custody: 'credentialed', credential },
+  spend: { custody: 'credentialed', provider: 'anthropic', credential },
 };
 
 function refusingPort(reason: string) {

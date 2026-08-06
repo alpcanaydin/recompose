@@ -134,11 +134,15 @@ function hasMalformedSubscription(grant: SpendGrant): boolean {
 }
 
 function dialectFor(grant: SpendGrant): ProxyDialect {
-  return grant.verdict === 'resolved' && grant.spend.custody === 'subscription'
-    ? grant.spend.provider === 'anthropic'
-      ? 'anthropic'
-      : 'responses'
-    : 'chat-completions';
+  if (grant.verdict !== 'resolved' || grant.spend.custody === 'open') {
+    return 'chat-completions';
+  }
+
+  if (grant.spend.provider === 'anthropic') {
+    return 'anthropic';
+  }
+
+  return grant.spend.custody === 'subscription' ? 'responses' : 'chat-completions';
 }
 
 async function reachedUpstream(
@@ -159,7 +163,7 @@ async function reachedUpstream(
       );
     }
 
-    return await fetchLike(chatCompletionsUrl(grant.providerOrigin), {
+    return await fetchLike(credentialedUrl(grant), {
       method: 'POST',
       headers: spendHeaders(grant.spend),
       body: JSON.stringify(body),
@@ -204,8 +208,11 @@ function streamAsk(raw: JsonObject): { stream?: boolean } {
   return wantsStream(raw) ? { stream: true } : {};
 }
 
-function chatCompletionsUrl(providerOrigin: string): string {
-  return `${providerOrigin.replace(/\/+$/u, '')}/v1/chat/completions`;
+function credentialedUrl(grant: Extract<SpendGrant, { verdict: 'resolved' }>): string {
+  const origin = grant.providerOrigin.replace(/\/+$/u, '');
+  const anthropic = grant.spend.custody === 'credentialed' && grant.spend.provider === 'anthropic';
+
+  return `${origin}${anthropic ? '/v1/messages' : '/v1/chat/completions'}`;
 }
 
 type GrantedSpend = Extract<SpendGrant, { verdict: 'resolved' }>['spend'];
@@ -213,7 +220,11 @@ type GrantedSpend = Extract<SpendGrant, { verdict: 'resolved' }>['spend'];
 function spendHeaders(spend: GrantedSpend): Record<string, string> {
   const shared = { 'content-type': 'application/json' };
 
-  return spend.custody === 'credentialed'
-    ? { ...shared, authorization: `Bearer ${spend.credential}` }
-    : shared;
+  if (spend.custody !== 'credentialed') {
+    return shared;
+  }
+
+  return spend.provider === 'anthropic'
+    ? { ...shared, 'x-api-key': spend.credential, 'anthropic-version': '2023-06-01' }
+    : { ...shared, authorization: `Bearer ${spend.credential}` };
 }

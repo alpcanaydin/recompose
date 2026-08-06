@@ -10,7 +10,7 @@ const credential = 'sk-ant-api03-long-secret-7f2c';
 const credentialed: SpendGrant = {
   verdict: 'resolved',
   providerOrigin: 'https://api.anthropic.com',
-  spend: { custody: 'credentialed', credential },
+  spend: { custody: 'credentialed', provider: 'anthropic', credential },
 };
 
 const askFor = (id: string, virtualModel: string): unknown => ({

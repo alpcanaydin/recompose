@@ -7,7 +7,7 @@ import { grantsNothing, hostOver, nothing, running, scriptedChild } from './engi
 const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 const vendorOrigin = 'https://api.openai.com';
 const credential = 'sk-ant-api03-long-secret-7f2c';
-const credentialed = { custody: 'bearer', credential } as const;
+const credentialed = { custody: 'bearer', provider: 'openrouter', credential } as const;
 const open = { custody: 'open' } as const;
 
 const listing: ModelListing = { standing: 'listed', modelIds: ['gpt-5'] };

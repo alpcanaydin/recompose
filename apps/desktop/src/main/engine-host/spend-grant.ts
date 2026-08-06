@@ -37,7 +37,7 @@ function spendFrom(custody: LookCustody): GrantedSpend {
 
   return custody.custody === 'subscription'
     ? custody
-    : { custody: 'credentialed', credential: custody.credential };
+    : { custody: 'credentialed', provider: custody.provider, credential: custody.credential };
 }
 
 /**

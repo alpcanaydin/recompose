@@ -15,7 +15,7 @@ const resolved = {
   grant: {
     verdict: 'resolved',
     providerOrigin: 'https://api.anthropic.com',
-    spend: { custody: 'credentialed', credential: 'sk-ant-api03-9f2c' },
+    spend: { custody: 'credentialed', provider: 'anthropic', credential: 'sk-ant-api03-9f2c' },
   },
 };
 
@@ -175,13 +175,15 @@ describe('the non-subscription spend a resolved grant authorizes', () => {
 
   test('a credentialed spend naming no credential is refused, because it authorizes nothing', () => {
     expect(() =>
-      engineSpendGrantSchema.parse(aGrantSpending({ custody: 'credentialed' })),
+      engineSpendGrantSchema.parse(aGrantSpending({ custody: 'credentialed', provider: 'openai' })),
     ).toThrow();
   });
 
   test('a credentialed spend carrying a blank credential is refused', () => {
     expect(() =>
-      engineSpendGrantSchema.parse(aGrantSpending({ custody: 'credentialed', credential: '   ' })),
+      engineSpendGrantSchema.parse(
+        aGrantSpending({ custody: 'credentialed', provider: 'openai', credential: '   ' }),
+      ),
     ).toThrow();
   });
 
@@ -194,7 +196,11 @@ describe('the non-subscription spend a resolved grant authorizes', () => {
   test('a resolved grant naming no spend is refused, because the proxy would not know what to send', () => {
     const { spend, ...withoutTheSpend } = resolved.grant;
 
-    expect(spend).toEqual({ custody: 'credentialed', credential: 'sk-ant-api03-9f2c' });
+    expect(spend).toEqual({
+      custody: 'credentialed',
+      provider: 'anthropic',
+      credential: 'sk-ant-api03-9f2c',
+    });
     expect(() => engineSpendGrantSchema.parse({ ...resolved, grant: withoutTheSpend })).toThrow();
   });
 

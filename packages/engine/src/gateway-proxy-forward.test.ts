@@ -68,6 +68,17 @@ describe('the request that crosses to the target', () => {
     expect(sent.at(0)?.init?.body).not.toContain('sk-live-40d1');
   });
 
+  test('an Anthropic key reaches Messages with the vendor key headers', async () => {
+    const grant = aCredentialedGrant('https://api.anthropic.com', 'anthropic');
+    const sent = await forwarded(grant, '/v1/messages', aWireAsk);
+
+    expect(sent.at(0)?.url).toBe('https://api.anthropic.com/v1/messages');
+    expect(headersSentIn(sent).get('x-api-key')).toBe('sk-live-40d1');
+    expect(headersSentIn(sent).get('anthropic-version')).toBe('2023-06-01');
+    expect(headersSentIn(sent).get('authorization')).toBeNull();
+    expect(bodySentIn(sent)).toMatchObject({ model: 'gpt-5-mini', max_tokens: 1024 });
+  });
+
   test('the crossed request names its JSON body for the provider', async () => {
     const sent = await forwarded(anOpenGrant(), '/v1/chat/completions', aChatAsk);
 

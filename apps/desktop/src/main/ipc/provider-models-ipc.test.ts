@@ -61,7 +61,7 @@ describe('the account a look resolves against', () => {
     expect(looks).toEqual([
       {
         origin: 'https://openrouter.ai/api',
-        custody: { custody: 'bearer', credential: secret },
+        custody: { custody: 'bearer', provider: 'openrouter', credential: secret },
       },
     ]);
   });

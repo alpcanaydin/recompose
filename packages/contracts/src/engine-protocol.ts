@@ -52,7 +52,11 @@ export const lookCustodySchema = z.discriminatedUnion('custody', [
     provider: keyProviderIdSchema,
     credential: nonBlankString,
   }),
-  z.strictObject({ custody: z.literal('bearer'), credential: nonBlankString }),
+  z.strictObject({
+    custody: z.literal('bearer'),
+    provider: nonBlankString,
+    credential: nonBlankString,
+  }),
   z.strictObject(subscriptionCustodyShape),
   z.strictObject({ custody: z.literal('open') }),
 ]);
@@ -138,7 +142,11 @@ export const engineSpendRequestSchema = z.strictObject({
 export type EngineSpendRequest = z.infer<typeof engineSpendRequestSchema>;
 
 const grantedSpendSchema = z.discriminatedUnion('custody', [
-  z.strictObject({ custody: z.literal('credentialed'), credential: nonBlankString }),
+  z.strictObject({
+    custody: z.literal('credentialed'),
+    provider: nonBlankString,
+    credential: nonBlankString,
+  }),
   z.strictObject(subscriptionCustodyShape),
   z.strictObject({ custody: z.literal('open') }),
 ]);

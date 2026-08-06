@@ -41,11 +41,14 @@ export function granting(grant: SpendGrant): AskedGrants {
 export const grantsNothing: SpendGrantFor = async () =>
   Promise.resolve({ verdict: 'missing-target' });
 
-export function aCredentialedGrant(providerOrigin = 'http://127.0.0.1:4242'): SpendGrant {
+export function aCredentialedGrant(
+  providerOrigin = 'http://127.0.0.1:4242',
+  provider = 'openai',
+): SpendGrant {
   return {
     verdict: 'resolved',
     providerOrigin,
-    spend: { custody: 'credentialed', credential: 'sk-live-40d1' },
+    spend: { custody: 'credentialed', provider, credential: 'sk-live-40d1' },
   };
 }
 
