@@ -150,7 +150,13 @@ async function reachedUpstream(
 ): Promise<Response | null> {
   try {
     if (grant.spend.custody === 'subscription') {
-      return await reachSubscription(grant, body, subscriptions, crossing.sessionId);
+      return await reachSubscription(
+        grant,
+        body,
+        subscriptions,
+        crossing.sessionId,
+        crossing.dialect,
+      );
     }
 
     return await fetchLike(chatCompletionsUrl(grant.providerOrigin), {

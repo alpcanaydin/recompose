@@ -2,19 +2,16 @@ import type { SpendGrant, SubscriptionProviderId } from '@recompose/contracts';
 
 import { randomUUID } from 'node:crypto';
 
-import type { JsonObject } from '../gateway-wire';
+import type { JsonObject, ProxyDialect } from '../gateway-wire';
 import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
-import {
-  ClaudeDiagnostics,
-  injectClaudeDiagnostics,
-  observeClaudeDiagnostics,
-} from './claude-diagnostics';
+import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
+import { CodexReasoningReplay } from './codex-replay';
 import { codexProviderRequest } from './codex-request';
 import { parseSubscriptionCredential, withClaudeCredentialIdentity } from './credentials';
 import {
@@ -22,6 +19,7 @@ import {
   sendSubscriptionRequest,
   subscriptionRefreshFetch,
 } from './provider-transport';
+import { observeSubscriptionAnswer } from './reach-observation';
 import { credentialNeedsRefresh, refreshSubscriptionCredential } from './refresh';
 
 export type SubscriptionRuntime = {
@@ -37,6 +35,7 @@ export type SubscriptionRuntime = {
   newClaudeDeviceId: () => string;
   fetchClaudeProfile: (accessToken: string) => Promise<ClaudeProfile>;
   diagnostics: ClaudeDiagnostics;
+  codexReplay?: CodexReasoningReplay;
 };
 
 export function subscriptionRuntime(
@@ -53,6 +52,7 @@ export function subscriptionRuntime(
     newClaudeDeviceId,
     fetchClaudeProfile,
     diagnostics: new ClaudeDiagnostics(),
+    codexReplay: new CodexReasoningReplay(),
   };
 }
 
@@ -88,19 +88,24 @@ function providerRequestFor(
   credential: ParsedSubscriptionCredential,
   runtime: SubscriptionRuntime,
   sessionId: string,
+  sourceDialect: ProxyDialect,
 ): ProviderRequest {
-  return grant.spend.custody === 'subscription' && grant.spend.provider === 'anthropic'
-    ? claudeProviderRequest(
-        grant.providerOrigin,
-        injectClaudeDiagnostics(
-          body,
-          runtime.diagnostics.previous(diagnosticsKey(grant, sessionId)),
-        ),
-        credential.accessToken,
-        { sessionId, requestId: runtime.randomUUID() },
-        claudeIdentityOf(credential),
-      )
-    : codexProviderRequest(grant.providerOrigin, body, credential, runtime.randomUUID());
+  if (grant.spend.custody === 'subscription' && grant.spend.provider === 'anthropic') {
+    return claudeProviderRequest(
+      grant.providerOrigin,
+      injectClaudeDiagnostics(body, runtime.diagnostics.previous(diagnosticsKey(grant, sessionId))),
+      credential.accessToken,
+      { sessionId, requestId: runtime.randomUUID() },
+      claudeIdentityOf(credential),
+    );
+  }
+
+  const replayed =
+    sourceDialect === 'anthropic' && runtime.codexReplay !== undefined
+      ? runtime.codexReplay.inject(codexReplayKey(body, sessionId), body)
+      : body;
+
+  return codexProviderRequest(grant.providerOrigin, replayed, credential, runtime.randomUUID());
 }
 
 function claudeIdentityOf(credential: ParsedSubscriptionCredential) {
@@ -111,11 +116,18 @@ function claudeIdentityOf(credential: ParsedSubscriptionCredential) {
     : { accountUuid: credential.accountUuid, deviceId };
 }
 
+function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
+  return grant.spend.custody === 'subscription'
+    ? `${grant.spend.accountId}\0${sessionId}`
+    : sessionId;
+}
+
 export async function reachSubscription(
   grant: ResolvedGrant,
   body: JsonObject,
   runtime: SubscriptionRuntime,
   sessionId = runtime.randomUUID(),
+  sourceDialect: ProxyDialect = 'responses',
 ): Promise<Response> {
   if (grant.spend.custody !== 'subscription') {
     throw new Error('a non-subscription spend reached the subscription transport');
@@ -125,7 +137,7 @@ export async function reachSubscription(
   const identified = await readyClaudeIdentity(grant.spend, ready, runtime);
   const answer = await runtime.send(
     grant.spend.provider,
-    providerRequestFor(grant, body, identified.credential, runtime, sessionId),
+    providerRequestFor(grant, body, identified.credential, runtime, sessionId, sourceDialect),
   );
 
   const finalAnswer = shouldRefreshUnauthorized(answer, identified.credential)
@@ -136,33 +148,17 @@ export async function reachSubscription(
         identified.blob,
         runtime,
         sessionId,
+        sourceDialect,
       )
     : answer;
 
-  return observeClaudeAnswer(grant, finalAnswer, runtime, sessionId);
+  return observeSubscriptionAnswer(grant, body, finalAnswer, runtime, sessionId, sourceDialect);
 }
 
-function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
-  return grant.spend.custody === 'subscription'
-    ? `${grant.spend.accountId}\0${sessionId}`
-    : sessionId;
-}
+function codexReplayKey(body: JsonObject, sessionId: string): string {
+  const model = typeof body['model'] === 'string' ? body['model'] : '';
 
-async function observeClaudeAnswer(
-  grant: ResolvedGrant,
-  answer: Response,
-  runtime: SubscriptionRuntime,
-  sessionId: string,
-): Promise<Response> {
-  if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'anthropic') {
-    return answer;
-  }
-
-  const key = diagnosticsKey(grant, sessionId);
-
-  return observeClaudeDiagnostics(answer, (messageId) => {
-    runtime.diagnostics.commit(key, messageId);
-  });
+  return `${model}\0${sessionId}`;
 }
 
 type ReadyCredential = { blob: string; credential: ParsedSubscriptionCredential };
@@ -237,12 +233,13 @@ async function retryWithRefreshedCredential(
   blob: string,
   runtime: SubscriptionRuntime,
   sessionId: string,
+  sourceDialect: ProxyDialect,
 ): Promise<Response> {
   const retried = await refreshedAndPersisted(spend, blob, runtime);
 
   return runtime.send(
     spend.provider,
-    providerRequestFor(grant, body, retried.credential, runtime, sessionId),
+    providerRequestFor(grant, body, retried.credential, runtime, sessionId, sourceDialect),
   );
 }
 

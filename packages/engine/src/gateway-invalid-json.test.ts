@@ -41,7 +41,9 @@ describe('invalid JSON request scope', () => {
     expect(answer.status).toBe(400);
     expect(body).toHaveProperty(envelope);
   });
+});
 
+describe('duplicate JSON request scope', () => {
   test.each([false, true])(
     'rejects duplicate metadata before %s streaming send',
     async (stream) => {
