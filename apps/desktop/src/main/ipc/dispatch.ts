@@ -28,6 +28,7 @@ export const ipcChannelNames: readonly IpcChannel[] = [
   'system:get',
   'system:open-config-folder',
   'system:window-band',
+  'system:title-bar-double-click',
   'gateways:offer-port',
   'gateways:move-port',
   'engine:start',

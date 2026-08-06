@@ -60,7 +60,7 @@ import {
   showMainWindow,
 } from './windows/main-window';
 import { registerPermissionHandlers } from './windows/permission-wiring';
-import { windowButtonsMoveOn } from './windows/window-buttons';
+import { answerTitleBarDoubleClick, placeWindowButtons } from './windows/window-chrome';
 
 app.setName('Recompose');
 app.setAboutPanelOptions({ applicationName: 'Recompose' });
@@ -190,11 +190,10 @@ function assembleIpcHandlers(
       isMenuBarVisible: () => isMenuBarTrayVisible(),
       openFolder: async (path) => shell.openPath(path),
       placeWindowButtons: (position) => {
-        if (!windowButtonsMoveOn(process.platform)) {
-          return;
-        }
-
-        BrowserWindow.getAllWindows()[0]?.setWindowButtonPosition(position);
+        placeWindowButtons(process.platform, position);
+      },
+      answerTitleBarDoubleClick: () => {
+        answerTitleBarDoubleClick(process.platform);
       },
     }),
   };

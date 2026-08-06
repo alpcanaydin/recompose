@@ -15,6 +15,7 @@ const channelNames: IpcChannel[] = [
   'system:get',
   'system:open-config-folder',
   'system:window-band',
+  'system:title-bar-double-click',
   'gateways:offer-port',
   'gateways:move-port',
   'engine:start',
@@ -33,7 +34,7 @@ const channelNames: IpcChannel[] = [
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the twenty-six specified channels exist', () => {
+  test('exactly the twenty-seven specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 

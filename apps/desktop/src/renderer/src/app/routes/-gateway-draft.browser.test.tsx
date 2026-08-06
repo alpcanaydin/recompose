@@ -1,7 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 
-import { inspectorOpen, toggleInspector } from '../../shared/lib';
+import { inspectorOpen, showSidebar, toggleInspector } from '../../shared/lib';
 import { gatewaySeed } from '../../shared/testing';
 import { renderAt } from '../testing/render-app';
 
@@ -9,6 +9,9 @@ const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
 const claude = gatewaySeed({ slug: 'claude', displayName: 'Claude', port: 51235 });
 
 beforeEach(() => {
+  localStorage.clear();
+  showSidebar();
+
   if (!inspectorOpen()) {
     toggleInspector();
   }

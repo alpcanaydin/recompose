@@ -52,7 +52,10 @@ export type BridgeParameters = {
 type SettingsHandlers = Pick<RecomposeIpc, 'settings:get' | 'settings:save'>;
 type SystemHandlers = Pick<
   RecomposeIpc,
-  'system:get' | 'system:open-config-folder' | 'system:window-band'
+  | 'system:get'
+  | 'system:open-config-folder'
+  | 'system:window-band'
+  | 'system:title-bar-double-click'
 >;
 
 function settingsHandlers(seed: Settings): SettingsHandlers {
@@ -73,6 +76,7 @@ function systemHandlers(): SystemHandlers {
     'system:get': async () => Promise.resolve({ ok: true, value: observedSystem }),
     'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
     'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),
+    'system:title-bar-double-click': async () => Promise.resolve({ ok: true, value: undefined }),
   };
 }
 

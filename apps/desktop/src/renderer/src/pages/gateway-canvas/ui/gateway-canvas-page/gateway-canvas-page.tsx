@@ -1,8 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { notFound } from '@tanstack/react-router';
-import { useCallback, useState, useSyncExternalStore } from 'react';
-
-import type { SettledDefinition } from '../../lib/model-draft';
+import { useRef, useSyncExternalStore } from 'react';
 
 import { gatewaysQueryOptions } from '../../../../shared/api';
 import {
@@ -16,7 +14,7 @@ import {
 } from '../../../../shared/lib';
 import { PanelSeparator } from '../../../../shared/ui';
 import { inspectorWidth } from '../../lib/inspector-width';
-import { draftKept, emptyDefinition } from '../../lib/model-draft';
+import { useHeldDraft } from '../../lib/use-held-draft';
 import { useInspectorReveal } from '../../lib/use-inspector-reveal';
 import { usePressAway } from '../../lib/use-press-away';
 import { GatewayDrawer } from '../gateway-drawer/gateway-drawer';
@@ -38,13 +36,10 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
   const selected = useSyncExternalStore(subscribeToInspectorVisibility, inspectorOpen);
   const width = useSyncExternalStore(subscribeToPanelWidths, inspectorWidth);
   const inspector = useInspectorReveal(selected);
+  const surface = useRef<HTMLDivElement>(null);
+  const { standing: drafting, startDrafting, keepDrafting, leaveDrafting } = useHeldDraft();
 
-  usePressAway(selected, toggleInspector);
-  const [drafting, setDrafting] = useState<SettledDefinition | undefined>(undefined);
-
-  const keepDrafting = useCallback((values: SettledDefinition) => {
-    setDrafting((held) => draftKept(held, values));
-  }, []);
+  usePressAway(surface, selected, toggleInspector);
 
   const gateway = gateways.find((held) => held.slug === slug);
 
@@ -53,7 +48,7 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0" ref={surface}>
       <GatewayStage gateway={gateway} onToggleSelected={toggleInspector} selected={selected} />
       {inspector.rendered ? (
         <PanelSeparator
@@ -77,12 +72,8 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
           gateway={gateway}
           leaving={inspector.leaving}
           onKeepDrafting={keepDrafting}
-          onLeaveDrafting={() => {
-            setDrafting(undefined);
-          }}
-          onStartDrafting={() => {
-            setDrafting(emptyDefinition());
-          }}
+          onLeaveDrafting={leaveDrafting}
+          onStartDrafting={startDrafting}
         />
       ) : null}
     </div>

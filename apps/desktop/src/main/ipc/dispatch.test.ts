@@ -26,6 +26,7 @@ const voidRequestChannel = fc.constantFrom<IpcChannel>(
   'accounts:list',
   'system:get',
   'system:open-config-folder',
+  'system:title-bar-double-click',
   'gateways:offer-port',
   'engine:states',
 );

@@ -1,7 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 
-import { inspectorOpen, toggleInspector } from '../../shared/lib';
+import { inspectorOpen, showSidebar, sidebarHidden, toggleInspector } from '../../shared/lib';
 import { gatewaySeed } from '../../shared/testing';
 import { renderAt } from '../testing/render-app';
 
@@ -11,6 +11,16 @@ function pressOn(target: Element) {
   target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
 }
 
+function theStageBackground(container: HTMLElement): Element {
+  const section = container.querySelector('main section');
+
+  if (section === null) {
+    throw new Error('the stage is not on screen');
+  }
+
+  return section;
+}
+
 async function renderGateway() {
   return renderAt('/gateways/codex', { gateways: [codex] });
 }
@@ -18,27 +28,47 @@ async function renderGateway() {
 const theEndpoint = { exact: true } as const;
 
 beforeEach(() => {
+  localStorage.clear();
+  showSidebar();
+
   if (!inspectorOpen()) {
     toggleInspector();
   }
 });
 
-test('a press on the toolbar puts the inspector away, because a person looked elsewhere', async () => {
+test('a press on the stage behind the drawer puts the inspector away', async () => {
   const screen = await renderGateway();
 
   await expect.element(screen.getByText('Endpoint', theEndpoint)).toBeVisible();
 
-  pressOn(screen.getByRole('toolbar', { name: 'Codex' }).element());
+  pressOn(theStageBackground(screen.container));
 
   await expect.element(screen.getByText('Endpoint', theEndpoint)).not.toBeInTheDocument();
 });
 
-test('a press on the status bar puts the inspector away too, wherever a person reached', async () => {
+test('a press on the toolbar leaves the inspector standing, since that is using the app', async () => {
+  const screen = await renderGateway();
+
+  pressOn(screen.getByRole('toolbar', { name: 'Codex' }).element());
+
+  await expect.element(screen.getByText('Endpoint', theEndpoint)).toBeVisible();
+});
+
+test('a press on the status bar leaves the inspector standing too', async () => {
   const screen = await renderGateway();
 
   pressOn(screen.getByText(/p95/).element());
 
-  await expect.element(screen.getByText('Endpoint', theEndpoint)).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Endpoint', theEndpoint)).toBeVisible();
+});
+
+test('pressing a real toolbar control runs it and leaves the inspector standing', async () => {
+  const screen = await renderGateway();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Sidebar' }));
+
+  expect(sidebarHidden()).toBe(true);
+  await expect.element(screen.getByText('Endpoint', theEndpoint)).toBeVisible();
 });
 
 test('the toolbar control that opens the inspector closes it once, never twice', async () => {
@@ -91,13 +121,13 @@ test('choosing another gateway leaves the inspector standing, being a choice not
   await expect.element(screen.getByText('Endpoint', theEndpoint)).toBeVisible();
 });
 
-test('a draft in flight survives a press away and comes back as it was', async () => {
+test('a draft in flight survives a press on the stage and comes back as it was', async () => {
   const screen = await renderGateway();
 
   await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
   await screen.getByRole('textbox', { name: 'Name' }).fill('Fast Sonnet');
 
-  pressOn(screen.getByText(/p95/).element());
+  pressOn(theStageBackground(screen.container));
 
   await expect.element(screen.getByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
 

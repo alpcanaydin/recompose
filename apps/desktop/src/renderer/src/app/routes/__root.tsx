@@ -26,6 +26,7 @@ import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
 import { SidebarEdge, SidebarToggle } from '../../shared/ui';
 import { CreateGatewaySheet } from '../../widgets/gateway/create';
 import { StatusBar } from '../../widgets/status-bar';
+import { useTitleBarDoubleClick } from '../lib/use-title-bar-double-click';
 import { AppSidebar } from './-app-sidebar';
 import { AppToolbar } from './-app-toolbar';
 import { NotFound } from './-not-found';
@@ -73,6 +74,8 @@ function RootLayout() {
   const { slug } = useParams({ strict: false });
   const providers = useMatch({ from: '/providers', shouldThrow: false });
   const sidebarAway = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+
+  useTitleBarDoubleClick();
 
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
 
