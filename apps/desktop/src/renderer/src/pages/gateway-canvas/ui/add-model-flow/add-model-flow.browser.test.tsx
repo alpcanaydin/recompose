@@ -3,7 +3,7 @@ import type { AccountsDocument, VirtualModel } from '@recompose/contracts';
 import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
@@ -67,6 +67,10 @@ function precedes(earlier: Element, later: Element): boolean {
   return (earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 test('the flow asks for a name, then the target it reaches, then the model it serves', async () => {
   const screen = await renderFlow();
 
@@ -109,7 +113,9 @@ test('picking a target fills the model list from that account, and never with fr
   await userEvent.click(screen.getByRole('button', { name: /work/ }));
 
   await expect.element(screen.getByRole('button', { name: 'claude-haiku-4-5' })).toBeVisible();
-  await expect.element(screen.getByRole('textbox', { name: 'Model' })).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole('textbox', { name: 'Model', exact: true }))
+    .not.toBeInTheDocument();
 });
 
 test('a target whose model list nothing could read refuses where the models would stand', async () => {
@@ -120,13 +126,41 @@ test('a target whose model list nothing could read refuses where the models woul
   await expect.element(screen.getByRole('alert')).toHaveTextContent(/model list/i);
 });
 
-test('the name field previews the id a client will ask for, and who lists it', async () => {
+test('typing the name derives the model id live, keeping the dots a client will send', async () => {
   const screen = await renderFlow();
 
-  await screen.getByRole('textbox', { name: 'Name' }).fill('Fast Sonnet');
+  await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'GPT 5.6 Sol');
 
-  await expect.element(screen.getByText(/Wire id fast-sonnet/)).toBeVisible();
+  await expect
+    .element(screen.getByRole('textbox', { name: 'Model id' }))
+    .toHaveValue('gpt-5.6-sol');
   await expect.element(screen.getByText(/Claude Code/)).toBeVisible();
+});
+
+test('editing the model id detaches it, so further name typing no longer overwrites it', async () => {
+  const screen = await renderFlow();
+  const name = screen.getByRole('textbox', { name: 'Name' });
+  const modelId = screen.getByRole('textbox', { name: 'Model id' });
+
+  await userEvent.type(name, 'Fast');
+  await expect.element(modelId).toHaveValue('fast');
+
+  await userEvent.clear(modelId);
+  await userEvent.type(modelId, 'my-alias');
+  await userEvent.type(name, 'er');
+
+  await expect.element(modelId).toHaveValue('my-alias');
+  await expect.element(name).toHaveValue('Faster');
+});
+
+test('the model id carries a copy affordance for the exact string a client sends', async () => {
+  const written = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+  const screen = await renderFlow();
+
+  await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'Fast');
+  await userEvent.click(screen.getByRole('button', { name: 'Copy model id' }));
+
+  expect(written).toHaveBeenCalledWith('fast');
 });
 
 test('the footer previews the whole binding once the draft is settled', async () => {
@@ -174,7 +208,7 @@ test('a short model list offers no search, because the whole list already stands
     .not.toBeInTheDocument();
 });
 
-test('a name the gateway already serves refuses under the name field', async () => {
+test('a model id the gateway already serves refuses under the model id field', async () => {
   const held: VirtualModel = {
     id: 'fast',
     displayName: 'Fast',

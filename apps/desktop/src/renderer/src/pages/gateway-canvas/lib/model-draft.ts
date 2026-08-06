@@ -1,47 +1,49 @@
 import type { GatewayConfig, VirtualModel } from '@recompose/contracts';
 
-import { gatewaySlugSchema, slugFromName } from '@recompose/contracts';
+import { modelAliasFromName, modelAliasSchema } from '@recompose/contracts';
 
 import type { ProviderModelList } from '../../../shared/api';
 
 import { IpcResultError, refusalSentence } from '../../../shared/api';
 
 const MISSING_NAME_REFUSAL = 'Give the virtual model a name.';
-const UNSERVABLE_NAME_REFUSAL = 'recompose cannot serve a virtual model under this name.';
+const UNSERVABLE_ID_REFUSAL = 'recompose cannot serve a virtual model under this id.';
 const MALFORMED_DEFINITION_REFUSAL = 'recompose cannot store this virtual model as it stands.';
 const SKIPPED_ID_HINT = 'Claude Code lists only ids starting with claude or anthropic.';
 const DISCOVERED_PREFIXES = ['claude', 'anthropic'];
 
+/** What the name field says back when a name with nothing in it can stand for no model. */
+export function nameRefusal(displayName: string): string | undefined {
+  return displayName.trim() === '' ? MISSING_NAME_REFUSAL : undefined;
+}
+
 /**
- * What the name field says back when no definition can stand under the name as typed.
+ * The id a name derives to, kept in step with the name until a person edits the id by hand.
  *
- * @summary The id is derived rather than typed, so format and length never reach a person. Three
- * things survive that: a name with nothing in it, which the fallback id would hide behind a model
- * nobody named; a name landing on an id the stored shape refuses; and a name this gateway already
- * serves, which would leave two definitions answering to one id.
+ * @summary The id follows the name while it still reads as the name's derived alias, and an empty
+ * id counts as following, so clearing a hand-edit lets the name drive it again. Once the id says
+ * something the name would not derive, it belongs to the person, and typing the name leaves it be.
  */
-export function nameRefusal(
-  displayName: string,
-  held: readonly VirtualModel[],
-): string | undefined {
-  if (displayName.trim() === '') {
-    return MISSING_NAME_REFUSAL;
-  }
+export function idFollowingName(previousName: string, nextName: string, currentId: string): string {
+  const following = currentId === '' || currentId === modelAliasFromName(previousName);
 
-  const id = slugFromName(displayName);
+  return following ? modelAliasFromName(nextName) : currentId;
+}
 
-  if (!gatewaySlugSchema.safeParse(id).success) {
-    return UNSERVABLE_NAME_REFUSAL;
+/**
+ * What the model id field says back when the id a client would send cannot stand as it is.
+ *
+ * @summary An id no client could send refuses first, then one this gateway already serves, because
+ * a second definition under one id would leave two answers to a single request.
+ */
+export function idRefusal(id: string, held: readonly VirtualModel[]): string | undefined {
+  if (!modelAliasSchema.safeParse(id).success) {
+    return UNSERVABLE_ID_REFUSAL;
   }
 
   return held.some((model) => model.id === id)
     ? `This gateway already serves a virtual model named "${id}".`
     : undefined;
-}
-
-/** The id a client would ask this model for, or nothing while the name says nothing. */
-export function previewWireId(displayName: string): string | undefined {
-  return displayName.trim() === '' ? undefined : slugFromName(displayName);
 }
 
 /**
@@ -58,8 +60,10 @@ export function discoveryHint(wireId: string): string | undefined {
 }
 
 export type SettledDefinition = {
-  /** The name a person gave the model, which the id is derived from. */
+  /** The name a person gave the model, which the id derives from until a person edits it. */
   displayName: string;
+  /** The id a client sends as its `model`, saved as a person saw it rather than derived again. */
+  id: string;
   /** The account the model reaches. */
   accountId: string;
   /** The real model that account serves. */
@@ -68,7 +72,7 @@ export type SettledDefinition = {
 
 /** A definition nobody has said anything about yet, which is what a fresh draft opens on. */
 export function emptyDefinition(): SettledDefinition {
-  return { displayName: '', accountId: '', providerModel: '' };
+  return { displayName: '', id: '', accountId: '', providerModel: '' };
 }
 
 /**
@@ -93,7 +97,7 @@ export function gatewayDefining(gateway: GatewayConfig, settled: SettledDefiniti
     virtualModels: [
       ...gateway.virtualModels,
       {
-        id: slugFromName(settled.displayName),
+        id: settled.id,
         displayName: settled.displayName,
         target: { accountId: settled.accountId, providerModel: settled.providerModel },
       },
@@ -102,8 +106,8 @@ export function gatewayDefining(gateway: GatewayConfig, settled: SettledDefiniti
 }
 
 export type DraftBinding = {
-  /** The name a person typed, which the previewed id derives from. */
-  displayName: string;
+  /** The id a client asks for, which the preview reads first. */
+  id: string;
   /** What the picked target reads as, or nothing while none is picked. */
   target: string | undefined;
   /** The real model picked, which is empty while none is. */
@@ -117,18 +121,12 @@ export type DraftBinding = {
  * account and the real model that answer it. A draft missing any of the three previews nothing,
  * because half a binding invites a person to believe the rest was already decided.
  */
-export function servesPreview({
-  displayName,
-  target,
-  providerModel,
-}: DraftBinding): string | undefined {
-  const wireId = previewWireId(displayName);
-
-  if (wireId === undefined || target === undefined || providerModel === '') {
+export function servesPreview({ id, target, providerModel }: DraftBinding): string | undefined {
+  if (id === '' || target === undefined || providerModel === '') {
     return undefined;
   }
 
-  return `serves as ${wireId} → ${target} · ${providerModel}`;
+  return `serves as ${id} → ${target} · ${providerModel}`;
 }
 
 /** What the Model field offers, and the sentence standing where a look answered nothing. */

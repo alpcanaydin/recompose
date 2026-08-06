@@ -8,9 +8,10 @@ import {
   discoveryHint,
   draftKept,
   gatewayDefining,
+  idFollowingName,
+  idRefusal,
   modelListReading,
   nameRefusal,
-  previewWireId,
   refusalFromMain,
   servesPreview,
 } from './model-draft';
@@ -32,32 +33,40 @@ const codex: GatewayConfig = {
 
 const noneHeld: readonly VirtualModel[] = [];
 
-test('a name with nothing in it refuses, because no id can stand for it', () => {
-  expect(nameRefusal('', noneHeld)).toBe('Give the virtual model a name.');
+test('a name with nothing in it refuses, because no model can stand under it', () => {
+  expect(nameRefusal('')).toBe('Give the virtual model a name.');
 });
 
-test('a name the gateway already defines refuses rather than shadowing what stands', () => {
-  expect(nameRefusal('fast', [fast])).toBe(
+test('a name a person actually typed passes without a word', () => {
+  expect(nameRefusal('Fast Sonnet')).toBeUndefined();
+});
+
+test('typing a name derives its id live, keeping the dots a client will send', () => {
+  expect(idFollowingName('claude-5', 'claude-5.6', 'claude-5')).toBe('claude-5.6');
+});
+
+test('an id a person edited by hand detaches, so further name typing leaves it alone', () => {
+  expect(idFollowingName('Fast', 'Faster', 'my-alias')).toBe('my-alias');
+});
+
+test('clearing a hand-edited id lets the name drive it again', () => {
+  expect(idFollowingName('Fast', 'Faster', '')).toBe('faster');
+});
+
+test('an id no client could send refuses before anything is stored', () => {
+  expect(idRefusal('Fast Model', noneHeld)).toBe(
+    'recompose cannot serve a virtual model under this id.',
+  );
+});
+
+test('an id this gateway already serves refuses rather than shadowing what stands', () => {
+  expect(idRefusal('fast', [fast])).toBe(
     'This gateway already serves a virtual model named "fast".',
   );
 });
 
-test('a name landing on an id nothing can be served under refuses', () => {
-  expect(nameRefusal('con', noneHeld)).toBe(
-    'recompose cannot serve a virtual model under this name.',
-  );
-});
-
-test('a free name a stored id can carry passes without a word', () => {
-  expect(nameRefusal('Fast Sonnet', noneHeld)).toBeUndefined();
-});
-
-test('the sheet previews the id a name would be served under', () => {
-  expect(previewWireId('Fast Sonnet')).toBe('fast-sonnet');
-});
-
-test('a name with nothing in it previews no id rather than a fallback nobody typed', () => {
-  expect(previewWireId('  ')).toBeUndefined();
+test('an id carrying dots and no collision passes without a word', () => {
+  expect(idRefusal('claude-5.6-sol', noneHeld)).toBeUndefined();
 });
 
 test("an id Claude Code's picker skips carries the hint that says so", () => {
@@ -69,9 +78,10 @@ test("an id Claude Code's picker surfaces carries no hint", () => {
   expect(discoveryHint('anthropic-fast')).toBeUndefined();
 });
 
-test('a settled draft reaches storage as the gateway carrying one more definition', () => {
+test('a settled draft reaches storage as the gateway carrying the id a person saw', () => {
   const defining = gatewayDefining(codex, {
-    displayName: 'Fast Sonnet',
+    displayName: 'Claude 5.6 Sol',
+    id: 'claude-5.6-sol',
     accountId: 'a1',
     providerModel: 'claude-sonnet-5',
   });
@@ -80,8 +90,8 @@ test('a settled draft reaches storage as the gateway carrying one more definitio
     ...codex,
     virtualModels: [
       {
-        id: 'fast-sonnet',
-        displayName: 'Fast Sonnet',
+        id: 'claude-5.6-sol',
+        displayName: 'Claude 5.6 Sol',
         target: { accountId: 'a1', providerModel: 'claude-sonnet-5' },
       },
     ],
@@ -91,7 +101,7 @@ test('a settled draft reaches storage as the gateway carrying one more definitio
 test('a definition joins the ones the gateway already holds rather than replacing them', () => {
   const defining = gatewayDefining(
     { ...codex, virtualModels: [fast] },
-    { displayName: 'slow', accountId: 'a1', providerModel: 'claude-opus-5' },
+    { displayName: 'slow', id: 'slow', accountId: 'a1', providerModel: 'claude-opus-5' },
   );
 
   expect(defining.virtualModels.map((model) => model.id)).toEqual(['fast', 'slow']);
@@ -144,21 +154,31 @@ test('a look still out offers no id and refuses nothing, because it has said not
 });
 
 test('a draft handed back while the flow still stands is kept for the reopen', () => {
-  const held = { displayName: 'Fast', accountId: '', providerModel: '' };
-  const handed = { displayName: 'Fast Sonnet', accountId: 'k1', providerModel: 'claude-sonnet-5' };
+  const held = { displayName: 'Fast', id: 'fast', accountId: '', providerModel: '' };
+  const handed = {
+    displayName: 'Fast Sonnet',
+    id: 'fast-sonnet',
+    accountId: 'k1',
+    providerModel: 'claude-sonnet-5',
+  };
 
   expect(draftKept(held, handed)).toBe(handed);
 });
 
 test('a draft handed back after the flow was left keeps nothing, so nothing walks back in', () => {
-  const handed = { displayName: 'Fast', accountId: 'k1', providerModel: 'claude-sonnet-5' };
+  const handed = {
+    displayName: 'Fast',
+    id: 'fast',
+    accountId: 'k1',
+    providerModel: 'claude-sonnet-5',
+  };
 
   expect(draftKept(undefined, handed)).toBeUndefined();
 });
 
 test('a settled draft previews the whole binding a client will reach', () => {
   const preview = servesPreview({
-    displayName: 'Fast',
+    id: 'fast',
     target: 'work',
     providerModel: 'claude-haiku-4-5',
   });
@@ -167,17 +187,17 @@ test('a settled draft previews the whole binding a client will reach', () => {
 });
 
 test('a draft still missing its model previews nothing, because the binding is half said', () => {
-  expect(servesPreview({ displayName: 'Fast', target: 'work', providerModel: '' })).toBeUndefined();
+  expect(servesPreview({ id: 'fast', target: 'work', providerModel: '' })).toBeUndefined();
 });
 
 test('a draft still missing its target previews nothing', () => {
   expect(
-    servesPreview({ displayName: 'Fast', target: undefined, providerModel: 'claude-haiku-4-5' }),
+    servesPreview({ id: 'fast', target: undefined, providerModel: 'claude-haiku-4-5' }),
   ).toBeUndefined();
 });
 
-test('a draft nobody has named previews nothing, because no id stands for it yet', () => {
+test('a draft whose id is not yet said previews nothing, because no id stands for it', () => {
   expect(
-    servesPreview({ displayName: '  ', target: 'work', providerModel: 'claude-haiku-4-5' }),
+    servesPreview({ id: '', target: 'work', providerModel: 'claude-haiku-4-5' }),
   ).toBeUndefined();
 });

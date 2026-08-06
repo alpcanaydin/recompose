@@ -5,8 +5,11 @@ import { Link } from '@tanstack/react-router';
 
 import type { OptionGroup } from '../option-list/option-list';
 
-import { discoveryHint, previewWireId } from '../../lib/model-draft';
+import { CopyButton } from '../../../../shared/ui';
+import { discoveryHint } from '../../lib/model-draft';
 import { OptionList } from '../option-list/option-list';
+
+const MODEL_ID_HELP = 'Clients send this exact string as the model.';
 
 export type ModelFieldsProps = {
   /** Control the flow lands opening focus on. */
@@ -17,6 +20,12 @@ export type ModelFieldsProps = {
   nameRefusal?: string | undefined;
   /** Receives every keystroke in the name field. */
   onNameChange: (typed: string) => void;
+  /** The id a client sends, derived from the name until a person edits it here. */
+  id: string;
+  /** Sentence standing under the model id field, where one applies. */
+  idRefusal?: string | undefined;
+  /** Receives every keystroke in the model id field. */
+  onIdChange: (typed: string) => void;
   /**
    * The accounts a target can name, gathered under the kinds they are held as, and nothing at all
    * while the registry has yet to answer. An empty list is a registry that answered with nobody who
@@ -38,23 +47,6 @@ export type ModelFieldsProps = {
   /** Sentence standing where a look at the model list answered nothing. */
   modelRefusal?: string | undefined;
 };
-
-function servedUnder(name: string): ReactNode {
-  const wireId = previewWireId(name);
-
-  if (wireId === undefined) {
-    return null;
-  }
-
-  const hint = discoveryHint(wireId);
-
-  return (
-    <p className="mt-1.5 text-footnote text-ink-secondary">
-      Wire id <code className="font-mono text-ink-secondary">{wireId}</code>
-      {hint === undefined ? null : ` · ${hint}`}
-    </p>
-  );
-}
 
 function nameField(props: ModelFieldsProps): ReactNode {
   return (
@@ -78,7 +70,49 @@ function nameField(props: ModelFieldsProps): ReactNode {
           </Field.Error>
         )}
       </Field.Root>
-      {servedUnder(props.name)}
+    </div>
+  );
+}
+
+function modelIdBelow(id: string, refusal: string | undefined): ReactNode {
+  if (refusal !== undefined) {
+    return (
+      <Field.Error className="mt-1.5 block text-caption text-danger-ink" match role="alert">
+        {refusal}
+      </Field.Error>
+    );
+  }
+
+  const hint = id === '' ? undefined : discoveryHint(id);
+
+  return (
+    <Field.Description className="mt-1.5 block text-footnote text-ink-secondary">
+      {MODEL_ID_HELP}
+      {hint === undefined ? null : ` · ${hint}`}
+    </Field.Description>
+  );
+}
+
+function modelIdField(props: ModelFieldsProps): ReactNode {
+  return (
+    <div className="border-t border-line-faint px-3 py-2.5">
+      <Field.Root>
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <Field.Label className="text-caption font-semibold text-ink-secondary">
+            Model id
+          </Field.Label>
+          <CopyButton announcement="Model id copied." label="Copy model id" value={props.id} />
+        </div>
+        <Field.Control
+          className="field-control w-full font-mono focus-ring placeholder:text-ink-tertiary"
+          onChange={(event) => {
+            props.onIdChange(event.currentTarget.value);
+          }}
+          placeholder="fast"
+          value={props.id}
+        />
+        {modelIdBelow(props.id, props.idRefusal)}
+      </Field.Root>
     </div>
   );
 }
@@ -170,18 +204,19 @@ function modelControl(props: ModelFieldsProps): ReactNode {
 }
 
 /**
- * The three things a definition needs, in the order a person settles them.
+ * The fields a definition needs, in the order a person settles them.
  *
- * @summary The name is typed and the other two are picked, because a target and a model both come
- * from what is stored and what a provider actually serves. The id a client will ask for stands
- * under the name as it is derived, and the model list belongs to the target, so it waits for one.
- * With nothing stored that can serve, the target says so and points at the screen that connects
- * one, because a picker left empty reads as a flow that failed rather than as a step not taken yet.
+ * @summary The name and the id are typed and the target and the model are picked. The id a client
+ * sends follows the name as it is derived and then a person may edit it, so it carries a copy and
+ * the word that clients send it exactly. The model list belongs to the target, so it waits for one.
+ * With nothing stored that can serve, the target says so and points at the screen that connects one,
+ * because a picker left empty reads as a flow that failed rather than as a step not taken yet.
  */
 export function ModelFields(props: ModelFieldsProps) {
   return (
     <div className="field-box">
       {nameField(props)}
+      {modelIdField(props)}
       {pickedFrom('Target', targetControl(props))}
       {pickedFrom(modelLabel(props.targetName), modelControl(props))}
     </div>

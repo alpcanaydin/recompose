@@ -9,7 +9,7 @@ import type { OptionGroup } from '../option-list/option-list';
 
 import { accountsQueryOptions } from '../../../../shared/api';
 import { Icon, placeFocus } from '../../../../shared/ui';
-import { nameRefusal, servesPreview } from '../../lib/model-draft';
+import { idRefusal, nameRefusal, servesPreview } from '../../lib/model-draft';
 import { targetGroups } from '../../lib/target-groups';
 import { useModelDraft } from '../../lib/use-model-draft';
 import { ModelFields } from '../model-fields/model-fields';
@@ -87,30 +87,29 @@ function draftFields(view: FlowView): ReactNode {
   const { pickTarget: onPickTarget, pickModel: onPickModel } = draft;
 
   return (
-    <draft.form.Field
-      name="displayName"
-      validators={{ onChange: ({ value }) => nameRefusal(value, view.held) }}
-    >
-      {(field) => (
-        <ModelFields
-          models={draft.models.offered}
-          modelRefusal={draft.models.refusal}
-          name={field.state.value}
-          nameField={view.nameField}
-          nameRefusal={spokenAfterAsking(view.attempted, field.state.meta.errors[0])}
-          onNameChange={(typed) => {
-            field.handleChange(typed);
-            draft.clearRefusal();
-          }}
-          onPickModel={onPickModel}
-          onPickTarget={onPickTarget}
-          providerModel={view.providerModel}
-          target={view.target}
-          targetName={view.targetName}
-          targets={view.targets}
-        />
-      )}
-    </draft.form.Field>
+    <ModelFields
+      id={draft.picked.id}
+      idRefusal={spokenAfterAsking(view.attempted, idRefusal(draft.picked.id, view.held))}
+      models={draft.models.offered}
+      modelRefusal={draft.models.refusal}
+      name={draft.displayName}
+      nameField={view.nameField}
+      nameRefusal={spokenAfterAsking(view.attempted, nameRefusal(draft.displayName))}
+      onIdChange={(typed) => {
+        draft.typeId(typed);
+        draft.clearRefusal();
+      }}
+      onNameChange={(typed) => {
+        draft.typeName(typed);
+        draft.clearRefusal();
+      }}
+      onPickModel={onPickModel}
+      onPickTarget={onPickTarget}
+      providerModel={view.providerModel}
+      target={view.target}
+      targetName={view.targetName}
+      targets={view.targets}
+    />
   );
 }
 

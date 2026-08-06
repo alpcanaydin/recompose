@@ -25,6 +25,8 @@ const meta = preview.meta({
     nameField: createRef<HTMLInputElement>(),
     name: '',
     onNameChange: () => {},
+    id: '',
+    onIdChange: () => {},
     targets,
     onPickTarget: () => {},
     models: [],
@@ -54,31 +56,43 @@ export const Empty = meta.story({
 });
 
 /**
- * A settled draft, reading the id a client will ask for under the name.
+ * A settled draft, reading the id a client will send in its own editable field under the name.
  *
- * @summary The id is derived rather than typed, so it stands where a person can check it against
- * what they will paste into a client, and the hint says why one caller's picker may skip it.
+ * @summary The id is derived from the name and then a person's to edit, so it stands in a field a
+ * person can check against what they will paste into a client, and the hint says why one caller's
+ * picker may skip it.
  */
 export const Settled = meta.story({
   args: {
     name: 'Fast Sonnet',
+    id: 'fast-sonnet',
     target: 'k1',
     targetName: 'work',
     models: ['claude-haiku-4-5', 'claude-sonnet-5'],
     providerModel: 'claude-sonnet-5',
   },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText('fast-sonnet')).toBeVisible();
+    await expect(await canvas.findByRole('textbox', { name: 'Model id' })).toHaveValue(
+      'fast-sonnet',
+    );
     await expect(await canvas.findByText(/Claude Code/)).toBeVisible();
     await expect(await canvas.findByText("· from work's live list")).toBeVisible();
   },
 });
 
-/** A name deriving a prefixed id, which every caller's picker surfaces, so no hint stands. */
+/** An id with a recognized prefix, which every caller's picker surfaces, so no hint stands. */
 export const NoHintNeeded = meta.story({
-  args: { name: 'Claude Fast', target: 'k1', targetName: 'work', models: ['claude-sonnet-5'] },
+  args: {
+    name: 'Claude Fast',
+    id: 'claude-fast',
+    target: 'k1',
+    targetName: 'work',
+    models: ['claude-sonnet-5'],
+  },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText('claude-fast')).toBeVisible();
+    await expect(await canvas.findByRole('textbox', { name: 'Model id' })).toHaveValue(
+      'claude-fast',
+    );
     await expect(canvas.queryByText(/Claude Code/)).toBeNull();
   },
 });
