@@ -27,7 +27,9 @@ describe('Claude diagnostics continuity', () => {
       messages: [],
     });
   });
+});
 
+describe('committing Claude diagnostic responses', () => {
   it('commits SSE identity only after message_stop', async () => {
     const committed: string[] = [];
     const complete = new Response(

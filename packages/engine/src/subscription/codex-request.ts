@@ -1,9 +1,12 @@
-import { createHash } from 'node:crypto';
-
 import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 
 import { isJsonObject } from '../gateway-wire';
+import {
+  boundedCodexCallId,
+  dropsCodexEncryptedReasoning,
+  normalizedCodexItemId,
+} from './codex-identities';
 
 type JsonObject = Record<string, unknown>;
 
@@ -81,16 +84,6 @@ function toolChoice(value: unknown): unknown {
   return { ...normalized, tools: searchEntries(normalized['tools']) };
 }
 
-function boundedCallId(value: unknown): unknown {
-  if (typeof value !== 'string' || value.length <= 64) {
-    return value;
-  }
-
-  const suffix = `_${createHash('sha256').update(value).digest('hex').slice(0, 16)}`;
-
-  return `${value.slice(0, 64 - suffix.length)}${suffix}`;
-}
-
 function baseToolName(name: string): string {
   if (name.length <= 64) {
     return name;
@@ -148,16 +141,34 @@ function renamedEntry(value: unknown, names: Map<string, string>): unknown {
 
   const originalName = normalized['name'];
   const name = typeof originalName === 'string' ? names.get(originalName) : undefined;
+  const id = normalizedCodexItemId(normalized);
 
   return {
     ...normalized,
+    ...renamedIdentityFields(normalized, name, id),
+  };
+}
+
+function renamedIdentityFields(
+  normalized: JsonObject,
+  name: string | undefined,
+  id: string | undefined,
+): JsonObject {
+  return {
     ...(name === undefined ? {} : { name }),
-    ...('call_id' in normalized ? { call_id: boundedCallId(normalized['call_id']) } : {}),
+    ...(id === undefined ? {} : { id }),
+    ...('call_id' in normalized ? { call_id: boundedCodexCallId(normalized['call_id']) } : {}),
   };
 }
 
 function renamedEntries(value: unknown, names: Map<string, string>): unknown {
-  return Array.isArray(value) ? value.map((entry) => renamedEntry(entry, names)) : value;
+  return Array.isArray(value)
+    ? value.flatMap((entry) =>
+        isJsonObject(entry) && dropsCodexEncryptedReasoning(entry)
+          ? []
+          : [renamedEntry(entry, names)],
+      )
+    : value;
 }
 
 function renamedToolChoice(value: unknown, names: Map<string, string>): unknown {
@@ -190,12 +201,32 @@ function normalizedBody(rawBody: JsonObject): JsonObject {
   body['tool_choice'] = renamedToolChoice(body['tool_choice'], names);
   body['stream'] = true;
   body['store'] = false;
-  body['parallel_tool_calls'] =
-    typeof body['parallel_tool_calls'] === 'boolean' ? body['parallel_tool_calls'] : true;
+  normalizeParallelToolCalls(body);
   body['include'] = ['reasoning.encrypted_content'];
   body['instructions'] ??= '';
 
   return body;
+}
+
+function isResponsesLite(body: JsonObject): boolean {
+  const metadata = body['client_metadata'];
+
+  return (
+    isJsonObject(metadata) &&
+    metadata['ws_request_header_x_openai_internal_codex_responses_lite'] === 'true'
+  );
+}
+
+function normalizeParallelToolCalls(body: JsonObject): void {
+  const tools = body['tools'];
+
+  if (isResponsesLite(body)) {
+    body['parallel_tool_calls'] = false;
+  } else if (!Array.isArray(tools) || tools.length === 0) {
+    delete body['parallel_tool_calls'];
+  } else if (typeof body['parallel_tool_calls'] !== 'boolean') {
+    body['parallel_tool_calls'] = true;
+  }
 }
 
 export function codexProviderRequest(
@@ -205,6 +236,8 @@ export function codexProviderRequest(
   sessionId: string,
 ): ProviderRequest {
   const body = normalizedBody(rawBody);
+
+  body['prompt_cache_key'] = sessionId;
 
   const headers: [string, string][] = [
     ['Content-Type', 'application/json'],
