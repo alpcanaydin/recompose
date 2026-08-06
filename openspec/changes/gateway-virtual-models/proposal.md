@@ -12,7 +12,7 @@ The slice stays narrow by design. One virtual model binds to one target. No rout
 
 **A virtual model binds to exactly one target.** A person defines it by a free name, a stored account, and one real model that account serves. The stored shape holds no second target, no router arm, and no fallback. `gateway-config` moves to version 2. The router node and its weight leave the file, one strict target stands per virtual model, and slugs stay unique per gateway. A restamp migration carries version 1 documents forward and rewrites only the version stamp, because no shipped writer ever minted a virtual model.
 
-**The target picker offers three kinds and refuses the fourth at parse.** The picker draws key, aggregator, and local accounts from a targetable-kinds helper in the account entity. A subscription account stands nowhere in it. The stored target's kind enum carries no subscription member, so the forbidden state has no shape rather than a screen habit a later edit could drop.
+**The target picker offers three kinds and refuses the fourth at parse.** The picker draws key, aggregator, and local accounts from the offered-kinds helper in the account entity. A subscription account stands nowhere in it. The stored target's kind enum carries no subscription member, so the forbidden state has no shape rather than a screen habit a later edit could drop.
 
 **The person picks the real model, and never types it.** The sheet's Model field fills from the target account's live model list over a probe-style lane. A failed fetch reads a typed refusal in the sheet that names the failed look. The field accepts no free-text fallback. The virtual name stays free. The sheet previews its derived wire id through the shipped slug derivation. A quiet hint notes that Claude Code's model picker only surfaces `claude`- or `anthropic`-prefixed ids.
 
@@ -40,10 +40,10 @@ The slice stays narrow by design. One virtual model binds to one target. No rout
 
 ## Impact
 
-- `packages/contracts/src/gateway-config.ts` moves to version 2: `virtualModelSchema` holds one target, the router node leaves, and `packages/contracts/src/migration.ts` carries version 1 forward. A targetable-target refusal rejects a subscription account kind at parse.
+- `packages/contracts/src/gateway-config.ts` moves to version 2: `virtualModelSchema` holds one target, the router node leaves, and `packages/contracts/src/migration.ts` carries version 1 forward. The stored target refuses a subscription account kind at parse.
 - `packages/contracts/src/engine-protocol.ts` widens `EngineGateway` to carry the virtual model bindings as a snapshot, so the child answers listings and refusals without a secret in the directive.
 - `packages/engine/src/gateway-app.ts` gains the proxy path and the `GET /v1/models` listing, replacing the current model-path 404 handlers, and `packages/engine/src/refusals.ts` gains the missing-target and missing-credential refusals in both dialects. Every proxied request still passes `guardLoopback`.
 - `packages/engine/src/engine-child.ts` gains the per-request credential lane, following the probe arm's precedent of a secret riding the message port rather than argv or env.
 - `apps/desktop/src/main` resolves a target and pulls its credential at the request boundary: `engine-host` carries the grant round trip, `storage/vault.ts` answers the secret, and `storage/accounts-store.ts` detects a removed target.
-- `apps/desktop/src/renderer/src/pages/gateway-canvas` gains the Models list and the add-model sheet, `entities/account` gains the targetable-kinds helper that drops subscriptions, and the flow runs through the shared `Sheet` primitive.
+- `apps/desktop/src/renderer/src/pages/gateway-canvas` gains the Models list and the add-model sheet, `entities/account` gains the offered-kinds helper that drops subscriptions, and the flow runs through the shared `Sheet` primitive.
 - Rider #117 graduates and its prohibition scenario joins the driven suite. The gateway e2e page objects extend for the Models list, the add-model sheet, and the proxied-answer path.
