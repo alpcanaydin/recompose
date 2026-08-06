@@ -6,6 +6,7 @@ import { expect, test } from 'vitest';
 import { IpcResultError } from '../../../shared/api';
 import {
   discoveryHint,
+  draftKept,
   gatewayDefining,
   modelListReading,
   nameRefusal,
@@ -140,6 +141,19 @@ test('a look that reached nothing offers no id and carries the refusal it answer
 
 test('a look still out offers no id and refuses nothing, because it has said nothing yet', () => {
   expect(modelListReading(undefined)).toEqual({ offered: [], refusal: undefined });
+});
+
+test('a draft handed back while the flow still stands is kept for the reopen', () => {
+  const held = { displayName: 'Fast', accountId: '', providerModel: '' };
+  const handed = { displayName: 'Fast Sonnet', accountId: 'k1', providerModel: 'claude-sonnet-5' };
+
+  expect(draftKept(held, handed)).toBe(handed);
+});
+
+test('a draft handed back after the flow was left keeps nothing, so nothing walks back in', () => {
+  const handed = { displayName: 'Fast', accountId: 'k1', providerModel: 'claude-sonnet-5' };
+
+  expect(draftKept(undefined, handed)).toBeUndefined();
 });
 
 test('a settled draft previews the whole binding a client will reach', () => {

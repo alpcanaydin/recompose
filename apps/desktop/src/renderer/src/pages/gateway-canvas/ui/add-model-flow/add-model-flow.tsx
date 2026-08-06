@@ -4,6 +4,7 @@ import type { ReactNode, RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
+import type { SettledDefinition } from '../../lib/model-draft';
 import type { OptionGroup } from '../option-list/option-list';
 
 import { accountsQueryOptions } from '../../../../shared/api';
@@ -16,8 +17,12 @@ import { ModelFields } from '../model-fields/model-fields';
 export type AddModelFlowProps = {
   /** The gateway the definition joins, whose stored shape the save carries whole. */
   gateway: GatewayConfig;
+  /** The values the flow opens on, which carry a put-down draft back in as it was. */
+  opening: SettledDefinition;
   /** Steps back to what the gateway serves, which a finished save also does. */
   onBack: () => void;
+  /** Hands the draft over as the flow leaves the screen with a person still in it. */
+  onKeep: (values: SettledDefinition) => void;
 };
 
 type Draft = ReturnType<typeof useModelDraft>;
@@ -139,14 +144,27 @@ function refusedSave(refusal: string | undefined): ReactNode {
  * the gateway the drawer already stands for, and a person keeps their place. The act that stores
  * waits until the binding is whole, since neither pick can be typed wrong, only left unsaid.
  */
-export function AddModelFlow({ gateway, onBack }: AddModelFlowProps) {
+export function AddModelFlow({ gateway, opening, onBack, onKeep }: AddModelFlowProps) {
   const registry = useQuery(accountsQueryOptions);
-  const draft = useModelDraft(gateway, onBack);
+  const draft = useModelDraft(gateway, onBack, opening);
   const nameField = useRef<HTMLInputElement>(null);
+  const handing = useRef(onKeep);
+
+  useEffect(() => {
+    handing.current = onKeep;
+  }, [onKeep]);
 
   useEffect(() => {
     placeFocus(nameField.current);
   }, []);
+
+  useEffect(() => {
+    const { store } = draft.form;
+
+    return () => {
+      handing.current(store.state.values);
+    };
+  }, [draft.form]);
 
   const targets = targetGroups(registry.data?.accounts ?? []);
   const targetName = nameOfPicked(targets, draft.picked.target);

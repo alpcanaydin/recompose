@@ -3,7 +3,7 @@ import type { GatewayEngineState } from '@recompose/contracts';
 import { useSyncExternalStore } from 'react';
 
 import { sidebarHidden, subscribeToSidebarVisibility } from '../../../../../shared/lib';
-import { SidebarToggle, ToolbarButton } from '../../../../../shared/ui';
+import { InspectorToggle, SidebarToggle, ToolbarButton } from '../../../../../shared/ui';
 import { AddressPill } from '../address-pill/address-pill';
 
 const GROUP =
@@ -53,12 +53,7 @@ export function ToolbarStrip({ address, name, onRun, port, running, status }: To
           waitsFor="request logging"
           where="grouped"
         />
-        <ToolbarButton
-          glyph="panel-right"
-          label="Inspector"
-          waitsFor="the inspector"
-          where="grouped"
-        />
+        <InspectorToggle available where="grouped" />
       </span>
     </div>
   );

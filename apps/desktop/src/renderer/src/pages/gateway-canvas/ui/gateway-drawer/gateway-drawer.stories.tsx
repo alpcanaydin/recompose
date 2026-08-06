@@ -1,7 +1,14 @@
+import type { ComponentProps } from 'react';
+
+import { useState } from 'react';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import type { SettledDefinition } from '../../lib/model-draft';
+
+import { paintedBox } from '../../../../shared/testing';
+import { draftKept, emptyDefinition } from '../../lib/model-draft';
 import {
   accountsWithout,
   freshGateway,
@@ -12,9 +19,36 @@ import {
 } from '../../testing/gateway-canvas.testkit';
 import { GatewayDrawer } from './gateway-drawer';
 
+function DrawerHarness(standing: ComponentProps<typeof GatewayDrawer>) {
+  const [drafting, setDrafting] = useState<SettledDefinition | undefined>(standing.drafting);
+
+  return (
+    <GatewayDrawer
+      {...standing}
+      drafting={drafting}
+      onKeepDrafting={(values) => {
+        setDrafting((held) => draftKept(held, values));
+      }}
+      onLeaveDrafting={() => {
+        setDrafting(undefined);
+      }}
+      onStartDrafting={() => {
+        setDrafting(emptyDefinition());
+      }}
+    />
+  );
+}
+
 const meta = preview.meta({
   component: GatewayDrawer,
-  args: { gateway: servingGateway },
+  render: (standing) => <DrawerHarness {...standing} />,
+  args: {
+    gateway: servingGateway,
+    drafting: undefined,
+    onStartDrafting: () => {},
+    onLeaveDrafting: () => {},
+    onKeepDrafting: () => {},
+  },
   parameters: {
     bridge: {
       accounts: storedAccounts,
@@ -57,7 +91,36 @@ export const ServingNothing = meta.story({
   parameters: { bridge: { gateways: [freshGateway] } },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('Nothing serves yet')).toBeVisible();
-    await expect(await canvas.findByText('· no virtual models yet')).toBeVisible();
+    await expect(
+      await canvas.findByText('Add a virtual model to map a name onto a stored account.'),
+    ).toBeVisible();
+  },
+});
+
+/**
+ * The Serves header at the width the drawer actually has, which has to hold one line.
+ *
+ * @summary The tally can grow, so the reading measures the header's height rather than trusting it:
+ * two lines here is the defect a person reported from the real window.
+ */
+export const ServesHeaderHoldsOneLine = meta.story({
+  play: async ({ canvas }) => {
+    const header = await canvas.findByRole('heading', { name: /Serves/ });
+
+    await expect(paintedBox(header).height).toBeLessThan(24);
+    await expect(await canvas.findByText('· 2 virtual models')).toBeVisible();
+  },
+});
+
+/** The same header with nothing served, where the tally stands aside rather than wrapping. */
+export const ServesHeaderWhenEmpty = meta.story({
+  args: { gateway: freshGateway },
+  parameters: { bridge: { gateways: [freshGateway] } },
+  play: async ({ canvas }) => {
+    const header = await canvas.findByRole('heading', { name: /Serves/ });
+
+    await expect(paintedBox(header).height).toBeLessThan(24);
+    await expect(canvas.queryByText('· no virtual models yet')).toBeNull();
   },
 });
 
@@ -89,6 +152,8 @@ export const OneTargetRemoved = meta.story({
 
 /** Asking for a virtual model takes the drawer over, rather than opening a sheet on top of it. */
 export const DefiningAModel = meta.story({
+  args: { gateway: freshGateway },
+  parameters: { bridge: { gateways: [freshGateway] } },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Add virtual model' }));
 

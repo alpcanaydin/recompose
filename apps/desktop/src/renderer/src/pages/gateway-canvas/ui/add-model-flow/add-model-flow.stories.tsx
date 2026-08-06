@@ -2,12 +2,18 @@ import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
+import { emptyDefinition } from '../../lib/model-draft';
 import { freshGateway, listedModels, storedAccounts } from '../../testing/gateway-canvas.testkit';
 import { AddModelFlow } from './add-model-flow';
 
 const meta = preview.meta({
   component: AddModelFlow,
-  args: { gateway: freshGateway, onBack: () => {} },
+  args: {
+    gateway: freshGateway,
+    opening: emptyDefinition(),
+    onBack: () => {},
+    onKeep: () => {},
+  },
   parameters: { bridge: { accounts: storedAccounts, gateways: [freshGateway] } },
   decorators: [
     (Story) => (

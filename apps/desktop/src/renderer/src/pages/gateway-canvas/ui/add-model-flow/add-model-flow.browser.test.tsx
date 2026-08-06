@@ -10,6 +10,7 @@ import { userEvent } from 'vitest/browser';
 import type { BridgeParameters } from '../../../../shared/testing';
 
 import { gatewaySeed, installFakeBridge } from '../../../../shared/testing';
+import { emptyDefinition } from '../../lib/model-draft';
 import { AddModelFlow } from './add-model-flow';
 
 const everyKind: AccountsDocument = {
@@ -51,7 +52,12 @@ async function renderFlow(
   return render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<p>Loading…</p>}>
-        <AddModelFlow gateway={gateway} onBack={onBack} />
+        <AddModelFlow
+          gateway={gateway}
+          onBack={onBack}
+          onKeep={() => {}}
+          opening={emptyDefinition()}
+        />
       </Suspense>
     </QueryClientProvider>,
   );

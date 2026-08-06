@@ -2,7 +2,7 @@ import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { gatewaySeed, paintedStyle } from '../../../../shared/testing';
+import { gatewaySeed, paintedBox, paintedStyle } from '../../../../shared/testing';
 import { GatewayStage } from './gateway-stage';
 
 const twoDefinitions = ['quick', 'deep'].map((name) => ({
@@ -20,7 +20,7 @@ const serving = gatewaySeed({
 
 const meta = preview.meta({
   component: GatewayStage,
-  args: { gateway: serving },
+  args: { gateway: serving, selected: true, onToggleSelected: () => {} },
   decorators: [
     (Story) => (
       <div className="flex h-100 bg-surface-content">
@@ -51,6 +51,81 @@ export const ServingNothing = meta.story({
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByText(':8397 · no virtual models yet')).toBeVisible();
+  },
+});
+
+/**
+ * The node with its inspector open, wearing the selection glow.
+ *
+ * @summary The glow is the one thing on the stage that says which node the drawer is speaking for,
+ * so it carries the tinted ring, the soft outer light and the tinted surface together rather than a
+ * single hairline a person has to hunt for.
+ */
+export const Selected = meta.story({
+  play: async ({ canvas }) => {
+    const node = await canvas.findByRole('button', { name: /My Gateway/ });
+
+    await expect(node).toHaveAttribute('aria-pressed', 'true');
+    await expect(paintedStyle(node).boxShadow).toContain('22px');
+  },
+});
+
+/**
+ * The node a person let go of, which is the plain card.
+ *
+ * @summary With nothing selected the stage takes the whole width, so the deselected node has to
+ * read as a control on its own rather than as the leftover of a selected one.
+ */
+export const Deselected = meta.story({
+  args: { selected: false },
+  play: async ({ canvas }) => {
+    const node = await canvas.findByRole('button', { name: /My Gateway/ });
+
+    await expect(node).toHaveAttribute('aria-pressed', 'false');
+    await expect(paintedStyle(node).boxShadow).not.toContain('22px');
+  },
+});
+
+/**
+ * The node under the pointer, which has to say it can be pressed.
+ *
+ * @summary A card that toggles a whole panel needs an answer to the pointer, so the border takes
+ * the accent and the surface warms a little, well short of what the selected glow claims.
+ */
+export const Hovered = meta.story({
+  args: { selected: false },
+  play: async ({ canvas }) => {
+    const node = await canvas.findByRole('button', { name: /My Gateway/ });
+    const resting = paintedStyle(node).borderColor;
+
+    node.setAttribute('data-hovered', '');
+
+    await expect(paintedStyle(node).borderColor).not.toBe(resting);
+  },
+});
+
+/**
+ * The stage squeezed to the narrowest the window allows, where the two blocks must still clear.
+ *
+ * @summary The node and the hint share a row rather than the centre, so no width can make them
+ * cover each other. The reading measures the gap rather than trusting the eye, and the hint takes no
+ * pointer of its own, so a click anywhere in that space still reaches the node it was meant for.
+ */
+export const NarrowStage = meta.story({
+  decorators: [
+    (Story) => (
+      <div className="flex h-100 w-105 bg-surface-content">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const node = await canvas.findByRole('button', { name: /My Gateway/ });
+    const hint = await canvas.findByText('Virtual models serve from the drawer');
+    const around = hint.parentElement;
+
+    await expect(paintedBox(node).right).toBeLessThanOrEqual(paintedBox(around).left);
+    await expect(paintedStyle(around).pointerEvents).toBe('none');
   },
 });
 

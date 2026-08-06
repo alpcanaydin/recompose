@@ -48,7 +48,9 @@ function matching(groups: readonly OptionGroup[], typed: string): readonly Optio
   const narrowed: OptionGroup[] = [];
 
   for (const group of groups) {
-    const options = group.options.filter((option) => option.name.toLowerCase().includes(sought));
+    const options = group.options.filter((option) =>
+      `${option.name} ${option.id} ${option.detail ?? ''}`.toLowerCase().includes(sought),
+    );
 
     if (options.length > 0) {
       narrowed.push({ ...group, options });

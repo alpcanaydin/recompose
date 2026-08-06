@@ -1,9 +1,10 @@
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 import { withShellSurface } from '#.storybook/shell-surface';
 
 import {
+  freshGateway,
   runningGateway,
   servingGateway,
   storedAccounts,
@@ -39,10 +40,30 @@ export const Serving = meta.story({
 
 /** Asking for a virtual model takes the drawer over and leaves the stage standing. */
 export const DefiningAModel = meta.story({
+  parameters: {
+    bridge: { accounts: storedAccounts, gateways: [freshGateway], engineStates: runningGateway },
+  },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Add virtual model' }));
 
     await expect(await canvas.findByRole('textbox', { name: 'Name' })).toBeVisible();
+    await expect(await canvas.findByText('Virtual models serve from the drawer')).toBeVisible();
+  },
+});
+
+/**
+ * The node let go of, which hands the stage the whole window.
+ *
+ * @summary The inspector is something a person opens, so the screen has to read as finished without
+ * it rather than as a panel that failed to load.
+ */
+export const InspectorClosed = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /My Gateway/ }));
+
+    await waitFor(async () => {
+      await expect(canvas.queryByText('Endpoint')).toBeNull();
+    });
     await expect(await canvas.findByText('Virtual models serve from the drawer')).toBeVisible();
   },
 });

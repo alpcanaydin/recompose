@@ -66,6 +66,26 @@ export type SettledDefinition = {
   providerModel: string;
 };
 
+/** A definition nobody has said anything about yet, which is what a fresh draft opens on. */
+export function emptyDefinition(): SettledDefinition {
+  return { displayName: '', accountId: '', providerModel: '' };
+}
+
+/**
+ * What to hold on to when the flow hands its draft back as it leaves the screen.
+ *
+ * @summary The flow hands its values over whenever it unmounts, and it cannot tell being closed
+ * from being finished. So the answer reads the draft that stands: a person still mid-definition
+ * keeps their words for the reopen, and one who cancelled or stored keeps nothing, which is what
+ * stops a settled draft from walking back in.
+ */
+export function draftKept(
+  held: SettledDefinition | undefined,
+  handed: SettledDefinition,
+): SettledDefinition | undefined {
+  return held === undefined ? undefined : handed;
+}
+
 /** The gateway as it stands once it carries this definition too, ready for storage. */
 export function gatewayDefining(gateway: GatewayConfig, settled: SettledDefinition): GatewayConfig {
   return {

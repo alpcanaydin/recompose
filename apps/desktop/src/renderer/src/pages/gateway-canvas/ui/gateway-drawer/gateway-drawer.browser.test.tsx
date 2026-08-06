@@ -2,14 +2,16 @@ import type { AccountsDocument, VirtualModel } from '@recompose/contracts';
 
 import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
 import type { BridgeParameters } from '../../../../shared/testing';
+import type { SettledDefinition } from '../../lib/model-draft';
 
 import { gatewaySeed, installFakeBridge } from '../../../../shared/testing';
+import { draftKept, emptyDefinition } from '../../lib/model-draft';
 import { GatewayDrawer } from './gateway-drawer';
 
 const registry: AccountsDocument = {
@@ -54,10 +56,30 @@ async function renderDrawer(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
+  function DrawerHarness() {
+    const [drafting, setDrafting] = useState<SettledDefinition | undefined>(undefined);
+
+    return (
+      <GatewayDrawer
+        drafting={drafting}
+        gateway={gateway}
+        onKeepDrafting={(values) => {
+          setDrafting((held) => draftKept(held, values));
+        }}
+        onLeaveDrafting={() => {
+          setDrafting(undefined);
+        }}
+        onStartDrafting={() => {
+          setDrafting(emptyDefinition());
+        }}
+      />
+    );
+  }
+
   return render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={<p>Loading…</p>}>
-        <GatewayDrawer gateway={gateway} />
+        <DrawerHarness />
       </Suspense>
     </QueryClientProvider>,
   );
@@ -99,15 +121,23 @@ test('what a gateway serves reads one row per virtual model, tallied in its head
     .toBeVisible();
 });
 
+test('a gateway serving nothing heads its section with no tally beside it', async () => {
+  const screen = await renderDrawer([]);
+
+  expect(screen.getByRole('heading', { name: /Serves/ }).element().textContent).toBe('Serves');
+});
+
 test('a gateway serving nothing invites the first virtual model', async () => {
   const screen = await renderDrawer([]);
 
   await expect.element(screen.getByText('Nothing serves yet', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('· no virtual models yet', { exact: true })).toBeVisible();
+  await expect
+    .element(screen.getByText('Add a virtual model to map a name onto a stored account.'))
+    .toBeVisible();
 });
 
 test('asking for a virtual model swaps the drawer to the flow that defines one', async () => {
-  const screen = await renderDrawer();
+  const screen = await renderDrawer([]);
 
   await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
 
@@ -116,11 +146,11 @@ test('asking for a virtual model swaps the drawer to the flow that defines one',
 });
 
 test('stepping back from the flow hands the drawer back to what serves', async () => {
-  const screen = await renderDrawer();
+  const screen = await renderDrawer([]);
 
   await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
   await userEvent.click(screen.getByRole('button', { name: 'Back' }));
 
   await expect.element(screen.getByText('Endpoint', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('Fast', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Nothing serves yet', { exact: true })).toBeVisible();
 });

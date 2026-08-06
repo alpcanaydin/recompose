@@ -4,6 +4,8 @@ import { useForm, useSelector } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import type { SettledDefinition } from './model-draft';
+
 import {
   providerModelsQueryOptions,
   refusalSentence,
@@ -33,12 +35,16 @@ function useOfferedModels(accountId: string) {
  * rather than leaving the field looking empty for no stated reason. A refused save keeps its
  * sentence apart from that one, so the flow says each thing once and in the place it belongs.
  */
-export function useModelDraft(gateway: GatewayConfig, onDefined: () => void) {
+export function useModelDraft(
+  gateway: GatewayConfig,
+  onDefined: () => void,
+  opening: SettledDefinition,
+) {
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
   const define = useDefineVirtualModel();
 
   const form = useForm({
-    defaultValues: { displayName: '', accountId: '', providerModel: '' },
+    defaultValues: opening,
     onSubmit: ({ value }) => {
       define.mutate(gatewayDefining(gateway, value), {
         onSuccess: () => {

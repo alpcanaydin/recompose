@@ -364,6 +364,55 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
+@utility node-card {
+  border: 1.5px solid var(--color-accent-ink);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface-card);
+  box-shadow: var(--shadow-raised);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  &:hover,
+  &[data-hovered] {
+    border-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-card));
+  }
+
+  &:active {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface-card));
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--color-accent);
+    background-color: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface-card));
+    box-shadow:
+      0 0 0 3.5px color-mix(in srgb, var(--color-accent) 55%, transparent),
+      0 0 22px color-mix(in srgb, var(--color-accent) 45%, transparent),
+      var(--shadow-raised);
+  }
+
+  &[aria-pressed='true']:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface-card));
+  }
+}
+
+@utility inspector-panel {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: inspector-in 150ms ease;
+  }
+}
+
+@utility inspector-panel-leaving {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: inspector-out 150ms ease forwards;
+  }
+}
+
 @utility chip-selected {
   border: 1px solid var(--color-line-selected);
   background-color: var(--color-surface-chip);
@@ -462,6 +511,20 @@
 @utility row-hover {
   &:not([aria-disabled='true']):hover {
     background: var(--color-surface-hover);
+  }
+}
+
+@keyframes inspector-in {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes inspector-out {
+  to {
+    width: 0;
+    opacity: 0;
   }
 }
 

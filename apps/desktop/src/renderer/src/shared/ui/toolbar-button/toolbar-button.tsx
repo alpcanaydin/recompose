@@ -1,11 +1,7 @@
 import type { IconName } from '../icon/icon';
 
 import { Icon } from '../icon/icon';
-
-const shape = {
-  grouped: 'h-5.75 w-7.75 rounded-chip',
-  standing: 'h-7.25 w-8.5 rounded-control border border-line-subtle bg-surface-raised',
-} as const;
+import { toolbarShape } from '../toolbar-shape';
 
 type ToolbarButtonProps = {
   glyph: IconName;
@@ -15,7 +11,7 @@ type ToolbarButtonProps = {
   tone?: string;
   /** The surface it waits for, named for anyone who presses it before its machinery lands. */
   waitsFor?: string;
-  where: keyof typeof shape;
+  where: keyof typeof toolbarShape;
 };
 
 /**
@@ -35,7 +31,7 @@ export function ToolbarButton({
   return (
     <button
       aria-label={label}
-      className={`flex items-center justify-center focus-ring hover:bg-surface-hover active:bg-surface-pressed ${shape[where]} ${tone}`}
+      className={`flex items-center justify-center focus-ring hover:bg-surface-hover active:bg-surface-pressed ${toolbarShape[where]} ${tone}`}
       onClick={onPress}
       title={waitsFor === undefined ? label : `${label}. Waits on ${waitsFor}.`}
       type="button"
