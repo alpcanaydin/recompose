@@ -1,6 +1,7 @@
 import type { ClaudeIdentity } from './claude-identity';
 
 import { isJsonObject } from '../gateway-wire';
+import { signedClaudeBody } from './claude-cch';
 import { applyClaudeCredentialIdentity } from './claude-identity';
 import { sanitizeClaudeSignatures } from './claude-signatures';
 import { prepareClaudeTools } from './claude-tools';
@@ -252,7 +253,7 @@ export function claudeProviderRequest(
 
   return {
     url: `${providerOrigin.replace(/\/+$/u, '')}/v1/messages?beta=true`,
-    body: JSON.stringify(prepared.body),
+    body: signedClaudeBody(prepared.body),
     ...(Object.keys(prepared.reverse).length === 0 ? {} : { reverseToolNames: prepared.reverse }),
     headers: [
       ['Accept', 'application/json'],

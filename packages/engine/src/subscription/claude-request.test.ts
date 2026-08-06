@@ -58,6 +58,14 @@ function bodyOf(request: ProviderRequest): JsonObject {
   return isJsonObject(parsed) ? parsed : {};
 }
 
+function semanticBodyOf(request: ProviderRequest): JsonObject {
+  const body = bodyOf(request);
+  const system = objectsIn(body['system']).slice(2);
+  const { system: _nativeSystem, ...withoutSystem } = body;
+
+  return system.length === 0 ? withoutSystem : { ...withoutSystem, system };
+}
+
 function objectsIn(value: unknown): JsonObject[] {
   return Array.isArray(value) ? value.filter(isJsonObject) : [];
 }
@@ -72,12 +80,14 @@ describe('the request sent as Claude Code 2.1.220', () => {
     });
 
     expect(request.url).toBe('https://api.anthropic.com/v1/messages?beta=true');
-    expect(bodyOf(request)).toEqual({
+    expect(semanticBodyOf(request)).toEqual({
       model: 'claude-sonnet-4-5',
       max_tokens: 256,
       messages: [],
       stream: true,
     });
+    expect(request.body).toMatch(/x-anthropic-billing-header:.*cch=[a-f\d]{5};/u);
+    expect(request.body).toContain("You are Claude Code, Anthropic's official CLI for Claude.");
     expect(request.headers).toEqual(nativeHeaders);
   });
 
@@ -111,7 +121,11 @@ describe('Claude sampling compatibility', () => {
   ])('removes unsupported controls', (input, expected) => {
     const request = requestFor({ model: 'claude-sonnet-4-5', messages: [], ...input });
 
-    expect(bodyOf(request)).toEqual({ model: 'claude-sonnet-4-5', messages: [], ...expected });
+    expect(semanticBodyOf(request)).toEqual({
+      model: 'claude-sonnet-4-5',
+      messages: [],
+      ...expected,
+    });
   });
 
   test.each(['any', 'tool'])('removes thinking for forced tool choice %s', (type) => {
@@ -123,7 +137,7 @@ describe('Claude sampling compatibility', () => {
       tool_choice,
     });
 
-    expect(bodyOf(request)).toEqual({ model: 'claude-sonnet-4-5', tool_choice });
+    expect(semanticBodyOf(request)).toEqual({ model: 'claude-sonnet-4-5', tool_choice });
   });
 });
 
