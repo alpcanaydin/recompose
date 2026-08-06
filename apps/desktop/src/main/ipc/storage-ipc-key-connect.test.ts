@@ -26,6 +26,7 @@ async function freshContext(): Promise<StorageIpcContext> {
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    restartGateway: () => undefined,
     releaseSubscription: async () => Promise.resolve({ ok: true }),
   };
 }

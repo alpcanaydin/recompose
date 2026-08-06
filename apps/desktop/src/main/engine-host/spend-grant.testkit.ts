@@ -12,16 +12,12 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { SpendGrantContext } from './spend-grant';
 
+import { reversibleCodec } from '../storage/safe-storage-codec.testkit';
 import { saveVaultFile, setSecret, type VaultDocument } from '../storage/vault';
 
-const fakeCodec: SecretCodec = {
-  encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
-  decrypt: (encrypted) => Buffer.from(encrypted, 'base64').toString('utf8'),
-  isPlaintextFallback: false,
-};
+const fakeCodec = reversibleCodec;
 
 export const secret = 'sk-ant-api03-long-secret-7f2c';
 

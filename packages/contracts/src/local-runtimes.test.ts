@@ -6,6 +6,7 @@ import {
   localRuntimeIdSchema,
   localRuntimes,
   loopbackAddressSchema,
+  modelListBoundMs,
   proxyFetchBoundMs,
   RUNTIME_PORT_RANGE,
   runtimeAddressFor,
@@ -139,6 +140,17 @@ describe('the bound a look at a runtime waits under', () => {
 describe('the bound a proxied request waits under', () => {
   test('the proxy gives a provider ten minutes before it counts as silence', () => {
     expect(proxyFetchBoundMs).toBe(600_000);
+  });
+});
+
+describe('the bound a look at an account model list waits under', () => {
+  test('a model list gives a vendor ten seconds before it counts as silence', () => {
+    expect(modelListBoundMs).toBe(10_000);
+  });
+
+  test('a model list waits longer than a loopback ping and far less than a proxied turn', () => {
+    expect(modelListBoundMs).toBeGreaterThan(runtimeLookBoundMs);
+    expect(modelListBoundMs).toBeLessThan(proxyFetchBoundMs);
   });
 });
 

@@ -17,6 +17,8 @@ export type StorageIpcContext = {
   applySettings: (settings: Settings, askedLoginItem: boolean | undefined) => void;
   /** A stored gateway serves at once, and the outcome reaches the screen by push rather than here. */
   startGateway: (gateway: EngineGateway) => void;
+  /** A rewritten gateway serves its fresh snapshot, which only a restart puts in front of it. */
+  restartGateway: (gateway: EngineGateway) => void;
   releaseSubscription: SubscriptionRelease;
 };
 

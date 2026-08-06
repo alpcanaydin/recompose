@@ -14,6 +14,7 @@ export type IpcHandlers = {
 export const ipcChannelNames: readonly IpcChannel[] = [
   'gateways:list',
   'gateways:save',
+  'gateways:update',
   'settings:get',
   'settings:save',
   'accounts:list',
@@ -23,6 +24,7 @@ export const ipcChannelNames: readonly IpcChannel[] = [
   'accounts:connect-local',
   'accounts:detect-runtime',
   'accounts:check-runtime',
+  'accounts:list-models',
   'system:get',
   'system:open-config-folder',
   'system:window-band',

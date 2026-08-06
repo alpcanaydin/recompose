@@ -1,99 +1,23 @@
 import { fc, test } from '@fast-check/vitest';
 import {
-  ACCOUNTS_VERSION,
-  defaultSettings,
   GATEWAY_CONFIG_VERSION,
   ipcChannels,
-  type AccountsDocument,
   type IpcChannel,
-  type Settings,
   type SettingsPatch,
-  type SystemState,
 } from '@recompose/contracts';
 import { describe, expect } from 'vitest';
 
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
 
-import { dispatchIpc, ipcChannelNames, type IpcHandlers } from './dispatch';
+import { dispatchIpc, ipcChannelNames } from './dispatch';
+import { alwaysSucceedingHandlers, darkSettings, handlersWith } from './ipc-handlers.testkit';
 
-const settings: Settings = { ...defaultSettings(), theme: 'dark' };
-const emptyAccounts: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
-const systemState: SystemState = {
-  fileBrowser: 'finder',
-  loginItem: 'available',
-  loginItemEnabled: false,
-  menuBarVisible: false,
-  configFolder: '/tmp/recompose',
-};
+const settings = darkSettings;
 const trustedSender: TrustedSender = {
   frameUrl: 'app://renderer/index.html',
   isMainFrame: true,
 };
 const allowedOrigins: AllowedOrigins = { devServerOrigin: undefined };
-
-function handlersWith(overrides: Partial<IpcHandlers>): IpcHandlers {
-  const reject = async (): Promise<never> => Promise.reject(new Error('not under test'));
-  const base: IpcHandlers = {
-    'gateways:list': reject,
-    'gateways:save': reject,
-    'settings:get': reject,
-    'settings:save': reject,
-    'accounts:list': reject,
-    'accounts:check-key': reject,
-    'accounts:connect-local': reject,
-    'accounts:detect-runtime': reject,
-    'accounts:check-runtime': reject,
-    'accounts:connect': reject,
-    'accounts:remove': reject,
-    'system:get': reject,
-    'system:open-config-folder': reject,
-    'system:window-band': reject,
-    'gateways:offer-port': reject,
-    'gateways:move-port': reject,
-    'engine:start': reject,
-    'engine:stop': reject,
-    'engine:states': reject,
-    'subscriptions:list': reject,
-    'subscriptions:tools': reject,
-    'subscriptions:sign-in': reject,
-    'subscriptions:restore': reject,
-    'subscriptions:activate': reject,
-  };
-
-  return { ...base, ...overrides };
-}
-
-function alwaysSucceedingHandlers(): IpcHandlers {
-  return {
-    'gateways:list': async () => Promise.resolve({ ok: true, value: [] }),
-    'gateways:save': async () => Promise.resolve({ ok: true, value: [] }),
-    'settings:get': async () => Promise.resolve({ ok: true, value: settings }),
-    'settings:save': async () => Promise.resolve({ ok: true, value: settings }),
-    'accounts:list': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
-    'accounts:connect': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
-    'accounts:remove': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
-    'accounts:check-key': async () =>
-      Promise.resolve({ ok: true, value: { verdict: 'could-not-check' as const } }),
-    'accounts:connect-local': async () => Promise.resolve({ ok: true, value: emptyAccounts }),
-    'accounts:detect-runtime': async () =>
-      Promise.resolve({ ok: true, value: { verdict: 'unreachable' as const } }),
-    'accounts:check-runtime': async () =>
-      Promise.resolve({ ok: true, value: { verdict: 'unreachable' as const } }),
-    'system:get': async () => Promise.resolve({ ok: true, value: systemState }),
-    'system:open-config-folder': async () => Promise.resolve({ ok: true, value: undefined }),
-    'system:window-band': async () => Promise.resolve({ ok: true, value: undefined }),
-    'gateways:offer-port': async () => Promise.resolve({ ok: true, value: 51234 }),
-    'gateways:move-port': async () => Promise.resolve({ ok: true, value: [] }),
-    'engine:start': async () => Promise.resolve({ ok: true, value: { status: 'running' } }),
-    'engine:stop': async () => Promise.resolve({ ok: true, value: { status: 'stopped' } }),
-    'engine:states': async () => Promise.resolve({ ok: true, value: {} }),
-    'subscriptions:list': async () => Promise.resolve({ ok: true, value: [] }),
-    'subscriptions:tools': async () => Promise.resolve({ ok: true, value: [] }),
-    'subscriptions:sign-in': async () => Promise.resolve({ ok: true, value: [] }),
-    'subscriptions:restore': async () => Promise.resolve({ ok: true, value: [] }),
-    'subscriptions:activate': async () => Promise.resolve({ ok: true, value: [] }),
-  };
-}
 
 const anyChannel = fc.constantFrom<IpcChannel>(...ipcChannelNames);
 const voidRequestChannel = fc.constantFrom<IpcChannel>(

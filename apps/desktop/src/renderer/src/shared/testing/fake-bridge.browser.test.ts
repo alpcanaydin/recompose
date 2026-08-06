@@ -2,7 +2,8 @@ import type { SubscriptionAccountView } from '@recompose/contracts';
 
 import { expect, test } from 'vitest';
 
-import { gatewaySeed, installFakeBridge } from './fake-bridge';
+import { installFakeBridge } from './fake-bridge';
+import { gatewaySeed } from './fake-gateways';
 
 async function saving(gateway: ReturnType<typeof gatewaySeed>) {
   return window.recompose['gateways:save'](gateway);

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { accountsDocumentSchema, credentialedAccountKindSchema } from './accounts';
 import { keyCheckReportSchema, pastedKeySchema } from './api-keys';
+import { modelListingSchema } from './engine-protocol';
 import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
 import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import {
@@ -69,6 +70,10 @@ export const ipcChannels = {
     request: gatewayConfigSchema,
     response: ipcResult(z.array(gatewayConfigSchema)),
   },
+  'gateways:update': {
+    request: gatewayConfigSchema,
+    response: ipcResult(z.array(gatewayConfigSchema)),
+  },
   'settings:get': { request: z.void(), response: ipcResult(settingsSchema) },
   'settings:save': { request: settingsPatchSchema, response: ipcResult(settingsSchema) },
   'accounts:list': { request: z.void(), response: ipcResult(accountsDocumentSchema) },
@@ -95,6 +100,10 @@ export const ipcChannels = {
   'accounts:check-runtime': {
     request: z.strictObject({ id: nonBlankString }),
     response: ipcResult(runtimeReachabilitySchema),
+  },
+  'accounts:list-models': {
+    request: z.strictObject({ id: nonBlankString }),
+    response: ipcResult(modelListingSchema),
   },
   'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
   'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },

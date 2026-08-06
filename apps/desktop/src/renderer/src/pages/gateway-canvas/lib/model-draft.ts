@@ -9,8 +9,6 @@ import { IpcResultError, refusalSentence } from '../../../shared/api';
 const MISSING_NAME_REFUSAL = 'Give the virtual model a name.';
 const UNSERVABLE_NAME_REFUSAL = 'recompose cannot serve a virtual model under this name.';
 const MALFORMED_DEFINITION_REFUSAL = 'recompose cannot store this virtual model as it stands.';
-const UNSTORABLE_ON_STORED_GATEWAY =
-  'recompose cannot add a virtual model to a stored gateway yet.';
 const SKIPPED_ID_HINT = 'Claude Code lists only ids starting with claude or anthropic.';
 const DISCOVERED_PREFIXES = ['claude', 'anthropic'];
 
@@ -137,21 +135,15 @@ export function modelListReading(answer: ProviderModelList | undefined): ModelLi
 /**
  * The sentence a refused save reads as, in words about the virtual model a person was defining.
  *
- * @summary The save rides the channel that stores a whole gateway, so a gateway already on disk
- * comes back as a name conflict written about the gateway. That sentence would send a person to
- * rename their virtual model over a collision it never had, so it is traded for the one true thing:
- * nothing can be added to a stored gateway until the lane that redefines one lands. A schema refusal
- * trades its words too, because the schema writes for a developer. Everything else travels as main
- * wrote it, because main writes its refusals for a person to read.
+ * @summary A schema refusal trades its words, because the schema writes for a developer and names
+ * a path inside a document nobody typed. Everything else travels as main wrote it: a gateway the
+ * rewrite could not find and a port the move lane owns are both already sentences a person can act
+ * on, and rewriting them here would only put this module's guess in front of main's fact.
  */
 export function refusalFromMain(failure: unknown): string {
   if (!(failure instanceof IpcResultError)) {
     return refusalSentence(failure);
   }
 
-  if (failure.code === 'validation-failed') {
-    return MALFORMED_DEFINITION_REFUSAL;
-  }
-
-  return failure.code === 'name-conflict' ? UNSTORABLE_ON_STORED_GATEWAY : failure.message;
+  return failure.code === 'validation-failed' ? MALFORMED_DEFINITION_REFUSAL : failure.message;
 }

@@ -1,5 +1,5 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { type EngineStates, type Settings } from '@recompose/contracts';
+import { type EngineStates } from '@recompose/contracts';
 import { app, BrowserWindow, nativeTheme, safeStorage, shell } from 'electron';
 import { join } from 'path';
 
@@ -20,6 +20,7 @@ import { resolveSpendGrant } from './engine-host/spend-grant';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
 import { createLocalRuntimesIpcHandlers } from './ipc/local-runtimes-ipc';
+import { createProviderModelsIpcHandlers, providerModelsReach } from './ipc/provider-models-ipc';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { storagePathsFor } from './ipc/storage-context';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
@@ -28,7 +29,10 @@ import { createSystemIpcHandlers } from './ipc/system-ipc';
 import { installAppMenu } from './menu/app-menu';
 import { resolvePasswordStoreOverride } from './password-store-override';
 import { registerAppScheme, serveRenderer } from './protocol/app-protocol';
-import { applyBootSettings, applyChosenSettings } from './settings/apply-settings';
+import {
+  applyBootSettingsOrComplain,
+  applyChosenSettingsOrComplain,
+} from './settings/apply-settings';
 import { storedBootState } from './storage/boot-state';
 import { listGatewayConfigs } from './storage/gateway-store';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
@@ -104,22 +108,6 @@ const settingsEffects: SettingsEffects = {
   },
 };
 
-function applyChosenSettingsNow(settings: Settings, askedLoginItem: boolean | undefined): void {
-  try {
-    applyChosenSettings(settingsEffects, settings, askedLoginItem);
-  } catch (error) {
-    console.error('recompose stored the settings but could not apply them', error);
-  }
-}
-
-function applySettingsAtBoot(settings: Settings): void {
-  try {
-    applyBootSettings(settingsEffects, settings);
-  } catch (error) {
-    console.error('recompose could not apply its stored settings at boot', error);
-  }
-}
-
 function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
@@ -128,6 +116,14 @@ function startStoredGateway(engineHost: EngineHost): StorageIpcContext['startGat
   return (gateway) => {
     engineHost.start(gateway).catch((error: unknown) => {
       console.error(`recompose stored ${gateway.slug} but could not start it`, error);
+    });
+  };
+}
+
+function serveRewrittenGateway(engineHost: EngineHost): StorageIpcContext['restartGateway'] {
+  return (gateway) => {
+    engineHost.restart(gateway).catch((error: unknown) => {
+      console.error(`recompose rewrote ${gateway.slug} but could not serve it again`, error);
     });
   };
 }
@@ -151,8 +147,11 @@ function storageContext(
     ...reach,
     isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
     readLoginItem: () => loginItem.isEnabled(),
-    applySettings: applyChosenSettingsNow,
+    applySettings: (settings, askedLoginItem) => {
+      applyChosenSettingsOrComplain(settingsEffects, settings, askedLoginItem);
+    },
     startGateway: startStoredGateway(engineHost),
+    restartGateway: serveRewrittenGateway(engineHost),
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(reach.userDataPath, process.platform),
       custody,
@@ -182,6 +181,7 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
     }),
     ...createStorageIpcHandlers(storageContext(engineHost, custody)),
     ...createKeyCheckIpcHandlers(keyCheckContext(engineHost)),
+    ...createProviderModelsIpcHandlers(providerModelsReach(storageReach(), engineHost)),
     ...createLocalRuntimesIpcHandlers({
       userDataPath,
       homeFolder,
@@ -269,7 +269,7 @@ async function startRecompose(): Promise<void> {
     onShowGetStarted: openGetStartedSurface,
   });
 
-  applySettingsAtBoot(boot.settings);
+  applyBootSettingsOrComplain(settingsEffects, boot.settings);
 
   createMainWindow(HOME_ROUTE);
 

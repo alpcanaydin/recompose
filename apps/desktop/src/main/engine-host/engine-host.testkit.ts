@@ -3,6 +3,7 @@ import {
   type EngineSpendGrant,
   type GatewayEngineState,
   type KeyCheckReport,
+  type ModelListing,
   type RuntimeReachability,
 } from '@recompose/contracts';
 
@@ -43,6 +44,7 @@ type Script = {
   answer: () => GatewayEngineState | null;
   answerProbe: () => KeyCheckReport | null;
   answerRuntime: () => RuntimeReachability | null;
+  answerModelList: () => ModelListing | null;
 };
 
 function keyCheckFor(
@@ -74,6 +76,15 @@ function stateFor(
   return state === null ? null : reportOf(directive, state);
 }
 
+function modelListFor(
+  script: Script,
+  directive: Extract<EngineDirective, { kind: 'list-models' }>,
+): unknown {
+  const listing = script.answerModelList();
+
+  return listing === null ? null : { kind: 'model-list', answers: directive.id, listing };
+}
+
 function reportFor(script: Script, directive: EngineDirective): unknown {
   if (directive.kind === 'probe') {
     return keyCheckFor(script, directive);
@@ -81,6 +92,10 @@ function reportFor(script: Script, directive: EngineDirective): unknown {
 
   if (directive.kind === 'probe-runtime') {
     return runtimeCheckFor(script, directive);
+  }
+
+  if (directive.kind === 'list-models') {
+    return modelListFor(script, directive);
   }
 
   return stateFor(script, directive);
@@ -120,6 +135,7 @@ export function scriptedChild(
   answer: () => GatewayEngineState | null,
   answerProbe: () => KeyCheckReport | null = () => null,
   answerRuntime: () => RuntimeReachability | null = () => null,
+  answerModelList: () => ModelListing | null = () => null,
 ) {
   const lane: Lane = { directives: [], grants: [] };
   const { directives, grants } = lane;
@@ -133,7 +149,7 @@ export function scriptedChild(
     }
   };
 
-  const script: Script = { send, answer, answerProbe, answerRuntime };
+  const script: Script = { send, answer, answerProbe, answerRuntime, answerModelList };
 
   const child: EngineChild = {
     postMessage: (message) => {

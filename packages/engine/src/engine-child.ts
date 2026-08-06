@@ -13,6 +13,7 @@ import type { ParentPort } from './parent-port';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
 import { firstPartyProbeOrigins, probeKey } from './provider/key-probe';
+import { listProviderModels } from './provider/model-list';
 import { probeRuntime } from './provider/runtime-probe';
 
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
@@ -58,26 +59,10 @@ function sanitizedRefusal(issues: readonly RefusalIssue[]): { path: string; code
   }));
 }
 
-async function answerFor(
-  runtime: EngineRuntime,
-  fetchLike: typeof fetch,
-  directive: EngineDirective,
-): Promise<unknown> {
+type LookDirective = Extract<EngineDirective, { kind: 'probe' | 'probe-runtime' | 'list-models' }>;
+
+async function lookAnswerFor(fetchLike: typeof fetch, directive: LookDirective): Promise<unknown> {
   switch (directive.kind) {
-    case 'start':
-      return {
-        kind: 'state',
-        answers: directive.id,
-        slug: directive.gateway.slug,
-        state: await runtime.start(directive.gateway),
-      };
-    case 'stop':
-      return {
-        kind: 'state',
-        answers: directive.id,
-        slug: directive.slug,
-        state: await runtime.stop(directive.slug),
-      };
     case 'probe':
       return {
         kind: 'key-check',
@@ -89,22 +74,53 @@ async function answerFor(
           probeOriginFor(directive.provider),
         )),
       };
-
     case 'probe-runtime':
       return {
         kind: 'runtime-check',
         answers: directive.id,
         reachability: await probeRuntime(fetchLike, runtimeOriginFor(directive.address)),
       };
+    case 'list-models':
+      return {
+        kind: 'model-list',
+        answers: directive.id,
+        listing: await listProviderModels(fetchLike, directive.origin, directive.custody),
+      };
 
     default: {
-      const unknownDirective: never = directive;
+      const unknownLook: never = directive;
 
       throw new Error(
-        `the engine child heard a directive kind it does not know: ${kindOf(unknownDirective)}`,
+        `the engine child heard a look kind it does not know: ${kindOf(unknownLook)}`,
       );
     }
   }
+}
+
+async function answerFor(
+  runtime: EngineRuntime,
+  fetchLike: typeof fetch,
+  directive: EngineDirective,
+): Promise<unknown> {
+  if (directive.kind === 'start') {
+    return {
+      kind: 'state',
+      answers: directive.id,
+      slug: directive.gateway.slug,
+      state: await runtime.start(directive.gateway),
+    };
+  }
+
+  if (directive.kind === 'stop') {
+    return {
+      kind: 'state',
+      answers: directive.id,
+      slug: directive.slug,
+      state: await runtime.stop(directive.slug),
+    };
+  }
+
+  return lookAnswerFor(fetchLike, directive);
 }
 
 async function reportBack(

@@ -182,10 +182,11 @@ describe('bridge surface totality', () => {
     expectTypeOf<keyof RecomposeIpc>().toEqualTypeOf<IpcChannel>();
   });
 
-  test('the surface is exactly these twenty-four channels, so a twenty-fifth arrives red', () => {
+  test('the surface is exactly these twenty-six channels, so a twenty-seventh arrives red', () => {
     expectTypeOf<IpcChannel>().toEqualTypeOf<
       | 'gateways:list'
       | 'gateways:save'
+      | 'gateways:update'
       | 'gateways:offer-port'
       | 'gateways:move-port'
       | 'settings:get'
@@ -197,6 +198,7 @@ describe('bridge surface totality', () => {
       | 'accounts:connect-local'
       | 'accounts:detect-runtime'
       | 'accounts:check-runtime'
+      | 'accounts:list-models'
       | 'system:get'
       | 'system:open-config-folder'
       | 'system:window-band'

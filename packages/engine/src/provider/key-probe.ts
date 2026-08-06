@@ -11,7 +11,14 @@ const modelsPath = '/v1/models';
 
 const anthropicVersion = '2023-06-01';
 
-function authHeadersFor(provider: KeyProviderId, key: string): Record<string, string> {
+/**
+ * The headers one first-party vendor reads its own key from.
+ *
+ * @summary Anthropic answers `x-api-key` beside the version it was written against and turns a
+ * bearer token away, so the header is picked per vendor rather than assumed. The model-list look
+ * reads the same `GET /v1/models` this probe does, so both spell the credential from here.
+ */
+export function authHeadersFor(provider: KeyProviderId, key: string): Record<string, string> {
   switch (provider) {
     case 'anthropic':
       return { 'x-api-key': key, 'anthropic-version': anthropicVersion };

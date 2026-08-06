@@ -9,28 +9,30 @@ import {
   type GatewayEngineState,
   type KeyCheckReport,
   type KeyProviderId,
+  type LookCustody,
+  type ModelListing,
   type RuntimeReachability,
 } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
+import type { EngineLooks } from './engine-looks';
 import type { SpendGrantFor } from './engine-spend';
 
 import {
-  answerKeyCheck,
-  answerRuntimeCheck,
-  createProbeDesk,
-  foldEveryProbe,
+  answerLook,
+  foldEveryLook,
+  listModelsThroughTheChild,
   lookAtTheRuntimeThroughTheChild,
+  openEngineLooks,
   probeThroughTheChild,
-  type ProbeDesk,
-} from './engine-probe';
+} from './engine-looks';
 import { answerSpendRequest } from './engine-spend';
 import { allStopped, foldEngineReport } from './engine-state-ledger';
 import { createGatewayOrder } from './gateway-order';
 
 export const DIRECTIVE_TIMEOUT_MS = 5000;
 
-export { PROBE_TIMEOUT_MS } from './engine-probe';
+export { PROBE_TIMEOUT_MS } from './engine-looks';
 
 export type EngineChild = {
   postMessage: (message: EngineDirective | EngineSpendGrant) => void;
@@ -51,6 +53,7 @@ export type EngineHost = {
   restart: (gateway: EngineGateway) => Promise<GatewayEngineState>;
   probe: (provider: KeyProviderId, key: string) => Promise<KeyCheckReport>;
   probeRuntime: (address: string) => Promise<RuntimeReachability>;
+  listModels: (origin: string, custody: LookCustody) => Promise<ModelListing>;
   states: () => EngineStates;
   onStatesChanged: (listener: (states: EngineStates) => void) => () => void;
   dispose: () => void;
@@ -70,8 +73,7 @@ type Resident = {
   grantFor: SpendGrantFor;
   subscribers: Set<StateListener>;
   awaitingReport: Map<string, Waiter>;
-  awaitingKeyCheck: ProbeDesk<KeyCheckReport>;
-  awaitingRuntimeLook: ProbeDesk<RuntimeReachability>;
+  looks: EngineLooks;
 };
 
 function publish(resident: Resident, next: EngineStates): void {
@@ -109,19 +111,13 @@ function answerState(resident: Resident, report: Extract<EngineReport, { kind: '
 }
 
 function routeReport(resident: Resident, report: EngineReport): void {
-  if (report.kind === 'key-check') {
-    answerKeyCheck(resident.awaitingKeyCheck, report);
+  if (report.kind === 'state') {
+    answerState(resident, report);
 
     return;
   }
 
-  if (report.kind === 'runtime-check') {
-    answerRuntimeCheck(resident.awaitingRuntimeLook, report);
-
-    return;
-  }
-
-  answerState(resident, report);
+  answerLook(resident.looks, report);
 }
 
 function receiveMessage(resident: Resident, child: EngineChild, message: unknown): void {
@@ -154,18 +150,7 @@ function receiveExit(resident: Resident, code: number): void {
   resident.child = null;
   publish(resident, allStopped(Object.keys(resident.states)));
   refuseEveryWaiter(resident, death);
-  foldEveryProbe(
-    resident.awaitingKeyCheck,
-    { verdict: 'could-not-check' },
-    (provider) =>
-      `recompose could not check the ${provider} key, because the engine stopped before it answered.`,
-  );
-  foldEveryProbe(
-    resident.awaitingRuntimeLook,
-    { verdict: 'unreachable' },
-    (address) =>
-      `recompose could not look at the runtime at ${address}, because the engine stopped before it answered.`,
-  );
+  foldEveryLook(resident.looks);
 }
 
 function runningChild(resident: Resident): EngineChild {
@@ -250,8 +235,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
     grantFor: deps.grantFor,
     subscribers: new Set(),
     awaitingReport: new Map(),
-    awaitingKeyCheck: createProbeDesk(),
-    awaitingRuntimeLook: createProbeDesk(),
+    looks: openEngineLooks(),
   };
   const inGatewayOrder = createGatewayOrder();
 
@@ -267,13 +251,11 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
     restart: async (gateway) =>
       inGatewayOrder(gateway.slug, async () => restartGateway(resident, gateway)),
     probe: async (provider, key) =>
-      probeThroughTheChild(resident.awaitingKeyCheck, () => runningChild(resident), provider, key),
+      probeThroughTheChild(resident.looks, () => runningChild(resident), provider, key),
     probeRuntime: async (address) =>
-      lookAtTheRuntimeThroughTheChild(
-        resident.awaitingRuntimeLook,
-        () => runningChild(resident),
-        address,
-      ),
+      lookAtTheRuntimeThroughTheChild(resident.looks, () => runningChild(resident), address),
+    listModels: async (origin, custody) =>
+      listModelsThroughTheChild(resident.looks, () => runningChild(resident), origin, custody),
     states: () => resident.states,
     onStatesChanged: (listener) => {
       resident.subscribers.add(listener);

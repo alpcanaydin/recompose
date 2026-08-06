@@ -55,6 +55,7 @@ function hostAnswering(refusal?: Error) {
     onStatesChanged: () => () => undefined,
     probe: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     probeRuntime: async () => Promise.resolve({ verdict: 'unreachable' as const }),
+    listModels: async () => Promise.resolve({ standing: 'unlisted' as const }),
     dispose: () => undefined,
   };
 

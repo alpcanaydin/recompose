@@ -96,14 +96,14 @@ test('a definition joins the ones the gateway already holds rather than replacin
   expect(defining.virtualModels.map((model) => model.id)).toEqual(['fast', 'slow']);
 });
 
-test('a gateway already on disk refuses in words about the virtual model, not the gateway', () => {
+test('a gateway the rewrite could not find refuses in the words main wrote', () => {
   const refused = new IpcResultError({
-    code: 'name-conflict',
-    message: 'Another gateway already holds the name "Codex".',
+    code: 'storage-failed',
+    message: 'recompose stores no gateway under the slug "codex", so it has nothing to rewrite.',
   });
 
   expect(refusalFromMain(refused)).toBe(
-    'recompose cannot add a virtual model to a stored gateway yet.',
+    'recompose stores no gateway under the slug "codex", so it has nothing to rewrite.',
   );
 });
 
@@ -114,6 +114,12 @@ test('a schema refusal trades its developer words for a sentence', () => {
 });
 
 test('every other refusal reads in the words main wrote', () => {
+  const namesake = new IpcResultError({
+    code: 'name-conflict',
+    message: 'Another gateway already holds the name "Codex".',
+  });
+
+  expect(refusalFromMain(namesake)).toBe('Another gateway already holds the name "Codex".');
   expect(refusalFromMain(new Error('the disk is full'))).toBe('the disk is full');
 });
 

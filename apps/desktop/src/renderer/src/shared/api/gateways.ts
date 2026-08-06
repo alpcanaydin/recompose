@@ -30,6 +30,9 @@ function useStoredGatewaysAfter(write: GatewayWrite) {
 const storeNewGateway: GatewayWrite = async (gateway) =>
   unwrapIpcResult(await window.recompose['gateways:save'](gateway));
 
+const rewriteStoredGateway: GatewayWrite = async (gateway) =>
+  unwrapIpcResult(await window.recompose['gateways:update'](gateway));
+
 /** Stores a new gateway, refusing a slug or a port a stored gateway already holds. */
 export function useSaveGateway() {
   return useStoredGatewaysAfter(storeNewGateway);
@@ -39,12 +42,12 @@ export function useSaveGateway() {
  * Stores the gateway that now carries one more virtual model.
  *
  * @summary The one place a definition reaches disk, so the whole Models surface is written against
- * this act rather than against the channel under it. The save channel it rides today refuses a
- * gateway it already holds, so a definition on a stored gateway reads that refusal until the lane
- * that redefines one lands behind this act.
+ * this act rather than against the channel under it. It rewrites a gateway that already stands
+ * rather than creating one, because the create channel exists to refuse a slug already held and
+ * that refusal is exactly what a second virtual model must not read.
  */
 export function useDefineVirtualModel() {
-  return useStoredGatewaysAfter(storeNewGateway);
+  return useStoredGatewaysAfter(rewriteStoredGateway);
 }
 
 /**

@@ -10,20 +10,17 @@ import type {
   SubscriptionAccountView,
   SubscriptionTool,
   SystemState,
-  VirtualModel,
 } from '@recompose/contracts';
 
-import {
-  ACCOUNTS_VERSION,
-  GATEWAY_CONFIG_VERSION,
-  withSettingsPatch,
-  defaultSettings,
-  ipcChannels,
-} from '@recompose/contracts';
+import { ACCOUNTS_VERSION, withSettingsPatch, defaultSettings } from '@recompose/contracts';
 
-import { serveProviderModelLook } from '../api';
 import { accountHandlers } from './fake-accounts';
-import { modelListLook, noModelLists, type SeededModelLists } from './fake-model-lists';
+import {
+  forgetEngineStateListeners,
+  gatewayHandlers,
+  listenForEngineStates,
+} from './fake-gateways';
+import { modelListHandlers, noModelLists, type SeededModelLists } from './fake-model-lists';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
 const emptyDocument: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
@@ -35,34 +32,6 @@ const observedSystem: SystemState = {
   menuBarVisible: false,
   configFolder: '~/Library/Application Support/recompose',
 };
-
-export type GatewaySeed = {
-  /** Identifier the gateway stores under and answers to. */
-  slug: string;
-  /** Name the sidebar and the toolbar show. */
-  displayName: string;
-  /** Loopback port the gateway binds. */
-  port: number;
-  /** Definitions the stored gateway already serves, which a fresh gateway holds none of. */
-  virtualModels?: readonly VirtualModel[];
-};
-
-/** A stored gateway document, filled out around the fields a scenario cares about. */
-export function gatewaySeed({
-  slug,
-  displayName,
-  port,
-  virtualModels = [],
-}: GatewaySeed): GatewayConfig {
-  return {
-    schemaVersion: GATEWAY_CONFIG_VERSION,
-    slug,
-    displayName,
-    port,
-    virtualModels: [...virtualModels],
-    layout: { nodes: {} },
-  };
-}
 
 export type BridgeParameters = {
   accounts?: AccountsDocument;
@@ -85,130 +54,6 @@ type SystemHandlers = Pick<
   RecomposeIpc,
   'system:get' | 'system:open-config-folder' | 'system:window-band'
 >;
-type GatewayHandlers = Pick<
-  RecomposeIpc,
-  | 'gateways:list'
-  | 'gateways:save'
-  | 'gateways:offer-port'
-  | 'gateways:move-port'
-  | 'engine:start'
-  | 'engine:stop'
-  | 'engine:states'
->;
-
-const FIRST_OFFERED_PORT = 51234;
-
-type EngineStatesListener = (states: EngineStates) => void;
-
-const engineStateListeners = new Set<EngineStatesListener>();
-
-/**
- * Pushes a lifecycle snapshot at everything listening, the way the main process would.
- *
- * @summary Reach for it in a story or a spec that has to show state arriving on its own, with
- * nothing on screen having asked for it.
- */
-export function emitEngineStates(states: EngineStates): void {
-  for (const listener of engineStateListeners) {
-    listener(states);
-  }
-}
-
-function conflictIn(
-  stored: readonly GatewayConfig[],
-  arriving: GatewayConfig,
-): { code: 'name-conflict' | 'port-conflict'; message: string } | undefined {
-  const namesake = stored.find((held) => held.slug === arriving.slug);
-
-  if (namesake !== undefined) {
-    return {
-      code: 'name-conflict',
-      message: `Another gateway already holds the name "${namesake.displayName}".`,
-    };
-  }
-
-  const portHolder = stored.find((held) => held.port === arriving.port);
-
-  if (portHolder !== undefined) {
-    return { code: 'port-conflict', message: `${portHolder.slug} already holds this port.` };
-  }
-
-  return undefined;
-}
-
-function refusalSaving(
-  stored: readonly GatewayConfig[],
-  arriving: GatewayConfig,
-): { code: 'validation-failed' | 'name-conflict' | 'port-conflict'; message: string } | undefined {
-  const parsed = ipcChannels['gateways:save'].request.safeParse(arriving);
-
-  return parsed.success
-    ? conflictIn(stored, parsed.data)
-    : { code: 'validation-failed', message: parsed.error.message };
-}
-
-function gatewayHandlers(
-  seededGateways: readonly GatewayConfig[],
-  seededStates: EngineStates,
-): GatewayHandlers {
-  let stored = [...seededGateways];
-  let states = { ...seededStates };
-
-  function freePort(): number {
-    let offer = FIRST_OFFERED_PORT;
-
-    while (stored.some((gateway) => gateway.port === offer)) {
-      offer += 1;
-    }
-
-    return offer;
-  }
-
-  function report(slug: string, state: EngineStates[string]): EngineStates {
-    states = { ...states, [slug]: state };
-    emitEngineStates(states);
-
-    return states;
-  }
-
-  return {
-    'gateways:list': async () => Promise.resolve({ ok: true, value: stored }),
-    'gateways:save': async (gateway) => {
-      const refused = refusalSaving(stored, gateway);
-
-      if (refused !== undefined) {
-        return Promise.resolve({ ok: false, error: refused });
-      }
-
-      stored = [...stored, gateway];
-      report(gateway.slug, { status: 'running' });
-
-      return Promise.resolve({ ok: true, value: stored });
-    },
-    'gateways:offer-port': async () => Promise.resolve({ ok: true, value: freePort() }),
-    'gateways:move-port': async ({ slug }) => {
-      const moved = freePort();
-
-      stored = stored.map((gateway) =>
-        gateway.slug === slug ? { ...gateway, port: moved } : gateway,
-      );
-      report(slug, { status: 'running' });
-
-      return Promise.resolve({ ok: true, value: stored });
-    },
-    'engine:start': async ({ slug }) => {
-      report(slug, { status: 'running' });
-
-      return Promise.resolve({ ok: true, value: { status: 'running' } });
-    },
-    'engine:stop': async ({ slug }) => {
-      report(slug, { status: 'stopped' });
-
-      return Promise.resolve({ ok: true, value: { status: 'stopped' } });
-    },
-    'engine:states': async () => Promise.resolve({ ok: true, value: states }),
-  };
-}
 
 function settingsHandlers(seed: Settings): SettingsHandlers {
   let stored = seed;
@@ -232,15 +77,7 @@ function systemHandlers(): SystemHandlers {
 }
 
 function eventBridge(): RecomposeIpcEvents {
-  return {
-    'engine:state': (listener) => {
-      engineStateListeners.add(listener);
-
-      return () => {
-        engineStateListeners.delete(listener);
-      };
-    },
-  };
+  return { 'engine:state': (listener) => listenForEngineStates(listener) };
 }
 
 const noGateways: readonly GatewayConfig[] = [];
@@ -266,8 +103,7 @@ function seedsFrom(parameters: BridgeParameters) {
 export function installFakeBridge(parameters: BridgeParameters = {}): void {
   const seeds = seedsFrom(parameters);
 
-  engineStateListeners.clear();
-  serveProviderModelLook(modelListLook(seeds.providerModels));
+  forgetEngineStateListeners();
 
   const { landSubscription, ...accounts } = accountHandlers(
     seeds.accounts,
@@ -280,6 +116,7 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
     ...accounts,
     ...systemHandlers(),
     ...gatewayHandlers(seeds.gateways, seeds.engineStates),
+    ...modelListHandlers(seeds.providerModels),
     ...subscriptionHandlers(seeds.subscriptions, seeds.tools, landSubscription),
     ...parameters.overrides,
   };

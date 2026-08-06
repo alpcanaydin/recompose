@@ -28,6 +28,17 @@ export const runtimeLookBoundMs = 3_000;
  */
 export const proxyFetchBoundMs = 600_000;
 
+/**
+ * How long a look at an account's model list waits for the vendor before it counts as silence.
+ *
+ * @summary A person is watching the Model field while this runs, so it is a look rather than a
+ * proxied turn and nowhere near the ten-minute bound. It still outlasts the loopback look, because
+ * that number is sized for a server on this machine and an aggregator's catalog crosses the
+ * internet. Ten seconds is what the shipped key probe already gives the same `GET /v1/models`, and
+ * it stays under the host's own wait so a look folds on the child's verdict.
+ */
+export const modelListBoundMs = 10_000;
+
 export const RUNTIME_PORT_RANGE = { min: 1, max: 65535 } as const;
 
 export const runtimePortSchema = z.int().min(RUNTIME_PORT_RANGE.min).max(RUNTIME_PORT_RANGE.max);

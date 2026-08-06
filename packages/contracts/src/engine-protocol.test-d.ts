@@ -37,9 +37,9 @@ type KeyCheckReportArm = Extract<EngineReport, { kind: 'key-check' }>;
 type RuntimeCheckReportArm = Extract<EngineReport, { kind: 'runtime-check' }>;
 
 describe('the protocol the two processes speak', () => {
-  test('a directive is a start, a stop, or one of the two probes', () => {
+  test('a directive is a start, a stop, one of the two probes, or a model-list look', () => {
     expectTypeOf<EngineDirective['kind']>().toEqualTypeOf<
-      'start' | 'stop' | 'probe' | 'probe-runtime'
+      'start' | 'stop' | 'probe' | 'probe-runtime' | 'list-models'
     >();
   });
 
@@ -75,8 +75,10 @@ describe('the protocol the two processes speak', () => {
 });
 
 describe('the report the child sends home', () => {
-  test('a report is a gateway state, a key check, or a runtime check, told apart by its kind', () => {
-    expectTypeOf<EngineReport['kind']>().toEqualTypeOf<'state' | 'key-check' | 'runtime-check'>();
+  test('a report is a gateway state, a check, or a model list, told apart by its kind', () => {
+    expectTypeOf<EngineReport['kind']>().toEqualTypeOf<
+      'state' | 'key-check' | 'runtime-check' | 'model-list'
+    >();
   });
 
   test('a state report carries one gateway and the same state every surface reads', () => {
