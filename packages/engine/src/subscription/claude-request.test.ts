@@ -26,7 +26,7 @@ const nativeBetas = [
 ].join(',');
 
 const nativeHeaders: [string, string][] = [
-  ['Accept', 'application/json'],
+  ['Accept', 'text/event-stream'],
   ['Authorization', 'Bearer claude-access'],
   ['Content-Type', 'application/json'],
   ['User-Agent', 'claude-cli/2.1.220 (external, cli)'],
@@ -45,7 +45,7 @@ const nativeHeaders: [string, string][] = [
   ['x-app', 'cli'],
   ['x-client-request-id', ids.requestId],
   ['Connection', 'keep-alive'],
-  ['Accept-Encoding', 'gzip, deflate, br, zstd'],
+  ['Accept-Encoding', 'identity'],
 ];
 
 function requestFor(body: JsonObject): ProviderRequest {
@@ -103,6 +103,28 @@ describe('the request sent as Claude Code 2.1.220', () => {
     );
     expect(request.body).toMatch(/"name":"mcp__/u);
     expect(Object.values(request.reverseToolNames ?? {})).toContain('read');
+  });
+});
+
+describe('Claude OAuth feature negotiation', () => {
+  test('keeps supported caller betas in the native OAuth order', () => {
+    const request = requestFor({
+      model: 'claude-sonnet-4-5',
+      betas: ['structured-outputs-2025-12-15', 'server-side-fallback-2026-06-01', 'unknown-beta'],
+    });
+    const beta = request.headers.find(([name]) => name === 'anthropic-beta')?.[1] ?? '';
+
+    expect(beta).toContain(
+      'effort-2025-11-24,fallback-credit-2026-06-01,server-side-fallback-2026-06-01,structured-outputs-2025-12-15',
+    );
+    expect(beta).not.toContain('unknown-beta');
+  });
+
+  test('non-streaming requests negotiate compressed JSON', () => {
+    const request = requestFor({ model: 'claude-sonnet-4-5', messages: [] });
+
+    expect(request.headers).toContainEqual(['Accept', 'application/json']);
+    expect(request.headers).toContainEqual(['Accept-Encoding', 'gzip, deflate, br, zstd']);
   });
 });
 

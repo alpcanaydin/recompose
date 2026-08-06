@@ -1,6 +1,7 @@
 import type { ClaudeIdentity } from './claude-identity';
 
 import { isJsonObject } from '../gateway-wire';
+import { claudeBetas, requestedClaudeBetas } from './claude-betas';
 import { signedClaudeBody } from './claude-cch';
 import { applyClaudeCredentialIdentity } from './claude-identity';
 import { sanitizeClaudeSignatures } from './claude-signatures';
@@ -21,74 +22,6 @@ type ClaudeRequestIds = {
 };
 
 type CacheBlock = JsonObject & { cache_control?: unknown };
-
-function claudeBetas(body: JsonObject): string {
-  const betas = ['claude-code-20250219', 'oauth-2025-04-20'];
-
-  appendThinkingBetas(betas, body);
-  appendFeatureBetas(betas, body);
-
-  return betas.join(',');
-}
-
-function appendThinkingBetas(betas: string[], body: JsonObject): void {
-  if (hasOneMillionContext(body)) {
-    betas.push('context-1m-2025-08-07');
-  }
-
-  betas.push('interleaved-thinking-2025-05-14');
-
-  if (!hasThinkingDisplay(body)) {
-    betas.push('redact-thinking-2026-02-12');
-  }
-
-  betas.push(
-    'thinking-token-count-2026-05-13',
-    'context-management-2025-06-27',
-    'prompt-caching-scope-2026-01-05',
-    'mid-conversation-system-2026-04-07',
-  );
-}
-
-function appendFeatureBetas(betas: string[], body: JsonObject): void {
-  if (hasTools(body)) {
-    betas.push('advanced-tool-use-2025-11-20');
-  }
-
-  betas.push('effort-2025-11-24', 'fallback-credit-2026-06-01');
-
-  if (usesFastMode(body)) {
-    betas.push('fast-mode-2026-02-01');
-  }
-
-  betas.push('extended-cache-ttl-2025-04-11');
-
-  if (isJsonObject(body['diagnostics'])) {
-    betas.push('cache-diagnosis-2026-04-07');
-  }
-}
-
-function hasOneMillionContext(body: JsonObject): boolean {
-  return typeof body['model'] === 'string' && body['model'].includes('[1m]');
-}
-
-function hasThinkingDisplay(body: JsonObject): boolean {
-  const thinking = body['thinking'];
-
-  return (
-    isJsonObject(thinking) &&
-    typeof thinking['display'] === 'string' &&
-    thinking['display'].trim() !== ''
-  );
-}
-
-function hasTools(body: JsonObject): boolean {
-  return Array.isArray(body['tools']) && body['tools'].length > 0;
-}
-
-function usesFastMode(body: JsonObject): boolean {
-  return body['speed'] === 'fast';
-}
 
 function cacheBlocksIn(value: unknown): CacheBlock[] {
   return Array.isArray(value)
@@ -244,19 +177,21 @@ export function claudeProviderRequest(
   ids: ClaudeRequestIds,
   identity?: ClaudeIdentity,
 ): ProviderRequest {
+  const requested = requestedClaudeBetas(rawBody);
   const identified =
     identity === undefined
       ? rawBody
       : applyClaudeCredentialIdentity(rawBody, identity, ids.sessionId);
   const body = normalizedClaudeBody(identified);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
+  const stream = prepared.body['stream'] === true;
 
   return {
     url: `${providerOrigin.replace(/\/+$/u, '')}/v1/messages?beta=true`,
     body: signedClaudeBody(prepared.body),
     ...(Object.keys(prepared.reverse).length === 0 ? {} : { reverseToolNames: prepared.reverse }),
     headers: [
-      ['Accept', 'application/json'],
+      ['Accept', stream ? 'text/event-stream' : 'application/json'],
       ['Authorization', `Bearer ${accessToken}`],
       ['Content-Type', 'application/json'],
       ['User-Agent', 'claude-cli/2.1.220 (external, cli)'],
@@ -269,13 +204,13 @@ export function claudeProviderRequest(
       ['X-Stainless-Runtime', 'node'],
       ['X-Stainless-Runtime-Version', 'v26.3.0'],
       ['X-Stainless-Timeout', '600'],
-      ['anthropic-beta', claudeBetas(body)],
+      ['anthropic-beta', claudeBetas(body, requested)],
       ['anthropic-dangerous-direct-browser-access', 'true'],
       ['anthropic-version', '2023-06-01'],
       ['x-app', 'cli'],
       ['x-client-request-id', ids.requestId],
       ['Connection', 'keep-alive'],
-      ['Accept-Encoding', 'gzip, deflate, br, zstd'],
+      ['Accept-Encoding', stream ? 'identity' : 'gzip, deflate, br, zstd'],
     ],
   };
 }
