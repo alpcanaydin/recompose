@@ -6,6 +6,8 @@ import { fetch as wreqFetch } from 'node-wreq';
 import type { ProviderRequest } from './claude-request';
 import type { RefreshFetch } from './refresh';
 
+import { restoreClaudeToolResponse } from './claude-tool-response';
+
 export const CLAUDE_TLS_FINGERPRINT = {
   clientHelloLength: 508,
   ja3: '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49161-49171-49162-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-21,29-23-24,0',
@@ -127,7 +129,11 @@ export async function sendSubscriptionRequest(
     throwHttpErrors: false,
   });
 
-  return webResponseFrom(upstream);
+  const response = webResponseFrom(upstream);
+
+  return provider === 'anthropic' && request.reverseToolNames !== undefined
+    ? restoreClaudeToolResponse(response, request.reverseToolNames)
+    : response;
 }
 
 export function subscriptionRefreshTransportOptions(url: string): WreqInit {

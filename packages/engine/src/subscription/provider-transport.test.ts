@@ -106,3 +106,63 @@ test('the native transport receives the exact ordered headers and streams its re
   expect(response.status).toBe(201);
   await expect(response.text()).resolves.toBe('answer');
 });
+
+test('Claude restores request-local MCP aliases in a JSON response', async () => {
+  const aliasedRequest: ProviderRequest = {
+    ...request,
+    reverseToolNames: { mcp__server__search: 'Search_Web' },
+  };
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return new Response(
+      JSON.stringify({
+        content: [
+          { type: 'tool_use', id: 'one', name: 'mcp__server__search', input: {} },
+          { type: 'tool_use', id: 'two', name: 'Bash', input: {} },
+        ],
+      }),
+      { headers: { 'content-type': 'application/json', 'content-length': '100' } },
+    );
+  });
+
+  const response = await sendSubscriptionRequest('anthropic', aliasedRequest, fetchLike);
+
+  expect(await response.json()).toEqual({
+    content: [
+      { type: 'tool_use', id: 'one', name: 'Search_Web', input: {} },
+      { type: 'tool_use', id: 'two', name: 'Bash', input: {} },
+    ],
+  });
+  expect(response.headers.has('content-length')).toBe(false);
+});
+
+test('Claude restores request-local MCP aliases across fragmented SSE chunks', async () => {
+  const encoder = new TextEncoder();
+  const source = [
+    'event: content_block_start\ndata: {"type":"content_block_start","content_block":{"type":"tool_use",',
+    '"name":"mcp__server__search"}}\n\ndata: {"type":"message_stop"}\n\n',
+  ];
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of source) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+
+      controller.close();
+    },
+  });
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+  });
+
+  const response = await sendSubscriptionRequest(
+    'anthropic',
+    { ...request, reverseToolNames: { mcp__server__search: 'Search_Web' } },
+    fetchLike,
+  );
+
+  await expect(response.text()).resolves.toContain('"name":"Search_Web"');
+});
