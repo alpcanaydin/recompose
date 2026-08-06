@@ -94,11 +94,21 @@ function servesBox(served: readonly ServedModel[], onDefine: () => void): ReactN
   }
 
   return (
-    <ul className="field-box">
-      {served.map((model) => (
-        <ServedModelRow key={model.id} served={model} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-2">
+      <ul className="field-box">
+        {served.map((model) => (
+          <ServedModelRow key={model.id} served={model} />
+        ))}
+      </ul>
+      <button
+        className="push-button-primary w-full whitespace-nowrap"
+        onClick={onDefine}
+        type="button"
+      >
+        <Icon className="size-3.5" name="plus" />
+        Add virtual model
+      </button>
+    </div>
   );
 }
 

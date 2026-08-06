@@ -78,6 +78,7 @@ export const Overview = meta.story({
     await expect(await canvas.findByText('http://localhost:8397')).toBeVisible();
     await expect(await canvas.findByText('Running')).toBeVisible();
     await expect(await canvas.findByText('· 2 virtual models')).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: 'Add virtual model' })).toBeVisible();
   },
 });
 

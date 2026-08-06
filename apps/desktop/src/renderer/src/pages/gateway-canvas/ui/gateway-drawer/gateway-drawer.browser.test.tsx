@@ -127,6 +127,14 @@ test('a gateway serving nothing heads its section with no tally beside it', asyn
   expect(screen.getByRole('heading', { name: /Serves/ }).element().textContent).toBe('Serves');
 });
 
+test('a gateway already serving offers to add another virtual model', async () => {
+  const screen = await renderDrawer();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
+
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
+});
+
 test('a gateway serving nothing invites the first virtual model', async () => {
   const screen = await renderDrawer([]);
 
