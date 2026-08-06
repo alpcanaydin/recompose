@@ -1,8 +1,10 @@
 import {
   engineReportSchema,
+  engineSpendRequestSchema,
   type EngineDirective,
   type EngineGateway,
   type EngineReport,
+  type EngineSpendGrant,
   type EngineStates,
   type GatewayEngineState,
   type KeyCheckReport,
@@ -11,15 +13,18 @@ import {
 } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
+import type { SpendGrantFor } from './engine-spend';
+
 import {
   answerKeyCheck,
   answerRuntimeCheck,
   createProbeDesk,
   foldEveryProbe,
-  sendProbe,
-  sendRuntimeProbe,
+  lookAtTheRuntimeThroughTheChild,
+  probeThroughTheChild,
   type ProbeDesk,
 } from './engine-probe';
+import { answerSpendRequest } from './engine-spend';
 import { allStopped, foldEngineReport } from './engine-state-ledger';
 import { createGatewayOrder } from './gateway-order';
 
@@ -28,7 +33,7 @@ export const DIRECTIVE_TIMEOUT_MS = 5000;
 export { PROBE_TIMEOUT_MS } from './engine-probe';
 
 export type EngineChild = {
-  postMessage: (directive: EngineDirective) => void;
+  postMessage: (message: EngineDirective | EngineSpendGrant) => void;
   onMessage: (listener: (message: unknown) => void) => void;
   onExit: (listener: (code: number) => void) => void;
   kill: () => void;
@@ -37,6 +42,7 @@ export type EngineChild = {
 export type EngineHostDeps = {
   knownSlugs: readonly string[];
   spawnChild: () => EngineChild;
+  grantFor: SpendGrantFor;
 };
 
 export type EngineHost = {
@@ -61,6 +67,7 @@ type Resident = {
   states: EngineStates;
   child: EngineChild | null;
   spawnChild: () => EngineChild;
+  grantFor: SpendGrantFor;
   subscribers: Set<StateListener>;
   awaitingReport: Map<string, Waiter>;
   awaitingKeyCheck: ProbeDesk<KeyCheckReport>;
@@ -101,28 +108,40 @@ function answerState(resident: Resident, report: Extract<EngineReport, { kind: '
   waiting.answer(report.state);
 }
 
-function receiveReport(resident: Resident, message: unknown): void {
+function routeReport(resident: Resident, report: EngineReport): void {
+  if (report.kind === 'key-check') {
+    answerKeyCheck(resident.awaitingKeyCheck, report);
+
+    return;
+  }
+
+  if (report.kind === 'runtime-check') {
+    answerRuntimeCheck(resident.awaitingRuntimeLook, report);
+
+    return;
+  }
+
+  answerState(resident, report);
+}
+
+function receiveMessage(resident: Resident, child: EngineChild, message: unknown): void {
   const report = engineReportSchema.safeParse(message);
 
-  if (!report.success) {
-    console.error('recompose could not read a report from the engine.', report.error.issues);
+  if (report.success) {
+    routeReport(resident, report.data);
 
     return;
   }
 
-  if (report.data.kind === 'key-check') {
-    answerKeyCheck(resident.awaitingKeyCheck, report.data);
+  const asked = engineSpendRequestSchema.safeParse(message);
+
+  if (asked.success) {
+    answerSpendRequest(child, resident.grantFor, asked.data);
 
     return;
   }
 
-  if (report.data.kind === 'runtime-check') {
-    answerRuntimeCheck(resident.awaitingRuntimeLook, report.data);
-
-    return;
-  }
-
-  answerState(resident, report.data);
+  console.error('recompose could not read a report from the engine.', report.error.issues);
 }
 
 function receiveExit(resident: Resident, code: number): void {
@@ -157,7 +176,7 @@ function runningChild(resident: Resident): EngineChild {
   const spawned = resident.spawnChild();
 
   spawned.onMessage((message) => {
-    receiveReport(resident, message);
+    receiveMessage(resident, spawned, message);
   });
   spawned.onExit((code) => {
     receiveExit(resident, code);
@@ -205,45 +224,22 @@ async function sendDirective(
   });
 }
 
-async function probeThroughTheChild(
+async function restartGateway(
   resident: Resident,
-  provider: KeyProviderId,
-  key: string,
-): Promise<KeyCheckReport> {
-  let engine: EngineChild;
-
-  try {
-    engine = runningChild(resident);
-  } catch (error) {
+  gateway: EngineGateway,
+): Promise<GatewayEngineState> {
+  await sendDirective(resident, {
+    kind: 'stop',
+    id: randomUUID(),
+    slug: gateway.slug,
+  }).catch((error: unknown) => {
     console.error(
-      `recompose could not check the ${provider} key, because the engine would not spawn.`,
+      `recompose never heard the stop of the gateway "${gateway.slug}" back, and is starting it again regardless.`,
       error,
     );
+  });
 
-    return { verdict: 'could-not-check' };
-  }
-
-  return sendProbe(resident.awaitingKeyCheck, engine, provider, key);
-}
-
-async function lookAtTheRuntimeThroughTheChild(
-  resident: Resident,
-  address: string,
-): Promise<RuntimeReachability> {
-  let engine: EngineChild;
-
-  try {
-    engine = runningChild(resident);
-  } catch (error) {
-    console.error(
-      `recompose could not look at the runtime at ${address}, because the engine would not spawn.`,
-      error,
-    );
-
-    return { verdict: 'unreachable' };
-  }
-
-  return sendRuntimeProbe(resident.awaitingRuntimeLook, engine, address);
+  return sendDirective(resident, { kind: 'start', id: randomUUID(), gateway });
 }
 
 export function createEngineHost(deps: EngineHostDeps): EngineHost {
@@ -251,6 +247,7 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
     states: allStopped(deps.knownSlugs),
     child: null,
     spawnChild: deps.spawnChild,
+    grantFor: deps.grantFor,
     subscribers: new Set(),
     awaitingReport: new Map(),
     awaitingKeyCheck: createProbeDesk(),
@@ -268,22 +265,15 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
         sendDirective(resident, { kind: 'stop', id: randomUUID(), slug }),
       ),
     restart: async (gateway) =>
-      inGatewayOrder(gateway.slug, async () => {
-        await sendDirective(resident, {
-          kind: 'stop',
-          id: randomUUID(),
-          slug: gateway.slug,
-        }).catch((error: unknown) => {
-          console.error(
-            `recompose never heard the stop of the gateway "${gateway.slug}" back, and is starting it again regardless.`,
-            error,
-          );
-        });
-
-        return sendDirective(resident, { kind: 'start', id: randomUUID(), gateway });
-      }),
-    probe: async (provider, key) => probeThroughTheChild(resident, provider, key),
-    probeRuntime: async (address) => lookAtTheRuntimeThroughTheChild(resident, address),
+      inGatewayOrder(gateway.slug, async () => restartGateway(resident, gateway)),
+    probe: async (provider, key) =>
+      probeThroughTheChild(resident.awaitingKeyCheck, () => runningChild(resident), provider, key),
+    probeRuntime: async (address) =>
+      lookAtTheRuntimeThroughTheChild(
+        resident.awaitingRuntimeLook,
+        () => runningChild(resident),
+        address,
+      ),
     states: () => resident.states,
     onStatesChanged: (listener) => {
       resident.subscribers.add(listener);

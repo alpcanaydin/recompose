@@ -6,7 +6,7 @@ import { storedEngineGateway } from './stored-gateway';
 
 export type EngineAccess = {
   host: () => EngineHost | null;
-  gatewaysDir: () => string;
+  userDataPath: () => string;
   onCorrupt: (quarantinedPath: string) => void;
 };
 
@@ -43,7 +43,7 @@ export function createGatewayLifecycleRequests(access: EngineAccess): GatewayLif
     serve: (host: EngineHost, gateway: EngineGateway) => Promise<unknown>,
   ): void {
     ask(act, slug, async (host) => {
-      const gateway = await storedEngineGateway(access.gatewaysDir(), access.onCorrupt, slug);
+      const gateway = await storedEngineGateway(access.userDataPath(), access.onCorrupt, slug);
 
       if (gateway === undefined) {
         throw new Error(`recompose stores no gateway under that slug.`);

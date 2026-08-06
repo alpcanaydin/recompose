@@ -11,6 +11,7 @@ import { withSettingsPatch } from '@recompose/contracts';
 
 import type { IpcHandlers } from './dispatch';
 
+import { engineGatewayOf } from '../engine-host/stored-gateway';
 import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { oneAtATime } from '../storage/one-at-a-time';
@@ -73,13 +74,10 @@ async function saveGateway(
       return conflict;
     }
 
+    const serving = await engineGatewayOf(ctx.userDataPath, ctx.onCorrupt, config);
+
     await saveGatewayConfig(paths.gatewaysDir, config);
-    ctx.startGateway({
-      slug: config.slug,
-      displayName: config.displayName,
-      port: config.port,
-      virtualModels: [],
-    });
+    ctx.startGateway(serving);
 
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
   } catch (error) {

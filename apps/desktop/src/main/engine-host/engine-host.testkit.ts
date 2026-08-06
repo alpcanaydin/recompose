@@ -1,11 +1,13 @@
 import {
   type EngineDirective,
+  type EngineSpendGrant,
   type GatewayEngineState,
   type KeyCheckReport,
   type RuntimeReachability,
 } from '@recompose/contracts';
 
 import type { EngineChild } from './engine-host';
+import type { SpendGrantFor } from './engine-spend';
 
 import { createEngineHost } from './engine-host';
 
@@ -94,12 +96,33 @@ function answerLater(script: Script, directive: EngineDirective): void {
   }
 }
 
+type Lane = {
+  directives: EngineDirective[];
+  grants: EngineSpendGrant[];
+};
+
+function recordAndAnswer(
+  lane: Lane,
+  script: Script,
+  message: EngineDirective | EngineSpendGrant,
+): void {
+  if (message.kind === 'spend-grant') {
+    lane.grants.push(message);
+
+    return;
+  }
+
+  lane.directives.push(message);
+  answerLater(script, message);
+}
+
 export function scriptedChild(
   answer: () => GatewayEngineState | null,
   answerProbe: () => KeyCheckReport | null = () => null,
   answerRuntime: () => RuntimeReachability | null = () => null,
 ) {
-  const directives: EngineDirective[] = [];
+  const lane: Lane = { directives: [], grants: [] };
+  const { directives, grants } = lane;
   const heard: ((message: unknown) => void)[] = [];
   const departed: ((code: number) => void)[] = [];
   let killed = false;
@@ -113,9 +136,8 @@ export function scriptedChild(
   const script: Script = { send, answer, answerProbe, answerRuntime };
 
   const child: EngineChild = {
-    postMessage: (directive) => {
-      directives.push(directive);
-      answerLater(script, directive);
+    postMessage: (message) => {
+      recordAndAnswer(lane, script, message);
     },
     onMessage: (listener) => {
       heard.push(listener);
@@ -131,6 +153,7 @@ export function scriptedChild(
   return {
     child,
     directives,
+    grants,
     send,
     answerDirective: (index: number, state: GatewayEngineState): void => {
       send(reportOf(gatewayDirectiveAt(directives, index), state));
@@ -144,13 +167,21 @@ export function scriptedChild(
   };
 }
 
-export function hostOver(scripted: { child: EngineChild }, knownSlugs: readonly string[] = []) {
+export const grantsNothing: SpendGrantFor = async () =>
+  Promise.resolve({ verdict: 'missing-target' });
+
+export function hostOver(
+  scripted: { child: EngineChild },
+  knownSlugs: readonly string[] = [],
+  grantFor: SpendGrantFor = grantsNothing,
+) {
   const spawns: number[] = [];
 
   return {
     spawns,
     host: createEngineHost({
       knownSlugs,
+      grantFor,
       spawnChild: () => {
         spawns.push(spawns.length);
 

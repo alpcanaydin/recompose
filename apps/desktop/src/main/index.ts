@@ -4,6 +4,8 @@ import { app, BrowserWindow, nativeTheme, safeStorage, shell } from 'electron';
 import { join } from 'path';
 
 import type { EngineHost } from './engine-host/engine-host';
+import type { SpendGrantFor } from './engine-host/engine-spend';
+import type { SpendGrantContext } from './engine-host/spend-grant';
 import type { IpcHandlers } from './ipc/dispatch';
 import type { KeyCheckIpcContext } from './ipc/key-check-ipc';
 import type { StorageIpcContext } from './ipc/storage-context';
@@ -14,10 +16,12 @@ import { createEngineHost } from './engine-host/engine-host';
 import { createGatewayLifecycleRequests } from './engine-host/gateway-lifecycle-requests';
 import { probeFreePort } from './engine-host/probe-free-port';
 import { spawnEngineChild } from './engine-host/spawn-engine';
+import { resolveSpendGrant } from './engine-host/spend-grant';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
 import { createLocalRuntimesIpcHandlers } from './ipc/local-runtimes-ipc';
 import { registerIpcHandlers } from './ipc/register-ipc';
+import { storagePathsFor } from './ipc/storage-context';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
 import { createSubscriptionsIpcHandlers } from './ipc/subscriptions-ipc';
 import { createSystemIpcHandlers } from './ipc/system-ipc';
@@ -57,13 +61,9 @@ app.setAboutPanelOptions({ applicationName: 'Recompose' });
 
 let engineHost: EngineHost | null = null;
 
-function gatewaysDir(): string {
-  return join(app.getPath('userData'), 'gateways');
-}
-
 const gatewayLifecycle = createGatewayLifecycleRequests({
   host: () => engineHost,
-  gatewaysDir,
+  userDataPath: () => app.getPath('userData'),
   onCorrupt: (quarantinedPath) => {
     onStorageCorrupt(quarantinedPath);
   },
@@ -132,36 +132,36 @@ function startStoredGateway(engineHost: EngineHost): StorageIpcContext['startGat
   };
 }
 
+function storageReach(): SpendGrantContext {
+  return {
+    userDataPath: app.getPath('userData'),
+    homeFolder: app.getPath('home'),
+    getCodec: () => createSafeStorageCodec(),
+    onCorrupt: onStorageCorrupt,
+  };
+}
+
 function storageContext(
   engineHost: EngineHost,
   custody: CredentialCustody | null,
 ): StorageIpcContext {
-  const userDataPath = app.getPath('userData');
+  const reach = storageReach();
 
   return {
-    userDataPath,
-    getCodec: () => createSafeStorageCodec(),
+    ...reach,
     isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
-    onCorrupt: onStorageCorrupt,
-    homeFolder: app.getPath('home'),
     readLoginItem: () => loginItem.isEnabled(),
     applySettings: applyChosenSettingsNow,
     startGateway: startStoredGateway(engineHost),
     releaseSubscription: subscriptionRelease(
-      subscriptionHomes(userDataPath, process.platform),
+      subscriptionHomes(reach.userDataPath, process.platform),
       custody,
     ),
   };
 }
 
 function keyCheckContext(engineHost: EngineHost): KeyCheckIpcContext {
-  return {
-    userDataPath: app.getPath('userData'),
-    homeFolder: app.getPath('home'),
-    getCodec: () => createSafeStorageCodec(),
-    onCorrupt: onStorageCorrupt,
-    probe: async (provider, key) => engineHost.probe(provider, key),
-  };
+  return { ...storageReach(), probe: async (provider, key) => engineHost.probe(provider, key) };
 }
 
 function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
@@ -214,7 +214,7 @@ function pushEngineStates(states: EngineStates): void {
 }
 
 function repaintTray(states: EngineStates): void {
-  listGatewayConfigs(gatewaysDir(), onStorageCorrupt)
+  listGatewayConfigs(storagePathsFor(app.getPath('userData')).gatewaysDir, onStorageCorrupt)
     .then((stored) => {
       refreshMenuBarTray(
         stored.map((gateway) => ({ slug: gateway.slug, displayName: gateway.displayName })),
@@ -245,7 +245,10 @@ async function startRecompose(): Promise<void> {
 
   const boot = await storedBootState(app.getPath('userData'), onStorageCorrupt);
 
-  engineHost = createEngineHost({ knownSlugs: boot.slugs, spawnChild: spawnEngineChild });
+  const grantFor: SpendGrantFor = async (slug, model) =>
+    resolveSpendGrant(storageReach(), slug, model);
+
+  engineHost = createEngineHost({ knownSlugs: boot.slugs, spawnChild: spawnEngineChild, grantFor });
   engineHost.onStatesChanged(pushEngineStates);
   engineHost.onStatesChanged(repaintTray);
   repaintTray(engineHost.states());

@@ -9,6 +9,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { EngineChild } from './engine-host';
 
 import { createEngineHost, DIRECTIVE_TIMEOUT_MS } from './engine-host';
+import { grantsNothing } from './engine-host.testkit';
 
 const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
@@ -25,7 +26,13 @@ function scriptedChild(answer: Answer) {
   };
 
   const child: EngineChild = {
-    postMessage: (directive) => {
+    postMessage: (message) => {
+      if (message.kind === 'spend-grant') {
+        return;
+      }
+
+      const directive = message;
+
       directives.push(directive);
 
       if (directive.kind !== 'start' && directive.kind !== 'stop') {
@@ -53,7 +60,13 @@ function scriptedChild(answer: Answer) {
 }
 
 function hostOver(scripted: { child: EngineChild }, knownSlugs: readonly string[] = []) {
-  return { host: createEngineHost({ knownSlugs, spawnChild: () => scripted.child }) };
+  return {
+    host: createEngineHost({
+      knownSlugs,
+      grantFor: grantsNothing,
+      spawnChild: () => scripted.child,
+    }),
+  };
 }
 
 const asAsked: Answer = (directive) =>
@@ -253,6 +266,7 @@ describe('when the engine child will not spawn at all', () => {
   test('the failure carries out rather than leaving the caller waiting', async () => {
     const host = createEngineHost({
       knownSlugs: [],
+      grantFor: grantsNothing,
       spawnChild: () => {
         throw new Error('the engine bundle is missing');
       },

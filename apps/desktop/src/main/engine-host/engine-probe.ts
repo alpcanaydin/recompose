@@ -113,7 +113,7 @@ async function sendAndWait<Report>(
   });
 }
 
-export async function sendProbe(
+async function sendProbe(
   desk: ProbeDesk<KeyCheckReport>,
   engine: ProbePort,
   provider: KeyProviderId,
@@ -131,7 +131,7 @@ export async function sendProbe(
   );
 }
 
-export async function sendRuntimeProbe(
+async function sendRuntimeProbe(
   desk: ProbeDesk<RuntimeReachability>,
   engine: ProbePort,
   address: string,
@@ -146,4 +146,47 @@ export async function sendRuntimeProbe(
       why: `recompose could not look at the runtime at ${address} within ${String(PROBE_TIMEOUT_MS)}ms.`,
     },
   );
+}
+
+export async function probeThroughTheChild(
+  desk: ProbeDesk<KeyCheckReport>,
+  engineOf: () => ProbePort,
+  provider: KeyProviderId,
+  key: string,
+): Promise<KeyCheckReport> {
+  let engine: ProbePort;
+
+  try {
+    engine = engineOf();
+  } catch (error) {
+    console.error(
+      `recompose could not check the ${provider} key, because the engine would not spawn.`,
+      error,
+    );
+
+    return { verdict: 'could-not-check' };
+  }
+
+  return sendProbe(desk, engine, provider, key);
+}
+
+export async function lookAtTheRuntimeThroughTheChild(
+  desk: ProbeDesk<RuntimeReachability>,
+  engineOf: () => ProbePort,
+  address: string,
+): Promise<RuntimeReachability> {
+  let engine: ProbePort;
+
+  try {
+    engine = engineOf();
+  } catch (error) {
+    console.error(
+      `recompose could not look at the runtime at ${address}, because the engine would not spawn.`,
+      error,
+    );
+
+    return { verdict: 'unreachable' };
+  }
+
+  return sendRuntimeProbe(desk, engine, address);
 }

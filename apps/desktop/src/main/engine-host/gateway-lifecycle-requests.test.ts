@@ -55,7 +55,8 @@ function recordingHost() {
 }
 
 async function directoryHolding(stored: readonly GatewayConfig[]): Promise<string> {
-  const gatewaysDir = join(await mkdtemp(join(tmpdir(), 'recompose-lifecycle-')), 'gateways');
+  const userDataPath = await mkdtemp(join(tmpdir(), 'recompose-lifecycle-'));
+  const gatewaysDir = join(userDataPath, 'gateways');
 
   await mkdir(gatewaysDir, { recursive: true });
 
@@ -63,17 +64,17 @@ async function directoryHolding(stored: readonly GatewayConfig[]): Promise<strin
     await writeFile(join(gatewaysDir, `${config.slug}.json`), JSON.stringify(config), 'utf8');
   }
 
-  return gatewaysDir;
+  return userDataPath;
 }
 
 function complained(spy: { mock: { calls: unknown[][] } }): string {
   return spy.mock.calls.flat().map(String).join(' ');
 }
 
-function requestsOver(host: EngineHost | null, gatewaysDir: string) {
+function requestsOver(host: EngineHost | null, userDataPath: string) {
   return createGatewayLifecycleRequests({
     host: () => host,
-    gatewaysDir: () => gatewaysDir,
+    userDataPath: () => userDataPath,
     onCorrupt: () => undefined,
   });
 }
@@ -163,7 +164,7 @@ describe('a request the engine cannot answer', () => {
     const recorded = recordingHost();
     const requests = createGatewayLifecycleRequests({
       host: () => null,
-      gatewaysDir: () => tmpdir(),
+      userDataPath: () => tmpdir(),
       onCorrupt: () => undefined,
     });
 

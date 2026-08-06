@@ -2,7 +2,7 @@ import { type EngineGateway } from '@recompose/contracts';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { createEngineHost, PROBE_TIMEOUT_MS } from './engine-host';
-import { hostOver, nothing, running, scriptedChild } from './engine-host.testkit';
+import { grantsNothing, hostOver, nothing, running, scriptedChild } from './engine-host.testkit';
 
 const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 const key = 'sk-ant-api03-long-secret-7f2c';
@@ -144,6 +144,7 @@ describe('a probe that never draws an answer', () => {
     const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const host = createEngineHost({
       knownSlugs: [],
+      grantFor: grantsNothing,
       spawnChild: () => {
         throw new Error('the engine bundle is missing');
       },
