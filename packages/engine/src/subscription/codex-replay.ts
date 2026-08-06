@@ -1,6 +1,7 @@
 import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { observingSseLines } from './observing-sse';
 
 type ReplayTurn = {
   reasoning: JsonObject[];
@@ -223,26 +224,9 @@ function observingStream(
   commit: (output: unknown) => void,
   clear: () => void,
 ): ReadableStream<Uint8Array> {
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  return body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        controller.enqueue(chunk);
-        buffer += decoder.decode(chunk, { stream: true });
-        const lines = buffer.split('\n');
-
-        buffer = lines.pop() ?? '';
-        lines.forEach((line) => {
-          observeLine(line, commit, clear);
-        });
-      },
-      flush() {
-        observeLine(buffer + decoder.decode(), commit, clear);
-      },
-    }),
-  );
+  return observingSseLines(body, (line) => {
+    observeLine(line, commit, clear);
+  });
 }
 
 function observableBody(response: Response): ReadableStream<Uint8Array> | undefined {

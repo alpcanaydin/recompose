@@ -8,6 +8,7 @@ import type { ParsedSubscriptionCredential } from './credentials';
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
+import { AntigravityReasoningReplay, replayedAntigravityBody } from './antigravity-replay';
 import { antigravityProviderRequest } from './antigravity-request';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
@@ -37,6 +38,7 @@ export type SubscriptionRuntime = {
   fetchClaudeProfile: (accessToken: string) => Promise<ClaudeProfile>;
   diagnostics: ClaudeDiagnostics;
   codexReplay?: CodexReasoningReplay;
+  antigravityReplay?: AntigravityReasoningReplay;
 };
 
 export function subscriptionRuntime(
@@ -54,6 +56,7 @@ export function subscriptionRuntime(
     fetchClaudeProfile,
     diagnostics: new ClaudeDiagnostics(),
     codexReplay: new CodexReasoningReplay(),
+    antigravityReplay: new AntigravityReasoningReplay(),
   };
 }
 
@@ -109,9 +112,16 @@ function providerRequestFor(
   }
 
   if (spend.provider === 'antigravity') {
+    const replayed = replayedAntigravityBody(
+      runtime.antigravityReplay,
+      spend.accountId,
+      body,
+      sessionId,
+    );
+
     return antigravityProviderRequest(
       grant.providerOrigin,
-      body,
+      replayed,
       credential,
       { sessionId, requestId: runtime.randomUUID() },
       runtime.now(),

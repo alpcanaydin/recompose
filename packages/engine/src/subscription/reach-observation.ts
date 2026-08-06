@@ -1,9 +1,15 @@
 import type { SpendGrant } from '@recompose/contracts';
 
 import type { JsonObject, ProxyDialect } from '../gateway-wire';
+import type { AntigravityReasoningReplay } from './antigravity-replay';
 import type { ClaudeDiagnostics } from './claude-diagnostics';
 import type { CodexReasoningReplay } from './codex-replay';
 
+import {
+  antigravityReplayKey,
+  antigravityUsesReplay,
+  observeAntigravityReasoning,
+} from './antigravity-replay';
 import { observeClaudeDiagnostics } from './claude-diagnostics';
 import { observeCodexReasoning } from './codex-replay';
 
@@ -11,6 +17,7 @@ type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
 type ObservationRuntime = {
   diagnostics: ClaudeDiagnostics;
   codexReplay?: CodexReasoningReplay;
+  antigravityReplay?: AntigravityReasoningReplay;
 };
 
 function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
@@ -55,6 +62,23 @@ function observesCodex(
   );
 }
 
+function observesAntigravity(
+  grant: ResolvedGrant,
+  runtime: ObservationRuntime,
+  body: JsonObject,
+): boolean {
+  return (
+    grant.spend.custody === 'subscription' &&
+    grant.spend.provider === 'antigravity' &&
+    runtime.antigravityReplay !== undefined &&
+    antigravityUsesReplay(body)
+  );
+}
+
+function subscriptionAccountId(grant: ResolvedGrant): string {
+  return grant.spend.custody === 'subscription' ? grant.spend.accountId : '';
+}
+
 export async function observeSubscriptionAnswer(
   grant: ResolvedGrant,
   body: JsonObject,
@@ -63,6 +87,16 @@ export async function observeSubscriptionAnswer(
   sessionId: string,
   sourceDialect: ProxyDialect,
 ): Promise<Response> {
+  if (observesAntigravity(grant, runtime, body)) {
+    const key = antigravityReplayKey(subscriptionAccountId(grant), body, sessionId);
+
+    return observeAntigravityReasoning(
+      answer,
+      (items) => runtime.antigravityReplay?.commit(key, items),
+      () => runtime.antigravityReplay?.clear(key),
+    );
+  }
+
   if (!observesCodex(grant, runtime, sourceDialect)) {
     return observeClaudeAnswer(grant, answer, runtime, sessionId);
   }
