@@ -1,7 +1,7 @@
 import type { ElectronApplication } from '@playwright/test';
 
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { userDataFolder } from './provider-screen';
@@ -32,6 +32,18 @@ export async function vaultBytes(app: ElectronApplication): Promise<string> {
   const file = await vaultFile(app);
 
   return existsSync(file) ? readFile(file, 'utf8') : '';
+}
+
+/**
+ * Takes the vault off the machine, leaving every stored account naming a secret nothing holds.
+ *
+ * @summary A machine restored without the file the keychain opened, or a home folder carried across
+ * without it, leaves exactly this: rows that still name a credential and a vault that cannot answer
+ * for one. The arrangement removes the file rather than editing it, because only main ever writes a
+ * vault, and the shipped lapse arrangement removes a provider tool's credentials the same way.
+ */
+export async function vaultLeavesTheMachine(app: ElectronApplication): Promise<void> {
+  await rm(await vaultFile(app), { force: true });
 }
 
 /** How many secrets the vault holds, which is none while the app has kept nothing in it. */

@@ -111,12 +111,16 @@ function unheldSlug(slug: string): { code: 'storage-failed'; message: string } {
   };
 }
 
+type Landing = { ok: true; value: GatewayConfig[] };
+
 type GatewayStore = {
   held: () => GatewayConfig[];
   freePort: () => number;
   states: () => EngineStates;
+  isServing: (slug: string) => boolean;
   report: (slug: string, state: EngineStates[string]) => void;
-  land: (next: readonly GatewayConfig[], slug: string) => { ok: true; value: GatewayConfig[] };
+  land: (next: readonly GatewayConfig[], slug: string) => Landing;
+  landWithoutServing: (next: readonly GatewayConfig[]) => Landing;
 };
 
 function openGatewayStore(
@@ -143,10 +147,16 @@ function openGatewayStore(
       return offer;
     },
     states: () => states,
+    isServing: (slug) => states[slug]?.status === 'running',
     report,
     land: (next, slug) => {
       stored = [...next];
       report(slug, { status: 'running' });
+
+      return { ok: true as const, value: stored };
+    },
+    landWithoutServing: (next) => {
+      stored = [...next];
 
       return { ok: true as const, value: stored };
     },
@@ -180,12 +190,12 @@ function rewritingGateway(store: GatewayStore): GatewayHandlers['gateways:update
     }
 
     const rewritten = { ...gateway, port: held.port };
+    const next = store.held().map((one) => (one.slug === gateway.slug ? rewritten : one));
 
     return Promise.resolve(
-      store.land(
-        store.held().map((one) => (one.slug === gateway.slug ? rewritten : one)),
-        gateway.slug,
-      ),
+      store.isServing(gateway.slug)
+        ? store.land(next, gateway.slug)
+        : store.landWithoutServing(next),
     );
   };
 }
@@ -195,7 +205,9 @@ function rewritingGateway(store: GatewayStore): GatewayHandlers['gateways:update
  *
  * @summary The save refuses a slug or a port already held and the update refuses a slug nothing is
  * held under, because a scenario that goes green over a double contradicting main proves nothing. A
- * write of either kind serves at once, the way main hands the engine the fresh snapshot.
+ * save serves at once, the way main hands the engine the fresh snapshot. An update serves only what
+ * was already serving, because main leaves a gateway a person stopped stopped, and a fake that
+ * started one would let a surface go green over a stop it quietly undid.
  */
 export function gatewayHandlers(
   seededGateways: readonly GatewayConfig[],

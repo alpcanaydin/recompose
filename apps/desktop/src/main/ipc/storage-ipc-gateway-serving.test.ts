@@ -116,7 +116,7 @@ describe('what a rewrite asks the engine for', () => {
     const orphan: VirtualModel = {
       id: 'gone',
       displayName: 'Gone',
-      target: { accountId: 'acc-plan', providerModel: 'claude-opus-5' },
+      target: { accountId: 'acc-vanished', providerModel: 'claude-opus-5' },
     };
 
     await desk.handlers['gateways:update'](gatewayServing([orphan]));

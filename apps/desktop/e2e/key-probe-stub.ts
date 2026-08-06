@@ -6,74 +6,170 @@ import { bindToAFreePort } from './loopback-ports';
 
 const MODELS_PATH = '/v1/models';
 
+const TURN_PATH = '/v1/chat/completions';
+
 const ACCEPTED = 200;
 
 const TURNED_AWAY = 401;
 
 const NOTHING_THERE = 404;
 
+/** The model ids the stand-in provider serves, which a scenario binds a virtual model to. */
+export const modelsTheProviderServes = ['claude-sonnet-5', 'claude-haiku-5'] as const;
+
+/** The words the stand-in provider answers a turn with, so a scenario reads the answer back. */
+export const answerTheProviderGives = 'The target answered.';
+
 /** How the provider answers the next check, which a scenario scripts before it asks for one. */
 type ProviderAnswer = 'accepts' | 'turns-away' | 'refuses-the-connection';
 
+type ProviderDesk = {
+  answer: ProviderAnswer;
+  asked: string[];
+};
+
 /** Stands in for the vendors' own hosts, so a scenario decides what a stored key hears back. */
 export type KeyProbeStub = {
-  /** The loopback origin the engine child probes in place of the vendors' first-party hosts. */
+  /** The loopback origin recompose looks at and serves against in place of the vendors' hosts. */
   origin: string;
   accepts: () => void;
   turnsAway: () => void;
   cannotBeReached: () => void;
+  /**
+   * Every model the provider was asked for this run, in the order it was asked.
+   *
+   * @summary The model name is the whole of what is kept, because a failing assertion prints what
+   * it compared and a turn also carries the credential that opened it.
+   */
+  modelsAsked: () => readonly string[];
   dispose: () => Promise<void>;
 };
 
-function answerAsked(
-  answer: ProviderAnswer,
+function catalogBody(): string {
+  return JSON.stringify({
+    object: 'list',
+    data: modelsTheProviderServes.map((id) => ({ id, object: 'model' })),
+  });
+}
+
+function turnAnswerBody(model: string): string {
+  return JSON.stringify({
+    id: 'chatcmpl-stand-in',
+    object: 'chat.completion',
+    model,
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: answerTheProviderGives },
+        finish_reason: 'stop',
+      },
+    ],
+    usage: { prompt_tokens: 3, completion_tokens: 4, total_tokens: 7 },
+  });
+}
+
+async function bodyOf(request: IncomingMessage): Promise<string> {
+  return new Promise<string>((settle) => {
+    let text = '';
+
+    request.setEncoding('utf8');
+    request.on('data', (chunk: string) => {
+      text += chunk;
+    });
+    request.on('end', () => {
+      settle(text);
+    });
+  });
+}
+
+function modelNamedIn(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+
+    return typeof parsed === 'object' && parsed !== null && 'model' in parsed
+      ? String(parsed.model)
+      : '';
+  } catch {
+    return '';
+  }
+}
+
+function answerTheLook(desk: ProviderDesk, response: ServerResponse): void {
+  response.writeHead(desk.answer === 'accepts' ? ACCEPTED : TURNED_AWAY, {
+    'content-type': 'application/json',
+  });
+  response.end(catalogBody());
+}
+
+async function answerTheTurn(
+  desk: ProviderDesk,
   request: IncomingMessage,
   response: ServerResponse,
-): void {
-  if (answer === 'refuses-the-connection') {
+): Promise<void> {
+  const model = modelNamedIn(await bodyOf(request));
+
+  desk.asked.push(model);
+  response.writeHead(ACCEPTED, { 'content-type': 'application/json' });
+  response.end(turnAnswerBody(model));
+}
+
+async function answerAsked(
+  desk: ProviderDesk,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  if (desk.answer === 'refuses-the-connection') {
     request.socket.destroy();
 
     return;
   }
 
-  if (request.url !== MODELS_PATH) {
-    response.writeHead(NOTHING_THERE).end();
+  if (request.url === MODELS_PATH) {
+    answerTheLook(desk, response);
 
     return;
   }
 
-  response.writeHead(answer === 'accepts' ? ACCEPTED : TURNED_AWAY, {
-    'content-type': 'application/json',
-  });
-  response.end(JSON.stringify({ data: [] }));
+  if (request.url === TURN_PATH) {
+    return answerTheTurn(desk, request, response);
+  }
+
+  response.writeHead(NOTHING_THERE).end();
 }
 
 /**
- * A stand-in for both vendors' `/v1/models`, bound on loopback so the engine child will use it.
+ * A stand-in for both vendors' own host, bound on loopback so recompose will reach it.
  *
- * @summary The child honors a probe origin only when it names a loopback host, so the stub binds
- * `127.0.0.1` and hands that origin over beside the launcher and keychain overrides. One server
- * answers both vendors, because the two differ by the header they send rather than by the path
- * they ask for, and the answer it gives is whatever the scenario last scripted.
+ * @summary Neither the engine child nor main honors an origin override unless it names a loopback
+ * host, so the stub binds `127.0.0.1` and hands that origin over beside the launcher and keychain
+ * overrides. One server answers both vendors, because the two differ by the header they send rather
+ * than by the path they ask for. It answers the three things a scenario needs offline: the probe
+ * that asks whether a key authenticates, the catalog a live model list is read from, and the turn a
+ * gateway forwards under a real model name. The look answers whatever the scenario last scripted,
+ * and the model each turn asked for is kept so a scenario can prove what left the machine.
  */
 export async function fakeKeyProbe(): Promise<KeyProbeStub> {
-  let answer: ProviderAnswer = 'accepts';
+  const desk: ProviderDesk = { answer: 'accepts', asked: [] };
   const server = createServer((request, response) => {
-    answerAsked(answer, request, response);
+    answerAsked(desk, request, response).catch((failure: unknown) => {
+      console.error('the stand-in provider could not answer a request', failure);
+      response.writeHead(NOTHING_THERE).end();
+    });
   });
   const port = await bindToAFreePort(server, '127.0.0.1');
 
   return {
     origin: `http://127.0.0.1:${String(port)}`,
     accepts: () => {
-      answer = 'accepts';
+      desk.answer = 'accepts';
     },
     turnsAway: () => {
-      answer = 'turns-away';
+      desk.answer = 'turns-away';
     },
     cannotBeReached: () => {
-      answer = 'refuses-the-connection';
+      desk.answer = 'refuses-the-connection';
     },
+    modelsAsked: () => desk.asked,
     dispose: async () =>
       new Promise<void>((settle) => {
         server.closeAllConnections();

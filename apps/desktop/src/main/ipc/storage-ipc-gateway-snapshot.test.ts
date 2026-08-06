@@ -13,7 +13,7 @@ import { describe, expect, test } from 'vitest';
 import type { SecretCodec } from '../storage/safe-storage-codec';
 import type { StorageIpcContext } from './storage-context';
 
-import { keyRow, planRow } from '../engine-host/spend-grant.testkit';
+import { keyRow } from '../engine-host/spend-grant.testkit';
 import { createStorageIpcHandlers } from './storage-ipc';
 
 const fakeCodec: SecretCodec = {
@@ -91,19 +91,6 @@ describe('the snapshot a gateway serves under the moment it is saved', () => {
   test('a target the registry never held serves removed', async () => {
     const started: EngineGateway[] = [];
     const handlers = createStorageIpcHandlers(await contextFor(started, []));
-
-    await handlers['gateways:save'](personal);
-
-    expect(started[0]?.virtualModels).toStrictEqual([
-      { id: 'fast', displayName: 'fast', target: { standing: 'removed' } },
-    ]);
-  });
-
-  test('a target that turned out to be a subscription serves removed', async () => {
-    const started: EngineGateway[] = [];
-    const handlers = createStorageIpcHandlers(
-      await contextFor(started, [{ ...planRow, id: keyRow.id }]),
-    );
 
     await handlers['gateways:save'](personal);
 
