@@ -54,8 +54,9 @@ function antigravityCountRequest(
   grant: ResolvedGrant,
   body: JsonObject,
   credential: ParsedSubscriptionCredential,
+  sensitiveWords: readonly string[] | undefined,
 ): ProviderRequest {
-  return antigravityCountTokensRequest(grant.providerOrigin, body, credential);
+  return antigravityCountTokensRequest(grant.providerOrigin, body, credential, sensitiveWords);
 }
 
 export async function reachAntigravityCount(
@@ -70,7 +71,7 @@ export async function reachAntigravityCount(
   const ready = await readySubscriptionCredential(grant.spend, runtime);
   const answer = await runtime.send(
     'antigravity',
-    antigravityCountRequest(grant, body, ready.credential),
+    antigravityCountRequest(grant, body, ready.credential, runtime.antigravitySensitiveWords),
   );
 
   if (!shouldRefreshUnauthorized(answer, ready.credential)) {
@@ -79,5 +80,8 @@ export async function reachAntigravityCount(
 
   const retried = await refreshedAndPersisted(grant.spend, ready.blob, runtime);
 
-  return runtime.send('antigravity', antigravityCountRequest(grant, body, retried.credential));
+  return runtime.send(
+    'antigravity',
+    antigravityCountRequest(grant, body, retried.credential, runtime.antigravitySensitiveWords),
+  );
 }

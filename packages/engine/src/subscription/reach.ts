@@ -44,6 +44,7 @@ export type SubscriptionRuntime = {
   diagnostics: ClaudeDiagnostics;
   codexReplay?: CodexReasoningReplay;
   antigravityReplay?: AntigravityReasoningReplay;
+  antigravitySensitiveWords?: readonly string[];
 };
 
 export function subscriptionRuntime(
@@ -107,6 +108,7 @@ function providerRequestFor(
       credential,
       { sessionId, requestId: runtime.randomUUID() },
       runtime.now(),
+      runtime.antigravitySensitiveWords,
     );
   }
 

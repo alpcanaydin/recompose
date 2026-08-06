@@ -5,6 +5,7 @@ import type { ParsedSubscriptionCredential } from './credentials';
 import { isJsonObject } from '../gateway-wire';
 import { normalizeAntigravityFunctionHistory } from './antigravity-function-history';
 import { cleanAntigravityRequestSchemas } from './antigravity-request-schemas';
+import { obfuscateAntigravitySystemInstruction } from './antigravity-sensitive-words';
 import { sanitizeAntigravitySignatures } from './antigravity-signatures';
 
 const USER_AGENT = 'antigravity/hub';
@@ -33,7 +34,11 @@ function validatedClaudeTools(request: JsonObject): void {
   };
 }
 
-function nestedRequest(body: JsonObject, model: string): JsonObject {
+function nestedRequest(
+  body: JsonObject,
+  model: string,
+  sensitiveWords: readonly string[],
+): JsonObject {
   const {
     model: _model,
     stream: _stream,
@@ -42,6 +47,7 @@ function nestedRequest(body: JsonObject, model: string): JsonObject {
   } = structuredClone(body);
 
   delete request['safetySettings'];
+  obfuscateAntigravitySystemInstruction(request, sensitiveWords);
   cleanAntigravityRequestSchemas(request, model);
   sanitizeAntigravitySignatures(request, model);
   normalizeAntigravityFunctionHistory(request);
@@ -71,15 +77,20 @@ function requestId(model: string, id: string, now: number): string {
   return model.includes('image') ? `image_gen/${String(now)}/${id}/12` : `agent-${id}`;
 }
 
+function configuredWords(words: readonly string[] | undefined): readonly string[] {
+  return words ?? [];
+}
+
 export function antigravityProviderRequest(
   providerOrigin: string,
   body: JsonObject,
   credential: ParsedSubscriptionCredential,
   ids: { requestId: string; sessionId: string },
   now: number,
+  sensitiveWords?: readonly string[],
 ): ProviderRequest {
   const model = modelOf(body);
-  const request = nestedRequest(body, model);
+  const request = nestedRequest(body, model, configuredWords(sensitiveWords));
 
   if (requestType(body, model) !== 'web_search') {
     request['sessionId'] = request['sessionId'] ?? ids.sessionId;
@@ -112,9 +123,10 @@ export function antigravityCountTokensRequest(
   providerOrigin: string,
   body: JsonObject,
   credential: ParsedSubscriptionCredential,
+  sensitiveWords?: readonly string[],
 ): ProviderRequest {
   const model = modelOf(body);
-  const request = nestedRequest(body, model);
+  const request = nestedRequest(body, model, configuredWords(sensitiveWords));
 
   return {
     url: `${providerOrigin.replace(/\/+$/u, '')}/v1internal:countTokens`,
