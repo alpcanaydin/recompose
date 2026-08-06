@@ -83,11 +83,16 @@ export const engineSpendRequestSchema = z.strictObject({
 
 export type EngineSpendRequest = z.infer<typeof engineSpendRequestSchema>;
 
+const grantedSpendSchema = z.discriminatedUnion('custody', [
+  z.strictObject({ custody: z.literal('credentialed'), credential: nonBlankString }),
+  z.strictObject({ custody: z.literal('open') }),
+]);
+
 export const spendGrantSchema = z.discriminatedUnion('verdict', [
   z.strictObject({
     verdict: z.literal('resolved'),
-    credential: nonBlankString,
     providerOrigin: nonBlankString,
+    spend: grantedSpendSchema,
   }),
   z.strictObject({ verdict: z.literal('missing-target') }),
   z.strictObject({ verdict: z.literal('missing-credential') }),

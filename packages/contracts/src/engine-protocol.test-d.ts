@@ -24,6 +24,12 @@ type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
 
 type RefusedGrant = Exclude<SpendGrant, { verdict: 'resolved' }>;
 
+type GrantedSpend = ResolvedGrant['spend'];
+
+type CredentialedSpend = Extract<GrantedSpend, { custody: 'credentialed' }>;
+
+type OpenSpend = Extract<GrantedSpend, { custody: 'open' }>;
+
 type RuntimeProbeDirective = Extract<EngineDirective, { kind: 'probe-runtime' }>;
 
 type KeyCheckReportArm = Extract<EngineReport, { kind: 'key-check' }>;
@@ -160,12 +166,10 @@ describe('the grant lane one spend rides', () => {
     >();
   });
 
-  test('a resolved grant carries the credential and the origin, and nothing else', () => {
-    expectTypeOf<keyof ResolvedGrant>().toEqualTypeOf<
-      'verdict' | 'credential' | 'providerOrigin'
-    >();
-    expectTypeOf<ResolvedGrant['credential']>().toEqualTypeOf<string>();
+  test('a resolved grant carries the origin and the spend it authorizes, and nothing else', () => {
+    expectTypeOf<keyof ResolvedGrant>().toEqualTypeOf<'verdict' | 'providerOrigin' | 'spend'>();
     expectTypeOf<ResolvedGrant['providerOrigin']>().toEqualTypeOf<string>();
+    expectTypeOf<ResolvedGrant>().not.toHaveProperty('credential');
   });
 
   test('a refusal names its state and carries no sentence and no credential', () => {
@@ -182,5 +186,26 @@ describe('the grant lane one spend rides', () => {
     expectTypeOf<EngineSpendGrant['kind']>().toEqualTypeOf<'spend-grant'>();
     expectTypeOf<EngineSpendGrant['answers']>().toEqualTypeOf<string>();
     expectTypeOf<EngineSpendGrant['grant']>().toEqualTypeOf<SpendGrant>();
+  });
+});
+
+describe('the spend a resolved grant authorizes', () => {
+  test('a spend is credentialed or open, so one branch decides the header', () => {
+    expectTypeOf<GrantedSpend['custody']>().toEqualTypeOf<'credentialed' | 'open'>();
+  });
+
+  test('a credentialed spend carries the credential, and nothing else', () => {
+    expectTypeOf<keyof CredentialedSpend>().toEqualTypeOf<'custody' | 'credential'>();
+    expectTypeOf<CredentialedSpend['credential']>().toEqualTypeOf<string>();
+  });
+
+  test('an open spend admits no credential key at all, rather than an absent one', () => {
+    expectTypeOf<OpenSpend>().toEqualTypeOf<{ custody: 'open' }>();
+    expectTypeOf<keyof OpenSpend>().toEqualTypeOf<'custody'>();
+    expectTypeOf<OpenSpend>().not.toHaveProperty('credential');
+  });
+
+  test('a refusal authorizes no spend', () => {
+    expectTypeOf<RefusedGrant>().not.toHaveProperty('spend');
   });
 });

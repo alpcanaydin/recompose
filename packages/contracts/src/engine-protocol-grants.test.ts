@@ -14,10 +14,24 @@ const resolved = {
   answers: 'g1',
   grant: {
     verdict: 'resolved',
-    credential: 'sk-ant-api03-9f2c',
     providerOrigin: 'https://api.anthropic.com',
+    spend: { custody: 'credentialed', credential: 'sk-ant-api03-9f2c' },
   },
 };
+
+const openToALocalRuntime = {
+  kind: 'spend-grant',
+  answers: 'g1',
+  grant: {
+    verdict: 'resolved',
+    providerOrigin: 'http://127.0.0.1:11434',
+    spend: { custody: 'open' },
+  },
+};
+
+function aGrantSpending(spend: unknown): unknown {
+  return { ...resolved, grant: { ...resolved.grant, spend } };
+}
 
 describe('the ask a serving gateway sends the parent for one spend', () => {
   test('a spend request names the gateway and the virtual model the traffic arrived under', () => {
@@ -59,17 +73,8 @@ describe('the ask a serving gateway sends the parent for one spend', () => {
 });
 
 describe('the grant the parent answers a spend request with', () => {
-  test('a resolved grant carries the credential and the origin it may be spent at', () => {
+  test('a resolved grant for a credentialed target carries the credential beside the origin', () => {
     expect(engineSpendGrantSchema.parse(resolved)).toEqual(resolved);
-  });
-
-  test('a resolved grant carrying a blank credential is refused, because it would spend nothing', () => {
-    expect(() =>
-      engineSpendGrantSchema.parse({
-        ...resolved,
-        grant: { ...resolved.grant, credential: '   ' },
-      }),
-    ).toThrow();
   });
 
   test('a resolved grant naming no origin is refused, because the spend would reach nowhere', () => {
@@ -88,6 +93,59 @@ describe('the grant the parent answers a spend request with', () => {
 
   test('a grant answering a blank identifier is refused', () => {
     expect(() => engineSpendGrantSchema.parse({ ...resolved, answers: '   ' })).toThrow();
+  });
+});
+
+describe('the spend a resolved grant authorizes', () => {
+  test('a local target resolves open, carrying the origin its runtime answers on', () => {
+    expect(engineSpendGrantSchema.parse(openToALocalRuntime)).toEqual(openToALocalRuntime);
+  });
+
+  test('an open spend carries no credential under any name, because a local account stores none', () => {
+    for (const smuggled of [
+      { credential: 'sk-ant-api03-9f2c' },
+      { key: 'sk-ant-api03-9f2c' },
+      { token: 'sk-ant-api03-9f2c' },
+      { authorization: 'Bearer sk-ant-api03-9f2c' },
+    ]) {
+      expect(() =>
+        engineSpendGrantSchema.parse(aGrantSpending({ custody: 'open', ...smuggled })),
+      ).toThrow();
+    }
+  });
+
+  test('a credentialed spend naming no credential is refused, because it authorizes nothing', () => {
+    expect(() =>
+      engineSpendGrantSchema.parse(aGrantSpending({ custody: 'credentialed' })),
+    ).toThrow();
+  });
+
+  test('a credentialed spend carrying a blank credential is refused', () => {
+    expect(() =>
+      engineSpendGrantSchema.parse(aGrantSpending({ custody: 'credentialed', credential: '   ' })),
+    ).toThrow();
+  });
+
+  test('a custody outside the credentialed and the open one is refused', () => {
+    for (const custody of ['local', 'subscription', 'none', '']) {
+      expect(() => engineSpendGrantSchema.parse(aGrantSpending({ custody }))).toThrow();
+    }
+  });
+
+  test('a resolved grant naming no spend is refused, because the proxy would not know what to send', () => {
+    const { spend, ...withoutTheSpend } = resolved.grant;
+
+    expect(spend).toEqual({ custody: 'credentialed', credential: 'sk-ant-api03-9f2c' });
+    expect(() => engineSpendGrantSchema.parse({ ...resolved, grant: withoutTheSpend })).toThrow();
+  });
+
+  test('a credential riding beside the spend rather than inside it is refused', () => {
+    expect(() =>
+      engineSpendGrantSchema.parse({
+        ...resolved,
+        grant: { ...resolved.grant, credential: 'sk-ant-api03-9f2c' },
+      }),
+    ).toThrow();
   });
 });
 
@@ -120,6 +178,15 @@ describe('the refusal that stands where a credential would', () => {
       engineSpendGrantSchema.parse({
         ...resolved,
         grant: { verdict: 'missing-target', credential: 'sk-ant-api03-9f2c' },
+      }),
+    ).toThrow();
+  });
+
+  test('a refused grant authorizes no spend, not even an open one', () => {
+    expect(() =>
+      engineSpendGrantSchema.parse({
+        ...resolved,
+        grant: { verdict: 'missing-credential', spend: { custody: 'open' } },
       }),
     ).toThrow();
   });
