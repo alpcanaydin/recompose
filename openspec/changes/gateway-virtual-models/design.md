@@ -136,9 +136,8 @@ The three refusals model expected failures as typed results rather than thrown s
 - `packages/engine/src/engine-runtime.ts`: the resolved bindings enter the running gateway through `start` (modify)
 - `apps/desktop/src/main/engine-host/spend-grants.ts`: the grant round trip resolving a target and its credential (create)
 - `apps/desktop/src/main/ipc/storage-ipc.ts`: `gateways:save` stays create-only, and a `gateways:update` channel rewrites the stored document for an existing slug, because adding a model amends a gateway that already stands (modify)
-- `apps/desktop/src/renderer/src/pages/gateway-canvas/model/*`: the Models list state, pages layer (create)
-- `apps/desktop/src/renderer/src/pages/gateway-canvas/ui/*`: the Models list rows, pages layer (create)
-- `apps/desktop/src/renderer/src/widgets/gateway/add-model/*`: the add-model sheet and its draft hook, widgets layer (create)
+- `apps/desktop/src/renderer/src/pages/gateway-canvas/ui/*`: the stage, the drawer, the Serves rows, and the add-model flow, pages layer (create)
+- `apps/desktop/src/renderer/src/pages/gateway-canvas/model/*` and `lib/*`: the served-models derivation, the draft library, and the draft hook, pages layer (create). The add-model flow lives in the page rather than a widget, because the Feature-Sliced Design insignificant-slice rule merges a one-consumer slice into its consumer.
 - `apps/desktop/src/renderer/src/entities/account/model/account-kind.ts`: the `offeredAccountKind` filter, entities layer (modify)
 - `apps/desktop/src/renderer/src/shared/api/gateways.ts`: the save path carries virtual models (modify)
 - `apps/desktop/src/renderer/src/shared/api/provider-models.ts`: the model-list probe query, shared layer (create)
