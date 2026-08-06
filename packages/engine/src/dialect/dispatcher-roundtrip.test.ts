@@ -2,13 +2,13 @@ import { fc } from '@fast-check/vitest';
 import { describe, expect, it } from 'vitest';
 
 import type {
-  HubContentBlock,
-  HubMessage,
-  HubRequest,
-  HubTextBlock,
-  HubToolResultBlock,
-  HubToolUseBlock,
-} from './hub';
+  AnthropicContentBlock,
+  AnthropicMessage,
+  AnthropicRequest,
+  AnthropicTextBlock,
+  AnthropicToolResultBlock,
+  AnthropicToolUseBlock,
+} from './anthropic-wire';
 import type { ResponsesContentPart, ResponsesInputItem, ResponsesRequest } from './responses-wire';
 
 import { translateRequest } from './dispatcher';
@@ -24,8 +24,8 @@ const toolInput = fc.dictionary(identifier, fc.oneof(fc.string(), fc.integer(), 
 });
 
 function contentBlockSignature(
-  role: HubMessage['role'],
-  block: HubTextBlock | HubToolUseBlock | HubToolResultBlock,
+  role: AnthropicMessage['role'],
+  block: AnthropicTextBlock | AnthropicToolUseBlock | AnthropicToolResultBlock,
 ): unknown {
   switch (block.type) {
     case 'text':
@@ -33,19 +33,19 @@ function contentBlockSignature(
     case 'tool_use':
       return { kind: 'use', id: block.id, name: block.name };
     case 'tool_result':
-      return { kind: 'result', id: block.toolUseId };
+      return { kind: 'result', id: block.tool_use_id };
 
     default: {
       const unhandled: never = block;
 
-      throw new Error(`unhandled hub block: ${JSON.stringify(unhandled)}`);
+      throw new Error(`unhandled wire block: ${JSON.stringify(unhandled)}`);
     }
   }
 }
 
-function blockSignature(role: HubMessage['role'], block: HubContentBlock): unknown {
+function blockSignature(role: AnthropicMessage['role'], block: AnthropicContentBlock): unknown {
   if (block.type === 'thinking') {
-    return { kind: 'thinking', text: block.text };
+    return { kind: 'thinking', text: block.thinking };
   }
 
   if (block.type === 'redacted_thinking') {
@@ -59,31 +59,39 @@ function blockSignature(role: HubMessage['role'], block: HubContentBlock): unkno
   return contentBlockSignature(role, block);
 }
 
-function hubSignature(messages: readonly HubMessage[]): unknown[] {
-  return messages.flatMap((message) =>
-    message.content.map((block) => blockSignature(message.role, block)),
-  );
+function messageSignature(message: AnthropicMessage): unknown[] {
+  if (typeof message.content === 'string') {
+    return [{ kind: 'text', role: message.role, text: message.content }];
+  }
+
+  return message.content.map((block) => blockSignature(message.role, block));
 }
 
-const hubTextTurn = fc
-  .record({ role: fc.constantFrom('user', 'assistant'), text: prose })
-  .map(({ role, text }): HubMessage => ({ role, content: [{ type: 'text', text }] }));
+function wireSignature(messages: readonly AnthropicMessage[]): unknown[] {
+  return messages.flatMap(messageSignature);
+}
 
-const hubToolTurn = fc
+const wireTextTurn = fc
+  .record({ role: fc.constantFrom('user', 'assistant'), text: prose })
+  .map(({ role, text }): AnthropicMessage => ({ role, content: [{ type: 'text', text }] }));
+
+const wireToolTurn = fc
   .record({ id: safeIdentifier, name: identifier, input: toolInput, output: prose })
-  .map(({ id, name, input, output }): HubMessage[] => [
+  .map(({ id, name, input, output }): AnthropicMessage[] => [
     { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] },
     {
       role: 'user',
-      content: [{ type: 'tool_result', toolUseId: id, content: [{ type: 'text', text: output }] }],
+      content: [
+        { type: 'tool_result', tool_use_id: id, content: [{ type: 'text', text: output }] },
+      ],
     },
   ]);
 
-const hubMessages = fc
+const wireMessages = fc
   .array(
     fc.oneof(
-      hubTextTurn.map((turn) => [turn]),
-      hubToolTurn,
+      wireTextTurn.map((turn) => [turn]),
+      wireToolTurn,
     ),
     { minLength: 1, maxLength: 6 },
   )
@@ -102,21 +110,21 @@ function expectTranslatedRequest<Body>(
   return result;
 }
 
-function throughChat(hub: HubRequest): HubRequest {
-  const toChat = expectTranslatedRequest(translateRequest('anthropic', 'chat-completions', hub));
+function throughChat(wire: AnthropicRequest): AnthropicRequest {
+  const toChat = expectTranslatedRequest(translateRequest('anthropic', 'chat-completions', wire));
 
   return expectTranslatedRequest(translateRequest('chat-completions', 'anthropic', toChat.value))
     .value;
 }
 
-describe('the round trip Anthropic to Chat Completions to Anthropic settles the hub', () => {
+describe('the round trip Anthropic to Chat Completions to Anthropic settles the wire', () => {
   it('reaches a fixed point the chat crossing no longer drifts from', () => {
     fc.assert(
-      fc.property(hubMessages, (messages: readonly HubMessage[]) => {
-        const settled = throughChat(throughChat({ messages }));
+      fc.property(wireMessages, (messages: readonly AnthropicMessage[]) => {
+        const settled = throughChat(throughChat({ max_tokens: 1024, messages }));
         const again = throughChat(settled);
 
-        expect(hubSignature(again.messages)).toEqual(hubSignature(settled.messages));
+        expect(wireSignature(again.messages)).toEqual(wireSignature(settled.messages));
       }),
     );
   });
@@ -178,9 +186,9 @@ const responsesInput = fc
   .map((turns) => turns.flat());
 
 function throughAnthropic(responses: ResponsesRequest): ResponsesRequest {
-  const toHub = expectTranslatedRequest(translateRequest('responses', 'anthropic', responses));
+  const toWire = expectTranslatedRequest(translateRequest('responses', 'anthropic', responses));
 
-  return expectTranslatedRequest(translateRequest('anthropic', 'responses', toHub.value)).value;
+  return expectTranslatedRequest(translateRequest('anthropic', 'responses', toWire.value)).value;
 }
 
 describe('the round trip Responses to Anthropic to Responses settles the input', () => {

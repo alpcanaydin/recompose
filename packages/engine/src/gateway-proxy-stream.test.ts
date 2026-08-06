@@ -11,6 +11,7 @@ import {
   aVirtualModel,
   parsedEvents,
   readSseData,
+  readSseEvents,
   servedOrigin,
   sseText,
 } from './gateway-app.testkit';
@@ -49,10 +50,31 @@ async function askStreaming(origin: string, path: string, body: unknown): Promis
   });
 }
 
-const aHubStreamAsk = {
+const aWireStreamAsk = {
   model: 'fast',
+  max_tokens: 1024,
   stream: true,
-  messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+  messages: [{ role: 'user', content: 'hello' }],
+};
+
+const aWireMessageStart = {
+  type: 'message_start',
+  message: {
+    id: 'msg_translated',
+    type: 'message',
+    role: 'assistant',
+    model: 'gpt-5-mini',
+    content: [],
+    stop_reason: null,
+    stop_sequence: null,
+    usage: { input_tokens: 0, output_tokens: 0 },
+  },
+};
+
+const aWireEndDelta = {
+  type: 'message_delta',
+  delta: { stop_reason: 'end_turn', stop_sequence: null },
+  usage: { input_tokens: 0, output_tokens: 0 },
 };
 
 const aChatStreamAsk = {
@@ -70,28 +92,49 @@ function bodyOf(response: Response): ReadableStream<Uint8Array> {
 }
 
 describe('a streamed answer crossing back to an Anthropic caller', () => {
-  test('arrives as hub events in order and ends clean', async () => {
+  test('arrives as named wire events in order and ends clean', async () => {
     running = await servedOrigin(
       anSseProvider(sseText([chunkOf('Hel'), chunkOf('lo'), finishChunk, '[DONE]'])),
     );
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     expect(answer.headers.get('content-type')).toContain('text/event-stream');
     expect(parsedEvents(await readSseData(answer))).toEqual([
-      { type: 'message-begin' },
-      { type: 'block-open', index: 0, opening: { kind: 'text' } },
-      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'Hel' } },
-      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'lo' } },
-      { type: 'block-close', index: 0 },
-      { type: 'message-end', stopReason: 'end', usage: {} },
+      aWireMessageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Hel' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'lo' } },
+      { type: 'content_block_stop', index: 0 },
+      aWireEndDelta,
+      { type: 'message_stop' },
+    ]);
+  });
+});
+
+describe('the named framing on the Anthropic egress', () => {
+  test('every frame rides under its named event line', async () => {
+    running = await servedOrigin(
+      anSseProvider(sseText([chunkOf('Hel'), chunkOf('lo'), finishChunk, '[DONE]'])),
+    );
+
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
+
+    expect((await readSseEvents(answer)).map((frame) => frame.event)).toEqual([
+      'message_start',
+      'content_block_start',
+      'content_block_delta',
+      'content_block_delta',
+      'content_block_stop',
+      'message_delta',
+      'message_stop',
     ]);
   });
 
   test('names the virtual model and target on the streamed answer', async () => {
     running = await servedOrigin(anSseProvider(sseText([chunkOf('hi'), finishChunk, '[DONE]'])));
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     expect(answer.headers.get('x-recompose-virtual-model')).toBe('fast');
     expect(answer.headers.get('x-recompose-target')).toBe('gpt-5-mini');
@@ -114,14 +157,15 @@ describe('a streamed answer crossing back to an Anthropic caller', () => {
 
     running = await servedOrigin(anSseProvider(noisy));
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     expect(parsedEvents(await readSseData(answer))).toEqual([
-      { type: 'message-begin' },
-      { type: 'block-open', index: 0, opening: { kind: 'text' } },
-      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'kept' } },
-      { type: 'block-close', index: 0 },
-      { type: 'message-end', stopReason: 'end', usage: {} },
+      aWireMessageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'kept' } },
+      { type: 'content_block_stop', index: 0 },
+      aWireEndDelta,
+      { type: 'message_stop' },
     ]);
   });
 });
@@ -132,23 +176,23 @@ describe('an upstream failure mid-stream', () => {
 
     running = await servedOrigin(anSseProvider(dyingStream));
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     expect(parsedEvents(await readSseData(answer))).toEqual([
-      { type: 'message-begin' },
-      { type: 'block-open', index: 0, opening: { kind: 'text' } },
-      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'kept' } },
-      { type: 'stream-error', error: { type: 'overloaded_error', message: 'overloaded' } },
+      aWireMessageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'kept' } },
+      { type: 'error', error: { type: 'overloaded_error', message: 'overloaded' } },
     ]);
   });
 
   test('a failure naming no type still crosses as an error', async () => {
     running = await servedOrigin(anSseProvider('data: {"error":{"message":"burned"}}\n\n'));
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     expect(parsedEvents(await readSseData(answer))).toEqual([
-      { type: 'stream-error', error: { type: 'error', message: 'burned' } },
+      { type: 'error', error: { type: 'error', message: 'burned' } },
     ]);
   });
 });
@@ -184,14 +228,15 @@ describe('a stream the network splits mid-character', () => {
     held.send('data: [DONE]\n\n');
     held.end();
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     expect(parsedEvents(await readSseData(answer))).toEqual([
-      { type: 'message-begin' },
-      { type: 'block-open', index: 0, opening: { kind: 'text' } },
-      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'café' } },
-      { type: 'block-close', index: 0 },
-      { type: 'message-end', stopReason: 'end', usage: {} },
+      aWireMessageStart,
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'café' } },
+      { type: 'content_block_stop', index: 0 },
+      aWireEndDelta,
+      { type: 'message_stop' },
     ]);
   });
 });
@@ -207,7 +252,7 @@ describe('the gateway never buffers a stream', () => {
     running = await servedOrigin(provider);
     held.send(`data: ${chunkOf('first')}\n\n`);
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
     const reader = bodyOf(answer).getReader();
     const step = await reader.read();
 
@@ -215,7 +260,7 @@ describe('the gateway never buffers a stream', () => {
       throw new Error('the streamed answer ended before its first event');
     }
 
-    expect(new TextDecoder().decode(step.value)).toContain('message-begin');
+    expect(new TextDecoder().decode(step.value)).toContain('event: message_start');
 
     held.send('data: [DONE]\n\n');
     held.end();
@@ -232,7 +277,7 @@ describe('the gateway never buffers a stream', () => {
     running = await servedOrigin(provider);
     held.send(`data: ${chunkOf('kept')}\n\n`);
 
-    const answer = await askStreaming(running.origin, '/v1/messages', aHubStreamAsk);
+    const answer = await askStreaming(running.origin, '/v1/messages', aWireStreamAsk);
 
     held.die();
 

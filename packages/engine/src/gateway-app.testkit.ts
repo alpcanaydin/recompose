@@ -176,6 +176,26 @@ export async function readSseData(response: Response): Promise<string[]> {
     .map((line) => line.slice('data: '.length));
 }
 
+export type SseEvent = { event: string | undefined; data: string };
+
+function sseEventOf(block: string): SseEvent {
+  const lines = block.split('\n');
+
+  return {
+    event: lines.find((line) => line.startsWith('event: '))?.slice('event: '.length),
+    data: lines.find((line) => line.startsWith('data: '))?.slice('data: '.length) ?? '',
+  };
+}
+
+export async function readSseEvents(response: Response): Promise<SseEvent[]> {
+  const text = await response.text();
+
+  return text
+    .split('\n\n')
+    .filter((block) => block.includes('data: '))
+    .map(sseEventOf);
+}
+
 export function parsedEvents(payloads: readonly string[]): unknown[] {
   return payloads.map((payload) => {
     const parsed: unknown = JSON.parse(payload);

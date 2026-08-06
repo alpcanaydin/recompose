@@ -2,9 +2,10 @@ import type { ChatCompletionsResponse } from './dialect/chat-completions-wire';
 import type { Crossing, JsonObject } from './gateway-wire';
 import type { AnthropicRefusal } from './refusals';
 
+import { answeredBy, answeringModelInto } from './dialect/anthropic-attribution';
 import { translateResponse, translateStream } from './dialect/dispatcher';
 import { isJsonObject, jsonResponse, parsedJson, refusalResponse } from './gateway-wire';
-import { chatFramesFrom, sseBodyFrom } from './stream-wire';
+import { chatFramesFrom, namedSseBodyFrom } from './stream-wire';
 
 function attributionOf(crossing: Crossing): Record<string, string> {
   return {
@@ -78,24 +79,33 @@ function streamedAnswer(
   upstream: Response,
   attribution: Record<string, string>,
 ): Response {
-  if (upstream.body === null) {
+  if (crossing.dialect === 'chat-completions') {
     return passedAlong(upstream, attribution);
   }
 
-  const crossed = translateStream(
-    'chat-completions',
-    crossing.dialect,
-    chatFramesFrom(upstream.body),
+  return anthropicStreamedAnswer(crossing, upstream, attribution);
+}
+
+function anthropicStreamedAnswer(
+  crossing: Crossing,
+  upstream: Response,
+  attribution: Record<string, string>,
+): Response {
+  const body = upstream.body;
+  const crossed =
+    body === null ? null : translateStream('chat-completions', 'anthropic', chatFramesFrom(body));
+
+  if (crossed === null || 'outcome' in crossed) {
+    return passedAlong(upstream, attribution);
+  }
+
+  return new Response(
+    namedSseBodyFrom(answeringModelInto(crossed.stream, crossing.providerModel)),
+    {
+      status: upstream.status,
+      headers: { ...attribution, 'content-type': 'text/event-stream' },
+    },
   );
-
-  if ('outcome' in crossed) {
-    return passedAlong(upstream, attribution);
-  }
-
-  return new Response(sseBodyFrom(crossed.stream), {
-    status: upstream.status,
-    headers: { ...attribution, 'content-type': 'text/event-stream' },
-  });
 }
 
 function isChatAnswer(value: JsonObject): value is JsonObject & ChatCompletionsResponse {
@@ -118,19 +128,33 @@ function textAnswer(
   });
 }
 
+function chatAnswerOf(parsed: unknown): (JsonObject & ChatCompletionsResponse) | null {
+  return isJsonObject(parsed) && isChatAnswer(parsed) ? parsed : null;
+}
+
 async function translatedAnswer(
   crossing: Crossing,
   upstream: Response,
   attribution: Record<string, string>,
 ): Promise<Response> {
   const text = await upstream.text();
-  const parsed = parsedJson(text);
+  const answer = chatAnswerOf(parsedJson(text));
 
-  if (!isJsonObject(parsed) || !isChatAnswer(parsed)) {
+  if (answer === null || crossing.dialect === 'chat-completions') {
     return textAnswer(text, upstream, attribution);
   }
 
-  const crossed = translateResponse('chat-completions', crossing.dialect, parsed);
+  return anthropicAnswer(crossing, answer, text, upstream, attribution);
+}
+
+function anthropicAnswer(
+  crossing: Crossing,
+  answer: ChatCompletionsResponse,
+  text: string,
+  upstream: Response,
+  attribution: Record<string, string>,
+): Response {
+  const crossed = translateResponse('chat-completions', 'anthropic', answer);
 
   if ('outcome' in crossed) {
     return textAnswer(text, upstream, attribution);
@@ -140,5 +164,9 @@ async function translatedAnswer(
     return refusalResponse(crossing.dialect, crossed.refusal);
   }
 
-  return jsonResponse(crossed.value, upstream.status, attribution);
+  return jsonResponse(
+    answeredBy(crossed.value, crossing.providerModel),
+    upstream.status,
+    attribution,
+  );
 }

@@ -16,9 +16,10 @@ function askingWith(answer: () => Response): (path: string, body: unknown) => Pr
 
 const aChatAsk = { model: 'fast', messages: [{ role: 'user', content: 'hello' }] };
 
-const aHubAsk = {
+const aWireAsk = {
   model: 'fast',
-  messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: 'hello' }],
 };
 
 const aChatAnswerText = JSON.stringify({
@@ -52,16 +53,21 @@ describe('the answer that travels back to the caller', () => {
     expect(answer.headers.get('x-recompose-target')).toBe('gpt-5-mini');
   });
 
-  test('a chat answer crosses back into the Anthropic dialect', async () => {
+  test('a chat answer crosses back as the wire message naming the model that answered', async () => {
     const ask = askingWith(aJsonUpstream(aChatAnswerText));
 
-    const answer = await ask('/v1/messages', aHubAsk);
+    const answer = await ask('/v1/messages', aWireAsk);
 
     expect(answer.headers.get('content-type')).toContain('application/json');
     expect(await answer.json()).toEqual({
+      id: 'msg_translated',
+      type: 'message',
+      role: 'assistant',
+      model: 'gpt-5-mini',
       content: [{ type: 'text', text: 'Sunny, 21C.' }],
-      stopReason: 'end',
-      usage: { inputTokens: 12, outputTokens: 8 },
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+      usage: { input_tokens: 12, output_tokens: 8 },
     });
   });
 
@@ -70,7 +76,7 @@ describe('the answer that travels back to the caller', () => {
       () => new Response(null, { status: 200, headers: { 'content-type': 'text/event-stream' } }),
     );
 
-    const answer = await ask('/v1/messages', aHubAsk);
+    const answer = await ask('/v1/messages', aWireAsk);
 
     expect(answer.status).toBe(200);
     expect(await answer.text()).toBe('');
@@ -84,7 +90,7 @@ describe('an answer that does not read as the target dialect', () => {
       () => new Response('not json', { status: 200, headers: { 'content-type': 'text/plain' } }),
     );
 
-    const answer = await ask('/v1/messages', aHubAsk);
+    const answer = await ask('/v1/messages', aWireAsk);
 
     expect(answer.status).toBe(200);
     expect(await answer.text()).toBe('not json');
@@ -94,7 +100,7 @@ describe('an answer that does not read as the target dialect', () => {
   test('an answer naming no content type still crosses whole, echoing none back', async () => {
     const ask = askingWith(() => new Response(null, { status: 200 }));
 
-    const answer = await ask('/v1/messages', aHubAsk);
+    const answer = await ask('/v1/messages', aWireAsk);
 
     expect(answer.status).toBe(200);
     expect(await answer.text()).toBe('');
@@ -106,7 +112,7 @@ describe('an answer that does not read as the target dialect', () => {
     async (upstreamText) => {
       const ask = askingWith(aJsonUpstream(upstreamText));
 
-      const answer = await ask('/v1/messages', aHubAsk);
+      const answer = await ask('/v1/messages', aWireAsk);
 
       expect(answer.status).toBe(200);
       expect(await answer.text()).toBe(upstreamText);
@@ -128,7 +134,7 @@ describe('a refusal the upstream provider answers', () => {
   test('still names the virtual model and target that failed', async () => {
     const ask = askingWith(aJsonUpstream('{"error":{"message":"slow down"}}', 429));
 
-    const answer = await ask('/v1/messages', aHubAsk);
+    const answer = await ask('/v1/messages', aWireAsk);
 
     expect(answer.headers.get('x-recompose-virtual-model')).toBe('fast');
     expect(answer.headers.get('x-recompose-target')).toBe('gpt-5-mini');
@@ -144,7 +150,7 @@ describe('a refusal the upstream provider answers', () => {
         }),
     );
 
-    const answer = await ask('/v1/messages', aHubAsk);
+    const answer = await ask('/v1/messages', aWireAsk);
 
     expect(answer.status).toBe(529);
     expect(await answer.text()).toBe(upstreamText);
@@ -157,7 +163,7 @@ describe('a request whose messages the gateway cannot read', () => {
 
     const refusal = await ask('/v1/messages', {
       model: 'fast',
-      messages: [{ role: 'user', content: 'a bare string is not a block list' }],
+      messages: [{ role: 'user', content: 42 }],
     });
 
     expect(refusal.status).toBe(400);
@@ -174,6 +180,7 @@ describe('a request whose messages the gateway cannot read', () => {
     ['/v1/messages', [null]],
     ['/v1/messages', [{ role: 'assistant', content: [] }, 42]],
     ['/v1/messages', [{ role: 'tool', content: [] }]],
+    ['/v1/messages', [{ role: 'tool', content: [{ type: 'text', text: 'a tool speaking' }] }]],
     ['/v1/messages', [{ role: 'user', content: [{ type: 'document', text: 'a report' }] }]],
     ['/v1/messages', [{ role: 'user', content: [42] }]],
     ['/v1/messages', [{ role: 'user', content: [null] }]],

@@ -111,7 +111,9 @@ export async function* chatFramesFrom(
   }
 }
 
-export function sseBodyFrom(events: AsyncIterable<unknown>): ReadableStream<Uint8Array> {
+export function namedSseBodyFrom(
+  events: AsyncIterable<{ type: string }>,
+): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const iterator = events[Symbol.asyncIterator]();
 
@@ -126,7 +128,9 @@ export function sseBodyFrom(events: AsyncIterable<unknown>): ReadableStream<Uint
           return;
         }
 
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(step.value)}\n\n`));
+        controller.enqueue(
+          encoder.encode(`event: ${step.value.type}\ndata: ${JSON.stringify(step.value)}\n\n`),
+        );
       } catch (failure) {
         controller.error(failure);
       }

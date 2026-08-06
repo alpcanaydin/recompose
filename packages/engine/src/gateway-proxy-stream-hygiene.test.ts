@@ -18,11 +18,37 @@ function chunkOf(content: string): string {
   return JSON.stringify({ choices: [{ index: 0, delta: { content } }] });
 }
 
-const aHubStreamAsk = {
+const aWireStreamAsk = {
   model: 'fast',
+  max_tokens: 1024,
   stream: true,
-  messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+  messages: [{ role: 'user', content: 'hello' }],
 };
+
+const theCrlfWireEvents = [
+  {
+    type: 'message_start',
+    message: {
+      id: 'msg_translated',
+      type: 'message',
+      role: 'assistant',
+      model: 'gpt-5-mini',
+      content: [],
+      stop_reason: null,
+      stop_sequence: null,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    },
+  },
+  { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+  { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Hel' } },
+  { type: 'content_block_stop', index: 0 },
+  {
+    type: 'message_delta',
+    delta: { stop_reason: 'end_turn', stop_sequence: null },
+    usage: { input_tokens: 0, output_tokens: 0 },
+  },
+  { type: 'message_stop' },
+];
 
 function bodyOf(response: Response): ReadableStream<Uint8Array> {
   if (response.body === null) {
@@ -48,7 +74,7 @@ async function askStreaming(origin: string, fetchLike?: typeof fetch): Promise<R
 
   return app.request('http://127.0.0.1:8397/v1/messages', {
     method: 'POST',
-    body: JSON.stringify(aHubStreamAsk),
+    body: JSON.stringify(aWireStreamAsk),
   });
 }
 
@@ -69,13 +95,7 @@ describe('a CRLF-framed upstream stream', () => {
 
     const answer = await askStreaming(running.origin);
 
-    expect(parsedEvents(await readSseData(answer))).toEqual([
-      { type: 'message-begin' },
-      { type: 'block-open', index: 0, opening: { kind: 'text' } },
-      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'Hel' } },
-      { type: 'block-close', index: 0 },
-      { type: 'message-end', stopReason: 'end', usage: {} },
-    ]);
+    expect(parsedEvents(await readSseData(answer))).toEqual(theCrlfWireEvents);
   });
 
   test('the first CRLF event reaches the caller while the provider still streams', async () => {
@@ -96,7 +116,7 @@ describe('a CRLF-framed upstream stream', () => {
       throw new Error('the streamed answer ended before its first event');
     }
 
-    expect(new TextDecoder().decode(step.value)).toContain('message-begin');
+    expect(new TextDecoder().decode(step.value)).toContain('event: message_start');
 
     held.send('data: [DONE]\r\n\r\n');
     held.end();

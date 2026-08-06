@@ -1,8 +1,8 @@
 import type { Context } from 'hono';
 
+import type { AnthropicMessage } from './dialect/anthropic-wire';
 import type { ChatMessage } from './dialect/chat-completions-wire';
 import type { RequestOf } from './dialect/dispatcher';
-import type { HubContentBlock, HubMessage } from './dialect/hub';
 import type { TranslationRefusal } from './refusals';
 
 import { renderRefusal } from './refusals';
@@ -47,7 +47,7 @@ export function wantsStream(body: JsonObject): boolean {
   return body['stream'] === true;
 }
 
-const hubBlockKinds = new Set([
+const wireBlockKinds = new Set([
   'text',
   'thinking',
   'redacted_thinking',
@@ -56,29 +56,30 @@ const hubBlockKinds = new Set([
   'tool_result',
 ]);
 
-function isHubBlock(value: unknown): value is HubContentBlock {
+function isWireBlock(value: unknown): boolean {
   return (
-    isJsonObject(value) && typeof value['type'] === 'string' && hubBlockKinds.has(value['type'])
+    isJsonObject(value) && typeof value['type'] === 'string' && wireBlockKinds.has(value['type'])
   );
 }
 
-function isHubMessage(value: unknown): value is HubMessage {
+function isWireContent(content: unknown): boolean {
+  return typeof content === 'string' || (Array.isArray(content) && content.every(isWireBlock));
+}
+
+function isWireMessage(value: unknown): value is AnthropicMessage {
   if (!isJsonObject(value)) {
     return false;
   }
 
   const role = value['role'];
-  const content = value['content'];
 
-  return (
-    (role === 'user' || role === 'assistant') && Array.isArray(content) && content.every(isHubBlock)
-  );
+  return (role === 'user' || role === 'assistant') && isWireContent(value['content']);
 }
 
-function speaksTheHub(body: JsonObject): body is JsonObject & RequestOf['anthropic'] {
+function speaksAnthropicWire(body: JsonObject): body is JsonObject & RequestOf['anthropic'] {
   const messages = body['messages'];
 
-  return Array.isArray(messages) && messages.every(isHubMessage);
+  return Array.isArray(messages) && messages.every(isWireMessage);
 }
 
 const chatRoles = new Set(['system', 'developer', 'user', 'assistant', 'tool']);
@@ -100,7 +101,7 @@ export function ingressPayload(
   body: JsonObject,
 ): RequestOf[ProxyDialect] | null {
   if (dialect === 'anthropic') {
-    return speaksTheHub(body) ? body : null;
+    return speaksAnthropicWire(body) ? body : null;
   }
 
   return speaksChatCompletions(body) ? body : null;

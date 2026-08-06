@@ -76,14 +76,20 @@ describe('a request crossing to a live provider origin', () => {
 
     const answer = await askThrough(running.origin, '/v1/messages', {
       model: 'fast',
-      messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: 'hello' }],
     });
 
     expect(provider.seen.at(0)?.body).toMatchObject({ model: 'gpt-5-mini' });
     expect(await answer.json()).toEqual({
+      id: 'msg_translated',
+      type: 'message',
+      role: 'assistant',
+      model: 'gpt-5-mini',
       content: [{ type: 'text', text: 'Sunny, 21C.' }],
-      stopReason: 'end',
-      usage: { inputTokens: 12, outputTokens: 8 },
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+      usage: { input_tokens: 12, output_tokens: 8 },
     });
   });
 

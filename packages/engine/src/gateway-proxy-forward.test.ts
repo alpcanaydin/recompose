@@ -36,10 +36,11 @@ const aChatAsk = {
   messages: [{ role: 'user', content: 'hello' }],
 };
 
-const aHubAsk = {
+const aWireAsk = {
   model: 'fast',
-  system: [{ text: 'Answer briefly.' }],
-  messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+  max_tokens: 1024,
+  system: [{ type: 'text', text: 'Answer briefly.' }],
+  messages: [{ role: 'user', content: 'hello' }],
 };
 
 describe('the request that crosses to the target', () => {
@@ -88,7 +89,7 @@ describe('the request that crosses to the target', () => {
 
 describe('a request arriving in the Anthropic dialect', () => {
   test('crosses to the chat dialect before it leaves the machine', async () => {
-    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', aHubAsk);
+    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', aWireAsk);
 
     expect(bodySentIn(sent)['model']).toBe('gpt-5-mini');
     expect(bodySentIn(sent)['messages']).toEqual([
@@ -97,9 +98,15 @@ describe('a request arriving in the Anthropic dialect', () => {
     ]);
   });
 
+  test('the wire max_tokens ceiling crosses onto the chat body', async () => {
+    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', aWireAsk);
+
+    expect(bodySentIn(sent)['max_tokens']).toBe(1024);
+  });
+
   test('the caller asking for a stream keeps its ask on the crossed request', async () => {
     const sent = await forwarded(aCredentialedGrant(), '/v1/messages', {
-      ...aHubAsk,
+      ...aWireAsk,
       stream: true,
     });
 
@@ -107,16 +114,68 @@ describe('a request arriving in the Anthropic dialect', () => {
   });
 
   test('a caller not asking for a stream sends no stream ask downstream', async () => {
-    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', aHubAsk);
+    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', aWireAsk);
 
     expect(bodySentIn(sent)['stream']).toBeUndefined();
   });
 });
 
-describe('the hub blocks a crossing request may carry', () => {
-  test('every hub block kind passes the guard and crosses', async () => {
+describe('the primary client speaks and the gateway serves', () => {
+  test('a full Claude Code wire body serves rather than refusing', async () => {
     const sent = await forwarded(aCredentialedGrant(), '/v1/messages', {
       model: 'fast',
+      max_tokens: 32000,
+      system: [
+        { type: 'text', text: 'You are Claude Code.', cache_control: { type: 'ephemeral' } },
+      ],
+      messages: [{ role: 'user', content: 'ls the repo' }],
+      tools: [
+        {
+          name: 'bash',
+          description: 'Run a command',
+          input_schema: {
+            type: 'object',
+            properties: { command: { type: 'string' } },
+            required: ['command'],
+          },
+        },
+      ],
+      tool_choice: { type: 'auto' },
+      metadata: { user_id: 'session-40d1' },
+      temperature: 1,
+    });
+
+    const body = bodySentIn(sent);
+
+    expect(body['model']).toBe('gpt-5-mini');
+    expect(body['max_tokens']).toBe(32000);
+    expect(body['messages']).toEqual([
+      { role: 'system', content: 'You are Claude Code.', cache_control: { type: 'ephemeral' } },
+      { role: 'user', content: 'ls the repo' },
+    ]);
+    expect(body['tool_choice']).toBe('auto');
+    expect(body['tools']).toEqual([
+      {
+        type: 'function',
+        function: {
+          name: 'bash',
+          description: 'Run a command',
+          parameters: {
+            type: 'object',
+            properties: { command: { type: 'string' } },
+            required: ['command'],
+          },
+        },
+      },
+    ]);
+  });
+});
+
+describe('the wire blocks a crossing request may carry', () => {
+  test('every wire block kind passes the guard and crosses', async () => {
+    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', {
+      model: 'fast',
+      max_tokens: 1024,
       messages: [
         {
           role: 'user',
@@ -125,7 +184,7 @@ describe('the hub blocks a crossing request may carry', () => {
             { type: 'image', source: { type: 'url', url: 'https://images.example/sky.png' } },
             {
               type: 'tool_result',
-              toolUseId: 'toolu_1',
+              tool_use_id: 'toolu_1',
               content: [{ type: 'text', text: 'sunny' }],
             },
           ],
@@ -134,7 +193,7 @@ describe('the hub blocks a crossing request may carry', () => {
           role: 'assistant',
           content: [
             { type: 'text', text: 'earlier' },
-            { type: 'thinking', text: 'quietly' },
+            { type: 'thinking', thinking: 'quietly' },
             { type: 'redacted_thinking', data: 'aGlkZGVu' },
             { type: 'tool_use', id: 'toolu_1', name: 'get_weather', input: {} },
           ],
@@ -148,9 +207,10 @@ describe('the hub blocks a crossing request may carry', () => {
   test('an assistant turn in the history crosses with the rest', async () => {
     const sent = await forwarded(aCredentialedGrant(), '/v1/messages', {
       model: 'fast',
+      max_tokens: 1024,
       messages: [
-        { role: 'user', content: [{ type: 'text', text: 'hello' }] },
-        { role: 'assistant', content: [{ type: 'text', text: 'earlier answer' }] },
+        { role: 'user', content: 'hello' },
+        { role: 'assistant', content: 'earlier answer' },
       ],
     });
 

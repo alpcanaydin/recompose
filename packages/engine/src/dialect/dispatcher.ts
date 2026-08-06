@@ -1,13 +1,22 @@
 import type { Dialect, TranslationRefusal } from '../refusals';
+import type { AnthropicRequest, AnthropicResponse, AnthropicStreamEvent } from './anthropic-wire';
 import type {
   ChatCompletionsRequest,
   ChatCompletionsResponse,
   ChatStreamFrame,
 } from './chat-completions-wire';
-import type { TranslateResult, Translated } from './fates';
+import type { TranslateResult } from './fates';
 import type { HubRequest, HubResponse, HubStreamEvent } from './hub';
 import type { ResponsesRequest, ResponsesResponse, ResponsesStreamEvent } from './responses-wire';
 
+import {
+  decodeRequest as anthropicDecodeRequest,
+  decodeResponse as anthropicDecodeResponse,
+  decodeStream as anthropicDecodeStream,
+  encodeRequest as anthropicEncodeRequest,
+  encodeResponse as anthropicEncodeResponse,
+  encodeStream as anthropicEncodeStream,
+} from './anthropic-codec';
 import {
   decodeRequest as chatDecodeRequest,
   decodeResponse as chatDecodeResponse,
@@ -28,19 +37,19 @@ import {
 export type { Dialect } from '../refusals';
 
 export type RequestOf = {
-  anthropic: HubRequest;
+  anthropic: AnthropicRequest;
   'chat-completions': ChatCompletionsRequest;
   responses: ResponsesRequest;
 };
 
 export type ResponseOf = {
-  anthropic: HubResponse;
+  anthropic: AnthropicResponse;
   'chat-completions': ChatCompletionsResponse;
   responses: ResponsesResponse;
 };
 
 export type StreamOf = {
-  anthropic: AsyncIterable<HubStreamEvent>;
+  anthropic: AsyncIterable<AnthropicStreamEvent>;
   'chat-completions': AsyncIterable<ChatStreamFrame>;
   responses: AsyncIterable<ResponsesStreamEvent>;
 };
@@ -56,16 +65,6 @@ export type ResponseTranslation<To extends Dialect> =
   | TranslateResult<ResponseOf[To], TranslationRefusal>;
 
 export type StreamTranslation<To extends Dialect> = Passthrough | { stream: StreamOf[To] };
-
-const identityRequest = (body: HubRequest): Translated<HubRequest> => ({ value: body, fates: [] });
-
-const identityResponse = (body: HubResponse): Translated<HubResponse> => ({
-  value: body,
-  fates: [],
-});
-
-const identityStream = (source: AsyncIterable<HubStreamEvent>): AsyncIterable<HubStreamEvent> =>
-  source;
 
 type RequestDecoders = {
   [D in Dialect]: (body: RequestOf[D]) => TranslateResult<HubRequest, TranslationRefusal>;
@@ -92,37 +91,37 @@ type StreamEncoders = {
 };
 
 const requestDecoders: RequestDecoders = {
-  anthropic: identityRequest,
+  anthropic: anthropicDecodeRequest,
   'chat-completions': chatDecodeRequest,
   responses: responsesDecodeRequest,
 };
 
 const requestEncoders: RequestEncoders = {
-  anthropic: identityRequest,
+  anthropic: anthropicEncodeRequest,
   'chat-completions': chatEncodeRequest,
   responses: responsesEncodeRequest,
 };
 
 const responseDecoders: ResponseDecoders = {
-  anthropic: identityResponse,
+  anthropic: anthropicDecodeResponse,
   'chat-completions': chatDecodeResponse,
   responses: responsesDecodeResponse,
 };
 
 const responseEncoders: ResponseEncoders = {
-  anthropic: identityResponse,
+  anthropic: anthropicEncodeResponse,
   'chat-completions': chatEncodeResponse,
   responses: responsesEncodeResponse,
 };
 
 const streamDecoders: StreamDecoders = {
-  anthropic: identityStream,
+  anthropic: anthropicDecodeStream,
   'chat-completions': chatDecodeStream,
   responses: responsesDecodeStream,
 };
 
 const streamEncoders: StreamEncoders = {
-  anthropic: identityStream,
+  anthropic: anthropicEncodeStream,
   'chat-completions': chatEncodeStream,
   responses: responsesEncodeStream,
 };
