@@ -94,6 +94,7 @@ export async function observeSubscriptionAnswer(
       answer,
       (items) => runtime.antigravityReplay?.commit(key, items),
       () => runtime.antigravityReplay?.clear(key),
+      runtime.antigravityReplay?.snapshot(key),
     );
   }
 

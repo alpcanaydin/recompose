@@ -55,6 +55,10 @@ export class AntigravityReasoningReplay {
     this.#items.delete(key);
   }
 
+  snapshot(key: string): readonly AntigravityReplayItem[] {
+    return this.#items.get(key) ?? [];
+  }
+
   private evictOldest(): void {
     if (this.#items.size <= MAX_SESSIONS) return;
 
@@ -111,6 +115,7 @@ function invalidSignature(response: Response, text: string): boolean {
 }
 
 type ReplayObservation = {
+  baseline: readonly AntigravityReplayItem[];
   items: AntigravityReplayItem[];
   pendingSignature?: string;
   text: TextReplayState;
@@ -123,9 +128,13 @@ function observedValue(value: unknown, accumulated: ReplayObservation): ReplayOb
   const rawText = scanTextReplayParts(parts, accumulated.text);
   const text = completed(value) ? finalizeTextReplay(rawText) : rawText;
   const pendingSignature = scan.pendingSignature;
-  const incoming = offsetOccurrences(accumulated.items, [...scan.items, ...text.items]);
+  const incoming = offsetOccurrences(
+    [...accumulated.baseline, ...accumulated.items],
+    [...scan.items, ...text.items],
+  );
 
   return {
+    baseline: accumulated.baseline,
     items: mergedReplayItems(accumulated.items, incoming),
     ...(pendingSignature === undefined ? {} : { pendingSignature }),
     text: text.state,
@@ -179,8 +188,10 @@ function observeLine(line: string, accumulated: ReplayObservation): ReplayObserv
 function observingStream(
   body: ReadableStream<Uint8Array>,
   commit: (items: AntigravityReplayItem[]) => void,
+  baseline: readonly AntigravityReplayItem[],
 ): ReadableStream<Uint8Array> {
   let observation: ReplayObservation = {
+    baseline,
     items: [],
     text: { buffer: '', thought: false },
     completed: false,
@@ -197,6 +208,7 @@ async function observeJson(
   response: Response,
   commit: (items: AntigravityReplayItem[]) => void,
   clear: () => void,
+  baseline: readonly AntigravityReplayItem[],
 ): Promise<Response> {
   const text = await response.clone().text();
 
@@ -204,6 +216,7 @@ async function observeJson(
   if (!response.ok) return response;
 
   const observed = observedValue(parsedJson(text), {
+    baseline,
     items: [],
     text: { buffer: '', thought: false },
     completed: false,
@@ -218,11 +231,19 @@ export async function observeAntigravityReasoning(
   response: Response,
   commit: (items: AntigravityReplayItem[]) => void,
   clear: () => void,
+  baseline?: readonly AntigravityReplayItem[],
 ): Promise<Response> {
+  const existing = observationBaseline(baseline);
   const stream = response.headers.get('content-type')?.includes('text/event-stream') === true;
 
   if (!stream || response.body === null || !response.ok)
-    return observeJson(response, commit, clear);
+    return observeJson(response, commit, clear, existing);
 
-  return new Response(observingStream(response.body, commit), response);
+  return new Response(observingStream(response.body, commit, existing), response);
+}
+
+function observationBaseline(
+  baseline: readonly AntigravityReplayItem[] | undefined,
+): readonly AntigravityReplayItem[] {
+  return baseline ?? [];
 }
