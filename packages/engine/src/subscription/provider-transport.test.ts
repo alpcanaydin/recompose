@@ -5,6 +5,7 @@ import type { ProviderRequest } from './claude-request';
 import {
   CLAUDE_OAUTH_TLS_FINGERPRINT,
   CLAUDE_TLS_FINGERPRINT,
+  fetchClaudeProfile,
   sendSubscriptionRequest,
   subscriptionRefreshTransportOptions,
   subscriptionTransportOptions,
@@ -73,6 +74,35 @@ test('the Claude OAuth transport carries the captured control-plane fingerprint'
       extensionPermutation: CLAUDE_OAUTH_TLS_FINGERPRINT.extensionTypes,
     },
   });
+});
+
+test('Claude profile lookup uses the native OAuth request shape', async () => {
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return Response.json({ account: { uuid: 'account-uuid' } });
+  });
+
+  await expect(fetchClaudeProfile('access-token', fetchLike)).resolves.toEqual({
+    account: { uuid: 'account-uuid' },
+  });
+  expect(fetchLike).toHaveBeenCalledWith(
+    'https://api.anthropic.com/api/oauth/profile',
+    expect.objectContaining({
+      method: 'GET',
+      headers: [
+        ['Accept', 'application/json, text/plain, */*'],
+        ['Authorization', 'Bearer access-token'],
+        ['Content-Type', 'application/json'],
+        ['Cache-Control', 'no-cache'],
+        ['User-Agent', 'axios/1.15.2'],
+        ['Accept-Encoding', 'gzip, compress, deflate, br'],
+        ['Connection', 'close'],
+      ],
+      retry: 0,
+      throwHttpErrors: false,
+    }),
+  );
 });
 
 test('Codex uses the Chrome transport profile used for its browser-facing API', () => {

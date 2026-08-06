@@ -12,6 +12,7 @@ import {
   subscriptionGrant,
   subscriptionModel,
 } from './gateway-proxy-subscription.testkit';
+import { isJsonObject } from './gateway-wire';
 
 function claudeApp(credential: string, runtime: Parameters<typeof createGatewayApp>[3]) {
   const grants = granting(subscriptionGrant('anthropic', credential));
@@ -22,6 +23,17 @@ function claudeApp(credential: string, runtime: Parameters<typeof createGatewayA
     neverFetches,
     runtime,
   );
+}
+
+function metadataFromRequest(body: string | undefined): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(body ?? '{}');
+  const metadata = isJsonObject(parsed) ? parsed['metadata'] : undefined;
+
+  if (!isJsonObject(metadata)) {
+    throw new Error('expected Claude request metadata');
+  }
+
+  return metadata;
 }
 
 function orderedRefreshRuntime(order: string[]) {
@@ -51,6 +63,12 @@ function orderedRefreshRuntime(order: string[]) {
       persist,
       now: () => 1_700_000_000_000,
       randomUUID: () => '11111111-1111-4111-8111-111111111111',
+      newClaudeDeviceId: () => '0'.repeat(64),
+      fetchClaudeProfile: async () => {
+        await Promise.resolve();
+
+        return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
+      },
     },
   };
 }
@@ -81,6 +99,28 @@ describe('serving a Claude subscription target', () => {
       choices: [{ message: { role: 'assistant', content: 'hello back' } }],
     });
     expect(provider.persist).not.toHaveBeenCalled();
+  });
+
+  test('a missing Claude identity is fetched, persisted, and sent upstream', async () => {
+    const provider = runtimeAnswering(() => claudeAnswer());
+    const credential = JSON.stringify({
+      claudeAiOauth: { accessToken: 'claude-access', expiresAt: 1_800_000_000_000 },
+    });
+    const app = claudeApp(credential, provider.runtime);
+    const answer = await chatRequest(app);
+    const metadata = metadataFromRequest(provider.sent[0]?.request.body);
+
+    expect(answer.status).toBe(200);
+    expect(provider.persist).toHaveBeenCalledWith(
+      'anthropic',
+      'acc-anthropic',
+      expect.stringContaining('claude_device_ids'),
+    );
+    expect(JSON.parse(String(metadata['user_id']))).toEqual({
+      device_id: '0'.repeat(64),
+      account_uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      session_id: '11111111-1111-4111-8111-111111111111',
+    });
   });
 });
 
@@ -123,6 +163,12 @@ describe('rotating a Claude subscription credential', () => {
       persist,
       now: () => 1_700_000_000_000,
       randomUUID: () => '11111111-1111-4111-8111-111111111111',
+      newClaudeDeviceId: () => '0'.repeat(64),
+      fetchClaudeProfile: async () => {
+        await Promise.resolve();
+
+        return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
+      },
     });
     const answer = await chatRequest(app);
 

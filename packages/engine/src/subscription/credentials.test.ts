@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { parseSubscriptionCredential, refreshedCredentialBlob } from './credentials';
+import {
+  parseSubscriptionCredential,
+  refreshedCredentialBlob,
+  withClaudeCredentialIdentity,
+} from './credentials';
 
 function jwtWith(claims: Record<string, unknown>): string {
   return `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
@@ -26,7 +30,42 @@ describe('reading the credential bundle written by each provider tool', () => {
       expiresAt: 1_800_000_000_000,
     });
   });
+});
 
+describe('reading and writing Claude credential identity', () => {
+  test('Claude identity uses the first canonical credential device', () => {
+    const original = JSON.stringify({
+      claudeAiOauth: { accessToken: 'claude-access' },
+      account_uuid: 'account-uuid',
+      claude_device_ids: ['A'.repeat(64), '0'.repeat(64), '1'.repeat(64)],
+    });
+
+    expect(parseSubscriptionCredential('anthropic', original)).toEqual({
+      accessToken: 'claude-access',
+      accountUuid: 'account-uuid',
+      deviceIds: ['0'.repeat(64)],
+    });
+  });
+
+  test('Claude identity is persisted without replacing the native credential fields', () => {
+    const original = JSON.stringify({
+      theme: 'dark',
+      claudeAiOauth: { accessToken: 'claude-access' },
+    });
+    const updated: unknown = JSON.parse(
+      withClaudeCredentialIdentity(original, 'account-uuid', '0'.repeat(64)),
+    );
+
+    expect(updated).toEqual({
+      theme: 'dark',
+      claudeAiOauth: { accessToken: 'claude-access' },
+      account_uuid: 'account-uuid',
+      claude_device_ids: ['0'.repeat(64)],
+    });
+  });
+});
+
+describe('reading Codex and malformed credential bundles', () => {
   test('Codex credentials expose the account id and access-token JWT expiry', () => {
     const accessToken = jwtWith({ exp: 1_800_000_000 });
     const parsed = parseSubscriptionCredential(

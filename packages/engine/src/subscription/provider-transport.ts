@@ -6,6 +6,7 @@ import { fetch as wreqFetch } from 'node-wreq';
 import type { ProviderRequest } from './claude-request';
 import type { RefreshFetch } from './refresh';
 
+import { isJsonObject } from '../gateway-wire';
 import { decodeClaudeResponse } from './claude-compression';
 import { restoreClaudeToolResponse } from './claude-tool-response';
 
@@ -102,6 +103,10 @@ type WireResponse = {
 
 export type SubscriptionWireFetch = (url: string, init: WreqInit) => Promise<WireResponse>;
 
+export type ClaudeProfile = {
+  account: { uuid: string };
+};
+
 function webResponseFrom(upstream: WireResponse): Response {
   const headers = new Headers();
 
@@ -180,3 +185,42 @@ export const subscriptionRefreshFetch: RefreshFetch = async (url, init) => {
 
   return isClaudeOAuthUrl(url) ? decodeClaudeResponse(webResponse) : webResponse;
 };
+
+export async function fetchClaudeProfile(
+  accessToken: string,
+  fetchLike: SubscriptionWireFetch = wreqFetch,
+): Promise<ClaudeProfile> {
+  const upstream = await fetchLike('https://api.anthropic.com/api/oauth/profile', {
+    ...subscriptionRefreshTransportOptions('https://api.anthropic.com/api/oauth/profile'),
+    method: 'GET',
+    headers: [
+      ['Accept', 'application/json, text/plain, */*'],
+      ['Authorization', `Bearer ${accessToken}`],
+      ['Content-Type', 'application/json'],
+      ['Cache-Control', 'no-cache'],
+      ['User-Agent', 'axios/1.15.2'],
+      ['Accept-Encoding', 'gzip, compress, deflate, br'],
+      ['Connection', 'close'],
+    ],
+    retry: 0,
+    throwHttpErrors: false,
+  });
+  const response = await decodeClaudeResponse(webResponseFrom(upstream));
+
+  if (!response.ok) {
+    throw new Error(`fetch Claude OAuth profile failed with status ${response.status}`);
+  }
+
+  return claudeProfileFrom(await response.json());
+}
+
+function claudeProfileFrom(value: unknown): ClaudeProfile {
+  const account = isJsonObject(value) ? value['account'] : undefined;
+  const uuid = isJsonObject(account) ? account['uuid'] : undefined;
+
+  if (typeof uuid !== 'string' || uuid.trim() === '') {
+    throw new Error('fetch Claude OAuth profile: response account UUID is empty');
+  }
+
+  return { account: { uuid } };
+}

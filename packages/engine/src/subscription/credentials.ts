@@ -6,6 +6,8 @@ export type ParsedSubscriptionCredential = {
   accessToken: string;
   refreshToken?: string;
   accountId?: string;
+  accountUuid?: string;
+  deviceIds?: string[];
   expiresAt?: number;
 };
 
@@ -34,6 +36,10 @@ function nonBlank(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
+function firstNonBlank(...values: unknown[]): string | undefined {
+  return values.map(nonBlank).find((value) => value !== undefined);
+}
+
 function jwtExpiry(token: string): number | undefined {
   const encoded = token.split('.')[1];
 
@@ -55,7 +61,39 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
-function claudeCredential(tokens: JsonObject): ParsedSubscriptionCredential | null {
+function validDeviceIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const ids = value.filter(
+    (item): item is string => typeof item === 'string' && /^[a-f\d]{64}$/u.test(item),
+  );
+  const first = ids[0];
+
+  return first === undefined ? undefined : [first];
+}
+
+function claudeIdentityFields(document: JsonObject, tokens: JsonObject) {
+  const accountUuid = firstNonBlank(
+    document['account_uuid'],
+    document['accountUuid'],
+    tokens['account_uuid'],
+    tokens['accountUuid'],
+  );
+  const candidates = [document['claude_device_ids'], tokens['claude_device_ids']];
+  const deviceIds = candidates.map(validDeviceIds).find((value) => value !== undefined);
+
+  return {
+    ...(accountUuid === undefined ? {} : { accountUuid }),
+    ...(deviceIds === undefined ? {} : { deviceIds }),
+  };
+}
+
+function claudeCredential(
+  document: JsonObject,
+  tokens: JsonObject,
+): ParsedSubscriptionCredential | null {
   const accessToken = nonBlank(tokens['accessToken']);
 
   if (accessToken === undefined) {
@@ -68,6 +106,7 @@ function claudeCredential(tokens: JsonObject): ParsedSubscriptionCredential | nu
   return {
     accessToken,
     ...(refreshToken === undefined ? {} : { refreshToken }),
+    ...claudeIdentityFields(document, tokens),
     ...(expiresAt === undefined ? {} : { expiresAt }),
   };
 }
@@ -109,7 +148,24 @@ export function parseSubscriptionCredential(
     return null;
   }
 
-  return provider === 'anthropic' ? claudeCredential(tokens) : codexCredential(tokens);
+  return provider === 'anthropic' ? claudeCredential(document, tokens) : codexCredential(tokens);
+}
+
+export function withClaudeCredentialIdentity(
+  originalBlob: string,
+  accountUuid: string,
+  deviceId: string,
+): string {
+  const document = documentOf(originalBlob);
+
+  if (document === null) {
+    throw new Error('subscription credential document is malformed');
+  }
+
+  document['account_uuid'] = accountUuid;
+  document['claude_device_ids'] = [deviceId];
+
+  return JSON.stringify(document);
 }
 
 function refreshedClaudeDocument(

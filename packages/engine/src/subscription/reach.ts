@@ -5,12 +5,18 @@ import { randomUUID } from 'node:crypto';
 import type { JsonObject } from '../gateway-wire';
 import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
+import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
+import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
 import { codexProviderRequest } from './codex-request';
-import { parseSubscriptionCredential } from './credentials';
-import { sendSubscriptionRequest, subscriptionRefreshFetch } from './provider-transport';
+import { parseSubscriptionCredential, withClaudeCredentialIdentity } from './credentials';
+import {
+  fetchClaudeProfile,
+  sendSubscriptionRequest,
+  subscriptionRefreshFetch,
+} from './provider-transport';
 import { credentialNeedsRefresh, refreshSubscriptionCredential } from './refresh';
 
 export type SubscriptionRuntime = {
@@ -23,6 +29,8 @@ export type SubscriptionRuntime = {
   ) => Promise<void>;
   now: () => number;
   randomUUID: () => string;
+  newClaudeDeviceId: () => string;
+  fetchClaudeProfile: (accessToken: string) => Promise<ClaudeProfile>;
 };
 
 export function subscriptionRuntime(
@@ -36,6 +44,8 @@ export function subscriptionRuntime(
     persist,
     now: Date.now,
     randomUUID,
+    newClaudeDeviceId,
+    fetchClaudeProfile,
   };
 }
 
@@ -72,11 +82,22 @@ function providerRequestFor(
   runtime: SubscriptionRuntime,
 ): ProviderRequest {
   return grant.spend.custody === 'subscription' && grant.spend.provider === 'anthropic'
-    ? claudeProviderRequest(grant.providerOrigin, body, credential.accessToken, {
-        sessionId: runtime.randomUUID(),
-        requestId: runtime.randomUUID(),
-      })
+    ? claudeProviderRequest(
+        grant.providerOrigin,
+        body,
+        credential.accessToken,
+        { sessionId: runtime.randomUUID(), requestId: runtime.randomUUID() },
+        claudeIdentityOf(credential),
+      )
     : codexProviderRequest(grant.providerOrigin, body, credential, runtime.randomUUID());
+}
+
+function claudeIdentityOf(credential: ParsedSubscriptionCredential) {
+  const deviceId = credential.deviceIds?.[0];
+
+  return credential.accountUuid === undefined || deviceId === undefined
+    ? undefined
+    : { accountUuid: credential.accountUuid, deviceId };
 }
 
 export async function reachSubscription(
@@ -89,14 +110,73 @@ export async function reachSubscription(
   }
 
   const ready = await readySubscriptionCredential(grant.spend, runtime);
+  const identified = await readyClaudeIdentity(grant.spend, ready, runtime);
   const answer = await runtime.send(
     grant.spend.provider,
-    providerRequestFor(grant, body, ready.credential, runtime),
+    providerRequestFor(grant, body, identified.credential, runtime),
   );
 
-  return shouldRefreshUnauthorized(answer, ready.credential)
-    ? retryWithRefreshedCredential(grant, grant.spend, body, ready.blob, runtime)
+  return shouldRefreshUnauthorized(answer, identified.credential)
+    ? retryWithRefreshedCredential(grant, grant.spend, body, identified.blob, runtime)
     : answer;
+}
+
+type ReadyCredential = { blob: string; credential: ParsedSubscriptionCredential };
+
+async function readyClaudeIdentity(
+  spend: SubscriptionSpend,
+  ready: ReadyCredential,
+  runtime: SubscriptionRuntime,
+): Promise<ReadyCredential> {
+  if (spend.provider !== 'anthropic') {
+    return ready;
+  }
+
+  if (claudeIdentityOf(ready.credential) !== undefined) {
+    return ready;
+  }
+
+  const identity = await resolvedClaudeIdentity(ready.credential, runtime);
+
+  const blob = withClaudeCredentialIdentity(ready.blob, identity.accountUuid, identity.deviceId);
+
+  await runtime.persist(spend.provider, spend.accountId, blob);
+
+  const credential = parseSubscriptionCredential(spend.provider, blob);
+
+  if (credential === null) {
+    throw new Error('the identified subscription credential could not be read');
+  }
+
+  return { blob, credential };
+}
+
+async function resolvedClaudeIdentity(
+  credential: ParsedSubscriptionCredential,
+  runtime: SubscriptionRuntime,
+) {
+  return {
+    accountUuid: await accountUuidFor(credential, runtime),
+    deviceId: deviceIdFor(credential, runtime),
+  };
+}
+
+async function accountUuidFor(
+  credential: ParsedSubscriptionCredential,
+  runtime: SubscriptionRuntime,
+): Promise<string> {
+  if (credential.accountUuid !== undefined) {
+    return credential.accountUuid;
+  }
+
+  return (await runtime.fetchClaudeProfile(credential.accessToken)).account.uuid;
+}
+
+function deviceIdFor(
+  credential: ParsedSubscriptionCredential,
+  runtime: SubscriptionRuntime,
+): string {
+  return credential.deviceIds?.[0] ?? runtime.newClaudeDeviceId();
 }
 
 function shouldRefreshUnauthorized(

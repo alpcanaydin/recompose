@@ -1,4 +1,7 @@
+import type { ClaudeIdentity } from './claude-identity';
+
 import { isJsonObject } from '../gateway-wire';
+import { applyClaudeCredentialIdentity } from './claude-identity';
 import { sanitizeClaudeSignatures } from './claude-signatures';
 import { prepareClaudeTools } from './claude-tools';
 
@@ -238,8 +241,13 @@ export function claudeProviderRequest(
   rawBody: JsonObject,
   accessToken: string,
   ids: ClaudeRequestIds,
+  identity?: ClaudeIdentity,
 ): ProviderRequest {
-  const body = normalizedClaudeBody(rawBody);
+  const identified =
+    identity === undefined
+      ? rawBody
+      : applyClaudeCredentialIdentity(rawBody, identity, ids.sessionId);
+  const body = normalizedClaudeBody(identified);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
 
   return {

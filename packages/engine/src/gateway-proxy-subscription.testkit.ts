@@ -54,6 +54,12 @@ export function runtimeAnswering(answer: () => Response) {
       persist,
       now: () => 1_700_000_000_000,
       randomUUID: () => '11111111-1111-4111-8111-111111111111',
+      newClaudeDeviceId: () => '0'.repeat(64),
+      fetchClaudeProfile: async () => {
+        await Promise.resolve();
+
+        return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
+      },
     },
   };
 }
@@ -63,7 +69,11 @@ export function claudeCredential(
   expiresAt: number,
   refreshToken = 'claude-refresh',
 ): string {
-  return JSON.stringify({ claudeAiOauth: { accessToken, refreshToken, expiresAt } });
+  return JSON.stringify({
+    account_uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    claude_device_ids: ['0'.repeat(64)],
+    claudeAiOauth: { accessToken, refreshToken, expiresAt },
+  });
 }
 
 export function codexCredential(): string {
