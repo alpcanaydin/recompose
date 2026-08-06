@@ -15,9 +15,9 @@ import {
 } from '../../testing/gateway-canvas.testkit';
 import { GatewayCanvasPage } from './gateway-canvas-page';
 
-async function renderPage(gateway = servingGateway) {
+async function renderPage(gateway = servingGateway, accounts = storedAccounts) {
   installFakeBridge({
-    accounts: storedAccounts,
+    accounts,
     gateways: [gateway],
     engineStates: runningGateway,
     providerModels: listedModels,
@@ -59,17 +59,16 @@ test('clicking the selected node closes the inspector and leaves the stage stand
   await userEvent.click(screen.getByRole('button', { name: /My Gateway/ }));
 
   await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
-  await expect.element(screen.getByText('Virtual models serve from the drawer')).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: /My Gateway/ })).toBeVisible();
 });
 
-test('the closing inspector stays for its exit rather than cutting out on the click', async () => {
+test('with motion off the inspector goes at once, waiting on no exit it will not play', async () => {
   const screen = await renderPage();
 
   await userEvent.click(screen.getByRole('button', { name: /My Gateway/ }));
 
-  expect(screen.container.textContent).toContain('Endpoint');
-
   await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
+  expect(screen.container.textContent).not.toContain('Endpoint');
 });
 
 test('clicking the node again opens the inspector back up', async () => {
@@ -88,6 +87,54 @@ test('a draft in flight survives closing the inspector and comes back as it was'
   await screen.getByRole('textbox', { name: 'Name' }).fill('Fast Sonnet');
 
   await userEvent.click(screen.getByRole('button', { name: /My Gateway/ }));
+
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /My Gateway/ }));
+
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Fast Sonnet');
+});
+
+function pressOn(target: Element | null) {
+  target?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+}
+
+function theSurfaceBehind(container: HTMLElement): Element | null {
+  return container.querySelector('section');
+}
+
+test('a press on the surface behind the node puts the inspector away', async () => {
+  const screen = await renderPage();
+
+  pressOn(theSurfaceBehind(screen.container));
+
+  await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
+});
+
+test('a press on the surface behind opens nothing while the inspector is already away', async () => {
+  const screen = await renderPage();
+
+  await userEvent.click(screen.getByRole('button', { name: /My Gateway/ }));
+  pressOn(theSurfaceBehind(screen.container));
+
+  await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
+});
+
+test('a press inside the inspector leaves it standing', async () => {
+  const screen = await renderPage();
+
+  pressOn(screen.getByRole('complementary').element());
+
+  await expect.element(screen.getByText('Endpoint', { exact: true })).toBeVisible();
+});
+
+test('a draft in flight survives a press on the surface behind', async () => {
+  const screen = await renderPage(freshGateway);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
+  await screen.getByRole('textbox', { name: 'Name' }).fill('Fast Sonnet');
+
+  pressOn(theSurfaceBehind(screen.container));
 
   await expect.element(screen.getByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
 
@@ -138,7 +185,15 @@ test('dragging the border well past the narrowest width shuts the inspector', as
   dragSeparator(screen.getByRole('separator', theSeparator).element(), 900, 1300);
 
   await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
-  await expect.element(screen.getByText('Virtual models serve from the drawer')).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: /My Gateway/ })).toBeVisible();
+});
+
+test('taking hold of the border to size the panel never puts the inspector away', async () => {
+  const screen = await renderPage();
+
+  dragSeparator(screen.getByRole('separator', theSeparator).element(), 900, 880);
+
+  await expect.element(screen.getByText('Endpoint', { exact: true })).toBeVisible();
 });
 
 test('a draft a person left behind is gone when the flow is opened again', async () => {

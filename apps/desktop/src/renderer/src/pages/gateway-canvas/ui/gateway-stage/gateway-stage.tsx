@@ -16,13 +16,22 @@ type GatewayStageProps = {
  * The surface a gateway will be composed on, holding the gateway itself and nothing else yet.
  *
  * @summary The dotted field says nodes belong here, and the one node standing on it says which
- * gateway this is and opens its inspector. The node and the hint sit in one row rather than both
- * claiming the centre, so neither can ever cover the other however narrow the window gets, and the
- * hint takes no pointer of its own, so every click in that space reaches the node it was meant for.
+ * gateway this is and opens its inspector. The node keeps the leading edge rather than the centre,
+ * because the field fills with nodes from that edge once routing arrives. Pressing the field itself
+ * lets the node go, which is how a person puts the inspector away by looking elsewhere rather than
+ * by finding the control that opened it. Only a press that lands on the field counts, so the node
+ * keeps its own toggle and nothing fires twice.
  */
 export function GatewayStage({ gateway, selected, onToggleSelected }: GatewayStageProps) {
   return (
-    <section className="relative flex min-w-0 flex-1 items-center gap-6 overflow-hidden p-6 dot-grid">
+    <section
+      className="relative flex min-w-0 flex-1 items-center gap-6 overflow-hidden p-6 dot-grid"
+      onPointerDown={(pressed) => {
+        if (selected && pressed.target === pressed.currentTarget) {
+          onToggleSelected();
+        }
+      }}
+    >
       <button
         aria-pressed={selected}
         className="relative z-10 shrink-0 node-card px-2.75 py-2 text-start focus-ring"
@@ -40,16 +49,6 @@ export function GatewayStage({ gateway, selected, onToggleSelected }: GatewaySta
           :{gateway.port} · {servesTally(gateway.virtualModels.length)}
         </span>
       </button>
-      <div className="pointer-events-none relative z-0 mx-auto max-w-80 min-w-0 text-center text-ink-secondary">
-        <Icon className="mx-auto size-6 text-ink-tertiary" name="spark" />
-        <p className="mt-2 text-detail font-semibold text-ink-secondary">
-          Virtual models serve from the drawer
-        </p>
-        <p className="mt-0.5 text-detail">
-          The canvas arrives with routing. Until then, define virtual models on the right and point
-          a client at the base URL.
-        </p>
-      </div>
     </section>
   );
 }

@@ -183,7 +183,7 @@ test('a valid gateway slug opens the stage and the inspector for that gateway', 
   const screen = await renderAt('/gateways/codex', { gateways: [codex] });
 
   await expect.element(screen.getByRole('heading', { name: 'Codex' })).toBeVisible();
-  await expect.element(screen.getByText('Virtual models serve from the drawer')).toBeVisible();
+  await expect.element(screen.getByRole('button', { name: /Codex/ })).toBeVisible();
 });
 
 test('a gateway slug nothing is stored under lands on the not-found state', async () => {
@@ -276,4 +276,25 @@ test('pressing the shortcut again brings focus back to the first control', async
   history.push('/settings?focus=first-control&at=2');
 
   await expect.element(launch).toHaveFocus();
+});
+
+test('a draft on one gateway never follows a person to another', async () => {
+  const registry: AccountsDocument = {
+    schemaVersion: ACCOUNTS_VERSION,
+    accounts: [
+      { id: 'k1', provider: 'anthropic', kind: 'api-key', label: 'work', credentialRef: 'c1' },
+    ],
+  };
+
+  const screen = await renderAt('/gateways/codex', {
+    accounts: registry,
+    gateways: [codex, claude],
+  });
+
+  await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
+  await screen.getByRole('textbox', { name: 'Name' }).fill('Fast Sonnet');
+
+  await userEvent.click(screen.getByRole('link', { name: /Claude/ }));
+
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
 });

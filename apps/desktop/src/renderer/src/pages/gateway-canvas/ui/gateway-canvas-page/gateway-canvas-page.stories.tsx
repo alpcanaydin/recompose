@@ -3,6 +3,7 @@ import { expect, waitFor } from 'storybook/test';
 import preview from '#.storybook/preview';
 import { withShellSurface } from '#.storybook/shell-surface';
 
+import { inspectorOpen, toggleInspector } from '../../../../shared/lib';
 import {
   freshGateway,
   runningGateway,
@@ -11,9 +12,20 @@ import {
 } from '../../testing/gateway-canvas.testkit';
 import { GatewayCanvasPage } from './gateway-canvas-page';
 
+function openTheInspector() {
+  if (!inspectorOpen()) {
+    toggleInspector();
+  }
+}
+
 const meta = preview.meta({
   component: GatewayCanvasPage,
   args: { slug: 'my-gateway' },
+  beforeEach: () => {
+    openTheInspector();
+
+    return openTheInspector;
+  },
   decorators: [withShellSurface],
   parameters: {
     bridge: {
@@ -32,7 +44,7 @@ const meta = preview.meta({
  */
 export const Serving = meta.story({
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText('Virtual models serve from the drawer')).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: /My Gateway/ })).toBeVisible();
     await expect(await canvas.findByText('· 2 virtual models')).toBeVisible();
     await expect(await canvas.findByText('fast → work · claude-haiku-4-5')).toBeVisible();
   },
@@ -47,7 +59,7 @@ export const DefiningAModel = meta.story({
     await userEvent.click(await canvas.findByRole('button', { name: 'Add virtual model' }));
 
     await expect(await canvas.findByRole('textbox', { name: 'Name' })).toBeVisible();
-    await expect(await canvas.findByText('Virtual models serve from the drawer')).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: /My Gateway/ })).toBeVisible();
   },
 });
 
@@ -64,7 +76,7 @@ export const InspectorClosed = meta.story({
     await waitFor(async () => {
       await expect(canvas.queryByText('Endpoint')).toBeNull();
     });
-    await expect(await canvas.findByText('Virtual models serve from the drawer')).toBeVisible();
+    await expect(await canvas.findByRole('button', { name: /My Gateway/ })).toBeVisible();
   },
 });
 

@@ -9,11 +9,26 @@ import type {
 } from '@recompose/contracts';
 
 import {
+  ACCOUNTS_VERSION,
   keyTail,
   runtimeAddressFor,
   runtimePortSchema,
   subscriptionProviders,
 } from '@recompose/contracts';
+
+/** A registry nobody has connected anything to, which every install starts as. */
+export const noAccounts: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
+
+/**
+ * A registry holding only a subscription, which offers a target picker nothing at all.
+ *
+ * @summary It is the shape most people's first install has, since a subscription is what a provider
+ * signs somebody into, so any screen that turns accounts into targets has to read against it.
+ */
+export const subscriptionOnlyAccounts: AccountsDocument = {
+  schemaVersion: ACCOUNTS_VERSION,
+  accounts: [{ id: 's1', provider: 'anthropic', kind: 'subscription', label: 'Claude' }],
+};
 
 type AccountHandlers = Pick<
   RecomposeIpc,

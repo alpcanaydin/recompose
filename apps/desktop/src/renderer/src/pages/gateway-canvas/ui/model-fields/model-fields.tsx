@@ -1,6 +1,7 @@
 import type { ReactNode, RefObject } from 'react';
 
 import { Field } from '@base-ui/react/field';
+import { Link } from '@tanstack/react-router';
 
 import type { OptionGroup } from '../option-list/option-list';
 
@@ -16,8 +17,12 @@ export type ModelFieldsProps = {
   nameRefusal?: string | undefined;
   /** Receives every keystroke in the name field. */
   onNameChange: (typed: string) => void;
-  /** The accounts a target can name, gathered under the kinds they are held as. */
-  targets: readonly OptionGroup[];
+  /**
+   * The accounts a target can name, gathered under the kinds they are held as, and nothing at all
+   * while the registry has yet to answer. An empty list is a registry that answered with nobody who
+   * can serve, which is a state a person has to be told about rather than shown as a blank.
+   */
+  targets: readonly OptionGroup[] | undefined;
   /** The account picked as the target, or nothing while none is. */
   target?: string | undefined;
   /** Receives the account the person picked. */
@@ -87,6 +92,42 @@ function pickedFrom(label: ReactNode, control: ReactNode): ReactNode {
   );
 }
 
+function nothingCanServe(): ReactNode {
+  return (
+    <div className="flex flex-col items-start gap-1.5 rounded-control border border-line-faint bg-surface-inert p-2.5">
+      <p className="text-control font-semibold text-ink">No account can serve yet</p>
+      <p className="text-detail text-ink-secondary">Connect an account in Providers first.</p>
+      <Link
+        className="mt-1 push-button whitespace-nowrap"
+        search={{ kind: 'api-key' }}
+        to="/providers"
+      >
+        Open Providers
+      </Link>
+    </div>
+  );
+}
+
+function targetControl(props: ModelFieldsProps): ReactNode {
+  if (props.targets === undefined) {
+    return null;
+  }
+
+  if (props.targets.length === 0) {
+    return nothingCanServe();
+  }
+
+  return (
+    <OptionList
+      groups={props.targets}
+      nothingMatched="No account matches that."
+      onPick={props.onPickTarget}
+      picked={props.target}
+      searchLabel="Search accounts"
+    />
+  );
+}
+
 function modelLabel(targetName: string | undefined): ReactNode {
   return (
     <>
@@ -134,21 +175,14 @@ function modelControl(props: ModelFieldsProps): ReactNode {
  * @summary The name is typed and the other two are picked, because a target and a model both come
  * from what is stored and what a provider actually serves. The id a client will ask for stands
  * under the name as it is derived, and the model list belongs to the target, so it waits for one.
+ * With nothing stored that can serve, the target says so and points at the screen that connects
+ * one, because a picker left empty reads as a flow that failed rather than as a step not taken yet.
  */
 export function ModelFields(props: ModelFieldsProps) {
   return (
     <div className="field-box">
       {nameField(props)}
-      {pickedFrom(
-        'Target',
-        <OptionList
-          groups={props.targets}
-          nothingMatched="No account matches that."
-          onPick={props.onPickTarget}
-          picked={props.target}
-          searchLabel="Search accounts"
-        />,
-      )}
+      {pickedFrom('Target', targetControl(props))}
       {pickedFrom(modelLabel(props.targetName), modelControl(props))}
     </div>
   );

@@ -53,11 +53,11 @@ function flowHead(slug: string, onBack: () => void): ReactNode {
 function flowFoot(draft: Draft, settled: boolean, onBack: () => void): ReactNode {
   return (
     <footer className="mt-auto flex gap-2 border-t border-line-faint px-3.5 py-3">
-      <button className="push-button flex-1" onClick={onBack} type="button">
+      <button className="push-button shrink-0 whitespace-nowrap" onClick={onBack} type="button">
         Cancel
       </button>
       <button
-        className="push-button-primary flex-1"
+        className="push-button-primary flex-1 whitespace-nowrap"
         disabled={!settled || draft.saving}
         onClick={() => {
           draft.save();
@@ -75,7 +75,7 @@ type FlowView = {
   /** The definitions this gateway already serves, which a new name may not collide with. */
   held: readonly VirtualModel[];
   nameField: RefObject<HTMLInputElement | null>;
-  targets: readonly OptionGroup[];
+  targets: readonly OptionGroup[] | undefined;
   target: string | undefined;
   targetName: string | undefined;
   providerModel: string;
@@ -166,8 +166,8 @@ export function AddModelFlow({ gateway, opening, onBack, onKeep }: AddModelFlowP
     };
   }, [draft.form]);
 
-  const targets = targetGroups(registry.data?.accounts ?? []);
-  const targetName = nameOfPicked(targets, draft.picked.target);
+  const targets = registry.data === undefined ? undefined : targetGroups(registry.data.accounts);
+  const targetName = nameOfPicked(targets ?? [], draft.picked.target);
 
   return (
     <>

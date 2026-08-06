@@ -145,6 +145,7 @@
 @utility push-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: calc(var(--spacing) * 1.5);
   height: var(--spacing-button);
   border: 1px solid var(--color-line-subtle);
@@ -329,6 +330,7 @@
 @utility push-button-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: calc(var(--spacing) * 1.5);
   height: var(--spacing-button);
   border: 1px solid transparent;

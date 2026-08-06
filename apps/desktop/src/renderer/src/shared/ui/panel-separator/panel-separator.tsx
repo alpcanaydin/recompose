@@ -1,6 +1,6 @@
 import type { KeyboardEvent, PointerEvent } from 'react';
 
-import type { PanelBounds } from './panel-resize';
+import type { PanelBounds, PanelStanding } from './panel-resize';
 
 import { draggedPanel, steppedPanel } from './panel-resize';
 
@@ -21,16 +21,18 @@ type PanelSeparatorProps = {
 
 type Settling = { onResize: (width: number) => void; onCollapse: () => void };
 
-function settle(asked: number, bounds: PanelBounds, settling: Settling): void {
+function settle(asked: number, bounds: PanelBounds, settling: Settling): PanelStanding['standing'] {
   const standing = draggedPanel(asked, bounds);
 
   if (standing.standing === 'collapsed') {
     settling.onCollapse();
 
-    return;
+    return 'collapsed';
   }
 
   settling.onResize(standing.width);
+
+  return 'sized';
 }
 
 function watchTheDrag(
@@ -40,18 +42,26 @@ function watchTheDrag(
   settling: Settling,
 ): void {
   const onMove = (moved: globalThis.PointerEvent): void => {
-    if (moved.pointerId === pointer) {
-      settle(askedFrom(moved.clientX), bounds, settling);
+    if (moved.pointerId !== pointer) {
+      return;
+    }
+
+    if (settle(askedFrom(moved.clientX), bounds, settling) === 'collapsed') {
+      stopWatching();
     }
   };
 
   const onEnd = (ended: globalThis.PointerEvent): void => {
     if (ended.pointerId === pointer) {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onEnd);
-      window.removeEventListener('pointercancel', onEnd);
+      stopWatching();
     }
   };
+
+  function stopWatching(): void {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onEnd);
+    window.removeEventListener('pointercancel', onEnd);
+  }
 
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onEnd);
@@ -68,7 +78,8 @@ const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
  * gesture that resizes and the gesture that closes are the same motion rather than two controls. It
  * carries the window-splitter semantics whole, so arrow keys size it, Home and End reach the bounds,
  * and Enter shuts it, because a border only a pointer can reach is out of reach for anyone without
- * one.
+ * one. Shutting the panel ends the drag rather than carrying on, since a pointer travelling further
+ * into a panel that has already gone has nothing left to say about how wide it stands.
  */
 export function PanelSeparator({
   label,

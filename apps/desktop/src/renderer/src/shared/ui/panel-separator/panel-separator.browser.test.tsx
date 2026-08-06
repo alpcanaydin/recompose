@@ -82,6 +82,24 @@ test('a drag well past the narrowest width shuts the panel rather than slivering
   expect(settled.collapses).toBe(1);
 });
 
+test('a drag carrying on past the collapse shuts the panel once and leaves it shut', async () => {
+  const { screen, settled } = await renderSeparator('trailing');
+  const handle = screen.getByRole('separator', theSeparator).element();
+
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 1, clientX: 500, bubbles: true }),
+  );
+
+  for (const at of [400, 300, 200, 100, 40]) {
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: at }));
+  }
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 40 }));
+
+  expect(settled.collapses).toBe(1);
+  expect(settled.widths).toEqual([bounds.min]);
+});
+
 test('arrow keys size the panel a step at a time', async () => {
   const { screen, settled } = await renderSeparator('trailing');
 

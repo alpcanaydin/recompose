@@ -31,16 +31,15 @@ const meta = preview.meta({
 });
 
 /**
- * The stage as it stands before the canvas exists: the gateway, and where to go instead.
+ * The stage as it stands before the canvas exists: the dotted field and the gateway on it.
  *
- * @summary The dotted field says nodes belong here and the hint says they do not arrive yet, so a
- * person reads an unfinished surface as unfinished rather than as broken.
+ * @summary The field carries the gateway and nothing else. Prose explaining that the canvas is
+ * unfinished told a person nothing they could act on, so the surface says what it holds and stops.
  */
 export const Standing = meta.story({
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('My Gateway')).toBeVisible();
     await expect(await canvas.findByText(':8397 · 2 virtual models')).toBeVisible();
-    await expect(await canvas.findByText('Virtual models serve from the drawer')).toBeVisible();
   },
 });
 
@@ -105,11 +104,11 @@ export const Hovered = meta.story({
 });
 
 /**
- * The stage squeezed to the narrowest the window allows, where the two blocks must still clear.
+ * The stage squeezed to the narrowest the window allows, where the node keeps the leading edge.
  *
- * @summary The node and the hint share a row rather than the centre, so no width can make them
- * cover each other. The reading measures the gap rather than trusting the eye, and the hint takes no
- * pointer of its own, so a click anywhere in that space still reaches the node it was meant for.
+ * @summary An empty field invites recentring the one thing on it, and that would move the node
+ * every time a second one arrived. It stays where the field will fill from, so the reading measures
+ * the node against the field's own leading edge rather than against the room around it.
  */
 export const NarrowStage = meta.story({
   decorators: [
@@ -119,13 +118,11 @@ export const NarrowStage = meta.story({
       </div>
     ),
   ],
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     const node = await canvas.findByRole('button', { name: /My Gateway/ });
-    const hint = await canvas.findByText('Virtual models serve from the drawer');
-    const around = hint.parentElement;
+    const field = canvasElement.querySelector('section');
 
-    await expect(paintedBox(node).right).toBeLessThanOrEqual(paintedBox(around).left);
-    await expect(paintedStyle(around).pointerEvents).toBe('none');
+    await expect(paintedBox(node).left - paintedBox(field).left).toBeLessThan(32);
   },
 });
 
