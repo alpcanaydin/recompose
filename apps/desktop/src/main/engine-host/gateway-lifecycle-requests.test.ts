@@ -1,5 +1,7 @@
 import {
+  ACCOUNTS_VERSION,
   GATEWAY_CONFIG_VERSION,
+  type Account,
   type EngineGateway,
   type GatewayConfig,
 } from '@recompose/contracts';
@@ -11,6 +13,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { EngineHost } from './engine-host';
 
 import { createGatewayLifecycleRequests } from './gateway-lifecycle-requests';
+import { keyRow } from './spend-grant.testkit';
 
 function gatewayNamed(slug: string, port: number): GatewayConfig {
   return {
@@ -20,6 +23,15 @@ function gatewayNamed(slug: string, port: number): GatewayConfig {
     port,
     virtualModels: [],
     layout: { nodes: {} },
+  };
+}
+
+function gatewayServing(slug: string, port: number, accountId: string): GatewayConfig {
+  return {
+    ...gatewayNamed(slug, port),
+    virtualModels: [
+      { id: 'fast', displayName: 'fast', target: { accountId, providerModel: 'claude-sonnet-5' } },
+    ],
   };
 }
 
@@ -54,7 +66,10 @@ function recordingHost() {
   return { host, started, stopped, restarted };
 }
 
-async function directoryHolding(stored: readonly GatewayConfig[]): Promise<string> {
+async function directoryHolding(
+  stored: readonly GatewayConfig[],
+  accounts: readonly Account[] = [],
+): Promise<string> {
   const userDataPath = await mkdtemp(join(tmpdir(), 'recompose-lifecycle-'));
   const gatewaysDir = join(userDataPath, 'gateways');
 
@@ -63,6 +78,12 @@ async function directoryHolding(stored: readonly GatewayConfig[]): Promise<strin
   for (const config of stored) {
     await writeFile(join(gatewaysDir, `${config.slug}.json`), JSON.stringify(config), 'utf8');
   }
+
+  await writeFile(
+    join(userDataPath, 'accounts.json'),
+    JSON.stringify({ schemaVersion: ACCOUNTS_VERSION, accounts }),
+    'utf8',
+  );
 
   return userDataPath;
 }
@@ -81,6 +102,60 @@ function requestsOver(host: EngineHost | null, userDataPath: string) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+const boundToTheStoredModel = [
+  {
+    id: 'fast',
+    displayName: 'fast',
+    target: { standing: 'bound', providerModel: 'claude-sonnet-5' },
+  },
+];
+
+describe('the snapshot a slug-only request serves under', () => {
+  test('starting hands the engine a target the registry still holds, bound', async () => {
+    const recorded = recordingHost();
+    const requests = requestsOver(
+      recorded.host,
+      await directoryHolding([gatewayServing('codex', 8397, keyRow.id)], [keyRow]),
+    );
+
+    requests.start('codex');
+
+    await vi.waitFor(() => {
+      expect(recorded.started[0]?.virtualModels).toStrictEqual(boundToTheStoredModel);
+    });
+  });
+
+  test('restarting hands the engine a target the registry still holds, bound', async () => {
+    const recorded = recordingHost();
+    const requests = requestsOver(
+      recorded.host,
+      await directoryHolding([gatewayServing('codex', 8397, keyRow.id)], [keyRow]),
+    );
+
+    requests.restart('codex');
+
+    await vi.waitFor(() => {
+      expect(recorded.restarted[0]?.virtualModels).toStrictEqual(boundToTheStoredModel);
+    });
+  });
+
+  test('starting hands the engine a target the registry lost, removed', async () => {
+    const recorded = recordingHost();
+    const requests = requestsOver(
+      recorded.host,
+      await directoryHolding([gatewayServing('codex', 8397, keyRow.id)], []),
+    );
+
+    requests.start('codex');
+
+    await vi.waitFor(() => {
+      expect(recorded.started[0]?.virtualModels).toStrictEqual([
+        { id: 'fast', displayName: 'fast', target: { standing: 'removed' } },
+      ]);
+    });
+  });
 });
 
 describe('asking the engine to act on a gateway named only by its slug', () => {

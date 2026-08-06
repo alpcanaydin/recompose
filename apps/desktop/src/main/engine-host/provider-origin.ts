@@ -1,10 +1,10 @@
 import type { CredentialedAccount, LocalAccount } from '@recompose/contracts';
 
-const servingOrigins: Readonly<Record<string, string>> = {
-  anthropic: 'https://api.anthropic.com',
-  openai: 'https://api.openai.com',
-  openrouter: 'https://openrouter.ai/api',
-};
+const servingOrigins = new Map<string, string>([
+  ['anthropic', 'https://api.anthropic.com'],
+  ['openai', 'https://api.openai.com'],
+  ['openrouter', 'https://openrouter.ai/api'],
+]);
 
 /**
  * Where a target account is spent, or nothing when recompose serves nothing for its provider.
@@ -14,7 +14,10 @@ const servingOrigins: Readonly<Record<string, string>> = {
  * against the vendor endpoint that speaks Chat Completions, named here rather than borrowed from
  * the engine's probe origins, because a probe asks whether a key authenticates and this says where
  * a turn is served.
+ *
+ * The lookup is a Map rather than an object, because a stored provider is any non-blank string a
+ * person typed and an object would answer `constructor` or `toString` with an inherited member.
  */
 export function providerOriginOf(account: CredentialedAccount | LocalAccount): string | undefined {
-  return account.kind === 'local' ? account.address : servingOrigins[account.provider];
+  return account.kind === 'local' ? account.address : servingOrigins.get(account.provider);
 }

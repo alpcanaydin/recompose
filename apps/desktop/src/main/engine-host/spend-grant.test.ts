@@ -140,7 +140,22 @@ describe('what a spend request draws when the credential is gone', () => {
     ).resolves.toStrictEqual({ verdict: 'missing-credential' });
   });
 
+  test('a vault that cannot be read at all answers a missing credential', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const userDataPath = await storageHolding([pointingAt(keyRow.id)], [keyRow]);
+
+    await rm(join(userDataPath, 'vault.bin'));
+    await mkdir(join(userDataPath, 'vault.bin'));
+
+    await expect(
+      resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
+    ).resolves.toStrictEqual({ verdict: 'missing-credential' });
+  });
+
   test('a vault a newer build wrote answers a missing credential', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
     const userDataPath = await storageHolding([pointingAt(keyRow.id)], [keyRow]);
 
     await writeFile(
@@ -152,5 +167,50 @@ describe('what a spend request draws when the credential is gone', () => {
     await expect(
       resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
     ).resolves.toStrictEqual({ verdict: 'missing-credential' });
+  });
+});
+
+describe('how a vault that refuses the read is written down', () => {
+  test('a vault the reader cannot open names what stopped it, and no secret', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const userDataPath = await storageHolding([pointingAt(keyRow.id)], [keyRow]);
+
+    await rm(join(userDataPath, 'vault.bin'));
+    await mkdir(join(userDataPath, 'vault.bin'));
+
+    await resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast');
+
+    const spoken = complaint.mock.calls.flat().map(String).join(' ');
+
+    expect(spoken).toContain('vault');
+    expect(spoken).toContain('EISDIR');
+    expect(spoken).not.toContain(secret);
+  });
+
+  test('a vault a newer build wrote names the schema version it holds', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const userDataPath = await storageHolding([pointingAt(keyRow.id)], [keyRow]);
+
+    await writeFile(
+      join(userDataPath, 'vault.bin'),
+      JSON.stringify({ schemaVersion: 2, entries: {} }),
+      'utf8',
+    );
+
+    await resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast');
+
+    const spoken = complaint.mock.calls.flat().map(String).join(' ');
+
+    expect(spoken).toContain('vault');
+    expect(spoken).toContain('schemaVersion 2');
+  });
+
+  test('a vault holding no entry for the account is refused without a complaint', async () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const userDataPath = await storageHolding([pointingAt(keyRow.id)], [keyRow], {});
+
+    await resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast');
+
+    expect(complaint).not.toHaveBeenCalled();
   });
 });

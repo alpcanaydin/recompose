@@ -28,13 +28,23 @@ async function grantOrNothing(
  * @summary Every request draws an answer, including the ones nothing can be granted for, because a
  * child left waiting holds an open turn. The credential a resolved grant carries lives in this
  * call's scope and in the message it posts, so nothing longer-lived ever holds it.
+ *
+ * A port that refuses the message is written down rather than left to carry out, because an
+ * unhandled rejection takes the whole main process down with it.
  */
 export function answerSpendRequest(
   port: GrantPort,
   grantFor: SpendGrantFor,
   asked: EngineSpendRequest,
 ): void {
-  void grantOrNothing(grantFor, asked).then((grant) => {
-    port.postMessage({ kind: 'spend-grant', answers: asked.id, grant });
-  });
+  void grantOrNothing(grantFor, asked)
+    .then((grant) => {
+      port.postMessage({ kind: 'spend-grant', answers: asked.id, grant });
+    })
+    .catch((error: unknown) => {
+      console.error(
+        `recompose could not hand the engine a grant for "${asked.virtualModel}" on the gateway "${asked.slug}", so the turn goes unanswered.`,
+        error,
+      );
+    });
 }

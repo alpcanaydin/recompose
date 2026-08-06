@@ -53,7 +53,15 @@ async function heldSecret(
 ): Promise<string | undefined> {
   const opened = await openVault(paths.vaultFile, ctx.onCorrupt, ctx.homeFolder);
 
-  return opened.ok ? getSecret(opened.vault, ctx.getCodec(), credentialRef) : undefined;
+  if (!opened.ok) {
+    console.error(
+      `recompose could not open the vault to spend a target, so the turn is refused: ${opened.error.message}`,
+    );
+
+    return undefined;
+  }
+
+  return getSecret(opened.vault, ctx.getCodec(), credentialRef);
 }
 
 async function credentialedGrant(

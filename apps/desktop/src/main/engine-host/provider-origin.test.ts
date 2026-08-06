@@ -45,3 +45,21 @@ describe('the origin a target account is spent against', () => {
     expect(providerOriginOf(keyRow('cerebras'))).toBeUndefined();
   });
 });
+
+describe('a provider named after something every object carries', () => {
+  test('a key stored under the provider "constructor" is spent against nothing', () => {
+    expect(providerOriginOf(keyRow('constructor'))).toBeUndefined();
+  });
+
+  test('a key stored under the provider "toString" is spent against nothing', () => {
+    expect(providerOriginOf(keyRow('toString'))).toBeUndefined();
+  });
+
+  test('a key stored under the provider "valueOf" is spent against nothing', () => {
+    expect(providerOriginOf(keyRow('valueOf'))).toBeUndefined();
+  });
+
+  test('a key stored under the provider "__proto__" is spent against nothing', () => {
+    expect(providerOriginOf(keyRow('__proto__'))).toBeUndefined();
+  });
+});
