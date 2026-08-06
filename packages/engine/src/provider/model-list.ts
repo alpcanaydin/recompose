@@ -6,6 +6,7 @@ import {
 } from '@recompose/contracts';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
+import { antigravitySubscriptionModels } from '../subscription/antigravity-models';
 import { claudeSubscriptionModels } from '../subscription/claude-models';
 import { authHeadersFor } from './key-probe';
 
@@ -67,6 +68,10 @@ function subscriptionListing(
 ): ModelListing {
   if (custody.provider === 'anthropic') {
     return { standing: 'listed', modelIds: claudeSubscriptionModels };
+  }
+
+  if (custody.provider === 'antigravity') {
+    return { standing: 'listed', modelIds: [...antigravitySubscriptionModels] };
   }
 
   const models = codexPlanIn(custody.credential) === 'free' ? codexFreeModels : codexPaidModels;

@@ -166,11 +166,20 @@ function keyOfferIn(entry: CatalogEntry): CatalogOffer | undefined {
  * @summary A person connected "Claude", so the row that lists the account keeps that word
  * rather than trading it for the vendor behind it.
  */
-export function subscriptionTitleFor(id: CatalogProviderId): string {
+export function subscriptionTitleFor(id: CatalogProviderId | SubscriptionProviderId): string {
+  if (id === 'antigravity') {
+    return 'Gemini';
+  }
+
   const entry = catalogEntries.find((candidate) => candidate.id === id);
   const title = entry === undefined ? undefined : offerFor(entry, 'subscription')?.title;
 
   return title ?? providerName(id);
+}
+
+/** The vendor mark used for a subscription product whose transport has its own provider id. */
+export function subscriptionMarkFor(id: SubscriptionProviderId): BrandMarkName {
+  return id === 'antigravity' ? 'gemini' : id;
 }
 
 /**

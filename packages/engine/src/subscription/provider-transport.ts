@@ -7,6 +7,7 @@ import type { ProviderRequest } from './claude-request';
 import type { RefreshFetch } from './refresh';
 
 import { isJsonObject } from '../gateway-wire';
+import { unwrapAntigravityResponse } from './antigravity-response';
 import { decodeClaudeResponse } from './claude-compression';
 import { restoreClaudeToolResponse } from './claude-tool-response';
 
@@ -70,6 +71,10 @@ export function subscriptionTransportOptions(provider: SubscriptionProviderId): 
     };
   }
 
+  if (provider === 'antigravity') {
+    return { http1Only: true, disableDefaultHeaders: true };
+  }
+
   return {
     http1Only: true,
     disableDefaultHeaders: true,
@@ -107,6 +112,27 @@ export type ClaudeProfile = {
   account: { uuid: string };
 };
 
+async function decodedProviderResponse(
+  provider: SubscriptionProviderId,
+  response: Response,
+): Promise<Response> {
+  if (provider === 'anthropic') {
+    return decodeClaudeResponse(response);
+  }
+
+  return provider === 'antigravity' ? unwrapAntigravityResponse(response) : response;
+}
+
+async function restoredProviderResponse(
+  provider: SubscriptionProviderId,
+  request: ProviderRequest,
+  response: Response,
+): Promise<Response> {
+  return provider === 'anthropic' && request.reverseToolNames !== undefined
+    ? restoreClaudeToolResponse(response, request.reverseToolNames)
+    : response;
+}
+
 function webResponseFrom(upstream: WireResponse): Response {
   const headers = new Headers();
 
@@ -135,12 +161,9 @@ export async function sendSubscriptionRequest(
     throwHttpErrors: false,
   });
 
-  const response = webResponseFrom(upstream);
-  const decoded = provider === 'anthropic' ? await decodeClaudeResponse(response) : response;
+  const decoded = await decodedProviderResponse(provider, webResponseFrom(upstream));
 
-  return provider === 'anthropic' && request.reverseToolNames !== undefined
-    ? restoreClaudeToolResponse(decoded, request.reverseToolNames)
-    : decoded;
+  return restoredProviderResponse(provider, request, decoded);
 }
 
 function isClaudeOAuthUrl(url: string): boolean {

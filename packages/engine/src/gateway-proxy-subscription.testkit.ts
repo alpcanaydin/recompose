@@ -13,15 +13,12 @@ export const subscriptionModel = aVirtualModel({
 });
 
 export function subscriptionGrant(
-  provider: 'anthropic' | 'openai',
+  provider: 'anthropic' | 'openai' | 'antigravity',
   credential: string,
 ): SpendGrant {
   return {
     verdict: 'resolved',
-    providerOrigin:
-      provider === 'anthropic'
-        ? 'https://api.anthropic.com'
-        : 'https://chatgpt.com/backend-api/codex',
+    providerOrigin: subscriptionOrigin(provider),
     spend: {
       custody: 'subscription',
       provider,
@@ -29,6 +26,14 @@ export function subscriptionGrant(
       credential,
     },
   };
+}
+
+function subscriptionOrigin(provider: 'anthropic' | 'openai' | 'antigravity'): string {
+  if (provider === 'anthropic') return 'https://api.anthropic.com';
+
+  return provider === 'openai'
+    ? 'https://chatgpt.com/backend-api/codex'
+    : 'https://daily-cloudcode-pa.googleapis.com';
 }
 
 export function runtimeAnswering(answer: () => Response) {
@@ -41,7 +46,7 @@ export function runtimeAnswering(answer: () => Response) {
     sent,
     persist,
     runtime: {
-      send: async (provider: 'anthropic' | 'openai', request: ProviderRequest) => {
+      send: async (provider: 'anthropic' | 'openai' | 'antigravity', request: ProviderRequest) => {
         await Promise.resolve();
         sent.push({ provider, request });
 

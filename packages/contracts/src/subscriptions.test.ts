@@ -28,7 +28,7 @@ const presentTool = {
 
 describe('the providers a subscription can name', () => {
   test('exactly the two providers whose own tools sign a person in', () => {
-    expect(subscriptionProviderIdSchema.options).toEqual(['anthropic', 'openai']);
+    expect(subscriptionProviderIdSchema.options).toEqual(['anthropic', 'openai', 'antigravity']);
   });
 
   test('a provider no tool signs in is refused', () => {

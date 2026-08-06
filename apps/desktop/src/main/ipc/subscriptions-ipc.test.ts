@@ -185,6 +185,7 @@ describe('reporting the provider tools this machine can run', () => {
     expect(answered.ok && answered.value.map((tool) => [tool.provider, tool.present])).toEqual([
       ['anthropic', true],
       ['openai', false],
+      ['antigravity', false],
     ]);
   });
 });

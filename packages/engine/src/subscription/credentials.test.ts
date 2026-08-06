@@ -99,6 +99,53 @@ describe('reading Codex and malformed credential bundles', () => {
   });
 });
 
+describe('reading and writing Antigravity credentials', () => {
+  test('the CLIProxyAPI bundle exposes project and RFC3339 expiry', () => {
+    const blob = JSON.stringify({
+      type: 'antigravity',
+      access_token: 'google-access',
+      refresh_token: 'google-refresh',
+      expired: '2027-01-15T08:00:00.000Z',
+      project_id: 'cloud-project',
+      email: 'person@example.com',
+    });
+
+    expect(parseSubscriptionCredential('antigravity', blob)).toEqual({
+      accessToken: 'google-access',
+      refreshToken: 'google-refresh',
+      expiresAt: 1_800_000_000_000,
+      projectId: 'cloud-project',
+    });
+  });
+
+  test('refresh preserves project and account metadata', () => {
+    const original = JSON.stringify({
+      type: 'antigravity',
+      access_token: 'old-access',
+      refresh_token: 'old-refresh',
+      expired: '2020-01-01T00:00:00.000Z',
+      project_id: 'cloud-project',
+      email: 'person@example.com',
+    });
+    const refreshed: unknown = JSON.parse(
+      refreshedCredentialBlob(
+        'antigravity',
+        original,
+        { accessToken: 'new-access', expiresInSeconds: 3600 },
+        1_700_000_000_000,
+      ),
+    );
+
+    expect(refreshed).toMatchObject({
+      access_token: 'new-access',
+      refresh_token: 'old-refresh',
+      expired: '2023-11-14T23:13:20.000Z',
+      project_id: 'cloud-project',
+      email: 'person@example.com',
+    });
+  });
+});
+
 describe('writing a rotated Claude token back into its provider document', () => {
   test('a Claude refresh preserves unrelated account metadata', () => {
     const original = JSON.stringify({

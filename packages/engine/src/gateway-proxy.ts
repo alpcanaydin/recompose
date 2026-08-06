@@ -142,6 +142,7 @@ function dialectFor(grant: SpendGrant): ProviderDialect {
   const direct = new Map<string, ProviderDialect>([
     ['anthropic', 'anthropic'],
     ['gemini', 'gemini'],
+    ['antigravity', 'gemini'],
   ]).get(grant.spend.provider);
 
   return direct ?? (grant.spend.custody === 'subscription' ? 'responses' : 'chat-completions');

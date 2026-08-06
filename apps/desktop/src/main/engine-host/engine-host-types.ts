@@ -10,6 +10,7 @@ import type {
   LookCustody,
   ModelListing,
   RuntimeReachability,
+  SubscriptionProviderId,
 } from '@recompose/contracts';
 
 import type { SpendGrantFor } from './engine-spend';
@@ -28,7 +29,7 @@ export type EngineHostDeps = {
   spawnChild: () => EngineChild;
   grantFor: SpendGrantFor;
   storeSubscriptionCredential?: (
-    provider: 'anthropic' | 'openai',
+    provider: SubscriptionProviderId,
     accountId: string,
     credential: string,
   ) => Promise<void>;

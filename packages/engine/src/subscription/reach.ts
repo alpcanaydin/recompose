@@ -8,6 +8,7 @@ import type { ParsedSubscriptionCredential } from './credentials';
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
+import { antigravityProviderRequest } from './antigravity-request';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
@@ -90,7 +91,13 @@ function providerRequestFor(
   sessionId: string,
   sourceDialect: ProxyDialect,
 ): ProviderRequest {
-  if (grant.spend.custody === 'subscription' && grant.spend.provider === 'anthropic') {
+  const spend = grant.spend;
+
+  if (spend.custody !== 'subscription') {
+    throw new Error('a non-subscription spend reached the subscription request builder');
+  }
+
+  if (spend.provider === 'anthropic') {
     return claudeProviderRequest(
       grant.providerOrigin,
       injectClaudeDiagnostics(body, runtime.diagnostics.previous(diagnosticsKey(grant, sessionId))),
@@ -101,12 +108,32 @@ function providerRequestFor(
     );
   }
 
-  const replayed =
-    sourceDialect === 'anthropic' && runtime.codexReplay !== undefined
-      ? runtime.codexReplay.inject(codexReplayKey(body, sessionId), body)
-      : body;
+  if (spend.provider === 'antigravity') {
+    return antigravityProviderRequest(
+      grant.providerOrigin,
+      body,
+      credential,
+      { sessionId, requestId: runtime.randomUUID() },
+      runtime.now(),
+    );
+  }
+
+  const replayed = replayedCodexBody(body, runtime, sessionId, sourceDialect);
 
   return codexProviderRequest(grant.providerOrigin, replayed, credential, runtime.randomUUID());
+}
+
+function replayedCodexBody(
+  body: JsonObject,
+  runtime: SubscriptionRuntime,
+  sessionId: string,
+  sourceDialect: ProxyDialect,
+): JsonObject {
+  if (sourceDialect !== 'anthropic' || runtime.codexReplay === undefined) {
+    return body;
+  }
+
+  return runtime.codexReplay.inject(codexReplayKey(body, sessionId), body);
 }
 
 function claudeIdentityOf(credential: ParsedSubscriptionCredential) {
@@ -254,7 +281,7 @@ export async function readySubscriptionCredential(
     throw new Error('the subscription credential could not be read');
   }
 
-  return credentialNeedsRefresh(credential, runtime.now())
+  return credentialNeedsRefresh(credential, runtime.now(), spend.provider)
     ? refreshedAndPersisted(spend, spend.credential, runtime)
     : { blob: spend.credential, credential };
 }

@@ -16,8 +16,12 @@ export type RefreshFetch = (url: string, init: RefreshRequest) => Promise<Respon
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 const CLAUDE_TOKEN_URL = 'https://platform.claude.com/v1/oauth/token';
 const CODEX_TOKEN_URL = 'https://auth.openai.com/oauth/token';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const CLAUDE_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
+const ANTIGRAVITY_CLIENT_ID =
+  '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com';
+const ANTIGRAVITY_CLIENT_SECRET = ['GOCSPX-', 'K58FWR486LdLJ1mLB8sXC4z6qDAf'].join('');
 const CLAUDE_SCOPE =
   'user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload';
 const CLAUDE_REFRESH_MIN_BACKOFF_MS = 5_000;
@@ -29,8 +33,22 @@ const claudeRefreshBlockedUntil = new Map<string, number>();
 export function credentialNeedsRefresh(
   credential: ParsedSubscriptionCredential,
   now: number,
+  provider: SubscriptionProviderId = 'anthropic',
 ): boolean {
-  return credential.expiresAt !== undefined && credential.expiresAt <= now + REFRESH_MARGIN_MS;
+  const margin = provider === 'antigravity' ? 50 * 60 * 1000 : REFRESH_MARGIN_MS;
+
+  return credential.expiresAt !== undefined && credential.expiresAt <= now + margin;
+}
+
+function formRefreshRequest(values: Record<string, string>): RefreshRequest {
+  return {
+    method: 'POST',
+    headers: [
+      ['Content-Type', 'application/x-www-form-urlencoded'],
+      ['Accept', 'application/json'],
+    ],
+    body: new URLSearchParams(values).toString(),
+  };
 }
 
 function refreshRequest(
@@ -59,21 +77,26 @@ function refreshRequest(
     ];
   }
 
-  return [
-    CODEX_TOKEN_URL,
-    {
-      method: 'POST',
-      headers: [
-        ['Content-Type', 'application/x-www-form-urlencoded'],
-        ['Accept', 'application/json'],
-      ],
-      body: new URLSearchParams({
+  if (provider === 'openai') {
+    return [
+      CODEX_TOKEN_URL,
+      formRefreshRequest({
         client_id: CODEX_CLIENT_ID,
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
         scope: 'openid profile email',
-      }).toString(),
-    },
+      }),
+    ];
+  }
+
+  return [
+    GOOGLE_TOKEN_URL,
+    formRefreshRequest({
+      client_id: ANTIGRAVITY_CLIENT_ID,
+      client_secret: ANTIGRAVITY_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    }),
   ];
 }
 

@@ -14,7 +14,11 @@ export type SubscriptionCredentialStore = {
 };
 
 function fileNameFor(provider: SubscriptionProviderId): string {
-  return provider === 'anthropic' ? '.credentials.json' : 'auth.json';
+  if (provider === 'anthropic') {
+    return '.credentials.json';
+  }
+
+  return provider === 'antigravity' ? 'antigravity.json' : 'auth.json';
 }
 
 async function readCredentialFile(path: string): Promise<string | null> {

@@ -59,6 +59,12 @@ describe('the origin a target account is spent against', () => {
     expect(providerOriginOf(subscription('openai'))).toBe('https://chatgpt.com/backend-api/codex');
   });
 
+  test('an Antigravity subscription is spent against Cloud Code Assist', () => {
+    expect(providerOriginOf(subscription('antigravity'))).toBe(
+      'https://daily-cloudcode-pa.googleapis.com',
+    );
+  });
+
   test('a key under a provider recompose serves nothing for is spent against nothing', () => {
     expect(providerOriginOf(keyRow('cerebras'))).toBeUndefined();
   });

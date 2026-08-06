@@ -55,9 +55,18 @@ export function providerOriginOf(account: Account): string | undefined {
 }
 
 function subscriptionOriginOf(account: Account): string | undefined {
-  return account.kind === 'subscription' && account.provider === 'openai'
-    ? (standInOrigin() ?? 'https://chatgpt.com/backend-api/codex')
-    : undefined;
+  if (account.kind !== 'subscription') {
+    return undefined;
+  }
+
+  const origins = new Map([
+    ['anthropic', 'https://api.anthropic.com'],
+    ['openai', 'https://chatgpt.com/backend-api/codex'],
+    ['antigravity', 'https://daily-cloudcode-pa.googleapis.com'],
+  ]);
+  const origin = origins.get(account.provider);
+
+  return origin === undefined ? undefined : (standInOrigin() ?? origin);
 }
 
 function keyedOriginOf(provider: string): string | undefined {

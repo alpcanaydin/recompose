@@ -9,6 +9,7 @@ export type ParsedSubscriptionCredential = {
   accountUuid?: string;
   deviceIds?: string[];
   expiresAt?: number;
+  projectId?: string;
 };
 
 export type RefreshedTokens = {
@@ -130,6 +131,50 @@ function codexCredential(tokens: JsonObject): ParsedSubscriptionCredential | nul
   };
 }
 
+function parsedDate(value: unknown): number | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const parsed = Date.parse(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function antigravityCredential(document: JsonObject): ParsedSubscriptionCredential | null {
+  const accessToken = nonBlank(document['access_token']);
+
+  if (accessToken === undefined) {
+    return null;
+  }
+
+  const refreshToken = nonBlank(document['refresh_token']);
+  const projectId = firstNonBlank(document['project_id'], document['projectId']);
+  const expiresAt = parsedDate(document['expired']);
+
+  return {
+    accessToken,
+    ...(refreshToken === undefined ? {} : { refreshToken }),
+    ...(projectId === undefined ? {} : { projectId }),
+    ...(expiresAt === undefined ? {} : { expiresAt }),
+  };
+}
+
+function nestedCredential(
+  provider: Exclude<SubscriptionProviderId, 'antigravity'>,
+  document: JsonObject,
+): ParsedSubscriptionCredential | null {
+  const tokens = objectOf(
+    provider === 'anthropic' ? document['claudeAiOauth'] : document['tokens'],
+  );
+
+  if (tokens === null) {
+    return null;
+  }
+
+  return provider === 'anthropic' ? claudeCredential(document, tokens) : codexCredential(tokens);
+}
+
 export function parseSubscriptionCredential(
   provider: SubscriptionProviderId,
   blob: string,
@@ -140,15 +185,11 @@ export function parseSubscriptionCredential(
     return null;
   }
 
-  const tokens = objectOf(
-    provider === 'anthropic' ? document['claudeAiOauth'] : document['tokens'],
-  );
-
-  if (tokens === null) {
-    return null;
+  if (provider === 'antigravity') {
+    return antigravityCredential(document);
   }
 
-  return provider === 'anthropic' ? claudeCredential(document, tokens) : codexCredential(tokens);
+  return nestedCredential(provider, document);
 }
 
 export function withClaudeCredentialIdentity(
@@ -199,6 +240,16 @@ function refreshedCodexDocument(
   document['last_refresh'] = new Date(now).toISOString();
 }
 
+function refreshedAntigravityDocument(
+  document: JsonObject,
+  refreshed: RefreshedTokens,
+  now: number,
+): void {
+  document['access_token'] = refreshed.accessToken;
+  document['refresh_token'] = refreshed.refreshToken ?? document['refresh_token'];
+  document['expired'] = new Date(now + refreshed.expiresInSeconds * 1000).toISOString();
+}
+
 export function refreshedCredentialBlob(
   provider: SubscriptionProviderId,
   originalBlob: string,
@@ -213,6 +264,8 @@ export function refreshedCredentialBlob(
 
   if (provider === 'anthropic') {
     refreshedClaudeDocument(document, refreshed, now);
+  } else if (provider === 'antigravity') {
+    refreshedAntigravityDocument(document, refreshed, now);
   } else {
     refreshedCodexDocument(document, refreshed, now);
   }

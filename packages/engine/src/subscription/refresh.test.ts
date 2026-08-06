@@ -59,6 +59,45 @@ describe('deciding whether an access token is still fit for a turn', () => {
   test('a token with no readable expiry is tried rather than discarded', () => {
     expect(credentialNeedsRefresh({ accessToken: 'x' }, 1_000_000)).toBe(false);
   });
+
+  test("Antigravity uses CLIProxyAPI's fifty-minute refresh skew", () => {
+    expect(
+      credentialNeedsRefresh({ accessToken: 'x', expiresAt: 3_999_999 }, 1_000_000, 'antigravity'),
+    ).toBe(true);
+    expect(
+      credentialNeedsRefresh({ accessToken: 'x', expiresAt: 4_000_001 }, 1_000_000, 'antigravity'),
+    ).toBe(false);
+  });
+});
+
+describe('refreshing an Antigravity OAuth credential', () => {
+  test("the refresh request matches CLIProxyAPI's Google exchange", async () => {
+    const blob = JSON.stringify({
+      access_token: 'old-access',
+      refresh_token: 'google-refresh',
+      expired: '2020-01-01T00:00:00.000Z',
+      project_id: 'cloud-project',
+    });
+    let capturedBody = '';
+    const fetchLike = vi.fn(async (_url: string, init: { body: string }) => {
+      await Promise.resolve();
+      capturedBody = init.body;
+
+      return Response.json({ access_token: 'new-access', expires_in: 3600 });
+    });
+
+    await refreshSubscriptionCredential('antigravity', blob, fetchLike, 1_700_000_000_000);
+
+    expect(fetchLike).toHaveBeenCalledWith('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: [
+        ['Content-Type', 'application/x-www-form-urlencoded'],
+        ['Accept', 'application/json'],
+      ],
+      body: capturedBody,
+    });
+    expect(new URLSearchParams(capturedBody).get('refresh_token')).toBe('google-refresh');
+  });
 });
 
 describe('refreshing a Claude Code OAuth credential', () => {
