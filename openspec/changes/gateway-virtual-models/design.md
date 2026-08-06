@@ -88,6 +88,8 @@ The refusal vocabulary in `refusals.ts` gains a missing-target and a missing-cre
 
 ### The Models surface anchors in the drawer, and the design project is its source of truth
 
+The maintainer approved the drawer proposal in the design project (`templates/gateway-models`) with one vocabulary rule. User-facing copy names the alias a virtual model, never a bare model, so the drawer reads "Serves · 2 virtual models" and "Add virtual model." The provider's own model keeps the plain Model label.
+
 The gateway screen takes the design system's shell: the content stage in the middle and the inspector drawer on the right, per the `recompose-design-system` project's `templates/gateway-detail`. The canvas stays out of this slice, so the stage holds a calm empty state and the topology arrives with the later canvas feature. The defined models live in the drawer's Serves section, each row reading the virtual name with its target and a target-removed standing, with the Copy model id act. Adding a model runs as a drawer flow ordering its fields Name, Target, then Model, with the maintainer settling the concrete composition in the design project before the surface lands. The target picker groups accounts by kind through the shipped `accountKindTitle` vocabulary and offers the key, aggregator, and local kinds, with a search once the list outgrows the screen. Provider display names live in a page slice a widget can't reach under Feature-Sliced Design. Each row leads with its provider mark instead, so the provider stays visible inside every group. The Model field fills from the target account's live model list. A person picks the model rather than typing it.
 
 ### The model list fills over a probe lane
