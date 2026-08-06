@@ -108,7 +108,7 @@ The response names the model that answered in the body and in `message_start`, r
 
 ### The offered-kinds refusal
 
-`entities/account/model/account-kind.ts` gains an `offeredAccountKind` filter that drops the subscription kind. The stored `targetSchema` refuses a subscription target at parse, so the prohibition holds in the contract as well as the picker.
+`entities/account/model/account-kind.ts` gains an `accountsStandingAsTarget` filter that drops the subscription kind, named after the contract's own refusal sentence, because the file already ships an unrelated `offeredAccountKind`. The stored `targetSchema` refuses a subscription target at parse, so the prohibition holds in the contract as well as the picker.
 
 ### The engine protocol snapshot
 
@@ -161,7 +161,7 @@ Produces:
 - `virtualModelSchema`, `VirtualModel`, `targetSchema`, `Target`, and `GATEWAY_CONFIG_VERSION` from `packages/contracts/src/gateway-config.ts`
 - the widened `engineGatewaySchema` and the spend-grant message pair from `packages/contracts/src/engine-protocol.ts`
 - the missing-target and missing-credential refusal factories from `packages/engine/src/refusals.ts`
-- `offeredAccountKind` from the account entity's public API
+- `accountsStandingAsTarget` from the account entity's public API
 
 ## Decisions
 
