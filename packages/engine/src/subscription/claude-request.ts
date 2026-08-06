@@ -190,7 +190,29 @@ function shapedSystemBody(
 }
 
 function messageFeatures(body: JsonObject, mode: 'messages' | 'count-tokens'): JsonObject {
-  return mode === 'messages' ? withClaudeMaxTokens(withClaudeContextManagement(body)) : body;
+  return mode === 'messages' ? withClaudeMaxTokens(body) : body;
+}
+
+function isAnthropicUpstream(providerOrigin: string): boolean {
+  try {
+    const origin = new URL(providerOrigin);
+
+    if (origin.username !== '' || origin.password !== '') return false;
+
+    return origin.origin.toLowerCase() === 'https://api.anthropic.com';
+  } catch {
+    return false;
+  }
+}
+
+function upstreamFeatures(
+  body: JsonObject,
+  providerOrigin: string,
+  mode: 'messages' | 'count-tokens',
+): JsonObject {
+  return mode === 'messages' && isAnthropicUpstream(providerOrigin)
+    ? withClaudeContextManagement(body)
+    : body;
 }
 
 export function claudeProviderRequest(
@@ -205,7 +227,8 @@ export function claudeProviderRequest(
   const requested = requestedClaudeBetas(rawBody);
   const identified = identifiedBody(rawBody, identity, ids.sessionId);
   const shaped = shapedSystemBody(identified, now, mode);
-  const body = messageFeatures(normalizedClaudeBody(shaped), mode);
+  const featured = messageFeatures(normalizedClaudeBody(shaped), mode);
+  const body = upstreamFeatures(featured, providerOrigin, mode);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
 
   return {
