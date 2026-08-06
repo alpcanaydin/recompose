@@ -88,8 +88,10 @@ describe('token counting through a subscription target', () => {
     expect(await answer.json()).toEqual({ input_tokens: 17 });
     expect(sent?.url).toBe('https://daily-cloudcode-pa.googleapis.com/v1internal:countTokens');
     expect(JSON.parse(sent?.body ?? '{}')).toMatchObject({
-      contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
-      systemInstruction: { parts: [{ text: 'caller rules' }] },
+      request: {
+        contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+        systemInstruction: { parts: [{ text: 'caller rules' }] },
+      },
     });
   });
 });

@@ -3,7 +3,9 @@ import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 
 import { isJsonObject } from '../gateway-wire';
+import { normalizeAntigravityFunctionHistory } from './antigravity-function-history';
 import { cleanAntigravityRequestSchemas } from './antigravity-request-schemas';
+import { sanitizeAntigravitySignatures } from './antigravity-signatures';
 
 const USER_AGENT = 'antigravity/hub';
 
@@ -41,6 +43,8 @@ function nestedRequest(body: JsonObject, model: string): JsonObject {
 
   delete request['safetySettings'];
   cleanAntigravityRequestSchemas(request, model);
+  sanitizeAntigravitySignatures(request, model);
+  normalizeAntigravityFunctionHistory(request);
 
   if (!model.includes('claude')) {
     withoutGeminiMaxTokens(request);
@@ -109,12 +113,8 @@ export function antigravityCountTokensRequest(
   body: JsonObject,
   credential: ParsedSubscriptionCredential,
 ): ProviderRequest {
-  const {
-    model: _model,
-    stream: _stream,
-    safetySettings: _safetySettings,
-    ...payload
-  } = structuredClone(body);
+  const model = modelOf(body);
+  const request = nestedRequest(body, model);
 
   return {
     url: `${providerOrigin.replace(/\/+$/u, '')}/v1internal:countTokens`,
@@ -124,6 +124,6 @@ export function antigravityCountTokensRequest(
       ['User-Agent', USER_AGENT],
       ['Connection', 'close'],
     ],
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ request }),
   };
 }

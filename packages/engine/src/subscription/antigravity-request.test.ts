@@ -114,8 +114,46 @@ test('native countTokens strips routing fields and keeps Gemini contents', () =>
 
   expect(request.url).toBe('https://daily-cloudcode-pa.googleapis.com/v1internal:countTokens');
   expect(JSON.parse(request.body)).toEqual({
-    contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+    request: { contents: [{ role: 'user', parts: [{ text: 'hello' }] }] },
   });
+});
+
+test('countTokens sanitizes the same Gemini parallel tool history as inference', () => {
+  const request = antigravityCountTokensRequest(
+    'https://daily-cloudcode-pa.googleapis.com/',
+    {
+      model: 'gemini-3.6-flash-high',
+      contents: [
+        {
+          role: 'model',
+          parts: [
+            { functionCall: { id: 'one', name: 'read' } },
+            {
+              functionCall: { id: 'two', name: 'read' },
+              thoughtSignature: 'skip_thought_signature_validator',
+            },
+          ],
+        },
+        {
+          role: 'user',
+          parts: [
+            { functionResponse: { id: 'two', name: 'read', response: {} } },
+            { functionResponse: { id: 'one', name: 'read', response: {} } },
+          ],
+        },
+      ],
+    },
+    credential,
+  );
+  const body = parsedJson(request.body);
+
+  expect(body).toHaveProperty(
+    'request.contents.0.parts.0.thoughtSignature',
+    'skip_thought_signature_validator',
+  );
+  expect(body).not.toHaveProperty('request.contents.0.parts.1.thoughtSignature');
+  expect(body).toHaveProperty('request.contents.1.role', 'model');
+  expect(body).toHaveProperty('request.contents.1.parts.0.functionResponse.id', 'one');
 });
 
 describe('sanitizing only schema-bearing Antigravity request fields', () => {
@@ -187,4 +225,34 @@ describe('protecting non-schema Antigravity payload data', () => {
       'request.generationConfig.responseJsonSchema.properties.reason',
     );
   });
+});
+
+test('finalizes Gemini parallel-call signatures and response roles inside the envelope', () => {
+  const { body: request } = bodyOf({
+    model: 'gemini-3.5-flash',
+    contents: [
+      {
+        role: 'model',
+        parts: [
+          { functionCall: { id: 'first', name: 'one', args: {} } },
+          { functionCall: { id: 'second', name: 'two', args: {} } },
+        ],
+      },
+      {
+        role: 'user',
+        parts: [
+          { functionResponse: { id: 'second', name: 'two', response: {} } },
+          { functionResponse: { id: 'first', name: 'one', response: {} } },
+        ],
+      },
+    ],
+  });
+
+  expect(request).toHaveProperty(
+    'request.contents.0.parts.0.thoughtSignature',
+    'skip_thought_signature_validator',
+  );
+  expect(request).not.toHaveProperty('request.contents.0.parts.1.thoughtSignature');
+  expect(request).toHaveProperty('request.contents.1.role', 'model');
+  expect(request).toHaveProperty('request.contents.1.parts.0.functionResponse.id', 'first');
 });
