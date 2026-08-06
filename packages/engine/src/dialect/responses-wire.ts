@@ -8,7 +8,7 @@ export type ResponsesToolParameters = {
   oneOf?: readonly unknown[];
 };
 
-export type ResponsesTool = {
+export type ResponsesFunctionTool = {
   type: 'function';
   name: string;
   description?: string;
@@ -16,16 +16,31 @@ export type ResponsesTool = {
   strict?: boolean;
 };
 
-export type ResponsesToolChoice = 'auto' | 'none' | 'required' | { type: 'function'; name: string };
+type ResponsesWebSearchTool = {
+  type: 'web_search';
+  filters?: { allowed_domains: readonly string[] };
+  user_location?: HubJsonObject;
+};
+
+export type ResponsesTool = ResponsesFunctionTool | ResponsesWebSearchTool;
+
+export type ResponsesToolChoice =
+  | 'auto'
+  | 'none'
+  | 'required'
+  | { type: 'function'; name: string }
+  | { type: 'web_search' };
 
 type ResponsesInputTextPart = { type: 'input_text'; text: string };
 export type ResponsesOutputTextPart = { type: 'output_text'; text: string };
 type ResponsesInputImagePart = { type: 'input_image'; image_url: string };
+type ResponsesInputFilePart = { type: 'input_file'; file_data: string; filename: string };
 
 export type ResponsesContentPart =
   | ResponsesInputTextPart
   | ResponsesOutputTextPart
-  | ResponsesInputImagePart;
+  | ResponsesInputImagePart
+  | ResponsesInputFilePart;
 
 export type ResponsesMessageItem = {
   type: 'message';
@@ -50,9 +65,10 @@ type ResponsesReasoningSummaryPart = { type: 'summary_text'; text: string };
 
 export type ResponsesReasoningItem = {
   type: 'reasoning';
-  id: string;
+  id?: string;
   summary?: readonly ResponsesReasoningSummaryPart[];
   encrypted_content?: string;
+  content?: null;
 };
 
 export type ResponsesInputItem =
@@ -117,6 +133,7 @@ export type ResponsesStreamResponse = {
   output: readonly ResponsesOutputItem[];
   incomplete_details?: { reason: string };
   usage?: ResponsesUsage;
+  error?: { code?: string; message?: string };
 };
 
 export type ResponsesStreamItem = {
@@ -125,6 +142,7 @@ export type ResponsesStreamItem = {
   id?: string;
   call_id?: string;
   name?: string;
+  encrypted_content?: string;
 };
 
 export type ResponsesKnownStreamEvent =
@@ -133,9 +151,10 @@ export type ResponsesKnownStreamEvent =
   | { type: 'response.output_text.delta'; output_index: number; delta: string }
   | { type: 'response.reasoning_summary_text.delta'; output_index: number; delta: string }
   | { type: 'response.function_call_arguments.delta'; output_index: number; delta: string }
-  | { type: 'response.output_item.done'; output_index: number }
+  | { type: 'response.output_item.done'; output_index: number; item?: ResponsesStreamItem }
   | { type: 'response.completed'; response: ResponsesStreamResponse }
   | { type: 'response.incomplete'; response: ResponsesStreamResponse }
+  | { type: 'response.failed'; response: ResponsesStreamResponse }
   | { type: 'error'; code: string; message: string };
 
 type ResponsesUnknownStreamEvent = { type: string };

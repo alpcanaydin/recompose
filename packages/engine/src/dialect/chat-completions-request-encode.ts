@@ -17,11 +17,7 @@ import type {
   HubToolUseBlock,
 } from './hub';
 
-import {
-  droppedRedactedThinking,
-  droppedThinking,
-  foldAssistantBlocks,
-} from './chat-completions-blocks';
+import { dropChatBlock, foldAssistantBlocks, isDroppedChatBlock } from './chat-completions-blocks';
 import { chatCacheControlFrom } from './chat-completions-cache';
 import { systemMessageFrom } from './chat-completions-request-fields';
 import {
@@ -101,14 +97,8 @@ function routeUserContentBlock(
 }
 
 function routeUserBlock(block: HubContentBlock, parts: ChatContentPart[], fates: Fate[]): void {
-  if (block.type === 'thinking') {
-    droppedThinking(fates);
-
-    return;
-  }
-
-  if (block.type === 'redacted_thinking') {
-    droppedRedactedThinking(fates);
+  if (isDroppedChatBlock(block)) {
+    dropChatBlock(block, fates, true);
 
     return;
   }

@@ -7,11 +7,13 @@ import type {
   HubTool,
   HubToolChoice,
   HubToolSchema,
+  HubWebSearchTool,
 } from './hub';
 import type { ResponsesDrop } from './responses-drops';
 import type {
   ResponsesFunctionCallItem,
   ResponsesFunctionCallOutputItem,
+  ResponsesFunctionTool,
   ResponsesInputItem,
   ResponsesRequest,
   ResponsesTool,
@@ -39,7 +41,7 @@ function normalizeSchema(parameters: ResponsesToolParameters): HubToolSchema {
   };
 }
 
-function toHubTool(tool: ResponsesTool): HubTool {
+function toHubTool(tool: ResponsesFunctionTool): HubTool {
   return {
     name: tool.name,
     ...(tool.description === undefined ? {} : { description: tool.description }),
@@ -47,9 +49,20 @@ function toHubTool(tool: ResponsesTool): HubTool {
   };
 }
 
+function toHubWebSearchTool(
+  tool: Extract<ResponsesTool, { type: 'web_search' }>,
+): HubWebSearchTool {
+  return {
+    type: 'web_search',
+    name: 'web_search',
+    ...(tool.filters === undefined ? {} : { allowedDomains: tool.filters.allowed_domains }),
+    ...(tool.user_location === undefined ? {} : { userLocation: tool.user_location }),
+  };
+}
+
 function toHubToolChoice(choice: ResponsesToolChoice): HubToolChoice {
   if (typeof choice === 'object') {
-    return { type: 'tool', name: choice.name };
+    return objectToolChoice(choice);
   }
 
   switch (choice) {
@@ -66,6 +79,14 @@ function toHubToolChoice(choice: ResponsesToolChoice): HubToolChoice {
       throw new Error(`unhandled responses tool choice: ${String(unhandled)}`);
     }
   }
+}
+
+function objectToolChoice(
+  choice: Extract<ResponsesToolChoice, object>,
+): Extract<HubToolChoice, { type: 'tool' | 'web_search' }> {
+  return choice.type === 'web_search'
+    ? { type: 'web_search' }
+    : { type: 'tool', name: choice.name };
 }
 
 function toHubSampling(request: ResponsesRequest): HubSampling | undefined {
@@ -215,7 +236,13 @@ function assembleHubRequest(
   }
 
   if (request.tools !== undefined) {
-    value.tools = request.tools.map(toHubTool);
+    const tools = request.tools.filter(
+      (tool): tool is ResponsesFunctionTool => tool.type === 'function',
+    );
+    const serverTools = request.tools.filter((tool) => tool.type === 'web_search');
+
+    value.tools = tools.map(toHubTool);
+    value.serverTools = serverTools.map(toHubWebSearchTool);
   }
 
   if (request.tool_choice !== undefined) {

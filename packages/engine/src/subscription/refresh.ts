@@ -20,8 +20,11 @@ const CLAUDE_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const CLAUDE_SCOPE =
   'user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload';
+const CLAUDE_REFRESH_MIN_BACKOFF_MS = 5_000;
+const CLAUDE_REFRESH_MAX_BACKOFF_MS = 5 * 60 * 1_000;
 
 const refreshing = new Map<string, Promise<string>>();
+const claudeRefreshBlockedUntil = new Map<string, number>();
 
 export function credentialNeedsRefresh(
   credential: ParsedSubscriptionCredential,
@@ -114,6 +117,50 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+function clampedBackoff(milliseconds: number): number {
+  return Math.min(
+    CLAUDE_REFRESH_MAX_BACKOFF_MS,
+    Math.max(CLAUDE_REFRESH_MIN_BACKOFF_MS, milliseconds),
+  );
+}
+
+function parsedRetryAfter(value: string | null, now: number): number | undefined {
+  if (value === null || value.trim() === '') {
+    return undefined;
+  }
+
+  const seconds = Number(value);
+  const milliseconds = Number.isFinite(seconds) ? seconds * 1_000 : Date.parse(value) - now;
+
+  return Number.isFinite(milliseconds) ? milliseconds : undefined;
+}
+
+function parsedMilliseconds(value: string | null): number | undefined {
+  const milliseconds = Number(value?.trim());
+
+  return Number.isFinite(milliseconds) ? milliseconds : undefined;
+}
+
+function retryAfterMilliseconds(response: Response, now: number): number {
+  const milliseconds =
+    parsedRetryAfter(response.headers.get('Retry-After'), now) ??
+    parsedMilliseconds(response.headers.get('Retry-After-Ms')) ??
+    0;
+
+  return clampedBackoff(milliseconds);
+}
+
+function rememberRateLimit(
+  provider: SubscriptionProviderId,
+  response: Response,
+  refreshToken: string,
+  now: number,
+): void {
+  if (provider === 'anthropic' && response.status === 429) {
+    claudeRefreshBlockedUntil.set(refreshToken, now + retryAfterMilliseconds(response, now));
+  }
+}
+
 async function refreshOnce(
   provider: SubscriptionProviderId,
   blob: string,
@@ -125,8 +172,12 @@ async function refreshOnce(
   const response = await fetchLike(url, init);
 
   if (!response.ok) {
+    rememberRateLimit(provider, response, refreshToken, now);
+
     throw new Error(`subscription token refresh failed with status ${String(response.status)}`);
   }
+
+  claudeRefreshBlockedUntil.delete(refreshToken);
 
   const refreshed = tokenResponse(await response.json().catch(() => null));
 
@@ -135,6 +186,18 @@ async function refreshOnce(
   }
 
   return refreshedCredentialBlob(provider, blob, refreshed, now);
+}
+
+function assertRefreshAllowed(
+  provider: SubscriptionProviderId,
+  refreshToken: string,
+  now: number,
+): void {
+  const blockedUntil = provider === 'anthropic' ? claudeRefreshBlockedUntil.get(refreshToken) : 0;
+
+  if (blockedUntil !== undefined && blockedUntil > now) {
+    throw new Error('subscription token refresh failed with status 429');
+  }
 }
 
 export async function refreshSubscriptionCredential(
@@ -151,6 +214,9 @@ export async function refreshSubscriptionCredential(
   }
 
   const key = `${provider}:${refreshToken}`;
+
+  assertRefreshAllowed(provider, refreshToken, now);
+
   const standing = refreshing.get(key);
 
   if (standing !== undefined) {

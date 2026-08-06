@@ -52,7 +52,9 @@ function wireToolsOf(tools: readonly HubTool[] | undefined): {
   return tools === undefined ? {} : { tools: tools.map(wireToolOf) };
 }
 
-function namedWireChoice(choice: HubToolChoice): AnthropicToolChoice {
+function basicNamedWireChoice(
+  choice: Exclude<HubToolChoice, { type: 'web_search' }>,
+): AnthropicToolChoice {
   switch (choice.type) {
     case 'auto':
       return { type: 'auto' };
@@ -69,6 +71,10 @@ function namedWireChoice(choice: HubToolChoice): AnthropicToolChoice {
       throw new Error(`encodeRequest met an unknown tool choice: ${JSON.stringify(unknownChoice)}`);
     }
   }
+}
+
+function namedWireChoice(choice: HubToolChoice): AnthropicToolChoice {
+  return choice.type === 'web_search' ? { type: 'auto' } : basicNamedWireChoice(choice);
 }
 
 function wireToolChoiceOf(choice: HubToolChoice | undefined): {

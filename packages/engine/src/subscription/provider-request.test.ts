@@ -104,6 +104,7 @@ describe('the request sent as Codex TUI 0.146.0', () => {
         model: 'gpt-5.4',
         instructions: null,
         input: [{ type: 'message', role: 'user', content: 'hello' }],
+        store: true,
         previous_response_id: 'resp-old',
         stream_options: { include_usage: true },
       },
@@ -116,7 +117,10 @@ describe('the request sent as Codex TUI 0.146.0', () => {
       model: 'gpt-5.4',
       instructions: '',
       input: [{ type: 'message', role: 'user', content: 'hello' }],
+      store: false,
       stream: true,
+      parallel_tool_calls: true,
+      include: ['reasoning.encrypted_content'],
     });
     expect(request.headers).toEqual(codexHeaders);
   });
@@ -130,5 +134,132 @@ describe('the request sent as Codex TUI 0.146.0', () => {
     );
 
     expect(request.headers.map(([name]) => name)).not.toContain('Chatgpt-Account-Id');
+  });
+});
+
+describe('normalizing a request for Codex compatibility', () => {
+  test('the Codex-required body fields override unsupported client values', () => {
+    const request = codexProviderRequest(
+      'https://chatgpt.com/backend-api/codex',
+      {
+        model: 'gpt-5.6',
+        stream: 'true',
+        store: true,
+        parallel_tool_calls: 'false',
+        include: ['file_search_call.results', 'reasoning.encrypted_content'],
+        max_output_tokens: 4096,
+        max_completion_tokens: 4096,
+        temperature: 0.2,
+        top_p: 0.9,
+        service_tier: 'standard',
+        truncation: 'auto',
+        user: 'request-owner',
+        context_management: [{ type: 'compaction', compact_threshold: 12_000 }],
+        input: [{ type: 'message', role: 'system', content: 'hello' }],
+      },
+      { accessToken: 'codex-access' },
+      ids.sessionId,
+    );
+
+    expect(JSON.parse(request.body)).toEqual({
+      model: 'gpt-5.6',
+      stream: true,
+      store: false,
+      parallel_tool_calls: true,
+      include: ['reasoning.encrypted_content'],
+      instructions: '',
+      input: [{ type: 'message', role: 'developer', content: 'hello' }],
+    });
+  });
+});
+
+describe('normalizing optional Codex request fields', () => {
+  test('Codex keeps the only supported service tier', () => {
+    const request = codexProviderRequest(
+      'https://chatgpt.com/backend-api/codex',
+      { model: 'gpt-5.6', service_tier: 'priority', input: [] },
+      { accessToken: 'codex-access' },
+      ids.sessionId,
+    );
+
+    expect(JSON.parse(request.body)).toMatchObject({ service_tier: 'priority' });
+  });
+
+  test('Codex normalizes string input and web-search aliases', () => {
+    const request = codexProviderRequest(
+      'https://chatgpt.com/backend-api/codex',
+      {
+        model: 'gpt-5.6',
+        input: 'find current model news',
+        tools: [{ type: 'web_search_preview_2025_03_11' }],
+        tool_choice: {
+          type: 'allowed_tools',
+          tools: [{ type: 'web_search_preview' }, { type: 'web_search_preview_2025_03_11' }],
+        },
+      },
+      { accessToken: 'codex-access' },
+      ids.sessionId,
+    );
+
+    expect(JSON.parse(request.body)).toMatchObject({
+      input: [
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: 'find current model news' }],
+        },
+      ],
+      tools: [{ type: 'web_search' }],
+      tool_choice: {
+        type: 'allowed_tools',
+        tools: [{ type: 'web_search' }, { type: 'web_search' }],
+      },
+    });
+  });
+});
+
+describe('bounding Codex tool identities', () => {
+  test('Codex shortens a long call id consistently across the call and its output', () => {
+    const longId = `toolu_${'a'.repeat(62)}`;
+    const boundedId = 'toolu_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_6eedd4aa88a6ed2f';
+    const request = codexProviderRequest(
+      'https://chatgpt.com/backend-api/codex',
+      {
+        model: 'gpt-5.6',
+        input: [
+          { type: 'function_call', call_id: longId, name: 'Bash', arguments: '{}' },
+          { type: 'function_call_output', call_id: longId, output: 'ok' },
+        ],
+      },
+      { accessToken: 'codex-access' },
+      ids.sessionId,
+    );
+
+    expect(JSON.parse(request.body)).toMatchObject({
+      input: [{ call_id: boundedId }, { call_id: boundedId }],
+    });
+    expect(boundedId).not.toBe(longId);
+    expect(boundedId).toHaveLength(64);
+  });
+
+  test('Codex gives long tool declarations, choices, and calls the same bounded name', () => {
+    const longName = 'mcp__server_with_a_very_long_name_that_exceeds_sixty_four_characters__search';
+    const request = codexProviderRequest(
+      'https://chatgpt.com/backend-api/codex',
+      {
+        model: 'gpt-5.6',
+        tools: [{ type: 'function', name: longName, parameters: { type: 'object' } }],
+        tool_choice: { type: 'function', name: longName },
+        input: [{ type: 'function_call', call_id: 'call_1', name: longName, arguments: '{}' }],
+      },
+      { accessToken: 'codex-access' },
+      ids.sessionId,
+    );
+
+    expect(JSON.parse(request.body)).toMatchObject({
+      tools: [{ name: 'mcp__search' }],
+      tool_choice: { name: 'mcp__search' },
+      input: [{ name: 'mcp__search' }],
+    });
   });
 });

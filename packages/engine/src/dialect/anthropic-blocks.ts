@@ -15,6 +15,7 @@ import type { Fate } from './fates';
 import type {
   HubCacheBreakpoint,
   HubContentBlock,
+  HubDocumentBlock,
   HubImageBlock,
   HubImageSource,
   HubTextBlock,
@@ -156,7 +157,27 @@ function hubContentBlockFrom(
   }
 }
 
+function hubDocumentFrom(block: AnthropicDocumentPart): HubDocumentBlock {
+  const type = block.source['type'];
+  const mediaType = block.source['media_type'];
+  const data = block.source['data'];
+
+  return {
+    type: 'document',
+    source: {
+      type: type === 'base64' ? type : 'base64',
+      mediaType: typeof mediaType === 'string' ? mediaType : 'application/pdf',
+      data: typeof data === 'string' ? data : '',
+    },
+    filename: block.title ?? 'document.pdf',
+  };
+}
+
 export function hubBlockFrom(block: AnthropicContentBlock, fates: Fate[]): HubContentBlock {
+  if (block.type === 'document') {
+    return hubDocumentFrom(block);
+  }
+
   if (block.type === 'thinking') {
     return {
       type: 'thinking',
@@ -215,6 +236,18 @@ function wireContentBlockFrom(
 }
 
 export function wireBlockFrom(block: HubContentBlock): AnthropicContentBlock {
+  if (block.type === 'document') {
+    return {
+      type: 'document',
+      source: {
+        type: 'base64',
+        media_type: block.source.mediaType,
+        data: block.source.data,
+      },
+      title: block.filename,
+    };
+  }
+
   if (block.type === 'thinking') {
     return {
       type: 'thinking',

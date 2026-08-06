@@ -58,18 +58,45 @@ describe('decodeRequest carries the tool surface', () => {
       },
     ]);
   });
+});
 
-  it('folds a server tool away with a recorded fate rather than crossing it', () => {
+describe('decodeRequest carries the web-search server tool surface', () => {
+  it('carries a Codex-compatible web-search server tool and its choice', () => {
     const { value, fates } = decodedValue(
       anAnthropicAsk({
-        tools: [anAnthropicTool(), { type: 'web_search_20250305', name: 'web_search' }],
+        tools: [
+          anAnthropicTool(),
+          {
+            type: 'web_search_20250305',
+            name: 'web_search',
+            allowed_domains: ['example.com'],
+            blocked_domains: ['blocked.example'],
+            user_location: { type: 'approximate', city: 'Istanbul', country: 'TR' },
+          },
+        ],
+        tool_choice: { type: 'tool', name: 'web_search' },
       }),
     );
 
     expect(value.tools).toHaveLength(1);
-    expect(fates).toContainEqual({ field: 'tools[server]', disposition: 'mapped', to: 'absent' });
+    expect(value.serverTools).toEqual([
+      {
+        type: 'web_search',
+        name: 'web_search',
+        allowedDomains: ['example.com'],
+        userLocation: { type: 'approximate', city: 'Istanbul', country: 'TR' },
+      },
+    ]);
+    expect(value.toolChoice).toEqual({ type: 'web_search' });
+    expect(fates).toContainEqual({
+      field: 'tools[server]',
+      disposition: 'mapped',
+      to: 'serverTools',
+    });
   });
+});
 
+describe('decodeRequest carries a minimal tool surface', () => {
   it('carries a bare tool without inventing a description or required list', () => {
     const { value } = decodedValue(
       anAnthropicAsk({ tools: [{ name: 'bash', input_schema: { type: 'object' } }] }),
@@ -98,15 +125,16 @@ describe('decodeRequest maps the tool choice onto the hub vocabulary', () => {
     expect(value.toolChoice).toEqual(hub);
   });
 
-  it('notes a dropped disable_parallel_tool_use the hub cannot carry', () => {
-    const { fates } = decodedValue(
+  it('maps disable_parallel_tool_use onto the hub', () => {
+    const { value, fates } = decodedValue(
       anAnthropicAsk({ tool_choice: { type: 'auto', disable_parallel_tool_use: true } }),
     );
 
+    expect(value.parallelToolCalls).toBe(false);
     expect(fates).toContainEqual({
       field: 'tool_choice.disable_parallel_tool_use',
       disposition: 'mapped',
-      to: 'absent',
+      to: 'parallelToolCalls',
     });
   });
 });
@@ -134,6 +162,19 @@ describe('decodeRequest maps the sampling knobs', () => {
       disposition: 'mapped',
       to: 'sampling.maxOutputTokens (default)',
     });
+  });
+});
+
+describe('decodeRequest maps Codex subscription priority', () => {
+  it.each([
+    [{ service_tier: 'priority' }, 'priority'],
+    [{ service_tier: 'fast' }, 'priority'],
+    [{ speed: 'fast' }, 'priority'],
+    [{ service_tier: 'default' }, undefined],
+  ] as const)('maps %j to %s', (wire, expected) => {
+    const { value } = decodedValue(anAnthropicAsk(wire));
+
+    expect(value.serviceTier).toBe(expected);
   });
 });
 

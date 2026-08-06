@@ -88,12 +88,16 @@ describe('a virtual model whose target no longer stands', () => {
     ]);
   });
 
-  test('a target that turned out to be a subscription stands removed', async () => {
+  test('a subscription target the registry still holds stands bound', async () => {
     const userDataPath = await storageHolding([pointingAt(planRow.id)], [planRow]);
     const gateway = await storedEngineGateway(userDataPath, noComplaint, 'personal');
 
     expect(gateway?.virtualModels).toStrictEqual([
-      { id: 'fast', displayName: 'fast', target: { standing: 'removed' } },
+      {
+        id: 'fast',
+        displayName: 'fast',
+        target: { standing: 'bound', providerModel: 'claude-sonnet-5' },
+      },
     ]);
   });
 

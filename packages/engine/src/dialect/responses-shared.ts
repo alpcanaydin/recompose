@@ -1,6 +1,7 @@
 import type { Fate } from './fates';
 import type {
   HubContentBlock,
+  HubDocumentBlock,
   HubImageBlock,
   HubRedactedThinkingBlock,
   HubStopReason,
@@ -25,13 +26,33 @@ import { sanitizeToolId } from './tool-id';
 
 export const translatedResponseId = 'resp_translated';
 
-function toHubContentBlock(part: ResponsesContentPart): HubTextBlock | HubImageBlock {
+function documentBlockOf(
+  part: Extract<ResponsesContentPart, { type: 'input_file' }>,
+): HubDocumentBlock {
+  const matched = /^data:([^;]+);base64,(.*)$/su.exec(part.file_data);
+
+  return {
+    type: 'document',
+    source: {
+      type: 'base64',
+      mediaType: matched?.[1] ?? 'application/pdf',
+      data: matched?.[2] ?? '',
+    },
+    filename: part.filename,
+  };
+}
+
+function toHubContentBlock(
+  part: ResponsesContentPart,
+): HubTextBlock | HubImageBlock | HubDocumentBlock {
   switch (part.type) {
     case 'input_text':
     case 'output_text':
       return { type: 'text', text: part.text };
     case 'input_image':
       return { type: 'image', source: imageSourceFromUrl(part.image_url) };
+    case 'input_file':
+      return documentBlockOf(part);
 
     default: {
       const unhandled: never = part;
@@ -81,6 +102,25 @@ export type ReasoningSignature =
   | { kind: 'redacted'; data: string }
   | { kind: 'foreign' };
 
+function hasCodexSignatureShape(signature: string): boolean {
+  const decoded = Buffer.from(signature, 'base64url');
+  const ciphertextLength = decoded.length - 57;
+
+  return decoded[0] === 0x80 && ciphertextLength > 0 && ciphertextLength % 16 === 0;
+}
+
+export function isCodexReasoningSignature(signature: string | undefined): signature is string {
+  if (signature === undefined || !signature.startsWith('gAAAA')) {
+    return false;
+  }
+
+  try {
+    return hasCodexSignatureShape(signature);
+  } catch {
+    return false;
+  }
+}
+
 export function classifyReasoningSignature(
   encryptedContent: string | undefined,
 ): ReasoningSignature {
@@ -97,6 +137,10 @@ export function classifyReasoningSignature(
       kind: 'compatible',
       signature: encryptedContent.slice(COMPATIBLE_SIGNATURE_PREFIX.length),
     };
+  }
+
+  if (isCodexReasoningSignature(encryptedContent)) {
+    return { kind: 'compatible', signature: encryptedContent };
   }
 
   return { kind: 'foreign' };

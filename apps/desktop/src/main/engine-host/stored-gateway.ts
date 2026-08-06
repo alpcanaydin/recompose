@@ -14,7 +14,7 @@ import { listGatewayConfigs } from '../storage/gateway-store';
 function standingOf(accounts: readonly Account[], target: Target): EngineVirtualModel['target'] {
   const held = accounts.find((account) => account.id === target.accountId);
 
-  return held === undefined || held.kind === 'subscription'
+  return held === undefined
     ? { standing: 'removed' }
     : { standing: 'bound', providerModel: target.providerModel };
 }
@@ -33,10 +33,10 @@ function mintedAgainst(
 /**
  * The engine's view of one gateway document, with every target resolved against the registry.
  *
- * @summary A stored target names an account, and the account may be gone or may have turned out to
- * be a subscription by the time the gateway serves, so the standing is minted here rather than
- * trusted from the document. The snapshot says which names serve and which refuse; it never carries
- * a credential, because a turn asks for one per request.
+ * @summary A stored target names an account, and the account may be gone by the time the gateway
+ * serves, so the standing is minted here rather than trusted from the document. The snapshot says
+ * which names serve and which refuse; it never carries a credential, because a turn asks for one
+ * per request.
  */
 export async function engineGatewayOf(
   userDataPath: string,

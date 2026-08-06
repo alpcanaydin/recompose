@@ -18,6 +18,7 @@ const knownStreamTypes = new Set<string>([
   'response.output_item.done',
   'response.completed',
   'response.incomplete',
+  'response.failed',
   'error',
 ]);
 
@@ -98,6 +99,24 @@ function openBlock(
   return [open];
 }
 
+function closeBlock(
+  event: Extract<ResponsesBlockEvent, { type: 'response.output_item.done' }>,
+): HubStreamEvent[] {
+  const signature = event.item?.encrypted_content;
+  const signatureEvent: HubStreamEvent[] =
+    event.item?.type === 'reasoning' && signature !== undefined
+      ? [
+          {
+            type: 'block-delta',
+            index: event.output_index,
+            delta: { kind: 'signature', signature },
+          },
+        ]
+      : [];
+
+  return [...signatureEvent, { type: 'block-close', index: event.output_index }];
+}
+
 function decodeDeltaOrClose(
   event: Exclude<ResponsesBlockEvent, { type: 'response.output_item.added' }>,
 ): HubStreamEvent[] {
@@ -127,7 +146,7 @@ function decodeDeltaOrClose(
         },
       ];
     case 'response.output_item.done':
-      return [{ type: 'block-close', index: event.output_index }];
+      return closeBlock(event);
 
     default: {
       const unhandled: never = event;
@@ -153,8 +172,8 @@ function decodeKnownEvent(
     return [{ type: 'message-begin' }];
   }
 
-  if (event.type === 'response.completed' || event.type === 'response.incomplete') {
-    return [messageEndOf(event.response)];
+  if (isTerminalResponseEvent(event)) {
+    return terminalEvents(event);
   }
 
   if (event.type === 'error') {
@@ -162,6 +181,39 @@ function decodeKnownEvent(
   }
 
   return decodeBlockEvent(event, skipped);
+}
+
+type TerminalResponseEvent = Extract<
+  ResponsesKnownStreamEvent,
+  { type: 'response.completed' | 'response.incomplete' | 'response.failed' }
+>;
+
+function isTerminalResponseEvent(event: ResponsesKnownStreamEvent): event is TerminalResponseEvent {
+  return terminalResponseTypes.has(event.type);
+}
+
+const terminalResponseTypes = new Set([
+  'response.completed',
+  'response.incomplete',
+  'response.failed',
+]);
+
+function terminalEvents(event: TerminalResponseEvent): HubStreamEvent[] {
+  if (event.type !== 'response.failed') {
+    return [messageEndOf(event.response)];
+  }
+
+  return [failedResponseEvent(event.response)];
+}
+
+function failedResponseEvent(response: ResponsesStreamResponse): HubStreamEvent {
+  return {
+    type: 'stream-error',
+    error: {
+      type: response.error?.code ?? 'api_error',
+      message: response.error?.message ?? 'Codex response failed',
+    },
+  };
 }
 
 function isTerminal(event: HubStreamEvent): boolean {

@@ -282,18 +282,10 @@ async function completedResponsesAnswer(
       );
 }
 
-function isTerminalResponseEvent(type: string): boolean {
-  return type === 'response.completed' || type === 'response.incomplete';
-}
-
 function terminalResponseIn(
   event: JsonObject & { type: string },
 ): (JsonObject & ResponsesResponse) | null {
   const response = event['response'];
 
-  return isTerminalResponseEvent(event.type) &&
-    isJsonObject(response) &&
-    isResponsesAnswer(response)
-    ? response
-    : null;
+  return isJsonObject(response) && isResponsesAnswer(response) ? response : null;
 }

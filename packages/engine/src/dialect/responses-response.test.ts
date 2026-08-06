@@ -273,4 +273,16 @@ describe('decodeResponse maps a reasoning output item by its signature', () => {
       to: 'thinking.signature',
     });
   });
+
+  it('keeps a signature-only Codex reasoning item for the next turn', () => {
+    const signature =
+      'gAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const response = aResponsesResponse({
+      output: [{ type: 'reasoning', id: 'rs_1', summary: [], encrypted_content: signature }],
+    });
+
+    const { value } = expectTranslation(decodeResponse(response));
+
+    expect(value.content).toContainEqual({ type: 'thinking', text: '', signature });
+  });
 });

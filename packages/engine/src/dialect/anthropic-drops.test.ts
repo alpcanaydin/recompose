@@ -11,7 +11,6 @@ describe('the Anthropic vendor drop table names what the hub cannot carry', () =
         'top_k',
         'metadata',
         'thinking',
-        'service_tier',
         'container',
         'inference_geo',
         'output_config',

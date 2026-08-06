@@ -2,14 +2,17 @@ import type { Fate, Translated } from './fates';
 import type {
   HubImageBlock,
   HubImageSource,
+  HubDocumentBlock,
   HubMessage,
   HubRequest,
   HubSampling,
   HubTextBlock,
+  HubThinkingBlock,
   HubTool,
   HubToolChoice,
   HubToolResultBlock,
   HubToolUseBlock,
+  HubWebSearchTool,
 } from './hub';
 import type {
   ResponsesContentPart,
@@ -21,7 +24,12 @@ import type {
   ResponsesToolParameters,
 } from './responses-wire';
 
-import { functionCallItemOf, redactedThinkingDropFate, thinkingDropFate } from './responses-shared';
+import {
+  functionCallItemOf,
+  isCodexReasoningSignature,
+  redactedThinkingDropFate,
+  thinkingDropFate,
+} from './responses-shared';
 
 function toResponsesTool(tool: HubTool): ResponsesTool {
   const parameters: ResponsesToolParameters = {
@@ -38,7 +46,19 @@ function toResponsesTool(tool: HubTool): ResponsesTool {
   };
 }
 
-function toResponsesToolChoice(choice: HubToolChoice): ResponsesToolChoice {
+function toResponsesWebSearchTool(tool: HubWebSearchTool): ResponsesTool {
+  return {
+    type: 'web_search',
+    ...(tool.allowedDomains === undefined
+      ? {}
+      : { filters: { allowed_domains: tool.allowedDomains } }),
+    ...(tool.userLocation === undefined ? {} : { user_location: tool.userLocation }),
+  };
+}
+
+function basicResponsesToolChoice(
+  choice: Exclude<HubToolChoice, { type: 'web_search' }>,
+): ResponsesToolChoice {
   switch (choice.type) {
     case 'auto':
       return 'auto';
@@ -57,14 +77,26 @@ function toResponsesToolChoice(choice: HubToolChoice): ResponsesToolChoice {
   }
 }
 
+function toResponsesToolChoice(choice: HubToolChoice): ResponsesToolChoice {
+  return choice.type === 'web_search' ? { type: 'web_search' } : basicResponsesToolChoice(choice);
+}
+
 function imageUrlOf(source: HubImageSource): string {
   return source.type === 'url' ? source.url : `data:${source.mediaType};base64,${source.data}`;
 }
 
 function partOfBlock(
   role: 'user' | 'assistant',
-  block: HubTextBlock | HubImageBlock,
+  block: HubTextBlock | HubImageBlock | HubDocumentBlock,
 ): ResponsesContentPart {
+  if (block.type === 'document') {
+    return {
+      type: 'input_file',
+      file_data: `data:${block.source.mediaType};base64,${block.source.data}`,
+      filename: block.filename,
+    };
+  }
+
   if (block.type === 'image') {
     return { type: 'input_image', image_url: imageUrlOf(block.source) };
   }
@@ -128,15 +160,38 @@ function flushParts(context: EncodeContext): void {
   }
 }
 
+function encodeThinkingInto(block: HubThinkingBlock, context: EncodeContext): void {
+  if (context.role !== 'assistant' || !isCodexReasoningSignature(block.signature)) {
+    context.fates.push(thinkingDropFate());
+
+    return;
+  }
+
+  flushParts(context);
+  context.items.push({
+    type: 'reasoning',
+    summary: [],
+    content: null,
+    encrypted_content: block.signature,
+  });
+  context.fates.push({ field: 'thinking.signature', disposition: 'carried' });
+}
+
+function isVisibleBlock(
+  block: HubMessage['content'][number],
+): block is HubTextBlock | HubImageBlock | HubDocumentBlock {
+  return ['text', 'image', 'document'].includes(block.type);
+}
+
 function encodeBlockInto(block: HubMessage['content'][number], context: EncodeContext): void {
-  if (block.type === 'text' || block.type === 'image') {
+  if (isVisibleBlock(block)) {
     context.parts.push(partOfBlock(context.role, block));
 
     return;
   }
 
   if (block.type === 'thinking') {
-    context.fates.push(thinkingDropFate());
+    encodeThinkingInto(block, context);
 
     return;
   }
@@ -201,13 +256,33 @@ export function encodeRequest(request: HubRequest): Translated<ResponsesRequest>
     value.instructions = request.system.map((entry) => entry.text).join('\n');
   }
 
-  if (request.tools !== undefined) {
-    value.tools = request.tools.map(toResponsesTool);
-  }
+  toolsInto(value, request);
 
   if (request.toolChoice !== undefined) {
     value.tool_choice = toResponsesToolChoice(request.toolChoice);
   }
 
+  subscriptionFieldsInto(value, request);
+
   return { value, fates: folded.fates };
+}
+
+function toolsInto(value: ResponsesRequest, request: HubRequest): void {
+  if (request.tools !== undefined) {
+    value.tools = request.tools.map(toResponsesTool);
+  }
+
+  if (request.serverTools !== undefined) {
+    value.tools = [...(value.tools ?? []), ...request.serverTools.map(toResponsesWebSearchTool)];
+  }
+}
+
+function subscriptionFieldsInto(value: ResponsesRequest, request: HubRequest): void {
+  if (request.parallelToolCalls !== undefined) {
+    value.parallel_tool_calls = request.parallelToolCalls;
+  }
+
+  if (request.serviceTier !== undefined) {
+    value.service_tier = request.serviceTier;
+  }
 }

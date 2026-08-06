@@ -27,7 +27,9 @@ export function chatToolsInto(hub: HubRequest, fates: Fate[]): { tools?: readonl
   return { tools: hub.tools.map(chatToolFromHub) };
 }
 
-function chatToolChoiceValue(choice: HubToolChoice): ChatToolChoice {
+function basicChatToolChoiceValue(
+  choice: Exclude<HubToolChoice, { type: 'web_search' }>,
+): ChatToolChoice {
   switch (choice.type) {
     case 'auto':
       return 'auto';
@@ -44,6 +46,10 @@ function chatToolChoiceValue(choice: HubToolChoice): ChatToolChoice {
       throw new Error(`encodeRequest met an unknown tool choice: ${JSON.stringify(unknownChoice)}`);
     }
   }
+}
+
+function chatToolChoiceValue(choice: HubToolChoice): ChatToolChoice {
+  return choice.type === 'web_search' ? 'auto' : basicChatToolChoiceValue(choice);
 }
 
 export function chatToolChoiceInto(

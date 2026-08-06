@@ -28,16 +28,50 @@ function chatCallFromHubToolUse(block: HubToolUseBlock): ChatToolCall {
   };
 }
 
-export function droppedThinking(fates: Fate[]): void {
+function droppedThinking(fates: Fate[]): void {
   fates.push({ field: 'thinking', disposition: 'mapped', to: 'absent', costBearing: true });
 }
 
-export function droppedRedactedThinking(fates: Fate[]): void {
+function droppedRedactedThinking(fates: Fate[]): void {
   fates.push({
     field: 'redacted_thinking',
     disposition: 'mapped',
     to: 'absent',
     costBearing: true,
+  });
+}
+
+type DroppedChatBlock = Extract<
+  HubContentBlock,
+  { type: 'thinking' | 'redacted_thinking' | 'document' }
+>;
+
+export function isDroppedChatBlock(block: HubContentBlock): block is DroppedChatBlock {
+  return ['thinking', 'redacted_thinking', 'document'].includes(block.type);
+}
+
+export function dropChatBlock(
+  block: DroppedChatBlock,
+  fates: Fate[],
+  documentCostBearing: boolean,
+): void {
+  if (block.type === 'thinking') {
+    droppedThinking(fates);
+
+    return;
+  }
+
+  if (block.type === 'redacted_thinking') {
+    droppedRedactedThinking(fates);
+
+    return;
+  }
+
+  fates.push({
+    field: 'document',
+    disposition: 'mapped',
+    to: 'absent',
+    ...(documentCostBearing ? { costBearing: true } : {}),
   });
 }
 
@@ -81,14 +115,8 @@ function routeAssistantBlock(
   toolCalls: ChatToolCall[],
   fates: Fate[],
 ): void {
-  if (block.type === 'thinking') {
-    droppedThinking(fates);
-
-    return;
-  }
-
-  if (block.type === 'redacted_thinking') {
-    droppedRedactedThinking(fates);
+  if (isDroppedChatBlock(block)) {
+    dropChatBlock(block, fates, false);
 
     return;
   }

@@ -1,7 +1,12 @@
 import { fc } from '@fast-check/vitest';
 import { describe, expect, it } from 'vitest';
 
-import type { ResponsesContentPart, ResponsesInputItem, ResponsesRequest } from './responses-wire';
+import type {
+  ResponsesContentPart,
+  ResponsesInputItem,
+  ResponsesRequest,
+  ResponsesTool,
+} from './responses-wire';
 
 import { decodeRequest, encodeRequest } from './responses-codec';
 import { expectTranslation } from './responses.testkit';
@@ -68,8 +73,8 @@ const responsesRequest = fc.record({
   tools: fc.array(toolDefinition, { maxLength: 3 }),
 });
 
-function toolNames(tools: readonly { name: string }[] | undefined): string[] | undefined {
-  return tools?.map((tool) => tool.name);
+function toolNames(tools: readonly ResponsesTool[] | undefined): string[] | undefined {
+  return tools?.flatMap((tool) => (tool.type === 'function' ? [tool.name] : []));
 }
 
 describe('the Responses request round trip settles the hub across a wire crossing', () => {

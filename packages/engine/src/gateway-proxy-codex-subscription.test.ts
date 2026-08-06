@@ -73,6 +73,7 @@ describe('serving a Codex subscription target', () => {
     expect(provider.sent[0]?.request.url).toBe('https://chatgpt.com/backend-api/codex/responses');
     expect(JSON.parse(provider.sent[0]?.request.body ?? '{}')).toMatchObject({
       model: 'claude-sonnet-4-5',
+      store: false,
       stream: true,
     });
     expect(answer.headers.get('content-type')).toContain('application/json');
@@ -91,5 +92,79 @@ describe('serving a Codex subscription target', () => {
     expect(answer.headers.get('content-type')).toContain('text/event-stream');
     expect(text).toContain('"content":"hello back"');
     expect(text).toContain('data: [DONE]');
+  });
+});
+
+describe('preserving Codex subscription request controls', () => {
+  test('an Anthropic parallel-tool opt-out reaches Codex', async () => {
+    const { app, provider } = codexApp(() => sseFor([completed]));
+
+    await app.request('http://127.0.0.1:8397/v1/messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'fast',
+        max_tokens: 64,
+        messages: [{ role: 'user', content: 'hello' }],
+        tools: [
+          {
+            name: 'read',
+            description: 'Read a file',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ],
+        tool_choice: { type: 'auto', disable_parallel_tool_use: true },
+      }),
+    });
+
+    expect(JSON.parse(provider.sent[0]?.request.body ?? '{}')).toMatchObject({
+      parallel_tool_calls: false,
+    });
+  });
+});
+
+describe('carrying Claude documents to a Codex subscription', () => {
+  test('a base64 PDF becomes a Codex input_file without losing surrounding text', async () => {
+    const { app, provider } = codexApp(() => sseFor([completed]));
+
+    await app.request('http://127.0.0.1:8397/v1/messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'fast',
+        max_tokens: 64,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'before' },
+              {
+                type: 'document',
+                source: {
+                  type: 'base64',
+                  media_type: 'application/pdf',
+                  data: 'JVBERi0xLjQK',
+                },
+              },
+              { type: 'text', text: 'after' },
+            ],
+          },
+        ],
+      }),
+    });
+
+    expect(JSON.parse(provider.sent[0]?.request.body ?? '{}')).toMatchObject({
+      input: [
+        {
+          content: [
+            { type: 'input_text', text: 'before' },
+            {
+              type: 'input_file',
+              file_data: 'data:application/pdf;base64,JVBERi0xLjQK',
+              filename: 'document.pdf',
+            },
+            { type: 'input_text', text: 'after' },
+          ],
+        },
+      ],
+    });
   });
 });

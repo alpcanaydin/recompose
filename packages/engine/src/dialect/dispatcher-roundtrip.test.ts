@@ -56,6 +56,10 @@ function blockSignature(role: AnthropicMessage['role'], block: AnthropicContentB
     return { kind: 'image', source: block.source.type };
   }
 
+  if (block.type === 'document') {
+    return { kind: 'document', source: block.source['type'] };
+  }
+
   return contentBlockSignature(role, block);
 }
 

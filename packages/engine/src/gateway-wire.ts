@@ -52,6 +52,7 @@ const wireBlockKinds = new Set([
   'thinking',
   'redacted_thinking',
   'image',
+  'document',
   'tool_use',
   'tool_result',
 ]);
@@ -80,16 +81,32 @@ function readsToolResultContent(content: unknown): boolean {
   );
 }
 
-function isWireBlock(value: unknown): boolean {
-  if (
-    !isJsonObject(value) ||
-    typeof value['type'] !== 'string' ||
-    !wireBlockKinds.has(value['type'])
-  ) {
-    return false;
+function readsDocument(value: JsonObject): boolean {
+  const source = value['source'];
+
+  return (
+    isJsonObject(source) &&
+    source['type'] === 'base64' &&
+    typeof source['media_type'] === 'string' &&
+    typeof source['data'] === 'string'
+  );
+}
+
+function readsWireBlock(value: JsonObject): boolean {
+  if (value['type'] === 'tool_result') {
+    return readsToolResultContent(value['content']);
   }
 
-  return value['type'] !== 'tool_result' || readsToolResultContent(value['content']);
+  return value['type'] !== 'document' || readsDocument(value);
+}
+
+function isWireBlock(value: unknown): boolean {
+  return (
+    isJsonObject(value) &&
+    typeof value['type'] === 'string' &&
+    wireBlockKinds.has(value['type']) &&
+    readsWireBlock(value)
+  );
 }
 
 function isWireContent(content: unknown): boolean {

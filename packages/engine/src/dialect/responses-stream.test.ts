@@ -78,6 +78,28 @@ describe('decodeStream: a reasoning summary text delta crosses as a thinking del
       delta: { kind: 'thinking', text: 'because' },
     });
   });
+
+  it('emits the final encrypted reasoning state as a signature delta', async () => {
+    const events = await decode([
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { type: 'reasoning', id: 'rs_1', encrypted_content: 'enc_initial' },
+      },
+      {
+        type: 'response.output_item.done',
+        output_index: 0,
+        item: { type: 'reasoning', id: 'rs_1', encrypted_content: 'enc_final' },
+      },
+    ]);
+
+    expect(events).toContainEqual({
+      type: 'block-delta',
+      index: 0,
+      delta: { kind: 'signature', signature: 'enc_final' },
+    });
+    expect(JSON.stringify(events)).not.toContain('enc_initial');
+  });
 });
 
 describe('decodeStream: an absent tool id is synthesized deterministically', () => {
@@ -153,6 +175,29 @@ describe('decodeStream: the whole tool-call stream maps event for event', () => 
 });
 
 describe('decodeStream: a failure and the unknown pass through honestly', () => {
+  it('carries a terminal response.failed error and stops', async () => {
+    const events = await decode([
+      {
+        type: 'response.failed',
+        response: {
+          id: 'r',
+          status: 'failed',
+          output: [],
+          error: { code: 'invalid_prompt', message: 'prompt rejected' },
+        },
+      },
+    ]);
+
+    expect(events).toEqual([
+      {
+        type: 'stream-error',
+        error: { type: 'invalid_prompt', message: 'prompt rejected' },
+      },
+    ]);
+  });
+});
+
+describe('decodeStream: mid-stream failures and unknown events pass through honestly', () => {
   it('carries a mid-stream error as a terminal stream-error and stops before a later completed', async () => {
     const events = await decode([
       { type: 'response.created', response: { id: 'r', status: 'in_progress', output: [] } },

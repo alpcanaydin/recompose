@@ -1,7 +1,13 @@
+import { createHash } from 'node:crypto';
+
 import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 
+import { isJsonObject } from '../gateway-wire';
+
 type JsonObject = Record<string, unknown>;
+
+const WEB_SEARCH_ALIASES = new Set(['web_search_preview', 'web_search_preview_2025_03_11']);
 
 const REMOVED_FIELDS = [
   'previous_response_id',
@@ -9,7 +15,188 @@ const REMOVED_FIELDS = [
   'prompt_cache_retention',
   'safety_identifier',
   'stream_options',
+  'max_output_tokens',
+  'max_completion_tokens',
+  'temperature',
+  'top_p',
+  'truncation',
+  'user',
+  'context_management',
 ] as const;
+
+function messageInput(input: string): JsonObject[] {
+  return [
+    {
+      type: 'message',
+      role: 'user',
+      content: [{ type: 'input_text', text: input }],
+    },
+  ];
+}
+
+function developerInput(input: unknown): unknown {
+  if (typeof input === 'string') {
+    return messageInput(input);
+  }
+
+  if (!Array.isArray(input)) {
+    return input;
+  }
+
+  return input.map((item: unknown) => {
+    if (!isJsonObject(item)) {
+      return item;
+    }
+
+    return item['role'] === 'system' ? { ...item, role: 'developer' } : item;
+  });
+}
+
+function searchEntry(value: unknown): unknown {
+  if (!isJsonObject(value)) {
+    return value;
+  }
+
+  const entry: JsonObject = { ...value };
+  const type = entry['type'];
+
+  if (typeof type === 'string' && WEB_SEARCH_ALIASES.has(type)) {
+    entry['type'] = 'web_search';
+  }
+
+  return entry;
+}
+
+function searchEntries(value: unknown): unknown {
+  return Array.isArray(value) ? value.map(searchEntry) : value;
+}
+
+function toolChoice(value: unknown): unknown {
+  const normalized = searchEntry(value);
+
+  if (!isJsonObject(normalized)) {
+    return normalized;
+  }
+
+  return { ...normalized, tools: searchEntries(normalized['tools']) };
+}
+
+function boundedCallId(value: unknown): unknown {
+  if (typeof value !== 'string' || value.length <= 64) {
+    return value;
+  }
+
+  const suffix = `_${createHash('sha256').update(value).digest('hex').slice(0, 16)}`;
+
+  return `${value.slice(0, 64 - suffix.length)}${suffix}`;
+}
+
+function baseToolName(name: string): string {
+  if (name.length <= 64) {
+    return name;
+  }
+
+  const separator = name.startsWith('mcp__') ? name.lastIndexOf('__') : -1;
+  const candidate = separator > 0 ? `mcp__${name.slice(separator + 2)}` : name;
+
+  return candidate.slice(0, 64);
+}
+
+function uniqueToolName(candidate: string, used: Set<string>): string {
+  if (!used.has(candidate)) {
+    return candidate;
+  }
+
+  for (let index = 1; ; index += 1) {
+    const suffix = `_${String(index)}`;
+    const name = `${candidate.slice(0, 64 - suffix.length)}${suffix}`;
+
+    if (!used.has(name)) {
+      return name;
+    }
+  }
+}
+
+function toolNameMap(value: unknown): Map<string, string> {
+  const names = Array.isArray(value) ? value.flatMap(toolNameOf) : [];
+  const mapped = new Map<string, string>();
+  const used = new Set<string>();
+
+  for (const name of names) {
+    const bounded = uniqueToolName(baseToolName(name), used);
+
+    mapped.set(name, bounded);
+    used.add(bounded);
+  }
+
+  return mapped;
+}
+
+function toolNameOf(value: unknown): string[] {
+  const entry = searchEntry(value);
+  const name = isJsonObject(entry) ? entry['name'] : undefined;
+
+  return typeof name === 'string' ? [name] : [];
+}
+
+function renamedEntry(value: unknown, names: Map<string, string>): unknown {
+  const normalized = searchEntry(value);
+
+  if (!isJsonObject(normalized)) {
+    return normalized;
+  }
+
+  const originalName = normalized['name'];
+  const name = typeof originalName === 'string' ? names.get(originalName) : undefined;
+
+  return {
+    ...normalized,
+    ...(name === undefined ? {} : { name }),
+    ...('call_id' in normalized ? { call_id: boundedCallId(normalized['call_id']) } : {}),
+  };
+}
+
+function renamedEntries(value: unknown, names: Map<string, string>): unknown {
+  return Array.isArray(value) ? value.map((entry) => renamedEntry(entry, names)) : value;
+}
+
+function renamedToolChoice(value: unknown, names: Map<string, string>): unknown {
+  const choice = toolChoice(value);
+
+  if (!isJsonObject(choice)) {
+    return choice;
+  }
+
+  const entry = renamedEntry(choice, names);
+
+  return isJsonObject(entry) ? { ...entry, tools: renamedEntries(entry['tools'], names) } : entry;
+}
+
+function normalizedBody(rawBody: JsonObject): JsonObject {
+  const body: JsonObject = { ...rawBody };
+
+  for (const field of REMOVED_FIELDS) {
+    delete body[field];
+  }
+
+  if (body['service_tier'] !== 'priority') {
+    delete body['service_tier'];
+  }
+
+  const names = toolNameMap(body['tools']);
+
+  body['input'] = renamedEntries(developerInput(body['input']), names);
+  body['tools'] = renamedEntries(body['tools'], names);
+  body['tool_choice'] = renamedToolChoice(body['tool_choice'], names);
+  body['stream'] = true;
+  body['store'] = false;
+  body['parallel_tool_calls'] =
+    typeof body['parallel_tool_calls'] === 'boolean' ? body['parallel_tool_calls'] : true;
+  body['include'] = ['reasoning.encrypted_content'];
+  body['instructions'] ??= '';
+
+  return body;
+}
 
 export function codexProviderRequest(
   providerOrigin: string,
@@ -17,13 +204,7 @@ export function codexProviderRequest(
   credential: ParsedSubscriptionCredential,
   sessionId: string,
 ): ProviderRequest {
-  const body: JsonObject = { ...rawBody, stream: true };
-
-  for (const field of REMOVED_FIELDS) {
-    delete body[field];
-  }
-
-  body['instructions'] ??= '';
+  const body = normalizedBody(rawBody);
 
   const headers: [string, string][] = [
     ['Content-Type', 'application/json'],

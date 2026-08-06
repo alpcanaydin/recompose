@@ -77,6 +77,7 @@ export type AnthropicToolResultBlock = {
 export type AnthropicContentBlock =
   | AnthropicTextBlock
   | AnthropicImageBlock
+  | AnthropicDocumentPart
   | AnthropicThinkingBlock
   | AnthropicRedactedThinkingBlock
   | AnthropicToolUseBlock
@@ -100,6 +101,9 @@ export type AnthropicTool = {
   description?: string;
   input_schema?: AnthropicToolSchema;
   type?: string;
+  allowed_domains?: readonly string[];
+  blocked_domains?: readonly string[];
+  user_location?: HubJsonObject;
   cache_control?: AnthropicCacheControl;
 };
 
@@ -119,6 +123,8 @@ type AnthropicRequestCore = {
   temperature?: number;
   top_p?: number;
   stop_sequences?: readonly string[];
+  service_tier?: unknown;
+  speed?: unknown;
 };
 
 export type AnthropicRequest = AnthropicRequestCore & AnthropicIgnoredFields;

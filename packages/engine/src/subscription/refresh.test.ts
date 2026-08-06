@@ -102,16 +102,28 @@ describe('refreshing a Claude Code OAuth credential', () => {
       },
     });
   });
+});
 
+describe('rate-limiting Claude Code OAuth refresh', () => {
   test('a rate-limited refresh is not immediately replayed', async () => {
+    const rateLimitedBlob = JSON.stringify({
+      claudeAiOauth: {
+        accessToken: 'old-access',
+        refreshToken: 'rate-limited-refresh',
+        expiresAt: 1_700_000_000_000,
+      },
+    });
     const fetchLike = vi.fn(async () => {
       await Promise.resolve();
 
-      return new Response('slow down', { status: 429 });
+      return new Response('slow down', { status: 429, headers: { 'Retry-After': '30' } });
     });
 
     await expect(
-      refreshSubscriptionCredential('anthropic', claudeBlob, fetchLike, 0),
+      refreshSubscriptionCredential('anthropic', rateLimitedBlob, fetchLike, 1_000),
+    ).rejects.toThrow(/429/);
+    await expect(
+      refreshSubscriptionCredential('anthropic', rateLimitedBlob, fetchLike, 2_000),
     ).rejects.toThrow(/429/);
     expect(fetchLike).toHaveBeenCalledOnce();
   });

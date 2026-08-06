@@ -6,9 +6,12 @@ import type { HubContentBlock, HubMessage, HubRequest } from './hub';
 import { emptyConversation } from '../refusals';
 import { hubBlockFrom } from './anthropic-blocks';
 import {
+  parallelToolCallsFrom,
   samplingFrom,
   scanDrops,
   scanEnvelope,
+  serverToolsFrom,
+  serviceTierFrom,
   systemFrom,
   toolChoiceFrom,
   toolsFrom,
@@ -53,6 +56,30 @@ function hubMessagesFrom(messages: readonly AnthropicMessage[], fates: Fate[]): 
   return mergeAdjacentSameRole(folded);
 }
 
+function optionalRequestFields(
+  system: HubRequest['system'],
+  tools: HubRequest['tools'],
+  toolChoice: HubRequest['toolChoice'],
+): Partial<HubRequest> {
+  return {
+    ...(system === undefined ? {} : { system }),
+    ...(tools === undefined ? {} : { tools }),
+    ...(toolChoice === undefined ? {} : { toolChoice }),
+  };
+}
+
+function subscriptionRequestFields(
+  serverTools: HubRequest['serverTools'],
+  parallelToolCalls: HubRequest['parallelToolCalls'],
+  serviceTier: HubRequest['serviceTier'],
+): Partial<HubRequest> {
+  return {
+    ...(serverTools === undefined ? {} : { serverTools }),
+    ...(parallelToolCalls === undefined ? {} : { parallelToolCalls }),
+    ...(serviceTier === undefined ? {} : { serviceTier }),
+  };
+}
+
 export function decodeRequest(
   request: AnthropicRequest,
 ): TranslateResult<HubRequest, TranslationRefusal> {
@@ -68,14 +95,16 @@ export function decodeRequest(
 
   const system = systemFrom(request.system, fates);
   const tools = toolsFrom(request.tools, fates);
-  const toolChoice = toolChoiceFrom(request.tool_choice, fates);
+  const serverTools = serverToolsFrom(request.tools, fates);
+  const toolChoice = toolChoiceFrom(request.tool_choice, fates, serverTools);
+  const parallelToolCalls = parallelToolCallsFrom(request.tool_choice, fates);
+  const serviceTier = serviceTierFrom(request, fates);
 
   return {
     value: {
-      ...(system === undefined ? {} : { system }),
+      ...optionalRequestFields(system, tools, toolChoice),
+      ...subscriptionRequestFields(serverTools, parallelToolCalls, serviceTier),
       messages,
-      ...(tools === undefined ? {} : { tools }),
-      ...(toolChoice === undefined ? {} : { toolChoice }),
       sampling: samplingFrom(request, fates),
     },
     fates,

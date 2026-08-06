@@ -33,9 +33,10 @@ export function reasoningOutcome(item: ResponsesReasoningItem): ReasoningOutcome
     case 'none':
       return thinkingOutcome(thinkingBlockOf(item), []);
     case 'compatible':
-      return thinkingOutcome(signedThinkingBlockOf(item, classified.signature), [
-        { field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' },
-      ]);
+      return {
+        blocks: [signedThinkingBlockOf(item, classified.signature)],
+        fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' }],
+      };
     case 'redacted':
       return {
         blocks: [redactedThinkingBlockOf(classified.data)],

@@ -6,7 +6,7 @@ import type {
   AnthropicToolSchema,
 } from './anthropic-wire';
 import type { Fate } from './fates';
-import type { HubSampling, HubSystemText, HubTool, HubToolChoice } from './hub';
+import type { HubSampling, HubSystemText, HubTool, HubToolChoice, HubWebSearchTool } from './hub';
 
 import { hubBreakpointOf } from './anthropic-blocks';
 import { anthropicDrops } from './anthropic-drops';
@@ -55,13 +55,47 @@ export function toolsFrom(
 
   for (const tool of tools) {
     if (tool.input_schema === undefined) {
-      fates.push({ field: 'tools[server]', disposition: 'mapped', to: 'absent' });
+      if (!isWebSearchTool(tool)) {
+        fates.push({ field: 'tools[server]', disposition: 'mapped', to: 'absent' });
+      }
     } else {
       carried.push(hubToolFrom(tool, tool.input_schema));
     }
   }
 
   return carried;
+}
+
+function isWebSearchTool(tool: AnthropicTool): boolean {
+  return tool.type === 'web_search_20250305' || tool.type === 'web_search_20260209';
+}
+
+export function serverToolsFrom(
+  tools: readonly AnthropicTool[] | undefined,
+  fates: Fate[],
+): readonly HubWebSearchTool[] | undefined {
+  if (tools === undefined) {
+    return undefined;
+  }
+
+  const carried = tools.flatMap((tool): HubWebSearchTool[] =>
+    isWebSearchTool(tool)
+      ? [
+          {
+            type: 'web_search',
+            name: tool.name,
+            ...(tool.allowed_domains === undefined ? {} : { allowedDomains: tool.allowed_domains }),
+            ...(tool.user_location === undefined ? {} : { userLocation: tool.user_location }),
+          },
+        ]
+      : [],
+  );
+
+  if (carried.length > 0) {
+    fates.push({ field: 'tools[server]', disposition: 'mapped', to: 'serverTools' });
+  }
+
+  return carried.length === 0 ? undefined : carried;
 }
 
 function namedToolChoice(choice: AnthropicToolChoice): HubToolChoice {
@@ -86,6 +120,7 @@ function namedToolChoice(choice: AnthropicToolChoice): HubToolChoice {
 export function toolChoiceFrom(
   choice: AnthropicToolChoice | undefined,
   fates: Fate[],
+  serverTools: readonly HubWebSearchTool[] = [],
 ): HubToolChoice | undefined {
   if (choice === undefined) {
     return undefined;
@@ -93,15 +128,40 @@ export function toolChoiceFrom(
 
   fates.push({ field: 'tool_choice', disposition: 'mapped', to: 'toolChoice' });
 
-  if (choice.disable_parallel_tool_use !== undefined) {
-    fates.push({
-      field: 'tool_choice.disable_parallel_tool_use',
-      disposition: 'mapped',
-      to: 'absent',
-    });
+  return choice.type === 'tool' && serverTools.some((tool) => tool.name === choice.name)
+    ? { type: 'web_search' }
+    : namedToolChoice(choice);
+}
+
+export function serviceTierFrom(request: AnthropicRequest, fates: Fate[]): 'priority' | undefined {
+  const priority = request.speed === 'fast' || isPriorityTier(request.service_tier);
+
+  if (request.speed !== undefined || request.service_tier !== undefined) {
+    fates.push({ field: 'service_tier/speed', disposition: 'mapped', to: 'serviceTier' });
   }
 
-  return namedToolChoice(choice);
+  return priority ? 'priority' : undefined;
+}
+
+function isPriorityTier(value: unknown): boolean {
+  return value === 'fast' || value === 'priority';
+}
+
+export function parallelToolCallsFrom(
+  choice: AnthropicToolChoice | undefined,
+  fates: Fate[],
+): boolean | undefined {
+  if (choice?.disable_parallel_tool_use === undefined) {
+    return undefined;
+  }
+
+  fates.push({
+    field: 'tool_choice.disable_parallel_tool_use',
+    disposition: 'mapped',
+    to: 'parallelToolCalls',
+  });
+
+  return !choice.disable_parallel_tool_use;
 }
 
 function maxTokensFrom(request: AnthropicRequest, fates: Fate[]): number {

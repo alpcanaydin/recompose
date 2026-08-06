@@ -28,6 +28,12 @@ export type HubImageBlock = {
   source: HubImageSource;
 };
 
+export type HubDocumentBlock = {
+  type: 'document';
+  source: { type: 'base64'; mediaType: string; data: string };
+  filename: string;
+};
+
 export type HubToolUseBlock = {
   type: 'tool_use';
   id: string;
@@ -49,6 +55,7 @@ export type HubContentBlock =
   | HubThinkingBlock
   | HubRedactedThinkingBlock
   | HubImageBlock
+  | HubDocumentBlock
   | HubToolUseBlock
   | HubToolResultBlock;
 
@@ -74,11 +81,19 @@ export type HubTool = {
   inputSchema: HubToolSchema;
 };
 
+export type HubWebSearchTool = {
+  type: 'web_search';
+  name: string;
+  allowedDomains?: readonly string[];
+  userLocation?: HubJsonObject;
+};
+
 export type HubToolChoice =
   | { type: 'auto' }
   | { type: 'none' }
   | { type: 'required' }
-  | { type: 'tool'; name: string };
+  | { type: 'tool'; name: string }
+  | { type: 'web_search' };
 
 export type HubSampling = {
   maxOutputTokens?: number;
@@ -91,7 +106,10 @@ export type HubRequest = {
   system?: readonly HubSystemText[];
   messages: readonly HubMessage[];
   tools?: readonly HubTool[];
+  serverTools?: readonly HubWebSearchTool[];
   toolChoice?: HubToolChoice;
+  parallelToolCalls?: boolean;
+  serviceTier?: 'priority';
   sampling?: HubSampling;
 };
 
