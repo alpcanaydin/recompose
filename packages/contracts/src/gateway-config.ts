@@ -69,6 +69,29 @@ export function slugFromName(displayName: string): string {
   return derived === '' ? FALLBACK_GATEWAY_SLUG : derived;
 }
 
+export const modelAliasSchema = z
+  .string()
+  .regex(
+    /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/u,
+    'lowercase id of letters, digits, dots and dashes',
+  );
+
+/**
+ * The id a client sends as its `model`, read off the name a person gave the virtual model.
+ *
+ * @summary Unlike the gateway slug, this keeps the dots real model names carry, so `Claude 5.6 Sol`
+ * reaches a client as `claude-5.6-sol` rather than losing the dot to a dash. It folds the case
+ * down, turns each run of anything outside the id charset into one dash, collapses repeated
+ * separators, and trims the ends, so every id it derives is one the stored shape already accepts.
+ */
+export function modelAliasFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9._-]+/gu, '-')
+    .replaceAll(/[-._]{2,}/gu, '-')
+    .replaceAll(/^[-._]+|[-._]+$/gu, '');
+}
+
 export const targetSchema = z.strictObject({
   accountId: nonBlankString,
   providerModel: nonBlankString,
@@ -78,7 +101,7 @@ export type Target = z.infer<typeof targetSchema>;
 
 function virtualModelSchemaAgainstAccounts() {
   return z.strictObject({
-    id: gatewaySlugSchema,
+    id: modelAliasSchema,
     displayName: nonBlankString,
     target: targetSchema,
   });

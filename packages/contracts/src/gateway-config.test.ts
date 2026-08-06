@@ -57,6 +57,15 @@ describe('a virtual model bound to one target', () => {
 
     expect(gatewayConfigSchema.parse(bare).virtualModels).toEqual([]);
   });
+
+  test('a virtual model id may carry the dots a real model name uses', () => {
+    const dotted = {
+      ...validConfig,
+      virtualModels: [{ id: 'claude-5.6-sol', displayName: 'Fast', target: boundTarget }],
+    };
+
+    expect(gatewayConfigSchema.parse(dotted).virtualModels[0]?.id).toBe('claude-5.6-sol');
+  });
 });
 
 describe('the stored shape holds no ladder', () => {
@@ -117,8 +126,8 @@ describe('a config with nowhere for a secret to hide', () => {
 });
 
 describe('a binding the gateway refuses to store', () => {
-  test('a virtual model name that is no slug is rejected', () => {
-    for (const bad of ['Fast Model', 'UPPER', '-lead', 'trail-', 'a--b', '']) {
+  test('a virtual model id that no client could send is rejected', () => {
+    for (const bad of ['Fast Model', 'UPPER', '-lead', 'trail-', '.lead', 'trail.', '']) {
       const hostile = {
         ...validConfig,
         virtualModels: [{ id: bad, displayName: 'Fast', target: boundTarget }],

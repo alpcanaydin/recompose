@@ -2,6 +2,8 @@ import { describe, expectTypeOf, test } from 'vitest';
 
 import type { GatewayConfig, Target, VirtualModel } from './index';
 
+import { modelAliasSchema } from './gateway-config';
+
 describe('the stored shape of a virtual model', () => {
   test('the config pins itself to schema version 2', () => {
     expectTypeOf<GatewayConfig['schemaVersion']>().toEqualTypeOf<2>();
@@ -15,6 +17,10 @@ describe('the stored shape of a virtual model', () => {
     expectTypeOf<keyof VirtualModel>().toEqualTypeOf<'id' | 'displayName' | 'target'>();
     expectTypeOf<VirtualModel['id']>().toEqualTypeOf<string>();
     expectTypeOf<VirtualModel['displayName']>().toEqualTypeOf<string>();
+  });
+
+  test('the id a client sends parses to a plain string', () => {
+    expectTypeOf(modelAliasSchema.parse('claude-5.6-sol')).toEqualTypeOf<string>();
   });
 
   test('the target is one binding, never a list and never optional', () => {
