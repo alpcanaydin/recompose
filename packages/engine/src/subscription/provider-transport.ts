@@ -6,6 +6,7 @@ import { fetch as wreqFetch } from 'node-wreq';
 import type { ProviderRequest } from './claude-request';
 import type { RefreshFetch } from './refresh';
 
+import { decodeClaudeResponse } from './claude-compression';
 import { restoreClaudeToolResponse } from './claude-tool-response';
 
 export const CLAUDE_TLS_FINGERPRINT = {
@@ -130,14 +131,19 @@ export async function sendSubscriptionRequest(
   });
 
   const response = webResponseFrom(upstream);
+  const decoded = provider === 'anthropic' ? await decodeClaudeResponse(response) : response;
 
   return provider === 'anthropic' && request.reverseToolNames !== undefined
-    ? restoreClaudeToolResponse(response, request.reverseToolNames)
-    : response;
+    ? restoreClaudeToolResponse(decoded, request.reverseToolNames)
+    : decoded;
+}
+
+function isClaudeOAuthUrl(url: string): boolean {
+  return new URL(url).hostname.endsWith('claude.com');
 }
 
 export function subscriptionRefreshTransportOptions(url: string): WreqInit {
-  if (!new URL(url).hostname.endsWith('claude.com')) {
+  if (!isClaudeOAuthUrl(url)) {
     return subscriptionTransportOptions('openai');
   }
 
@@ -170,5 +176,7 @@ export const subscriptionRefreshFetch: RefreshFetch = async (url, init) => {
     throwHttpErrors: false,
   });
 
-  return webResponseFrom(response);
+  const webResponse = webResponseFrom(response);
+
+  return isClaudeOAuthUrl(url) ? decodeClaudeResponse(webResponse) : webResponse;
 };
