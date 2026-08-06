@@ -137,11 +137,11 @@ describe('the count_tokens path of an unknown model', () => {
     });
   });
 
-  test('a request naming no model keeps the 404', async () => {
+  test('a request carrying no JSON body is invalid before model lookup', async () => {
     const codex = aCodexHolding(fast);
 
     const answer = await codex.ask('/v1/messages/count_tokens', { method: 'POST' });
 
-    expect(answer.status).toBe(404);
+    expect(answer.status).toBe(400);
   });
 });

@@ -11,6 +11,7 @@ import { translateRequest } from './dialect/dispatcher';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
 import {
   ingressPayload,
+  InvalidJsonBodyError,
   readJsonBody,
   refusalResponse,
   requestSessionId,
@@ -159,6 +160,10 @@ async function reachedUpstream(
       signal: AbortSignal.timeout(proxyFetchBoundMs),
     });
   } catch (failure) {
+    if (failure instanceof InvalidJsonBodyError) {
+      throw failure;
+    }
+
     console.error(unreachableTargetMessage(crossing), failure);
 
     return null;

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
-import { isJsonObject } from '../gateway-wire';
+import { InvalidJsonBodyError, isJsonObject } from '../gateway-wire';
+import { duplicateJsonKey } from '../json-duplicates';
 
 type JsonObject = Record<string, unknown>;
 
@@ -13,15 +14,31 @@ export function newClaudeDeviceId(): string {
   return randomBytes(32).toString('hex');
 }
 
-function existingUserId(body: JsonObject): JsonObject {
+function encodedUserId(body: JsonObject): string | undefined {
   const metadata = body['metadata'];
 
-  if (!isJsonObject(metadata) || typeof metadata['user_id'] !== 'string') {
+  return isJsonObject(metadata) && typeof metadata['user_id'] === 'string'
+    ? metadata['user_id']
+    : undefined;
+}
+
+function existingUserId(body: JsonObject): JsonObject {
+  const encoded = encodedUserId(body);
+
+  if (encoded === undefined) {
     return {};
   }
 
+  const duplicate = duplicateJsonKey(encoded);
+
+  if (duplicate !== undefined) {
+    throw new InvalidJsonBodyError(
+      `The request metadata user_id repeats the JSON key "${duplicate}".`,
+    );
+  }
+
   try {
-    const parsed: unknown = JSON.parse(metadata['user_id']);
+    const parsed: unknown = JSON.parse(encoded);
 
     return isJsonObject(parsed) ? parsed : {};
   } catch {

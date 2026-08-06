@@ -78,10 +78,10 @@ describe('a model request naming a model nobody defined', () => {
     expect(refusal.status).toBe(404);
   });
 
-  test.each(MODEL_PATHS)('%s reads a request carrying no JSON body as unknown', async (path) => {
+  test.each(MODEL_PATHS)('%s rejects a request carrying no JSON body', async (path) => {
     const refusal = await askCodex(path, { method: 'POST' });
 
-    expect(refusal.status).toBe(404);
+    expect(refusal.status).toBe(400);
   });
 });
 

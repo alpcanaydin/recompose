@@ -8,8 +8,9 @@ import type { ProxyDialect } from './gateway-wire';
 import { proxyTokenCountRequest } from './gateway-count-tokens';
 import { modelListing } from './gateway-discovery';
 import { proxyModelRequest, subscriptionRuntime } from './gateway-proxy';
+import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
-import { unservedPath } from './refusals';
+import { invalidJson, unservedPath } from './refusals';
 
 export type { SpendGrantFor } from './gateway-proxy';
 
@@ -24,6 +25,14 @@ const MODEL_ROUTES: readonly (readonly [string, ProxyDialect])[] = [
 
 const COUNT_TOKENS_PATHS = ['/v1/messages/count_tokens', '/messages/count_tokens'];
 
+function dialectForPath(path: string): ProxyDialect {
+  if (path.endsWith('/responses')) {
+    return 'responses';
+  }
+
+  return path.includes('/messages') ? 'anthropic' : 'chat-completions';
+}
+
 export function createGatewayApp(
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
@@ -34,6 +43,14 @@ export function createGatewayApp(
   const subscriptionServing = subscriptions ?? subscriptionRuntime();
 
   app.use(guardLoopback(gateway.port));
+
+  app.onError((error, c) => {
+    if (error instanceof InvalidJsonBodyError) {
+      return refusalResponse(dialectForPath(c.req.path), invalidJson(error.message));
+    }
+
+    throw error;
+  });
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));

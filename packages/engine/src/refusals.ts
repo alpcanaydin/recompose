@@ -16,7 +16,8 @@ type OpenAiCode =
   | 'empty_conversation'
   | 'tool_id_collision'
   | 'missing_target'
-  | 'missing_credential';
+  | 'missing_credential'
+  | 'invalid_json';
 
 export type OpenAiRefusal = {
   error: {
@@ -44,7 +45,8 @@ export type TranslationRefusal =
   | { reason: 'empty-conversation' }
   | { reason: 'tool-id-collision'; sanitizedId: string }
   | { reason: 'missing-target'; displayName: string; model: string }
-  | { reason: 'missing-credential'; displayName: string; model: string };
+  | { reason: 'missing-credential'; displayName: string; model: string }
+  | { reason: 'invalid-json'; message: string };
 
 export type RenderedRefusal = {
   status: number;
@@ -136,6 +138,10 @@ export function missingCredential(displayName: string, model: string): Translati
   return { reason: 'missing-credential', displayName, model };
 }
 
+export function invalidJson(message: string): TranslationRefusal {
+  return { reason: 'invalid-json', message };
+}
+
 type RefusalFacts = {
   status: number;
   message: string;
@@ -145,7 +151,7 @@ type RefusalFacts = {
 
 type ClientErrorRefusal = Extract<
   TranslationRefusal,
-  { reason: 'unsupported-field' | 'empty-conversation' | 'tool-id-collision' }
+  { reason: 'unsupported-field' | 'empty-conversation' | 'tool-id-collision' | 'invalid-json' }
 >;
 
 function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
@@ -169,6 +175,13 @@ function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
         status: 400,
         message: `Two tool calls share the sanitized id "${refusal.sanitizedId}", so their pairing is ambiguous.`,
         code: 'tool_id_collision',
+        anthropicType: 'invalid_request_error',
+      };
+    case 'invalid-json':
+      return {
+        status: 400,
+        message: refusal.message,
+        code: 'invalid_json',
         anthropicType: 'invalid_request_error',
       };
 

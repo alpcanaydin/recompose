@@ -5,11 +5,19 @@ import type { ChatMessage } from './dialect/chat-completions-wire';
 import type { RequestOf } from './dialect/dispatcher';
 import type { TranslationRefusal } from './refusals';
 
+import { duplicateJsonKey } from './json-duplicates';
 import { renderRefusal } from './refusals';
 
 export type ProxyDialect = 'anthropic' | 'chat-completions' | 'responses';
 
 export type JsonObject = Record<string, unknown>;
+
+export class InvalidJsonBodyError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'InvalidJsonBodyError';
+  }
+}
 
 export type Crossing = {
   dialect: ProxyDialect;
@@ -33,9 +41,19 @@ export function parsedJson(text: string): unknown {
 }
 
 export async function readJsonBody(c: Context): Promise<JsonObject> {
-  const body: unknown = await c.req.json<unknown>().catch(() => null);
+  const text = await c.req.text();
+  const body = parsedJson(text);
+  const duplicate = duplicateJsonKey(text);
 
-  return isJsonObject(body) ? body : {};
+  if (!isJsonObject(body)) {
+    throw new InvalidJsonBodyError('The request body must be a JSON object.');
+  }
+
+  if (duplicate !== undefined) {
+    throw new InvalidJsonBodyError(`The request body repeats the JSON key "${duplicate}".`);
+  }
+
+  return body;
 }
 
 export function virtualNameOf(body: JsonObject): string {
