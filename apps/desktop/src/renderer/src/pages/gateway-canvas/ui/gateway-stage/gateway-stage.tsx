@@ -24,15 +24,9 @@ type GatewayStageProps = {
  */
 export function GatewayStage({ gateway, selected, onToggleSelected }: GatewayStageProps) {
   return (
-    <section
-      className="relative flex min-w-0 flex-1 items-center gap-6 overflow-hidden p-6 dot-grid"
-      onPointerDown={(pressed) => {
-        if (selected && pressed.target === pressed.currentTarget) {
-          onToggleSelected();
-        }
-      }}
-    >
+    <section className="relative flex min-w-0 flex-1 items-center gap-6 overflow-hidden p-6 dot-grid">
       <button
+        data-panel-control=""
         aria-pressed={selected}
         className="relative z-10 shrink-0 node-card px-2.75 py-2 text-start focus-ring"
         onClick={onToggleSelected}

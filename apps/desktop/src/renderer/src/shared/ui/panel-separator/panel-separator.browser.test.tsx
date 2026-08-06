@@ -2,15 +2,15 @@ import { expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { userEvent } from 'vitest/browser';
 
-import { panelBounds } from './panel-resize';
+import { panelBounds } from '../../lib';
 import { PanelSeparator } from './panel-separator';
 
 const bounds = panelBounds.inspector;
 
-type Settled = { widths: number[]; collapses: number };
+type Settled = { widths: number[]; collapses: number; restores: number; kept: number };
 
-async function renderSeparator(side: 'leading' | 'trailing', width = 320) {
-  const settled: Settled = { widths: [], collapses: 0 };
+async function renderSeparator(panelEdge: 'leading' | 'trailing', width = 320, shut = false) {
+  const settled: Settled = { widths: [], collapses: 0, restores: 0, kept: 0 };
 
   const screen = await render(
     <PanelSeparator
@@ -22,7 +22,14 @@ async function renderSeparator(side: 'leading' | 'trailing', width = 320) {
       onResize={(asked) => {
         settled.widths.push(asked);
       }}
-      side={side}
+      onRestore={() => {
+        settled.restores += 1;
+      }}
+      onSettled={() => {
+        settled.kept += 1;
+      }}
+      panelEdge={panelEdge}
+      shut={shut}
       width={width}
     />,
   );
@@ -45,7 +52,7 @@ test('the separator says how wide the panel stands and how wide it may stand', a
   const handle = screen.getByRole('separator', theSeparator);
 
   await expect.element(handle).toHaveAttribute('aria-valuenow', '320');
-  await expect.element(handle).toHaveAttribute('aria-valuemin', String(bounds.min));
+  await expect.element(handle).toHaveAttribute('aria-valuemin', '0');
   await expect.element(handle).toHaveAttribute('aria-valuemax', String(bounds.max));
   await expect.element(handle).toHaveAttribute('aria-orientation', 'vertical');
 });
@@ -98,6 +105,98 @@ test('a drag carrying on past the collapse shuts the panel once and leaves it sh
 
   expect(settled.collapses).toBe(1);
   expect(settled.widths).toEqual([bounds.min]);
+});
+
+test('a shut panel is announced as shut, never as the width it will come back at', async () => {
+  const { screen } = await renderSeparator('trailing', 320, true);
+
+  await expect
+    .element(screen.getByRole('separator', theSeparator))
+    .toHaveAttribute('aria-valuenow', '0');
+});
+
+test('dragging out of a shut panel brings it back rather than doing nothing', async () => {
+  const { screen, settled } = await renderSeparator('trailing', 320, true);
+
+  dragTo(screen.getByRole('separator', theSeparator).element(), 0, bounds.collapseBelow + 20);
+
+  expect(settled.restores).toBe(1);
+  expect(settled.widths).toEqual([]);
+});
+
+test('a nudge on a shut panel leaves it shut, so a stray pointer never reopens it', async () => {
+  const { screen, settled } = await renderSeparator('trailing', 320, true);
+
+  dragTo(screen.getByRole('separator', theSeparator).element(), 0, 4);
+
+  expect(settled.restores).toBe(0);
+});
+
+test('dragging further out of a panel that came back stops asking, having been answered', async () => {
+  const { screen, settled } = await renderSeparator('trailing', 320, true);
+  const handle = screen.getByRole('separator', theSeparator).element();
+
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, bubbles: true }),
+  );
+
+  for (const at of [60, 120, 240, 400]) {
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: at }));
+  }
+
+  expect(settled.restores).toBe(1);
+});
+
+test('Enter brings a shut panel back, so the one key both shuts it and returns it', async () => {
+  const { screen, settled } = await renderSeparator('trailing', 320, true);
+
+  screen.getByRole('separator', theSeparator).element().focus();
+  await userEvent.keyboard('{Enter}');
+
+  expect(settled.restores).toBe(1);
+  expect(settled.collapses).toBe(0);
+});
+
+test('the arrow that would grow a shut panel brings it back instead', async () => {
+  const { screen, settled } = await renderSeparator('trailing', 320, true);
+
+  screen.getByRole('separator', theSeparator).element().focus();
+  await userEvent.keyboard('{ArrowRight}');
+
+  expect(settled.restores).toBe(1);
+
+  await userEvent.keyboard('{ArrowLeft}');
+
+  expect(settled.restores).toBe(1);
+});
+
+test('the panel a person is dragging keeps its settled width to itself until the drag ends', async () => {
+  const { screen, settled } = await renderSeparator('trailing');
+  const handle = screen.getByRole('separator', theSeparator).element();
+
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 1, clientX: 500, bubbles: true }),
+  );
+
+  for (const at of [510, 520, 530]) {
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: at }));
+  }
+
+  expect(settled.widths).toHaveLength(3);
+  expect(settled.kept).toBe(0);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 530 }));
+
+  expect(settled.kept).toBe(1);
+});
+
+test('a leading panel grows toward the leading edge from the keyboard too', async () => {
+  const { screen, settled } = await renderSeparator('leading');
+
+  screen.getByRole('separator', theSeparator).element().focus();
+  await userEvent.keyboard('{ArrowLeft}');
+
+  expect(settled.widths.at(-1)).toBe(320 + bounds.step);
 });
 
 test('arrow keys size the panel a step at a time', async () => {

@@ -104,6 +104,8 @@ export const FooterActsHoldOneLine = meta.story({
     await expect(paintedBox(store).height).toBeLessThan(40);
     await expect(paintedBox(cancel).height).toBeLessThan(40);
     await expect(paintedStyle(store).whiteSpace).toBe('nowrap');
+    await expect(paintedStyle(store).justifyContent).toBe('center');
+    await expect(paintedStyle(cancel).justifyContent).toBe('center');
   },
 });
 

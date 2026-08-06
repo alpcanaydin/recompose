@@ -7,15 +7,18 @@ import type { SettledDefinition } from '../../lib/model-draft';
 import { gatewaysQueryOptions } from '../../../../shared/api';
 import {
   inspectorOpen,
+  keepPanelWidth,
+  panelBounds,
   setPanelWidth,
   subscribeToInspectorVisibility,
   subscribeToPanelWidths,
   toggleInspector,
 } from '../../../../shared/lib';
-import { panelBounds, PanelSeparator } from '../../../../shared/ui';
+import { PanelSeparator } from '../../../../shared/ui';
 import { inspectorWidth } from '../../lib/inspector-width';
 import { draftKept, emptyDefinition } from '../../lib/model-draft';
 import { useInspectorReveal } from '../../lib/use-inspector-reveal';
+import { usePressAway } from '../../lib/use-press-away';
 import { GatewayDrawer } from '../gateway-drawer/gateway-drawer';
 import { GatewayStage } from '../gateway-stage/gateway-stage';
 
@@ -35,6 +38,8 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
   const selected = useSyncExternalStore(subscribeToInspectorVisibility, inspectorOpen);
   const width = useSyncExternalStore(subscribeToPanelWidths, inspectorWidth);
   const inspector = useInspectorReveal(selected);
+
+  usePressAway(selected, toggleInspector);
   const [drafting, setDrafting] = useState<SettledDefinition | undefined>(undefined);
 
   const keepDrafting = useCallback((values: SettledDefinition) => {
@@ -58,7 +63,11 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
           onResize={(asked) => {
             setPanelWidth('inspector', asked);
           }}
-          side="leading"
+          onRestore={toggleInspector}
+          onSettled={() => {
+            keepPanelWidth('inspector');
+          }}
+          panelEdge="leading"
           width={width}
         />
       ) : null}

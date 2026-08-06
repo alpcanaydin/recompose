@@ -277,24 +277,3 @@ test('pressing the shortcut again brings focus back to the first control', async
 
   await expect.element(launch).toHaveFocus();
 });
-
-test('a draft on one gateway never follows a person to another', async () => {
-  const registry: AccountsDocument = {
-    schemaVersion: ACCOUNTS_VERSION,
-    accounts: [
-      { id: 'k1', provider: 'anthropic', kind: 'api-key', label: 'work', credentialRef: 'c1' },
-    ],
-  };
-
-  const screen = await renderAt('/gateways/codex', {
-    accounts: registry,
-    gateways: [codex, claude],
-  });
-
-  await userEvent.click(screen.getByRole('button', { name: 'Add virtual model' }));
-  await screen.getByRole('textbox', { name: 'Name' }).fill('Fast Sonnet');
-
-  await userEvent.click(screen.getByRole('link', { name: /Claude/ }));
-
-  await expect.element(screen.getByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
-});

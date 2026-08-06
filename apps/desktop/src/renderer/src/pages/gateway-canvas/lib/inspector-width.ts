@@ -1,8 +1,6 @@
 import { panelWidth } from '../../../shared/lib';
 
-const INSPECTOR_STANDING_WIDTH = 304;
-
-/** How wide the inspector stands, which is the last width a person dragged it to. */
+/** How wide the inspector stands, which the stage and the drawer both read the same way. */
 export function inspectorWidth(): number {
-  return panelWidth('inspector', INSPECTOR_STANDING_WIDTH);
+  return panelWidth('inspector');
 }

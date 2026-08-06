@@ -7,6 +7,8 @@ export type PanelBounds = {
   collapseBelow: number;
   /** How far one arrow key moves the separator. */
   step: number;
+  /** How wide the panel stands before anybody has sized it. */
+  standing: number;
 };
 
 /**
@@ -17,9 +19,12 @@ export type PanelBounds = {
  * slack is what keeps a person who overshoots the minimum by a few pixels from losing the panel.
  */
 export const panelBounds = {
-  sidebar: { min: 200, max: 360, collapseBelow: 48, step: 16 },
-  inspector: { min: 260, max: 480, collapseBelow: 48, step: 16 },
+  sidebar: { min: 200, max: 360, collapseBelow: 48, step: 16, standing: 240 },
+  inspector: { min: 260, max: 480, collapseBelow: 48, step: 16, standing: 304 },
 } as const satisfies Record<string, PanelBounds>;
+
+/** A panel a person can size, which is the set the widths are held under. */
+export type PanelName = keyof typeof panelBounds;
 
 /** Where a panel stands once a drag asked for this width: sized to it, or shut. */
 export type PanelStanding = { standing: 'sized'; width: number } | { standing: 'collapsed' };
@@ -38,6 +43,17 @@ export function draggedPanel(asked: number, bounds: PanelBounds): PanelStanding 
   }
 
   return { standing: 'sized', width: Math.min(Math.max(asked, bounds.min), bounds.max) };
+}
+
+/**
+ * Whether a drag out of a shut panel has gone far enough to bring it back.
+ *
+ * @summary The same slack that keeps an overshot minimum from losing the panel keeps a stray pointer
+ * from returning it, so shutting and restoring cost the same travel and the border a person grabs on
+ * a shut panel is the one that reopens it.
+ */
+export function restoredPanel(travelled: number, bounds: PanelBounds): boolean {
+  return travelled >= bounds.collapseBelow;
 }
 
 /** The width one arrow key away, which never leaves the bounds. */

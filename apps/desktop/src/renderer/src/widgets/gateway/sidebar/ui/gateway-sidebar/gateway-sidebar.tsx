@@ -32,6 +32,7 @@ export function GatewaySidebar({ onNewGateway }: GatewaySidebarProps) {
       </h2>
       {gateways.map((gateway) => (
         <Link
+          data-panel-control=""
           className="nav-item"
           key={gateway.slug}
           params={{ slug: gateway.slug }}

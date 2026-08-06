@@ -1,10 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import {
-  inspectorOpen,
-  subscribeToInspectorVisibility,
-  toggleInspector,
-} from '../../lib/inspector-visibility';
+import { inspectorOpen, subscribeToInspectorVisibility, toggleInspector } from '../../lib';
 import { Icon } from '../icon/icon';
 import { toolbarShape } from '../toolbar-shape';
 
@@ -32,6 +28,7 @@ export function InspectorToggle({ available, where }: InspectorToggleProps) {
 
   return (
     <button
+      data-panel-control=""
       aria-expanded={standing}
       aria-label="Inspector"
       className={`flex items-center justify-center text-ink-secondary focus-ring ${STATES} ${toolbarShape[where]}`}

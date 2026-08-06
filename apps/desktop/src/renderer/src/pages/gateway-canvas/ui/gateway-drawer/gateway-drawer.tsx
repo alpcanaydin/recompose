@@ -151,6 +151,7 @@ export function GatewayDrawer({
 
   return (
     <aside
+      data-panel-control=""
       className={`shrink-0 overflow-hidden border-s border-line-subtle bg-surface-toolbar ${leaving ? 'inspector-panel-leaving' : 'inspector-panel'}`}
       style={{ width }}
     >

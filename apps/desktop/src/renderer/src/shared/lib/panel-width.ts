@@ -1,6 +1,10 @@
+import type { PanelName } from './panel-resize';
+
+import { panelBounds } from './panel-resize';
+
 const WIDTH_KEY = 'recompose.panel.width';
 
-const standing = new Map<string, number>();
+const held = new Map<PanelName, number>();
 
 const readers = new Set<() => void>();
 
@@ -10,7 +14,7 @@ function tellReaders(): void {
   }
 }
 
-function storedWidth(panel: string): number | undefined {
+function storedWidth(panel: PanelName): number | undefined {
   const written = localStorage.getItem(`${WIDTH_KEY}.${panel}`);
   const read = written === null ? Number.NaN : Number(written);
 
@@ -31,17 +35,28 @@ export function subscribeToPanelWidths(reader: () => void): () => void {
  *
  * @summary The width outlives a collapse, so reopening a panel returns it to the width its owner
  * chose rather than to the one it shipped with. It outlives the session too, because a person who
- * sized a panel once meant it.
+ * sized a panel once meant it. What comes back is read against today's bounds rather than trusted,
+ * so a width stored while the panel read at other sizes cannot stand it outside them.
  */
-export function panelWidth(panel: string, standingWidth: number): number {
-  const held = standing.get(panel) ?? storedWidth(panel);
+export function panelWidth(panel: PanelName): number {
+  const bounds = panelBounds[panel];
+  const asked = held.get(panel) ?? storedWidth(panel) ?? bounds.standing;
 
-  return held ?? standingWidth;
+  return Math.min(Math.max(asked, bounds.min), bounds.max);
 }
 
-/** Remembers the width a drag or an arrow key settled the panel on. */
-export function setPanelWidth(panel: string, width: number): void {
-  standing.set(panel, width);
-  localStorage.setItem(`${WIDTH_KEY}.${panel}`, String(width));
+/** Takes the width a drag or an arrow key is passing through, without writing it down. */
+export function setPanelWidth(panel: PanelName, width: number): void {
+  held.set(panel, width);
   tellReaders();
+}
+
+/**
+ * Writes down the width the panel came to rest at.
+ *
+ * @summary A drag passes through every width between where it started and where it stopped, and
+ * only the last of them is a choice, so the disk hears the gesture once rather than once a frame.
+ */
+export function keepPanelWidth(panel: PanelName): void {
+  localStorage.setItem(`${WIDTH_KEY}.${panel}`, String(panelWidth(panel)));
 }

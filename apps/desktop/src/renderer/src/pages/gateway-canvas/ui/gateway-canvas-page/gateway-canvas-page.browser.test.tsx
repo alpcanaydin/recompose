@@ -67,7 +67,6 @@ test('with motion off the inspector goes at once, waiting on no exit it will not
 
   await userEvent.click(screen.getByRole('button', { name: /My Gateway/ }));
 
-  await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
   expect(screen.container.textContent).not.toContain('Endpoint');
 });
 

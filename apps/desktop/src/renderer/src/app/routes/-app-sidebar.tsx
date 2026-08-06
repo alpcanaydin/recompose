@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Suspense, useId, useSyncExternalStore } from 'react';
 
-import { subscribeToPanelWidths } from '../../shared/lib';
-import { Icon, sidebarWidth } from '../../shared/ui';
+import { panelWidth, subscribeToPanelWidths } from '../../shared/lib';
+import { Icon } from '../../shared/ui';
 import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GetStartedPanel } from '../../widgets/get-started';
 import { ProviderSidebar } from '../../widgets/provider/sidebar';
@@ -28,6 +28,10 @@ type AppSidebarProps = {
  * collapse it would outrank it, and the control that puts the sidebar away would leave it painted
  * while the toolbar cleared the window controls beside it.
  */
+function sidebarWidth(): number {
+  return panelWidth('sidebar');
+}
+
 export function AppSidebar({ away, band, onNewGateway, restoreGetStarted }: AppSidebarProps) {
   const systemId = useId();
   const width = useSyncExternalStore(subscribeToPanelWidths, sidebarWidth);

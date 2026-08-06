@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { draggedPanel, panelBounds, steppedPanel } from './panel-resize';
+import { draggedPanel, panelBounds, restoredPanel, steppedPanel } from './panel-resize';
 
 const bounds = panelBounds.inspector;
 
@@ -39,4 +39,22 @@ test('a step narrows the panel by one step, and never under the narrowest', () =
 test('the sidebar and the inspector each carry their own bounds', () => {
   expect(panelBounds.sidebar.min).toBeLessThan(panelBounds.sidebar.max);
   expect(panelBounds.inspector.min).toBeLessThan(panelBounds.inspector.max);
+});
+
+test('every panel stands at a width its own bounds allow', () => {
+  expect(panelBounds.sidebar.standing).toBeGreaterThanOrEqual(panelBounds.sidebar.min);
+  expect(panelBounds.sidebar.standing).toBeLessThanOrEqual(panelBounds.sidebar.max);
+  expect(panelBounds.inspector.standing).toBeGreaterThanOrEqual(panelBounds.inspector.min);
+  expect(panelBounds.inspector.standing).toBeLessThanOrEqual(panelBounds.inspector.max);
+});
+
+test('a drag out of a shut panel brings it back once it has gone far enough to mean it', () => {
+  expect(restoredPanel(bounds.collapseBelow, bounds)).toBe(true);
+  expect(restoredPanel(bounds.collapseBelow + 200, bounds)).toBe(true);
+});
+
+test('a nudge out of a shut panel leaves it shut, so a stray pointer never reopens it', () => {
+  expect(restoredPanel(0, bounds)).toBe(false);
+  expect(restoredPanel(bounds.collapseBelow - 1, bounds)).toBe(false);
+  expect(restoredPanel(-200, bounds)).toBe(false);
 });

@@ -7,6 +7,7 @@ import preview from '#.storybook/preview';
 
 import type { SettledDefinition } from '../../lib/model-draft';
 
+import { panelBounds, setPanelWidth } from '../../../../shared/lib';
 import { paintedBox } from '../../../../shared/testing';
 import { draftKept, emptyDefinition } from '../../lib/model-draft';
 import {
@@ -109,6 +110,31 @@ export const ServesHeaderHoldsOneLine = meta.story({
 
     await expect(paintedBox(header).height).toBeLessThan(24);
     await expect(await canvas.findByText('· 2 virtual models')).toBeVisible();
+  },
+});
+
+/**
+ * The drawer at the narrowest width a drag can leave it, where its endpoint row still reads.
+ *
+ * @summary The narrowest width is chosen as the one the base URL holds one line at, so the claim has
+ * to be read at that width rather than at the width the drawer happens to ship with. Wrapping here
+ * would mean the bound is wrong rather than that the row is.
+ */
+export const NarrowestTheDrawerReadsAt = meta.story({
+  beforeEach: () => {
+    setPanelWidth('inspector', panelBounds.inspector.min);
+
+    return () => {
+      setPanelWidth('inspector', panelBounds.inspector.standing);
+    };
+  },
+  play: async ({ canvas }) => {
+    const row = await canvas.findByText('Base URL');
+    const address = await canvas.findByText('http://localhost:8397');
+
+    await expect(paintedBox(address).height).toBeLessThan(24);
+    await expect(paintedBox(address).top).toBeGreaterThanOrEqual(paintedBox(row).top - 2);
+    await expect(paintedBox(address).bottom).toBeLessThanOrEqual(paintedBox(row).bottom + 2);
   },
 });
 

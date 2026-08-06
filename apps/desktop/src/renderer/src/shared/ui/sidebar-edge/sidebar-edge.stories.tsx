@@ -1,42 +1,63 @@
+import type { ReactNode } from 'react';
+
+import { useSyncExternalStore } from 'react';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { setPanelWidth } from '../../lib/panel-width';
-import { showSidebar } from '../../lib/sidebar-visibility';
-import { paintedStyle } from '../../testing';
-import { panelBounds } from '../panel-separator/panel-resize';
+import {
+  panelBounds,
+  panelWidth,
+  setPanelWidth,
+  showSidebar,
+  sidebarHidden,
+  subscribeToPanelWidths,
+  subscribeToSidebarVisibility,
+} from '../../lib';
+import { paintedStyle, pressedByKeyboard } from '../../testing';
 import { SidebarEdge } from './sidebar-edge';
-import { sidebarWidth } from './sidebar-width';
 
 const bounds = panelBounds.sidebar;
+
+function SidebarBeside({ children }: { children: ReactNode }) {
+  const width = useSyncExternalStore(subscribeToPanelWidths, () => panelWidth('sidebar'));
+  const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+
+  return (
+    <div className="flex h-40 bg-surface-content">
+      <aside
+        className="shrink-0 overflow-hidden border-e border-line-subtle bg-surface-sidebar p-3"
+        style={{ width: away ? 0 : width }}
+      >
+        <p className="text-caption font-bold text-ink-secondary">Sidebar</p>
+      </aside>
+      {children}
+      <div className="flex-1" />
+    </div>
+  );
+}
 
 const meta = preview.meta({
   beforeEach: () => {
     showSidebar();
-    setPanelWidth('sidebar', 240);
+    setPanelWidth('sidebar', bounds.standing);
 
     return () => {
       showSidebar();
-      setPanelWidth('sidebar', 240);
+      setPanelWidth('sidebar', bounds.standing);
     };
   },
   component: SidebarEdge,
   decorators: [
     (Story) => (
-      <div className="flex h-40 bg-surface-content">
-        <aside
-          className="shrink-0 border-e border-line-subtle bg-surface-sidebar p-3"
-          style={{ width: sidebarWidth() }}
-        >
-          <p className="text-caption font-bold text-ink-secondary">Sidebar</p>
-        </aside>
+      <SidebarBeside>
         <Story />
-        <div className="flex-1" />
-      </div>
+      </SidebarBeside>
     ),
   ],
 });
+
+const theEdge = { role: 'separator', name: 'Sidebar width' };
 
 /**
  * The edge at the sidebar's standing width, which is where a person meets it.
@@ -46,40 +67,62 @@ const meta = preview.meta({
  */
 export const Standing = meta.story({
   play: async ({ canvas }) => {
-    const edge = await canvas.findByRole('separator', { name: 'Sidebar width' });
+    const edge = await canvas.findByRole('separator', { name: theEdge.name });
 
     await expect(paintedStyle(edge).cursor).toBe('ew-resize');
     await expect(edge).toHaveAttribute('aria-orientation', 'vertical');
-    await expect(edge).toHaveAttribute('aria-valuenow', '240');
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.standing));
   },
 });
-
-async function sizedByPressing(
-  canvas: { findByRole: (role: string, options: { name: string }) => Promise<HTMLElement> },
-  press: (keys: string) => Promise<void>,
-  keys: string,
-): Promise<HTMLElement> {
-  const edge = await canvas.findByRole('separator', { name: 'Sidebar width' });
-
-  edge.focus();
-  await press(keys);
-
-  return edge;
-}
 
 /** The edge sizing the sidebar from the keyboard, one step per press. */
 export const SizedByKeyboard = meta.story({
   play: async ({ canvas, userEvent }) => {
-    const edge = await sizedByPressing(canvas, userEvent.keyboard, '{ArrowRight}');
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{ArrowRight}');
 
-    await expect(edge).toHaveAttribute('aria-valuenow', String(240 + bounds.step));
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.standing + bounds.step));
   },
 });
 
 /** The edge reaching the widest the sidebar may stand, where the pattern says End goes. */
 export const Widest = meta.story({
   play: async ({ canvas, userEvent }) => {
-    const edge = await sizedByPressing(canvas, userEvent.keyboard, '{End}');
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{End}');
+
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.max));
+  },
+});
+
+/**
+ * The edge once the sidebar has gone, waiting at the window's leading edge for the way back.
+ *
+ * @summary The sidebar takes no room, so this border is all that is left of it, and it has to keep
+ * standing rather than leaving with the panel. A strip announcing a width against a sidebar of none
+ * would be worse than no strip at all.
+ */
+export const SidebarShut = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{Enter}');
+
+    await expect(edge).toHaveAttribute('aria-valuenow', '0');
+    await expect(paintedStyle(edge).cursor).toBe('ew-resize');
+  },
+});
+
+/**
+ * The sidebar brought back out of shut, at the width its owner had chosen.
+ *
+ * @summary The gesture that put the sidebar away is the one that returns it, and the width it stood
+ * at outlives the collapse, so nobody loses a sizing by closing the panel they had just sized.
+ */
+export const SidebarBroughtBack = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{End}');
+
+    await userEvent.keyboard('{Enter}');
+    await expect(edge).toHaveAttribute('aria-valuenow', '0');
+
+    await userEvent.keyboard('{ArrowRight}');
 
     await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.max));
   },
