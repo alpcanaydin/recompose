@@ -3,7 +3,7 @@ import type { AntigravityReplayItem } from './antigravity-replay-items';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
 import { injectAntigravityReplay } from './antigravity-replay-inject';
-import { mergedReplayItems, scanReplayParts } from './antigravity-replay-items';
+import { functionCallKey, mergedReplayItems, scanReplayParts } from './antigravity-replay-items';
 import { observingSseLines } from './observing-sse';
 
 const MAX_SESSIONS = 4096;
@@ -114,12 +114,29 @@ type ReplayObservation = {
 function observedValue(value: unknown, accumulated: ReplayObservation): ReplayObservation {
   const scan = scanReplayParts(candidateParts(value), accumulated.pendingSignature);
   const pendingSignature = scan.pendingSignature;
+  const incoming = offsetOccurrences(accumulated.items, scan.items);
 
   return {
-    items: mergedReplayItems(accumulated.items, scan.items),
+    items: mergedReplayItems(accumulated.items, incoming),
     ...(pendingSignature === undefined ? {} : { pendingSignature }),
     completed: completed(value),
   };
+}
+
+function offsetOccurrences(
+  accumulated: AntigravityReplayItem[],
+  incoming: AntigravityReplayItem[],
+): AntigravityReplayItem[] {
+  return incoming.map((item) => {
+    if (item.id !== '') return item;
+
+    const key = functionCallKey(item.name, item.args);
+    const offset = accumulated.filter(
+      (candidate) => candidate.id === '' && functionCallKey(candidate.name, candidate.args) === key,
+    ).length;
+
+    return { ...item, occurrence: offset + (item.occurrence ?? 0) };
+  });
 }
 
 function observeLine(line: string, accumulated: ReplayObservation): ReplayObservation {

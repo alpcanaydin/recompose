@@ -74,3 +74,118 @@ test('a detached signature crosses SSE chunks to the next function call', async 
 
   expect(replay.inject(key, body)).toHaveProperty('contents.1.parts.0.thoughtSignature', signature);
 });
+
+test('repeated ID-less calls retain distinct occurrence signatures', async () => {
+  const replay = new AntigravityReasoningReplay();
+  const first = nativeSignature(0x39);
+  const second = nativeSignature(0x40);
+  const body = {
+    model: 'gemini-3.6-flash-high',
+    contents: [
+      {
+        role: 'model',
+        parts: [
+          { functionCall: { name: 'run', args: { command: 'same' } } },
+          { functionCall: { name: 'run', args: { command: 'same' } } },
+        ],
+      },
+    ],
+  };
+  const key = antigravityReplayKey('account-1', body, 'session-1');
+  const response = Response.json(
+    responseOf([
+      { functionCall: { name: 'run', args: { command: 'same' } }, thoughtSignature: first },
+      { functionCall: { name: 'run', args: { command: 'same' } }, thoughtSignature: second },
+    ]),
+  );
+
+  await observeAntigravityReasoning(
+    response,
+    (items) => {
+      replay.commit(key, items);
+    },
+    () => {},
+  );
+
+  const injected = replay.inject(key, body);
+
+  expect(injected).toHaveProperty('contents.0.parts.0.thoughtSignature', first);
+  expect(injected).toHaveProperty('contents.0.parts.1.thoughtSignature', second);
+});
+
+test('repeated ID-less calls remain distinct across separate SSE chunks', async () => {
+  const replay = new AntigravityReasoningReplay();
+  const first = nativeSignature(0x41);
+  const second = nativeSignature(0x42);
+  const body = {
+    model: 'gemini-3.6-flash-high',
+    contents: [
+      {
+        role: 'model',
+        parts: [
+          { functionCall: { name: 'run', args: { command: 'same' } } },
+          { functionCall: { name: 'run', args: { command: 'same' } } },
+        ],
+      },
+    ],
+  };
+  const key = antigravityReplayKey('account-1', body, 'session-1');
+  const chunks = [
+    responseOf(
+      [{ functionCall: { name: 'run', args: { command: 'same' } }, thoughtSignature: first }],
+      null,
+    ),
+    responseOf([
+      { functionCall: { name: 'run', args: { command: 'same' } }, thoughtSignature: second },
+    ]),
+  ];
+  const response = new Response(
+    chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join(''),
+    { headers: { 'content-type': 'text/event-stream' } },
+  );
+  const observed = await observeAntigravityReasoning(
+    response,
+    (items) => {
+      replay.commit(key, items);
+    },
+    () => {},
+  );
+
+  await observed.text();
+
+  const injected = replay.inject(key, body);
+
+  expect(injected).toHaveProperty('contents.0.parts.0.thoughtSignature', first);
+  expect(injected).toHaveProperty('contents.0.parts.1.thoughtSignature', second);
+});
+
+test('a reused ID with changed arguments never receives a stale signature', () => {
+  const replay = new AntigravityReasoningReplay();
+  const body = {
+    model: 'gemini-3.6-flash-high',
+    contents: [
+      {
+        role: 'model',
+        parts: [
+          { functionCall: { id: 'reused', name: 'run', args: { command: 'new' } } },
+          { functionCall: { id: 'other', name: 'run', args: { command: 'old' } } },
+        ],
+      },
+    ],
+  };
+  const key = antigravityReplayKey('account-1', body, 'session-1');
+
+  replay.commit(key, [
+    {
+      id: 'reused',
+      name: 'run',
+      args: { command: 'old' },
+      signature: nativeSignature(),
+    },
+  ]);
+
+  const injected = replay.inject(key, body);
+
+  expect(injected).not.toHaveProperty('contents.0.parts.0.thoughtSignature');
+  expect(injected).not.toHaveProperty('contents.0.parts.1.thoughtSignature');
+});

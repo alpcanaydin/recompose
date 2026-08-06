@@ -1,5 +1,5 @@
-export function nativeSignature(): string {
-  const payload = Buffer.from([0x01, 0x0c, 0x39]);
+export function nativeSignature(marker = 0x39): string {
+  const payload = Buffer.from([0x01, 0x0c, marker]);
   const inner = Buffer.concat([Buffer.from([0x0a, payload.length]), payload]);
 
   return Buffer.concat([Buffer.from([0x12, inner.length]), inner]).toString('base64');

@@ -9,6 +9,7 @@ export type AntigravityReplayItem = {
   name: string;
   args: JsonObject;
   signature?: string;
+  occurrence?: number;
 };
 
 function functionCall(part: unknown): JsonObject | null {
@@ -104,8 +105,22 @@ function scanReplayPart(scan: MutableReplayScan, value: unknown): void {
 
   if (item === null) return;
 
-  scan.items.push(item);
+  scan.items.push(withOccurrence(item, scan.items));
   delete scan.prefix;
+}
+
+function withOccurrence(
+  item: AntigravityReplayItem,
+  existing: AntigravityReplayItem[],
+): AntigravityReplayItem {
+  if (item.id !== '') return item;
+
+  const key = functionCallKey(item.name, item.args);
+  const occurrence = existing.filter(
+    (candidate) => candidate.id === '' && functionCallKey(candidate.name, candidate.args) === key,
+  ).length;
+
+  return { ...item, occurrence };
 }
 
 function captureDetached(scan: MutableReplayScan, signature: string | undefined): void {
@@ -118,7 +133,10 @@ function captureDetached(scan: MutableReplayScan, signature: string | undefined)
 function sameIdentity(left: AntigravityReplayItem, right: AntigravityReplayItem): boolean {
   if (left.id !== '' && right.id !== '') return left.id === right.id;
 
-  return left.name === right.name && canonicalJson(left.args) === canonicalJson(right.args);
+  return (
+    functionCallKey(left.name, left.args) === functionCallKey(right.name, right.args) &&
+    left.occurrence === right.occurrence
+  );
 }
 
 export function mergedReplayItems(
@@ -146,14 +164,38 @@ export function matchesResponse(item: AntigravityReplayItem, response: JsonObjec
   return name !== '' && name !== 'unknown' && item.name === name;
 }
 
-export function matchesCall(item: AntigravityReplayItem, call: JsonObject): boolean {
+export function matchesCall(
+  item: AntigravityReplayItem,
+  call: JsonObject,
+  occurrence = 0,
+): boolean {
   const id = stringField(call, 'id');
   const name = stringField(call, 'name');
   const args = isJsonObject(call['args']) ? call['args'] : {};
 
   if (conflictingCallId(id, item.id)) return false;
+  if (conflictingOccurrence(id, item.occurrence, occurrence)) return false;
 
+  return sameCallShape(item, name, args);
+}
+
+function sameCallShape(item: AntigravityReplayItem, name: string, args: JsonObject): boolean {
   return name === item.name && canonicalJson(args) === canonicalJson(item.args);
+}
+
+function conflictingOccurrence(id: string, cached: number | undefined, current: number): boolean {
+  return id === '' && cached !== current;
+}
+
+export function functionCallKey(name: string, args: JsonObject): string {
+  return `${name}\0${canonicalJson(args)}`;
+}
+
+export function functionCallObjectKey(call: JsonObject): string {
+  const name = stringField(call, 'name');
+  const args = isJsonObject(call['args']) ? call['args'] : {};
+
+  return functionCallKey(name, args);
 }
 
 function conflictingCallId(current: string, cached: string): boolean {
