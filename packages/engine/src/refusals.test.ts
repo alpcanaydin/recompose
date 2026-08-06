@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   emptyConversation,
+  missingCredential,
   missingModelInAnthropicDialect,
   missingModelInOpenAiDialect,
+  missingTarget,
   renderRefusal,
   toolIdCollision,
   unmappableStopReason,
@@ -111,6 +113,72 @@ describe('renderRefusal splits the other refusals by meaning', () => {
         message: 'This dialect cannot carry the field "previous_response_id".',
       },
     });
+  });
+});
+
+describe('renderRefusal renders a missing target as a 502 in both dialects', () => {
+  it('names the gateway and the virtual model in the anthropic envelope', () => {
+    const rendered = renderRefusal('anthropic', missingTarget('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      type: 'error',
+      error: {
+        type: 'api_error',
+        message: 'The gateway "Codex" holds no target for the virtual model "fast".',
+      },
+    });
+  });
+
+  it('names the gateway and the virtual model in the OpenAI envelope', () => {
+    const rendered = renderRefusal('chat-completions', missingTarget('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      error: {
+        message: 'The gateway "Codex" holds no target for the virtual model "fast".',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'missing_target',
+      },
+    });
+  });
+});
+
+describe('renderRefusal renders a missing credential as a 502 in both dialects', () => {
+  it('names the gateway and the virtual model in the anthropic envelope', () => {
+    const rendered = renderRefusal('anthropic', missingCredential('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      type: 'error',
+      error: {
+        type: 'api_error',
+        message: 'The gateway "Codex" holds no credential for the virtual model "fast".',
+      },
+    });
+  });
+
+  it('names the gateway and the virtual model in the OpenAI envelope', () => {
+    const rendered = renderRefusal('chat-completions', missingCredential('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      error: {
+        message: 'The gateway "Codex" holds no credential for the virtual model "fast".',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'missing_credential',
+      },
+    });
+  });
+});
+
+describe('renderRefusal keeps an absent model apart from broken backing', () => {
+  it('answers 404 for an unknown model and 502 for each config fault', () => {
+    expect(renderRefusal('anthropic', unknownModel('ghost')).status).toBe(404);
+    expect(renderRefusal('anthropic', missingTarget('Codex', 'ghost')).status).toBe(502);
+    expect(renderRefusal('anthropic', missingCredential('Codex', 'ghost')).status).toBe(502);
   });
 });
 

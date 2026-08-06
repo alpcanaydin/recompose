@@ -3,7 +3,7 @@ export type Dialect = 'anthropic' | 'chat-completions' | 'responses';
 export type AnthropicRefusal = {
   type: 'error';
   error: {
-    type: 'not_found_error' | 'permission_error' | 'invalid_request_error';
+    type: 'not_found_error' | 'permission_error' | 'invalid_request_error' | 'api_error';
     message: string;
   };
 };
@@ -14,7 +14,9 @@ type OpenAiCode =
   | 'unrepairable_tool_call'
   | 'unsupported_field'
   | 'empty_conversation'
-  | 'tool_id_collision';
+  | 'tool_id_collision'
+  | 'missing_target'
+  | 'missing_credential';
 
 export type OpenAiRefusal = {
   error: {
@@ -40,7 +42,9 @@ export type TranslationRefusal =
   | { reason: 'unrepairable-tool-call'; unmatchedId: string }
   | { reason: 'unsupported-field'; field: string }
   | { reason: 'empty-conversation' }
-  | { reason: 'tool-id-collision'; sanitizedId: string };
+  | { reason: 'tool-id-collision'; sanitizedId: string }
+  | { reason: 'missing-target'; displayName: string; model: string }
+  | { reason: 'missing-credential'; displayName: string; model: string };
 
 export type RenderedRefusal = {
   status: number;
@@ -124,6 +128,14 @@ export function toolIdCollision(sanitizedId: string): TranslationRefusal {
   return { reason: 'tool-id-collision', sanitizedId };
 }
 
+export function missingTarget(displayName: string, model: string): TranslationRefusal {
+  return { reason: 'missing-target', displayName, model };
+}
+
+export function missingCredential(displayName: string, model: string): TranslationRefusal {
+  return { reason: 'missing-credential', displayName, model };
+}
+
 type RefusalFacts = {
   status: number;
   message: string;
@@ -168,6 +180,33 @@ function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
   }
 }
 
+type ConfigFaultRefusal = Extract<
+  TranslationRefusal,
+  { reason: 'missing-target' | 'missing-credential' }
+>;
+
+function configFaultFacts(refusal: ConfigFaultRefusal): RefusalFacts {
+  if (refusal.reason === 'missing-target') {
+    return {
+      status: 502,
+      message: `The gateway "${refusal.displayName}" holds no target for the virtual model "${refusal.model}".`,
+      code: 'missing_target',
+      anthropicType: 'api_error',
+    };
+  }
+
+  return {
+    status: 502,
+    message: `The gateway "${refusal.displayName}" holds no credential for the virtual model "${refusal.model}".`,
+    code: 'missing_credential',
+    anthropicType: 'api_error',
+  };
+}
+
+function isConfigFault(refusal: TranslationRefusal): refusal is ConfigFaultRefusal {
+  return refusal.reason === 'missing-target' || refusal.reason === 'missing-credential';
+}
+
 function factsOf(refusal: TranslationRefusal): RefusalFacts {
   if (refusal.reason === 'unknown-model') {
     return {
@@ -194,6 +233,10 @@ function factsOf(refusal: TranslationRefusal): RefusalFacts {
       code: 'unrepairable_tool_call',
       anthropicType: 'invalid_request_error',
     };
+  }
+
+  if (isConfigFault(refusal)) {
+    return configFaultFacts(refusal);
   }
 
   return clientErrorFacts(refusal);
