@@ -113,3 +113,72 @@ describe('choosing Antigravity text signature carriers', () => {
     );
   });
 });
+
+describe('closing Antigravity text signature segments', () => {
+  test('a duplicate detached carrier does not split the following segment', async () => {
+    const first = nativeSignature(0x48);
+    const second = nativeSignature(0x49);
+    const { replay, key } = await replayFromResponse([
+      { text: 'a', thought: true },
+      { text: '', thought: true, thoughtSignature: first },
+      { text: 'b', thought: true },
+      { text: '', thought: true, thoughtSignature: first },
+      { text: 'c', thought: true, thoughtSignature: second },
+    ]);
+    const body = {
+      model: 'gemini-3.6-flash-high',
+      contents: [
+        {
+          role: 'model',
+          parts: [
+            { text: 'a', thought: true },
+            { text: 'bc', thought: true },
+          ],
+        },
+      ],
+    };
+    const injected = replay.inject(key, body);
+
+    expect(injected).toHaveProperty('contents.0.parts.0.thoughtSignature', first);
+    expect(injected).toHaveProperty('contents.0.parts.1.thoughtSignature', second);
+  });
+});
+
+describe('discarding unmatched Antigravity text carriers', () => {
+  test('drops an unmatched consecutive carrier before a directly signed segment', async () => {
+    const first = nativeSignature(0x4a);
+    const unmatched = nativeSignature(0x4b);
+    const direct = nativeSignature(0x4c);
+    const { replay, key } = await replayFromResponse([
+      { text: 'a' },
+      { text: '', thoughtSignature: first },
+      { text: '', thoughtSignature: unmatched },
+      { text: 'b', thoughtSignature: direct },
+    ]);
+    const body = {
+      model: 'gemini-3.6-flash-high',
+      contents: [{ role: 'model', parts: [{ text: 'a' }, { text: 'b' }] }],
+    };
+    const injected = replay.inject(key, body);
+
+    expect(injected).toHaveProperty('contents.0.parts.0.thoughtSignature', first);
+    expect(injected).toHaveProperty('contents.0.parts.1.thoughtSignature', direct);
+    expect(JSON.stringify(injected)).not.toContain(unmatched);
+  });
+
+  test('a direct signature closes before later unsigned text', async () => {
+    const signature = nativeSignature(0x4d);
+    const { replay, key } = await replayFromResponse([
+      { text: 'signed', thoughtSignature: signature },
+      { text: 'unsigned' },
+    ]);
+    const body = {
+      model: 'gemini-3.6-flash-high',
+      contents: [{ role: 'model', parts: [{ text: 'signed' }, { text: 'unsigned' }] }],
+    };
+    const injected = replay.inject(key, body);
+
+    expect(injected).toHaveProperty('contents.0.parts.0.thoughtSignature', signature);
+    expect(injected).not.toHaveProperty('contents.0.parts.1.thoughtSignature');
+  });
+});

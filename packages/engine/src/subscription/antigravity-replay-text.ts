@@ -8,6 +8,7 @@ export type TextReplayState = {
   buffer: string;
   thought: boolean;
   prefix?: string;
+  lastSignature?: string;
 };
 
 export type TextReplayScan = {
@@ -36,8 +37,12 @@ function textItem(state: TextReplayState, signature: string): AntigravityReplayI
   };
 }
 
-function resetState(): TextReplayState {
-  return { buffer: '', thought: false };
+function resetState(lastSignature?: string): TextReplayState {
+  return {
+    buffer: '',
+    thought: false,
+    ...(lastSignature === undefined ? {} : { lastSignature }),
+  };
 }
 
 function signedText(
@@ -46,10 +51,11 @@ function signedText(
   items: AntigravityReplayItem[],
 ): TextReplayState {
   if (state.buffer === '') return { ...state, prefix: signature };
+  if (state.lastSignature === signature) return state;
 
   items.push(textItem(state, signature));
 
-  return resetState();
+  return resetState(signature);
 }
 
 function scanTextPart(
