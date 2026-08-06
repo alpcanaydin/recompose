@@ -1,92 +1,32 @@
-import type { KeyboardEvent, PointerEvent } from 'react';
-
 import { useSyncExternalStore } from 'react';
 
-import { sidebarGestureFrom } from '../../lib/sidebar-gesture';
-import {
-  hideSidebar,
-  showSidebar,
-  sidebarHidden,
-  subscribeToSidebarVisibility,
-} from '../../lib/sidebar-visibility';
-
-const SIDEBAR_WIDTH = 240;
-
-const asked = {
-  hidden: hideSidebar,
-  shown: showSidebar,
-};
-
-function watchTheDrag(pointer: number, from: number): void {
-  const onMove = (moved: globalThis.PointerEvent): void => {
-    if (moved.pointerId !== pointer) {
-      return;
-    }
-
-    const gesture = sidebarGestureFrom(moved.clientX - from);
-
-    if (gesture === 'unchanged') {
-      return;
-    }
-
-    stopWatching();
-    asked[gesture]();
-  };
-
-  const onEnd = (ended: globalThis.PointerEvent): void => {
-    if (ended.pointerId === pointer) {
-      stopWatching();
-    }
-  };
-
-  function stopWatching(): void {
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onEnd);
-    window.removeEventListener('pointercancel', onEnd);
-  }
-
-  window.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onEnd);
-  window.addEventListener('pointercancel', onEnd);
-}
-
-function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
-  if (event.key === 'ArrowLeft') {
-    hideSidebar();
-  }
-
-  if (event.key === 'ArrowRight') {
-    showSidebar();
-  }
-}
+import { setPanelWidth, subscribeToPanelWidths } from '../../lib/panel-width';
+import { hideSidebar } from '../../lib/sidebar-visibility';
+import { panelBounds } from '../panel-separator/panel-resize';
+import { PanelSeparator } from '../panel-separator/panel-separator';
+import { sidebarWidth } from './sidebar-width';
 
 /**
- * The sidebar's trailing edge, which a person drags to put the sidebar away or bring it back.
+ * The sidebar's trailing edge, which a person drags to size the sidebar or to put it away.
  *
- * @summary Dragging towards the sidebar puts it away and dragging out from it brings it back,
- * each once the pointer has gone far enough to mean it. The drag follows the one pointer that
- * started it, so a second finger neither drives it nor ends it. The edge travels with the sidebar,
- * so once the sidebar has gone it waits at the window's leading edge for the drag that returns
- * it. Arrow keys do the same thing, because a control only a pointer can reach is out of reach
- * for anyone who does not use one.
+ * @summary The edge travels with the sidebar, so dragging it inward narrows the sidebar and
+ * dragging well past its narrowest width puts it away, which is the gesture this edge already
+ * carried. The width it settles on outlives the collapse, so bringing the sidebar back returns it
+ * to the width its owner chose rather than to the one it shipped with.
  */
 export function SidebarEdge() {
-  const hidden = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+  const width = useSyncExternalStore(subscribeToPanelWidths, sidebarWidth);
 
   return (
-    <div
-      aria-label="Sidebar edge"
-      aria-orientation="vertical"
-      aria-valuemax={SIDEBAR_WIDTH}
-      aria-valuemin={0}
-      aria-valuenow={hidden ? 0 : SIDEBAR_WIDTH}
-      className="app-no-drag relative z-20 -mx-1 w-2 shrink-0 cursor-ew-resize"
-      onKeyDown={onKeyDown}
-      onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
-        watchTheDrag(event.pointerId, event.clientX);
+    <PanelSeparator
+      bounds={panelBounds.sidebar}
+      label="Sidebar width"
+      onCollapse={hideSidebar}
+      onResize={(asked) => {
+        setPanelWidth('sidebar', asked);
       }}
-      role="separator"
-      tabIndex={0}
+      side="trailing"
+      width={width}
     />
   );
 }

@@ -2,6 +2,7 @@ import type { GatewayConfig } from '@recompose/contracts';
 import type { ReactNode } from 'react';
 
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { useSyncExternalStore } from 'react';
 
 import type { SettledDefinition } from '../../lib/model-draft';
 import type { ServedModel } from '../../model/served-models';
@@ -11,7 +12,9 @@ import {
   engineStatesQueryOptions,
   gatewayStateIn,
 } from '../../../../shared/api';
+import { subscribeToPanelWidths } from '../../../../shared/lib';
 import { CopyButton, Icon, stateMark, stateWord } from '../../../../shared/ui';
+import { inspectorWidth } from '../../lib/inspector-width';
 import { servedModels, servesTally } from '../../model/served-models';
 import { AddModelFlow } from '../add-model-flow/add-model-flow';
 import { ServedModelRow } from '../served-model-row/served-model-row';
@@ -144,12 +147,14 @@ export function GatewayDrawer({
 }: GatewayDrawerProps) {
   const { data: registry } = useSuspenseQuery(accountsQueryOptions);
   const { data: states } = useSuspenseQuery(engineStatesQueryOptions);
+  const width = useSyncExternalStore(subscribeToPanelWidths, inspectorWidth);
 
   return (
     <aside
-      className={`w-76 shrink-0 overflow-hidden border-s border-line-subtle bg-surface-toolbar ${leaving ? 'inspector-panel-leaving' : 'inspector-panel'}`}
+      className={`shrink-0 overflow-hidden border-s border-line-subtle bg-surface-toolbar ${leaving ? 'inspector-panel-leaving' : 'inspector-panel'}`}
+      style={{ width }}
     >
-      <div className="flex h-full w-76 shrink-0 flex-col">
+      <div className="flex h-full shrink-0 flex-col" style={{ width }}>
         {drafting === undefined ? (
           gatewayOverview({
             gateway,

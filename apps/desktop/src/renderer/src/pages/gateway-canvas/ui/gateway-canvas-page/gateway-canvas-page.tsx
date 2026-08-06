@@ -7,9 +7,13 @@ import type { SettledDefinition } from '../../lib/model-draft';
 import { gatewaysQueryOptions } from '../../../../shared/api';
 import {
   inspectorOpen,
+  setPanelWidth,
   subscribeToInspectorVisibility,
+  subscribeToPanelWidths,
   toggleInspector,
 } from '../../../../shared/lib';
+import { panelBounds, PanelSeparator } from '../../../../shared/ui';
+import { inspectorWidth } from '../../lib/inspector-width';
 import { draftKept, emptyDefinition } from '../../lib/model-draft';
 import { useInspectorReveal } from '../../lib/use-inspector-reveal';
 import { GatewayDrawer } from '../gateway-drawer/gateway-drawer';
@@ -29,6 +33,7 @@ import { GatewayStage } from '../gateway-stage/gateway-stage';
 export function GatewayCanvasPage({ slug }: { slug: string }) {
   const { data: gateways } = useSuspenseQuery(gatewaysQueryOptions);
   const selected = useSyncExternalStore(subscribeToInspectorVisibility, inspectorOpen);
+  const width = useSyncExternalStore(subscribeToPanelWidths, inspectorWidth);
   const inspector = useInspectorReveal(selected);
   const [drafting, setDrafting] = useState<SettledDefinition | undefined>(undefined);
 
@@ -45,6 +50,18 @@ export function GatewayCanvasPage({ slug }: { slug: string }) {
   return (
     <div className="flex h-full min-h-0">
       <GatewayStage gateway={gateway} onToggleSelected={toggleInspector} selected={selected} />
+      {inspector.rendered ? (
+        <PanelSeparator
+          bounds={panelBounds.inspector}
+          label="Inspector width"
+          onCollapse={toggleInspector}
+          onResize={(asked) => {
+            setPanelWidth('inspector', asked);
+          }}
+          side="leading"
+          width={width}
+        />
+      ) : null}
       {inspector.rendered ? (
         <GatewayDrawer
           drafting={drafting}
