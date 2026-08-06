@@ -3,7 +3,9 @@ import type { ClaudeIdentity } from './claude-identity';
 import { isJsonObject } from '../gateway-wire';
 import { claudeBetas, requestedClaudeBetas } from './claude-betas';
 import { signedClaudeBody } from './claude-cch';
+import { withClaudeContextManagement } from './claude-context';
 import { applyClaudeCredentialIdentity } from './claude-identity';
+import { withClaudeMaxTokens } from './claude-models';
 import { sanitizeClaudeSignatures } from './claude-signatures';
 import { claudeCountTokensSystem, claudeMessagesSystem } from './claude-system';
 import { prepareClaudeTools } from './claude-tools';
@@ -187,6 +189,10 @@ function shapedSystemBody(
   return mode === 'count-tokens' ? claudeCountTokensSystem(body) : claudeMessagesSystem(body, now);
 }
 
+function messageFeatures(body: JsonObject, mode: 'messages' | 'count-tokens'): JsonObject {
+  return mode === 'messages' ? withClaudeMaxTokens(withClaudeContextManagement(body)) : body;
+}
+
 export function claudeProviderRequest(
   providerOrigin: string,
   rawBody: JsonObject,
@@ -199,7 +205,7 @@ export function claudeProviderRequest(
   const requested = requestedClaudeBetas(rawBody);
   const identified = identifiedBody(rawBody, identity, ids.sessionId);
   const shaped = shapedSystemBody(identified, now, mode);
-  const body = normalizedClaudeBody(shaped);
+  const body = messageFeatures(normalizedClaudeBody(shaped), mode);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
 
   return {
