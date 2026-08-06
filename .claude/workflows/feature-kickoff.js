@@ -135,7 +135,7 @@ function citationRepairNote(failures) {
     .join('\n')
   return [
     '',
-    'The citation validator rejected these citations from your previous code map. Cite only paths and symbols that exist in the repository, then return the corrected map in full.',
+    'The citation validator rejected these citations from your previous code map. Open each rejected path with Read before answering: correct the entry to symbols the file actually holds, or drop the symbol when nothing fits. Never repeat a rejected citation unchanged. Then return the corrected map in full.',
     named,
   ].join('\n')
 }
@@ -206,13 +206,14 @@ function expectedByteLength(content) {
 }
 function acceptedByteLengths(content) {
   const whole = expectedByteLength(content)
-  return content.endsWith('\n') ? [whole, whole - 1] : [whole]
+  return content.endsWith('\n') ? [whole, whole - 1] : [whole, whole + 1]
 }
 function writerPrompt(files) {
   return [
     'Write each of the following files exactly as given, creating any missing directories.',
     'Every path below is relative to the repository root. Write it there, and report it back in the same relative form.',
-    'Report the UTF-8 byte length you wrote for every path, even one that already matched. Write the content between the markers byte for byte, and add nothing of your own to it.',
+    'Write the content between the markers byte for byte, and add nothing of your own to it.',
+    'After writing, measure every file with the shell command `wc -c` and report the number that command printed as bytesWritten. Never count or estimate the bytes yourself; only the command output counts.',
     ...files.map((file) => `--- ${file.path} ---\n${file.content}`),
   ].join('\n')
 }
