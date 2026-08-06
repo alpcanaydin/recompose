@@ -76,28 +76,15 @@ export const targetSchema = z.strictObject({
 
 export type Target = z.infer<typeof targetSchema>;
 
-function resolvesToASubscription(accounts: readonly Account[], accountId: string): boolean {
-  return accounts.some((account) => account.id === accountId && account.kind === 'subscription');
-}
-
-function targetSchemaAgainstAccounts(accounts: readonly Account[]): z.ZodType<Target> {
-  return targetSchema.refine((target) => !resolvesToASubscription(accounts, target.accountId), {
-    error: 'a subscription account never stands as a target',
-    path: ['accountId'],
-  });
-}
-
-function virtualModelSchemaAgainstAccounts(accounts: readonly Account[]) {
+function virtualModelSchemaAgainstAccounts() {
   return z.strictObject({
     id: gatewaySlugSchema,
     displayName: nonBlankString,
-    target: targetSchemaAgainstAccounts(accounts),
+    target: targetSchema,
   });
 }
 
-const noRegistryToResolveAgainst: readonly Account[] = [];
-
-export const virtualModelSchema = virtualModelSchemaAgainstAccounts(noRegistryToResolveAgainst);
+export const virtualModelSchema = virtualModelSchemaAgainstAccounts();
 
 export type VirtualModel = z.infer<typeof virtualModelSchema>;
 
@@ -108,18 +95,18 @@ const layoutSchema = z.strictObject({
     .optional(),
 });
 
-export function gatewayConfigSchemaAgainstAccounts(accounts: readonly Account[]) {
+export function gatewayConfigSchemaAgainstAccounts(_accounts: readonly Account[]) {
   return z.strictObject({
     schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
     slug: gatewaySlugSchema,
     displayName: z.string().trim().min(1),
     port: gatewayPortSchema,
-    virtualModels: z.array(virtualModelSchemaAgainstAccounts(accounts)),
+    virtualModels: z.array(virtualModelSchemaAgainstAccounts()),
     layout: layoutSchema,
   });
 }
 
-export const gatewayConfigSchema = gatewayConfigSchemaAgainstAccounts(noRegistryToResolveAgainst);
+export const gatewayConfigSchema = gatewayConfigSchemaAgainstAccounts([]);
 
 export type GatewayConfig = z.infer<typeof gatewayConfigSchema>;
 

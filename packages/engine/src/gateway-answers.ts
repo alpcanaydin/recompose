@@ -1,11 +1,20 @@
+import type { AnthropicResponse } from './dialect/anthropic-wire';
 import type { ChatCompletionsResponse } from './dialect/chat-completions-wire';
+import type { ResponsesResponse } from './dialect/responses-wire';
 import type { Crossing, JsonObject } from './gateway-wire';
 import type { AnthropicRefusal } from './refusals';
 
-import { answeredBy, answeringModelInto } from './dialect/anthropic-attribution';
-import { translateResponse, translateStream } from './dialect/dispatcher';
-import { isJsonObject, jsonResponse, parsedJson, refusalResponse } from './gateway-wire';
-import { chatFramesFrom, namedSseBodyFrom } from './stream-wire';
+import { answeredBy } from './dialect/anthropic-attribution';
+import { translateResponse } from './dialect/dispatcher';
+import { translatedStreamBody } from './gateway-stream-answers';
+import {
+  isJsonObject,
+  jsonResponse,
+  parsedJson,
+  refusalResponse,
+  wantsStream,
+} from './gateway-wire';
+import { jsonEventsFrom } from './stream-wire';
 
 function attributionOf(crossing: Crossing): Record<string, string> {
   return {
@@ -60,7 +69,11 @@ function passedAlong(upstream: Response, attribution: Record<string, string>): R
   });
 }
 
-export async function answerFrom(crossing: Crossing, upstream: Response): Promise<Response> {
+export async function answerFrom(
+  crossing: Crossing,
+  upstream: Response,
+  upstreamDialect: Crossing['dialect'] = 'chat-completions',
+): Promise<Response> {
   const attribution = attributionOf(crossing);
 
   if (!upstream.ok) {
@@ -68,44 +81,49 @@ export async function answerFrom(crossing: Crossing, upstream: Response): Promis
   }
 
   if (upstream.headers.get('content-type')?.includes('text/event-stream') === true) {
-    return streamedAnswer(crossing, upstream, attribution);
+    return streamedAnswer(crossing, upstream, attribution, upstreamDialect);
   }
 
-  return translatedAnswer(crossing, upstream, attribution);
+  return translatedAnswer(crossing, upstream, attribution, upstreamDialect);
 }
 
-function streamedAnswer(
+async function streamedAnswer(
   crossing: Crossing,
   upstream: Response,
   attribution: Record<string, string>,
-): Response {
-  if (crossing.dialect === 'chat-completions') {
+  upstreamDialect: Crossing['dialect'],
+): Promise<Response> {
+  if (needsCompletedResponses(upstreamDialect, crossing)) {
+    return completedResponsesAnswer(crossing, upstream, attribution);
+  }
+
+  if (crossing.dialect === upstreamDialect) {
     return passedAlong(upstream, attribution);
   }
 
-  return anthropicStreamedAnswer(crossing, upstream, attribution);
-}
-
-function anthropicStreamedAnswer(
-  crossing: Crossing,
-  upstream: Response,
-  attribution: Record<string, string>,
-): Response {
   const body = upstream.body;
-  const crossed =
-    body === null ? null : translateStream('chat-completions', 'anthropic', chatFramesFrom(body));
 
-  if (crossed === null || 'outcome' in crossed) {
+  if (body === null) {
     return passedAlong(upstream, attribution);
   }
 
-  return new Response(
-    namedSseBodyFrom(answeringModelInto(crossed.stream, crossing.providerModel)),
-    {
-      status: upstream.status,
-      headers: { ...attribution, 'content-type': 'text/event-stream' },
-    },
-  );
+  const crossed = translatedStreamBody(upstreamDialect, crossing, body);
+
+  if (crossed === null) {
+    return passedAlong(upstream, attribution);
+  }
+
+  return new Response(crossed, {
+    status: upstream.status,
+    headers: { ...attribution, 'content-type': 'text/event-stream' },
+  });
+}
+
+function needsCompletedResponses(
+  upstreamDialect: Crossing['dialect'],
+  crossing: Crossing,
+): boolean {
+  return upstreamDialect === 'responses' && !wantsStream(crossing.raw);
 }
 
 function isChatAnswer(value: JsonObject): value is JsonObject & ChatCompletionsResponse {
@@ -132,31 +150,89 @@ function chatAnswerOf(parsed: unknown): (JsonObject & ChatCompletionsResponse) |
   return isJsonObject(parsed) && isChatAnswer(parsed) ? parsed : null;
 }
 
+function isAnthropicAnswer(value: JsonObject): value is JsonObject & AnthropicResponse {
+  return hasAnthropicEnvelope(value) && hasAnthropicPayload(value);
+}
+
+function hasAnthropicEnvelope(value: JsonObject): boolean {
+  return (
+    typeof value['id'] === 'string' && value['type'] === 'message' && value['role'] === 'assistant'
+  );
+}
+
+function hasAnthropicPayload(value: JsonObject): boolean {
+  const stopReason = value['stop_reason'];
+
+  return Array.isArray(value['content']) && (typeof stopReason === 'string' || stopReason === null);
+}
+
+function isResponsesAnswer(value: JsonObject): value is JsonObject & ResponsesResponse {
+  return (
+    typeof value['id'] === 'string' &&
+    (value['status'] === 'completed' ||
+      value['status'] === 'incomplete' ||
+      value['status'] === 'failed') &&
+    Array.isArray(value['output'])
+  );
+}
+
 async function translatedAnswer(
   crossing: Crossing,
   upstream: Response,
   attribution: Record<string, string>,
+  upstreamDialect: Crossing['dialect'],
 ): Promise<Response> {
   const text = await upstream.text();
-  const answer = chatAnswerOf(parsedJson(text));
+  const answer = parsedJson(text);
 
-  if (answer === null || crossing.dialect === 'chat-completions') {
+  if (!isJsonObject(answer) || crossing.dialect === upstreamDialect) {
     return textAnswer(text, upstream, attribution);
   }
 
-  return anthropicAnswer(crossing, answer, text, upstream, attribution);
+  return translatedJsonAnswer(crossing, upstreamDialect, answer, text, upstream, attribution);
 }
 
-function anthropicAnswer(
+function translatedResponse(
+  from: Crossing['dialect'],
+  to: Crossing['dialect'],
+  answer: JsonObject,
+) {
+  if (from === 'chat-completions') {
+    return translatedChatResponse(to, answer);
+  }
+
+  return translatedProviderResponse(from, to, answer);
+}
+
+function translatedChatResponse(to: Crossing['dialect'], answer: JsonObject) {
+  const chat = chatAnswerOf(answer);
+
+  return chat === null ? null : translateResponse('chat-completions', to, chat);
+}
+
+function translatedProviderResponse(
+  from: 'anthropic' | 'responses',
+  to: Crossing['dialect'],
+  answer: JsonObject,
+) {
+  if (from === 'anthropic') {
+    return isAnthropicAnswer(answer) ? translateResponse('anthropic', to, answer) : null;
+  }
+
+  return isResponsesAnswer(answer) ? translateResponse('responses', to, answer) : null;
+}
+
+function translatedJsonAnswer(
   crossing: Crossing,
-  answer: ChatCompletionsResponse,
+  upstreamDialect: Crossing['dialect'],
+  answer: JsonObject,
   text: string,
   upstream: Response,
   attribution: Record<string, string>,
 ): Response {
-  const crossed = translateResponse('chat-completions', 'anthropic', answer);
+  const crossed = translatedResponse(upstreamDialect, crossing.dialect, answer);
 
-  if ('outcome' in crossed) {
+  if (crossed === null || 'outcome' in crossed) {
     return textAnswer(text, upstream, attribution);
   }
 
@@ -164,9 +240,60 @@ function anthropicAnswer(
     return refusalResponse(crossing.dialect, crossed.refusal);
   }
 
-  return jsonResponse(
-    answeredBy(crossed.value, crossing.providerModel),
-    upstream.status,
-    attribution,
-  );
+  const value = attributedAnswer(crossing, crossed.value);
+
+  return jsonResponse(value, upstream.status, attribution);
+}
+
+function attributedAnswer(crossing: Crossing, value: unknown): unknown {
+  return crossing.dialect === 'anthropic' && isJsonObject(value) && isAnthropicAnswer(value)
+    ? answeredBy(value, crossing.providerModel)
+    : value;
+}
+
+async function completedResponsesAnswer(
+  crossing: Crossing,
+  upstream: Response,
+  attribution: Record<string, string>,
+): Promise<Response> {
+  if (upstream.body === null) {
+    return unreachableTargetAnswer(crossing);
+  }
+
+  let completed: (JsonObject & ResponsesResponse) | null = null;
+
+  for await (const event of jsonEventsFrom(upstream.body)) {
+    const response = terminalResponseIn(event);
+
+    if (response !== null) {
+      completed = response;
+    }
+  }
+
+  return completed === null
+    ? unreachableTargetAnswer(crossing)
+    : translatedJsonAnswer(
+        crossing,
+        'responses',
+        completed,
+        JSON.stringify(completed),
+        upstream,
+        attribution,
+      );
+}
+
+function isTerminalResponseEvent(type: string): boolean {
+  return type === 'response.completed' || type === 'response.incomplete';
+}
+
+function terminalResponseIn(
+  event: JsonObject & { type: string },
+): (JsonObject & ResponsesResponse) | null {
+  const response = event['response'];
+
+  return isTerminalResponseEvent(event.type) &&
+    isJsonObject(response) &&
+    isResponsesAnswer(response)
+    ? response
+    : null;
 }

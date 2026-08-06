@@ -6,7 +6,8 @@ import { aGatewayHolding, grantsNothing, neverFetches } from './gateway-app.test
 
 const ANTHROPIC_MODEL_PATHS = ['/v1/messages', '/messages'];
 const OPENAI_MODEL_PATHS = ['/v1/chat/completions', '/chat/completions'];
-const MODEL_PATHS = [...ANTHROPIC_MODEL_PATHS, ...OPENAI_MODEL_PATHS];
+const RESPONSES_MODEL_PATHS = ['/v1/responses', '/responses'];
+const MODEL_PATHS = [...ANTHROPIC_MODEL_PATHS, ...OPENAI_MODEL_PATHS, ...RESPONSES_MODEL_PATHS];
 const SERVED_PATHS = ['/health', '/v1/models', ...MODEL_PATHS];
 
 async function askCodex(path: string, init?: RequestInit): Promise<Response> {
@@ -96,6 +97,22 @@ describe('the envelope an unknown model refuses in', () => {
 
   test.each(OPENAI_MODEL_PATHS)('%s answers the OpenAI envelope', async (path) => {
     const refusal = await sendModelRequest(path);
+
+    expect(await refusal.json()).toEqual({
+      error: {
+        message: 'No model named "ghost" is defined.',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'model_not_found',
+      },
+    });
+  });
+
+  test.each(RESPONSES_MODEL_PATHS)('%s answers the Responses envelope', async (path) => {
+    const refusal = await sendModelRequest(
+      path,
+      JSON.stringify({ model: 'ghost', input: [{ type: 'message', role: 'user', content: 'hi' }] }),
+    );
 
     expect(await refusal.json()).toEqual({
       error: {

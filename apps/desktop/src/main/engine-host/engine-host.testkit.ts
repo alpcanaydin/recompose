@@ -1,6 +1,7 @@
 import {
   type EngineDirective,
   type EngineSpendGrant,
+  type EngineSubscriptionCredentialUpdated,
   type GatewayEngineState,
   type KeyCheckReport,
   type ModelListing,
@@ -119,11 +120,15 @@ type Lane = {
 function recordAndAnswer(
   lane: Lane,
   script: Script,
-  message: EngineDirective | EngineSpendGrant,
+  message: EngineDirective | EngineSpendGrant | EngineSubscriptionCredentialUpdated,
 ): void {
   if (message.kind === 'spend-grant') {
     lane.grants.push(message);
 
+    return;
+  }
+
+  if (message.kind === 'subscription-credential-updated') {
     return;
   }
 

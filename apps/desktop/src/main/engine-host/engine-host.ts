@@ -1,20 +1,16 @@
 import {
   engineReportSchema,
   engineSpendRequestSchema,
+  engineSubscriptionCredentialUpdateSchema,
   type EngineDirective,
   type EngineGateway,
   type EngineReport,
-  type EngineSpendGrant,
   type EngineStates,
   type GatewayEngineState,
-  type KeyCheckReport,
-  type KeyProviderId,
-  type LookCustody,
-  type ModelListing,
-  type RuntimeReachability,
 } from '@recompose/contracts';
 import { randomUUID } from 'node:crypto';
 
+import type { EngineChild, EngineHost, EngineHostDeps } from './engine-host-types';
 import type { EngineLooks } from './engine-looks';
 import type { SpendGrantFor } from './engine-spend';
 
@@ -33,31 +29,7 @@ import { createGatewayOrder } from './gateway-order';
 export const DIRECTIVE_TIMEOUT_MS = 5000;
 
 export { PROBE_TIMEOUT_MS } from './engine-looks';
-
-export type EngineChild = {
-  postMessage: (message: EngineDirective | EngineSpendGrant) => void;
-  onMessage: (listener: (message: unknown) => void) => void;
-  onExit: (listener: (code: number) => void) => void;
-  kill: () => void;
-};
-
-export type EngineHostDeps = {
-  knownSlugs: readonly string[];
-  spawnChild: () => EngineChild;
-  grantFor: SpendGrantFor;
-};
-
-export type EngineHost = {
-  start: (gateway: EngineGateway) => Promise<GatewayEngineState>;
-  stop: (slug: string) => Promise<GatewayEngineState>;
-  restart: (gateway: EngineGateway) => Promise<GatewayEngineState>;
-  probe: (provider: KeyProviderId, key: string) => Promise<KeyCheckReport>;
-  probeRuntime: (address: string) => Promise<RuntimeReachability>;
-  listModels: (origin: string, custody: LookCustody) => Promise<ModelListing>;
-  states: () => EngineStates;
-  onStatesChanged: (listener: (states: EngineStates) => void) => () => void;
-  dispose: () => void;
-};
+export type { EngineChild, EngineHost, EngineHostDeps } from './engine-host-types';
 
 type StateListener = (states: EngineStates) => void;
 
@@ -71,6 +43,7 @@ type Resident = {
   child: EngineChild | null;
   spawnChild: () => EngineChild;
   grantFor: SpendGrantFor;
+  storeSubscriptionCredential: NonNullable<EngineHostDeps['storeSubscriptionCredential']>;
   subscribers: Set<StateListener>;
   awaitingReport: Map<string, Waiter>;
   looks: EngineLooks;
@@ -133,6 +106,36 @@ function receiveMessage(resident: Resident, child: EngineChild, message: unknown
 
   if (asked.success) {
     answerSpendRequest(child, resident.grantFor, asked.data);
+
+    return;
+  }
+
+  const update = engineSubscriptionCredentialUpdateSchema.safeParse(message);
+
+  if (update.success) {
+    void resident
+      .storeSubscriptionCredential(
+        update.data.provider,
+        update.data.accountId,
+        update.data.credential,
+      )
+      .then(
+        () => {
+          child.postMessage({
+            kind: 'subscription-credential-updated',
+            answers: update.data.id,
+            verdict: 'stored',
+          });
+        },
+        (error: unknown) => {
+          console.error('recompose could not persist a refreshed subscription credential.', error);
+          child.postMessage({
+            kind: 'subscription-credential-updated',
+            answers: update.data.id,
+            verdict: 'failed',
+          });
+        },
+      );
 
     return;
   }
@@ -233,6 +236,11 @@ export function createEngineHost(deps: EngineHostDeps): EngineHost {
     child: null,
     spawnChild: deps.spawnChild,
     grantFor: deps.grantFor,
+    storeSubscriptionCredential:
+      deps.storeSubscriptionCredential ??
+      (async () => {
+        await Promise.reject(new Error('subscription credential persistence is unavailable'));
+      }),
     subscribers: new Set(),
     awaitingReport: new Map(),
     looks: openEngineLooks(),

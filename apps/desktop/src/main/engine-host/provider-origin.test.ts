@@ -1,4 +1,4 @@
-import type { CredentialedAccount, LocalAccount } from '@recompose/contracts';
+import type { CredentialedAccount, LocalAccount, SubscriptionAccount } from '@recompose/contracts';
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
@@ -19,6 +19,10 @@ const ollama: LocalAccount = {
   kind: 'local',
   address: 'http://127.0.0.1:11434',
 };
+
+function subscription(provider: SubscriptionAccount['provider']): SubscriptionAccount {
+  return { id: `acc-${provider}`, provider, kind: 'subscription', label: provider };
+}
 
 describe('the origin a target account is spent against', () => {
   test('a local runtime is spent against the address its account was stored with', () => {
@@ -41,6 +45,14 @@ describe('the origin a target account is spent against', () => {
 
   test('an OpenRouter key is spent against the aggregator serving base', () => {
     expect(providerOriginOf(keyRow('openrouter', 'aggregator'))).toBe('https://openrouter.ai/api');
+  });
+
+  test('a Claude subscription is spent against the Claude Messages origin', () => {
+    expect(providerOriginOf(subscription('anthropic'))).toBe('https://api.anthropic.com');
+  });
+
+  test('a Codex subscription is spent against the ChatGPT Codex origin', () => {
+    expect(providerOriginOf(subscription('openai'))).toBe('https://chatgpt.com/backend-api/codex');
   });
 
   test('a key under a provider recompose serves nothing for is spent against nothing', () => {

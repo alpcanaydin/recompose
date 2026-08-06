@@ -15,16 +15,20 @@ const everyKind: StoredAccounts = [
 
 test('the offered accounts stand under the kinds the registry holds them as', () => {
   expect(targetGroups(everyKind).map((group) => group.heading)).toEqual([
+    'Subscriptions',
     'API Keys',
     'Aggregators',
     'Local Runtimes',
   ]);
 });
 
-test('a subscription account stands under no heading, because none of them offers one', () => {
-  const headings = targetGroups(everyKind).map((group) => group.heading);
+test('a subscription account stands under the subscription heading', () => {
+  const [subscriptions] = targetGroups(everyKind);
 
-  expect(headings).not.toContain('Subscriptions');
+  expect(subscriptions).toEqual({
+    heading: 'Subscriptions',
+    options: [{ id: 's1', name: 'Claude', mark: 'anthropic' }],
+  });
 });
 
 test('a kind holding nothing that can be a target stands as no group at all', () => {
@@ -34,7 +38,7 @@ test('a kind holding nothing that can be a target stands as no group at all', ()
 });
 
 test('a stored key offers the name a person filed it under, and its vendor mark', () => {
-  const [keys] = targetGroups(everyKind);
+  const keys = targetGroups(everyKind)[1];
 
   expect(keys?.options).toEqual([{ id: 'k1', name: 'Work key', mark: 'anthropic' }]);
 });

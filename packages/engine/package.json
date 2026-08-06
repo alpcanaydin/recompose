@@ -15,7 +15,8 @@
   "dependencies": {
     "@hono/node-server": "2.0.12",
     "@recompose/contracts": "workspace:*",
-    "hono": "4.12.32"
+    "hono": "4.12.32",
+    "node-wreq": "3.1.0"
   },
   "devDependencies": {
     "@fast-check/vitest": "0.4.1",

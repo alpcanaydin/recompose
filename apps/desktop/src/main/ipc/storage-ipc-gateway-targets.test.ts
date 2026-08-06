@@ -80,30 +80,29 @@ const bindingASubscription = gatewayHolding([pointingAt(planRow.id)]);
 const bindingAKey = gatewayHolding([pointingAt(keyRow.id)]);
 
 describe('a save carrying a definition bound to a subscription account', () => {
-  test('the save is refused rather than stored', async () => {
+  test('the save is accepted as a targetable definition', async () => {
     const desk = await deskWith([keyRow, planRow], []);
 
     const answer = await desk.handlers['gateways:save'](bindingASubscription);
 
-    expect(refusalIn(answer).code).toBe('validation-failed');
+    expect(answer).toMatchObject({ ok: true });
   });
 
-  test('the refusal names the subscription target it refused', async () => {
+  test('the answer retains the selected subscription target', async () => {
     const desk = await deskWith([keyRow, planRow], []);
 
     const answer = await desk.handlers['gateways:save'](bindingASubscription);
 
-    expect(refusalIn(answer).message).toContain(planRow.label);
-    expect(refusalIn(answer).message).toContain('subscription');
+    expect(answer).toMatchObject({ ok: true, value: [bindingASubscription] });
   });
 
-  test('a refused save leaves no document behind and serves nothing', async () => {
+  test('the accepted save writes its document and starts the gateway', async () => {
     const desk = await deskWith([keyRow, planRow], []);
 
     await desk.handlers['gateways:save'](bindingASubscription);
 
-    await expect(storedSlugs(desk.userDataPath)).resolves.toStrictEqual([]);
-    expect(desk.served).toStrictEqual([]);
+    await expect(storedSlugs(desk.userDataPath)).resolves.toStrictEqual(['personal.json']);
+    expect(desk.served).toHaveLength(1);
   });
 
   test('a definition bound to a key account still stores and serves', async () => {
@@ -150,25 +149,24 @@ describe('a save the stored shape itself refuses', () => {
 });
 
 describe('an update carrying a definition bound to a subscription account', () => {
-  test('the update is refused rather than rewritten', async () => {
+  test('the update is accepted and rewritten', async () => {
     const desk = await deskWith([keyRow, planRow], [gatewayHolding([])]);
 
     const answer = await desk.handlers['gateways:update'](bindingASubscription);
 
-    expect(refusalIn(answer).code).toBe('validation-failed');
-    expect(refusalIn(answer).message).toContain(planRow.label);
+    expect(answer).toMatchObject({ ok: true, value: [bindingASubscription] });
   });
 
-  test('a refused update leaves the stored document exactly as it stood', async () => {
+  test('the accepted update stores and restarts the subscription binding', async () => {
     const desk = await deskWith([keyRow, planRow], [gatewayHolding([])]);
 
     await desk.handlers['gateways:update'](bindingASubscription);
 
     await expect(desk.handlers['gateways:list'](undefined)).resolves.toStrictEqual({
       ok: true,
-      value: [gatewayHolding([])],
+      value: [bindingASubscription],
     });
-    expect(desk.served).toStrictEqual([]);
+    expect(desk.served).toHaveLength(1);
   });
 
   test('an update binding a key account rewrites the document', async () => {

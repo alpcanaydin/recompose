@@ -27,7 +27,7 @@ function scriptedChild(answer: Answer) {
 
   const child: EngineChild = {
     postMessage: (message) => {
-      if (message.kind === 'spend-grant') {
+      if (!('id' in message)) {
         return;
       }
 

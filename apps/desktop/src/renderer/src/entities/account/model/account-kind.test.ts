@@ -56,21 +56,22 @@ test('a kind nothing is stored under gathers nothing', () => {
   expect(accountsOfKind([account('a1', 'api-key')], 'aggregator')).toEqual([]);
 });
 
-test('every kind but a subscription stands as a target', () => {
+test('every account kind stands as a target', () => {
   const subscription = account('a1', 'subscription');
   const key = account('a2', 'api-key');
   const aggregator = account('a3', 'aggregator');
   const local = account('a4', 'local');
 
   expect(accountsStandingAsTarget([subscription, key, aggregator, local])).toEqual([
+    subscription,
     key,
     aggregator,
     local,
   ]);
 });
 
-test('a registry holding nothing but subscriptions stands nothing as a target', () => {
+test('a registry holding subscriptions offers each one as a target', () => {
   const stored = [account('a1', 'subscription'), account('a2', 'subscription')];
 
-  expect(accountsStandingAsTarget(stored)).toEqual([]);
+  expect(accountsStandingAsTarget(stored)).toEqual(stored);
 });

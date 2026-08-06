@@ -12,7 +12,7 @@
         "scripts/generate-icons.mts",
         "vitest.mutation.config.ts"
       ],
-      "ignoreDependencies": ["chromatic", "fast-check"],
+      "ignoreDependencies": ["chromatic", "fast-check", "node-wreq"],
       "ignoreBinaries": ["dpkg-deb"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },

@@ -5,7 +5,9 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { resolveSpendGrant } from './spend-grant';
 import {
   aggregatorRow,
+  codexPlanRow,
   contextFor,
+  holdSubscriptionCredential,
   keyRow,
   localRow,
   planRow,
@@ -68,6 +70,59 @@ describe('what a spend request draws for a local target', () => {
   });
 });
 
+describe('what a spend request draws for a subscription target', () => {
+  test('a Claude subscription grants its complete live credential bundle', async () => {
+    const credential = '{"claudeAiOauth":{"accessToken":"claude-access"}}';
+    const userDataPath = await storageHolding([pointingAt(planRow.id)], [planRow]);
+
+    await holdSubscriptionCredential(userDataPath, 'anthropic', planRow.id, credential);
+
+    await expect(
+      resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
+    ).resolves.toStrictEqual({
+      verdict: 'resolved',
+      providerOrigin: 'https://api.anthropic.com',
+      spend: {
+        custody: 'subscription',
+        provider: 'anthropic',
+        accountId: planRow.id,
+        credential,
+      },
+    });
+  });
+
+  test('a Codex subscription grants its complete live credential bundle', async () => {
+    const credential = '{"tokens":{"access_token":"codex-access"}}';
+    const userDataPath = await storageHolding(
+      [pointingAt(codexPlanRow.id, 'gpt-5.4')],
+      [codexPlanRow],
+    );
+
+    await holdSubscriptionCredential(userDataPath, 'openai', codexPlanRow.id, credential);
+
+    await expect(
+      resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
+    ).resolves.toStrictEqual({
+      verdict: 'resolved',
+      providerOrigin: 'https://chatgpt.com/backend-api/codex',
+      spend: {
+        custody: 'subscription',
+        provider: 'openai',
+        accountId: codexPlanRow.id,
+        credential,
+      },
+    });
+  });
+
+  test('a subscription whose credential disappeared answers a missing credential', async () => {
+    const userDataPath = await storageHolding([pointingAt(planRow.id)], [planRow]);
+
+    await expect(
+      resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
+    ).resolves.toStrictEqual({ verdict: 'missing-credential' });
+  });
+});
+
 describe('what a spend request draws when no target stands', () => {
   test('a virtual model no stored gateway defines answers a missing target', async () => {
     const userDataPath = await storageHolding([pointingAt(keyRow.id)], [keyRow]);
@@ -87,14 +142,6 @@ describe('what a spend request draws when no target stands', () => {
 
   test('a target account the registry no longer holds answers a missing target', async () => {
     const userDataPath = await storageHolding([pointingAt(keyRow.id)], []);
-
-    await expect(
-      resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
-    ).resolves.toStrictEqual({ verdict: 'missing-target' });
-  });
-
-  test('a target account that turned out to be a subscription answers a missing target', async () => {
-    const userDataPath = await storageHolding([pointingAt(planRow.id)], [planRow]);
 
     await expect(
       resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),

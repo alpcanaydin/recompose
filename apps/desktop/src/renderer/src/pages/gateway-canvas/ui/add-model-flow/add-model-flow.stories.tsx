@@ -36,17 +36,17 @@ export const Opening = meta.story({
 });
 
 /**
- * The target list, holding every account that can serve and no subscription.
+ * The target list, holding every account that can serve, including subscriptions.
  *
- * @summary A subscription is spent by a provider's own tool rather than routed to, so it stands
- * under no heading here at all, rather than standing greyed out for a person to wonder about.
+ * @summary A subscription uses its provider-native transport, so it stands beside the other
+ * account kinds a virtual model can target.
  */
 export const TargetsOnOffer = meta.story({
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('API Keys')).toBeVisible();
+    await expect(await canvas.findByText('Subscriptions')).toBeVisible();
     await expect(await canvas.findByText('Aggregators')).toBeVisible();
     await expect(await canvas.findByText('Local Runtimes')).toBeVisible();
-    await expect(canvas.queryByText('Subscriptions')).toBeNull();
   },
 });
 

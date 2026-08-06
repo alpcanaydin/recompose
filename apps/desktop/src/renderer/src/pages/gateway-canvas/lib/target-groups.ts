@@ -25,9 +25,9 @@ function optionFor(account: Account): OptionRow {
 /**
  * The accounts a target can name, gathered the way the picker offers them.
  *
- * @summary A subscription is dropped before anything is gathered, so it stands under no heading
- * rather than under a disabled one, and the kinds keep the registry's own order. A kind holding
- * nothing offered stands as no group, because an empty heading says only that a person has none.
+ * @summary Every stored account stands under its own kind and the kinds keep the registry's own
+ * order. A kind holding nothing offered stands as no group, because an empty heading says only
+ * that a person has none.
  */
 export function targetGroups(accounts: AccountsDocument['accounts']): readonly OptionGroup[] {
   const offered = accountsStandingAsTarget(accounts);

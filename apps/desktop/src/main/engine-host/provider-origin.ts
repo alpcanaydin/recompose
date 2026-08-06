@@ -1,4 +1,4 @@
-import type { CredentialedAccount, LocalAccount } from '@recompose/contracts';
+import type { Account } from '@recompose/contracts';
 
 const servingOrigins = new Map<string, string>([
   ['anthropic', 'https://api.anthropic.com'],
@@ -45,12 +45,22 @@ function standInOrigin(): string | undefined {
  * The lookup is a Map rather than an object, because a stored provider is any non-blank string a
  * person typed and an object would answer `constructor` or `toString` with an inherited member.
  */
-export function providerOriginOf(account: CredentialedAccount | LocalAccount): string | undefined {
+export function providerOriginOf(account: Account): string | undefined {
   if (account.kind === 'local') {
     return account.address;
   }
 
-  const served = servingOrigins.get(account.provider);
+  return subscriptionOriginOf(account) ?? keyedOriginOf(account.provider);
+}
+
+function subscriptionOriginOf(account: Account): string | undefined {
+  return account.kind === 'subscription' && account.provider === 'openai'
+    ? (standInOrigin() ?? 'https://chatgpt.com/backend-api/codex')
+    : undefined;
+}
+
+function keyedOriginOf(provider: string): string | undefined {
+  const served = servingOrigins.get(provider);
 
   return served === undefined ? undefined : (standInOrigin() ?? served);
 }

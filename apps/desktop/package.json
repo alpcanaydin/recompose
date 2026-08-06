@@ -44,7 +44,8 @@
     "@lobehub/icons": "^5.15.0",
     "@tanstack/react-form": "1.33.2",
     "@tanstack/react-router": "1.170.18",
-    "electron-liquid-glass": "^1.1.1"
+    "electron-liquid-glass": "^1.1.1",
+    "node-wreq": "3.1.0"
   },
   "devDependencies": {
     "@base-ui/react": "1.6.0",
@@ -92,6 +93,14 @@
     "vite": "8.1.5",
     "vitest": "4.1.10",
     "vitest-browser-react": "2.2.0"
+  },
+  "optionalDependencies": {
+    "@node-wreq/darwin-arm64": "3.1.0",
+    "@node-wreq/darwin-x64": "3.1.0",
+    "@node-wreq/linux-arm64-gnu": "3.1.0",
+    "@node-wreq/linux-x64-gnu": "3.1.0",
+    "@node-wreq/linux-x64-musl": "3.1.0",
+    "@node-wreq/win32-x64-msvc": "3.1.0"
   },
   "desktopName": "recompose"
 }

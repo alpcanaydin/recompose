@@ -107,6 +107,48 @@ describe('placing a parked credential back where the tool looks for it', () => {
   });
 });
 
+describe('serving with a credential while it remains in custody', () => {
+  test('the active account reads from the vendor item', async () => {
+    const custody = credentialCustody(fakeKeychain(vendorHolding('active-blob')).seam, osUser);
+
+    await expect(custody.readFor('acc-one', true)).resolves.toBe('active-blob');
+  });
+
+  test('an inactive account reads from its parked item', async () => {
+    const custody = credentialCustody(
+      fakeKeychain({
+        ...vendorHolding('active-blob'),
+        ...parkedUnder('acc-two', 'parked-blob'),
+      }).seam,
+      osUser,
+    );
+
+    await expect(custody.readFor('acc-two', false)).resolves.toBe('parked-blob');
+  });
+
+  test('a refreshed active credential replaces the vendor item', async () => {
+    const keychain = fakeKeychain(vendorHolding('old-blob'));
+    const custody = credentialCustody(keychain.seam, osUser);
+
+    await custody.writeFor('acc-one', true, 'new-blob');
+
+    expect(keychain.blobAt(VENDOR_SERVICE, osUser)).toBe('new-blob');
+  });
+
+  test('a refreshed inactive credential replaces only its parked item', async () => {
+    const keychain = fakeKeychain({
+      ...vendorHolding('active-blob'),
+      ...parkedUnder('acc-two', 'old-blob'),
+    });
+    const custody = credentialCustody(keychain.seam, osUser);
+
+    await custody.writeFor('acc-two', false, 'new-blob');
+
+    expect(keychain.blobAt(PARKED_SERVICE, 'acc-two')).toBe('new-blob');
+    expect(keychain.blobAt(VENDOR_SERVICE, osUser)).toBe('active-blob');
+  });
+});
+
 describe('handing the vendor item from one account to another', () => {
   test('given both accounts, the outgoing credential is parked and the incoming one takes its place', async () => {
     const keychain = fakeKeychain({

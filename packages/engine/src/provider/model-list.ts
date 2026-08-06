@@ -5,11 +5,91 @@ import {
   type ModelListing,
 } from '@recompose/contracts';
 
+import { isJsonObject, parsedJson } from '../gateway-wire';
 import { authHeadersFor } from './key-probe';
 
 const modelsPath = '/v1/models';
 
 const nothingListed: ModelListing = { standing: 'unlisted' };
+
+const claudeSubscriptionModels = [
+  'claude-haiku-4-5-20251001',
+  'claude-sonnet-4-5-20250929',
+  'claude-sonnet-4-6',
+  'claude-opus-4-6',
+  'claude-opus-4-7',
+  'claude-opus-4-8',
+  'claude-opus-5',
+  'claude-sonnet-5',
+  'claude-fable-5',
+  'claude-opus-4-5-20251101',
+  'claude-opus-4-1-20250805',
+  'claude-opus-4-20250514',
+  'claude-sonnet-4-20250514',
+  'claude-3-7-sonnet-20250219',
+  'claude-3-5-haiku-20241022',
+] as const;
+
+const codexFreeModels = [
+  'gpt-5.4-mini',
+  'gpt-5.5',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
+  'codex-auto-review',
+] as const;
+
+const codexPaidModels = [
+  'gpt-5.3-codex-spark',
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.5',
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
+  'codex-auto-review',
+] as const;
+
+function codexPlanIn(blob: string): string | null {
+  const document = parsedJson(blob);
+
+  if (!isJsonObject(document) || !isJsonObject(document['tokens'])) {
+    return null;
+  }
+
+  const token = document['tokens']['id_token'];
+
+  return typeof token === 'string' ? planInToken(token) : null;
+}
+
+function planInToken(token: string): string | null {
+  const encoded = token.split('.')[1];
+
+  if (encoded === undefined) {
+    return null;
+  }
+
+  const claims = parsedJson(Buffer.from(encoded, 'base64url').toString('utf8'));
+
+  if (!isJsonObject(claims) || !isJsonObject(claims['https://api.openai.com/auth'])) {
+    return null;
+  }
+
+  const plan = claims['https://api.openai.com/auth']['chatgpt_plan_type'];
+
+  return typeof plan === 'string' ? plan : null;
+}
+
+function subscriptionListing(
+  custody: Extract<LookCustody, { custody: 'subscription' }>,
+): ModelListing {
+  if (custody.provider === 'anthropic') {
+    return { standing: 'listed', modelIds: [...claudeSubscriptionModels] };
+  }
+
+  const models = codexPlanIn(custody.credential) === 'free' ? codexFreeModels : codexPaidModels;
+
+  return { standing: 'listed', modelIds: [...models] };
+}
 
 function headersFor(custody: LookCustody): Record<string, string> {
   if (custody.custody === 'open') {
@@ -89,6 +169,10 @@ export async function listProviderModels(
   origin: string,
   custody: LookCustody,
 ): Promise<ModelListing> {
+  if (custody.custody === 'subscription') {
+    return subscriptionListing(custody);
+  }
+
   const response = await answerOrSilence(fetchLike, origin, custody);
 
   if (response === null || !response.ok) {

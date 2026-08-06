@@ -12,11 +12,13 @@ import type { StorageIpcContext } from './ipc/storage-context';
 import type { SettingsEffects } from './settings/apply-settings';
 import type { CredentialCustody } from './subscriptions/credential-custody';
 
+import { registerAppLifecycle } from './app-lifecycle';
 import { createEngineHost } from './engine-host/engine-host';
 import { createGatewayLifecycleRequests } from './engine-host/gateway-lifecycle-requests';
 import { probeFreePort } from './engine-host/probe-free-port';
 import { spawnEngineChild } from './engine-host/spawn-engine';
 import { resolveSpendGrant } from './engine-host/spend-grant';
+import { serveRewrittenGateway, startStoredGateway } from './engine-host/stored-gateway-serving';
 import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
 import { createLocalRuntimesIpcHandlers } from './ipc/local-runtimes-ipc';
@@ -36,6 +38,7 @@ import {
 import { storedBootState } from './storage/boot-state';
 import { listGatewayConfigs } from './storage/gateway-store';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
+import { subscriptionCredentialStore } from './subscriptions/subscription-credential-store';
 import { subscriptionHomes } from './subscriptions/subscription-homes';
 import { subscriptionRelease } from './subscriptions/subscription-release';
 import { machineCustody, subscriptionsContext } from './subscriptions/subscriptions-wiring';
@@ -57,7 +60,6 @@ import {
   showMainWindow,
 } from './windows/main-window';
 import { registerPermissionHandlers } from './windows/permission-wiring';
-import { shouldQuitOnLastWindowClose } from './windows/quit-policy';
 import { windowButtonsMoveOn } from './windows/window-buttons';
 
 app.setName('Recompose');
@@ -112,28 +114,16 @@ function onStorageCorrupt(quarantinedPath: string): void {
   console.warn(`storage document quarantined: ${quarantinedPath}`);
 }
 
-function startStoredGateway(engineHost: EngineHost): StorageIpcContext['startGateway'] {
-  return (gateway) => {
-    engineHost.start(gateway).catch((error: unknown) => {
-      console.error(`recompose stored ${gateway.slug} but could not start it`, error);
-    });
-  };
-}
+function storageReach(custody: CredentialCustody | null = null): SpendGrantContext {
+  const userDataPath = app.getPath('userData');
 
-function serveRewrittenGateway(engineHost: EngineHost): StorageIpcContext['restartGateway'] {
-  return (gateway) => {
-    engineHost.restart(gateway).catch((error: unknown) => {
-      console.error(`recompose rewrote ${gateway.slug} but could not serve it again`, error);
-    });
-  };
-}
-
-function storageReach(): SpendGrantContext {
   return {
-    userDataPath: app.getPath('userData'),
+    userDataPath,
     homeFolder: app.getPath('home'),
     getCodec: () => createSafeStorageCodec(),
     onCorrupt: onStorageCorrupt,
+    readSubscriptionCredential: subscriptionCredentialStore(userDataPath, process.platform, custody)
+      .read,
   };
 }
 
@@ -141,7 +131,7 @@ function storageContext(
   engineHost: EngineHost,
   custody: CredentialCustody | null,
 ): StorageIpcContext {
-  const reach = storageReach();
+  const reach = storageReach(custody);
 
   return {
     ...reach,
@@ -164,10 +154,12 @@ function keyCheckContext(engineHost: EngineHost): KeyCheckIpcContext {
   return { ...storageReach(), probe: async (provider, key) => engineHost.probe(provider, key) };
 }
 
-function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
+function assembleIpcHandlers(
+  engineHost: EngineHost,
+  custody: CredentialCustody | null,
+): IpcHandlers {
   const userDataPath = app.getPath('userData');
   const homeFolder = app.getPath('home');
-  const custody = machineCustody();
 
   return {
     ...createSubscriptionsIpcHandlers(
@@ -182,7 +174,7 @@ function assembleIpcHandlers(engineHost: EngineHost): IpcHandlers {
     }),
     ...createStorageIpcHandlers(storageContext(engineHost, custody)),
     ...createKeyCheckIpcHandlers(keyCheckContext(engineHost)),
-    ...createProviderModelsIpcHandlers(providerModelsReach(storageReach(), engineHost)),
+    ...createProviderModelsIpcHandlers(providerModelsReach(storageReach(custody), engineHost)),
     ...createLocalRuntimesIpcHandlers({
       userDataPath,
       homeFolder,
@@ -246,15 +238,26 @@ async function startRecompose(): Promise<void> {
 
   const boot = await storedBootState(app.getPath('userData'), onStorageCorrupt);
 
+  const custody = machineCustody();
+  const subscriptionCredentials = subscriptionCredentialStore(
+    app.getPath('userData'),
+    process.platform,
+    custody,
+  );
   const grantFor: SpendGrantFor = async (slug, model) =>
-    resolveSpendGrant(storageReach(), slug, model);
+    resolveSpendGrant(storageReach(custody), slug, model);
 
-  engineHost = createEngineHost({ knownSlugs: boot.slugs, spawnChild: spawnEngineChild, grantFor });
+  engineHost = createEngineHost({
+    knownSlugs: boot.slugs,
+    spawnChild: spawnEngineChild,
+    grantFor,
+    storeSubscriptionCredential: subscriptionCredentials.write,
+  });
   engineHost.onStatesChanged(pushEngineStates);
   engineHost.onStatesChanged(repaintTray);
   repaintTray(engineHost.states());
 
-  registerIpcHandlers(assembleIpcHandlers(engineHost));
+  registerIpcHandlers(assembleIpcHandlers(engineHost, custody));
 
   electronApp.setAppUserModelId('sh.recompose.app');
 
@@ -273,28 +276,14 @@ async function startRecompose(): Promise<void> {
   applyBootSettingsOrComplain(settingsEffects, boot.settings);
 
   createMainWindow(HOME_ROUTE);
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow(HOME_ROUTE);
-    }
-  });
 }
 
-void app
-  .whenReady()
-  .then(startRecompose)
-  .catch((error: unknown) => {
-    console.error('recompose failed to start', error);
-  });
-
-app.on('before-quit', () => {
-  hideMenuBarTray();
-  engineHost?.dispose();
-});
-
-app.on('window-all-closed', () => {
-  if (shouldQuitOnLastWindowClose(process.platform, isMenuBarTrayVisible())) {
-    app.quit();
-  }
+registerAppLifecycle({
+  start: startRecompose,
+  activate: () => {
+    createMainWindow(HOME_ROUTE);
+  },
+  dispose: () => {
+    engineHost?.dispose();
+  },
 });

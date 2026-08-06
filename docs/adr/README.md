@@ -74,7 +74,7 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0066](0066-a-report-names-the-directive-it-answers.md)                         | A Report Names the Directive It Answers                                             | Accepted   | 2026-08-01 |
 | [0067](0067-paperwork-events-run-in-their-own-lane.md)                          | Title and Label Events Run in Their Own Concurrency Lane                            | Accepted   | 2026-08-01 |
 | [0068](0068-the-standing-sidebar-carries-its-own-control.md)                    | The Standing Sidebar Carries the Control That Puts It Away                          | Accepted   | 2026-08-01 |
-| [0069](0069-subscriptions-delegate-to-the-providers-tool.md)                    | Subscriptions Delegate to the Provider's Tool, and Custody Follows Each Platform    | Accepted   | 2026-08-02 |
+| [0069](0069-subscriptions-delegate-to-the-providers-tool.md)                    | Subscriptions Delegate to the Provider's Tool, and Custody Follows Each Platform    | Superseded | 2026-08-02 |
 | [0070](0070-key-checks-live-in-the-engine-child.md)                             | Key Checks Live in the Engine Child                                                 | Accepted   | 2026-08-03 |
 | [0071](0071-tanstack-form-carries-the-renderer-drafts.md)                       | TanStack Form Carries the Renderer Drafts                                           | Accepted   | 2026-08-03 |
 | [0072](0072-a-local-runtime-account-is-a-credential-free-observation.md)        | A Local Runtime Account Is a Credential-Free Observation                            | Accepted   | 2026-08-04 |
@@ -85,3 +85,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0077](0077-bindings-ride-the-directive-and-secrets-ride-per-request-grants.md) | Bindings Ride the Directive, and Secrets Ride Per-Request Grants                    | Accepted   | 2026-08-06 |
 | [0078](0078-an-absent-model-is-404-and-broken-backing-is-502.md)                | An Absent Model Is 404, and Broken Backing Is 502                                   | Accepted   | 2026-08-06 |
 | [0079](0079-tests-and-snapshots-run-with-reduced-motion.md)                     | Tests and Snapshots Run With Reduced Motion                                         | Accepted   | 2026-08-06 |
+| [0080](0080-subscriptions-spend-through-provider-native-transports.md)          | Subscriptions Spend Through Provider-Native Transports in the Engine Child          | Accepted   | 2026-08-06 |

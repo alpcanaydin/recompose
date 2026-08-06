@@ -4,14 +4,18 @@ import {
   engineReportSchema,
   engineSpendGrantSchema,
   engineSpendRequestSchema,
+  engineSubscriptionCredentialUpdateSchema,
+  engineSubscriptionCredentialUpdatedSchema,
   type KeyProviderId,
   type SpendGrant,
 } from '@recompose/contracts';
 
 import type { SpendGrantFor } from './gateway-app';
+import type { SubscriptionRuntime } from './gateway-proxy';
 import type { ParentPort } from './parent-port';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
+import { subscriptionRuntime } from './gateway-proxy';
 import { firstPartyProbeOrigins, probeKey } from './provider/key-probe';
 import { listProviderModels } from './provider/model-list';
 import { probeRuntime } from './provider/runtime-probe';
@@ -173,16 +177,73 @@ function openSpendLane(parentPort: ParentPort): SpendLane {
   };
 }
 
+type CredentialUpdateLane = {
+  persist: SubscriptionRuntime['persist'];
+  settle: (data: unknown) => boolean;
+};
+
+function openCredentialUpdateLane(parentPort: ParentPort): CredentialUpdateLane {
+  const pending = new Map<string, { stored: () => void; failed: () => void }>();
+
+  return {
+    persist: async (provider, accountId, credential) =>
+      new Promise<void>((stored, failed) => {
+        const id = crypto.randomUUID();
+
+        pending.set(id, {
+          stored,
+          failed: () => {
+            failed(new Error('credential update failed'));
+          },
+        });
+        parentPort.postMessage(
+          engineSubscriptionCredentialUpdateSchema.parse({
+            kind: 'subscription-credential-update',
+            id,
+            provider,
+            accountId,
+            credential,
+          }),
+        );
+      }),
+    settle: (data) => {
+      const answer = engineSubscriptionCredentialUpdatedSchema.safeParse(data);
+
+      if (!answer.success) {
+        return false;
+      }
+
+      const waiting = pending.get(answer.data.answers);
+
+      if (waiting === undefined) {
+        console.error('The engine child heard a credential update answering no open request.');
+
+        return true;
+      }
+
+      pending.delete(answer.data.answers);
+      waiting[answer.data.verdict]();
+
+      return true;
+    },
+  };
+}
+
 export function attachEngineChild(
   parentPort: ParentPort,
   openListeners: OpenListeners,
   fetchLike: typeof fetch = globalThis.fetch,
+  subscriptionOverrides?: Omit<SubscriptionRuntime, 'persist'>,
 ): void {
   const spendLane = openSpendLane(parentPort);
-  const runtime = createEngineRuntime(openListeners, spendLane.grantFor, fetchLike);
+  const credentialLane = openCredentialUpdateLane(parentPort);
+  const subscriptions = subscriptionOverrides
+    ? { ...subscriptionOverrides, persist: credentialLane.persist }
+    : subscriptionRuntime(credentialLane.persist);
+  const runtime = createEngineRuntime(openListeners, spendLane.grantFor, fetchLike, subscriptions);
 
   parentPort.on('message', (messageEvent) => {
-    if (spendLane.settle(messageEvent.data)) {
+    if (spendLane.settle(messageEvent.data) || credentialLane.settle(messageEvent.data)) {
       return;
     }
 

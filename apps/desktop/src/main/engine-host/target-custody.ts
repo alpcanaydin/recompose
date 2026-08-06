@@ -1,4 +1,9 @@
-import type { Account, CredentialedAccount, LocalAccount, LookCustody } from '@recompose/contracts';
+import type {
+  Account,
+  CredentialedAccount,
+  LookCustody,
+  SubscriptionAccount,
+} from '@recompose/contracts';
 
 import { keyProviderIdSchema } from '@recompose/contracts';
 
@@ -18,6 +23,10 @@ export type TargetCustodyContext = {
   homeFolder: string;
   getCodec: () => SecretCodec;
   onCorrupt: (quarantinedPath: string) => void;
+  readSubscriptionCredential: (
+    provider: SubscriptionAccount['provider'],
+    accountId: string,
+  ) => Promise<string | null>;
 };
 
 /** Where one account is reached and how the credential opening it is spelled, or why neither. */
@@ -26,13 +35,29 @@ export type ResolvedTarget =
   | { verdict: 'missing-target' }
   | { verdict: 'missing-credential' };
 
-function targetableIn(
-  accounts: readonly Account[],
-  accountId: string,
-): CredentialedAccount | LocalAccount | undefined {
-  const held = accounts.find((account) => account.id === accountId);
+function targetableIn(accounts: readonly Account[], accountId: string): Account | undefined {
+  return accounts.find((account) => account.id === accountId);
+}
 
-  return held === undefined || held.kind === 'subscription' ? undefined : held;
+async function subscriptionTarget(
+  ctx: TargetCustodyContext,
+  providerOrigin: string,
+  account: SubscriptionAccount,
+): Promise<ResolvedTarget> {
+  const credential = await ctx.readSubscriptionCredential(account.provider, account.id);
+
+  return credential === null
+    ? { verdict: 'missing-credential' }
+    : {
+        verdict: 'resolved',
+        providerOrigin,
+        custody: {
+          custody: 'subscription',
+          provider: account.provider,
+          accountId: account.id,
+          credential,
+        },
+      };
 }
 
 async function heldSecret(
@@ -78,11 +103,10 @@ async function credentialedTarget(
  * Where a stored account is reached, resolved against live storage for every ask.
  *
  * @summary The registry and the vault are read per ask rather than carried anywhere, so a key
- * removed or replaced between two asks takes effect on the next one. A subscription resolves to
- * nothing, because it authorizes a tool on this machine rather than a request recompose may send.
- * The secret lives in this call's scope and in whatever the caller hands the child, and nowhere
- * else. Storage that cannot be read carries out rather than reading as a refusal, because the lane
- * that owes an answer is the one place that turns a failure into one.
+ * removed or replaced between two asks takes effect on the next one. The secret lives in this
+ * call's scope and in whatever the caller hands the child, and nowhere else. Storage that cannot
+ * be read carries out rather than reading as a refusal, because the lane that owes an answer is
+ * the one place that turns a failure into one.
  */
 export async function resolveTargetCustody(
   ctx: TargetCustodyContext,
@@ -102,7 +126,11 @@ export async function resolveTargetCustody(
     return { verdict: 'missing-target' };
   }
 
-  return account.kind === 'local'
-    ? { verdict: 'resolved', providerOrigin, custody: { custody: 'open' } }
+  if (account.kind === 'local') {
+    return { verdict: 'resolved', providerOrigin, custody: { custody: 'open' } };
+  }
+
+  return account.kind === 'subscription'
+    ? subscriptionTarget(ctx, providerOrigin, account)
     : credentialedTarget(ctx, paths, providerOrigin, account);
 }

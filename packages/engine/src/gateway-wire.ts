@@ -7,7 +7,7 @@ import type { TranslationRefusal } from './refusals';
 
 import { renderRefusal } from './refusals';
 
-export type ProxyDialect = 'anthropic' | 'chat-completions';
+export type ProxyDialect = 'anthropic' | 'chat-completions' | 'responses';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -126,14 +126,39 @@ function speaksChatCompletions(
   return Array.isArray(messages) && messages.every(isChatMessage);
 }
 
+function speaksResponses(body: JsonObject): body is JsonObject & RequestOf['responses'] {
+  const input = body['input'];
+
+  return (
+    Array.isArray(input) &&
+    input.every((item) => isJsonObject(item) && typeof item['type'] === 'string')
+  );
+}
+
 export function ingressPayload(
   dialect: ProxyDialect,
   body: JsonObject,
 ): RequestOf[ProxyDialect] | null {
   if (dialect === 'anthropic') {
-    return speaksAnthropicWire(body) ? body : null;
+    return anthropicPayload(body);
   }
 
+  if (dialect === 'responses') {
+    return responsesPayload(body);
+  }
+
+  return chatPayload(body);
+}
+
+function anthropicPayload(body: JsonObject): RequestOf['anthropic'] | null {
+  return speaksAnthropicWire(body) ? body : null;
+}
+
+function responsesPayload(body: JsonObject): RequestOf['responses'] | null {
+  return speaksResponses(body) ? body : null;
+}
+
+function chatPayload(body: JsonObject): RequestOf['chat-completions'] | null {
   return speaksChatCompletions(body) ? body : null;
 }
 

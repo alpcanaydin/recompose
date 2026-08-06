@@ -31,8 +31,12 @@ type GrantedSpend = Extract<SpendGrant, { verdict: 'resolved' }>['spend'];
  * business, and folding it away here keeps the serving wire as narrow as it always was.
  */
 function spendFrom(custody: LookCustody): GrantedSpend {
-  return custody.custody === 'open'
-    ? { custody: 'open' }
+  if (custody.custody === 'open') {
+    return { custody: 'open' };
+  }
+
+  return custody.custody === 'subscription'
+    ? custody
     : { custody: 'credentialed', credential: custody.credential };
 }
 

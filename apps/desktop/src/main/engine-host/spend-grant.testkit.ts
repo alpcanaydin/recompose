@@ -16,6 +16,7 @@ import type { SpendGrantContext } from './spend-grant';
 
 import { reversibleCodec } from '../storage/safe-storage-codec.testkit';
 import { saveVaultFile, setSecret, type VaultDocument } from '../storage/vault';
+import { subscriptionCredentialStore } from '../subscriptions/subscription-credential-store';
 
 const fakeCodec = reversibleCodec;
 
@@ -49,6 +50,13 @@ export const planRow: SubscriptionAccount = {
   provider: 'anthropic',
   kind: 'subscription',
   label: 'Max',
+};
+
+export const codexPlanRow: SubscriptionAccount = {
+  id: 'acc-codex-plan',
+  provider: 'openai',
+  kind: 'subscription',
+  label: 'Plus',
 };
 
 const everyRefHoldsTheSecret: Readonly<Record<string, string>> = {
@@ -116,11 +124,21 @@ export async function storageHolding(
   return userDataPath;
 }
 
+export async function holdSubscriptionCredential(
+  userDataPath: string,
+  provider: SubscriptionAccount['provider'],
+  accountId: string,
+  blob: string,
+): Promise<void> {
+  await subscriptionCredentialStore(userDataPath, 'linux', null).write(provider, accountId, blob);
+}
+
 export function contextFor(userDataPath: string): SpendGrantContext {
   return {
     userDataPath,
     homeFolder: '/Users/ada',
     getCodec: () => fakeCodec,
     onCorrupt: () => undefined,
+    readSubscriptionCredential: subscriptionCredentialStore(userDataPath, 'linux', null).read,
   };
 }

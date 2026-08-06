@@ -5,6 +5,7 @@ import { proxyFetchBoundMs } from '@recompose/contracts';
 
 import type { Crossing, JsonObject, ProxyDialect } from './gateway-wire';
 import type { TranslationRefusal } from './refusals';
+import type { SubscriptionRuntime } from './subscription/reach';
 
 import { translateRequest } from './dialect/dispatcher';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
@@ -16,6 +17,11 @@ import {
   wantsStream,
 } from './gateway-wire';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
+import { parseSubscriptionCredential } from './subscription/credentials';
+import { reachSubscription, subscriptionRuntime } from './subscription/reach';
+
+export type { SubscriptionRuntime } from './subscription/reach';
+export { subscriptionRuntime } from './subscription/reach';
 
 export type SpendGrantFor = (slug: string, virtualModel: string) => Promise<SpendGrant>;
 
@@ -25,6 +31,7 @@ export async function proxyModelRequest(
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
   fetchLike: typeof fetch,
+  subscriptions: SubscriptionRuntime = subscriptionRuntime(),
 ): Promise<Response> {
   const raw = await readJsonBody(c);
   const name = virtualNameOf(raw);
@@ -46,14 +53,56 @@ export async function proxyModelRequest(
     providerModel: virtualModel.target.providerModel,
   };
 
-  return forwardGranted(crossing, await spendGrantFor(gateway.slug, virtualModel.id), fetchLike);
+  return forwardGranted(
+    crossing,
+    await spendGrantFor(gateway.slug, virtualModel.id),
+    fetchLike,
+    subscriptions,
+  );
 }
 
 async function forwardGranted(
   crossing: Crossing,
   grant: SpendGrant,
   fetchLike: typeof fetch,
+  subscriptions: SubscriptionRuntime,
 ): Promise<Response> {
+  const denied = deniedGrantAnswer(crossing, grant);
+
+  if (grant.verdict !== 'resolved') {
+    return denied ?? unreachableTargetAnswer(crossing);
+  }
+
+  if (denied !== null) {
+    return denied;
+  }
+
+  return forwardResolved(crossing, grant, fetchLike, subscriptions);
+}
+
+async function forwardResolved(
+  crossing: Crossing,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  fetchLike: typeof fetch,
+  subscriptions: SubscriptionRuntime,
+): Promise<Response> {
+  const upstreamDialect = dialectFor(grant);
+  const outbound = outboundBodyFor(crossing, upstreamDialect);
+
+  if ('refusal' in outbound) {
+    return refusalResponse(crossing.dialect, outbound.refusal);
+  }
+
+  const upstream = await reachedUpstream(crossing, grant, outbound.body, fetchLike, subscriptions);
+
+  if (upstream === null) {
+    return unreachableTargetAnswer(crossing);
+  }
+
+  return answerFrom(crossing, upstream, upstreamDialect);
+}
+
+function deniedGrantAnswer(crossing: Crossing, grant: SpendGrant): Response | null {
   if (grant.verdict === 'missing-target') {
     return refusalResponse(
       crossing.dialect,
@@ -61,26 +110,30 @@ async function forwardGranted(
     );
   }
 
-  if (grant.verdict === 'missing-credential') {
+  if (grant.verdict === 'missing-credential' || hasMalformedSubscription(grant)) {
     return refusalResponse(
       crossing.dialect,
       missingCredential(crossing.gatewayName, crossing.virtualModel),
     );
   }
 
-  const outbound = outboundBodyFor(crossing);
+  return null;
+}
 
-  if ('refusal' in outbound) {
-    return refusalResponse(crossing.dialect, outbound.refusal);
-  }
+function hasMalformedSubscription(grant: SpendGrant): boolean {
+  return (
+    grant.verdict === 'resolved' &&
+    grant.spend.custody === 'subscription' &&
+    parseSubscriptionCredential(grant.spend.provider, grant.spend.credential) === null
+  );
+}
 
-  const upstream = await reachedUpstream(crossing, grant, outbound.body, fetchLike);
-
-  if (upstream === null) {
-    return unreachableTargetAnswer(crossing);
-  }
-
-  return answerFrom(crossing, upstream);
+function dialectFor(grant: SpendGrant): ProxyDialect {
+  return grant.verdict === 'resolved' && grant.spend.custody === 'subscription'
+    ? grant.spend.provider === 'anthropic'
+      ? 'anthropic'
+      : 'responses'
+    : 'chat-completions';
 }
 
 async function reachedUpstream(
@@ -88,8 +141,13 @@ async function reachedUpstream(
   grant: Extract<SpendGrant, { verdict: 'resolved' }>,
   body: JsonObject,
   fetchLike: typeof fetch,
+  subscriptions: SubscriptionRuntime,
 ): Promise<Response | null> {
   try {
+    if (grant.spend.custody === 'subscription') {
+      return await reachSubscription(grant, body, subscriptions);
+    }
+
     return await fetchLike(chatCompletionsUrl(grant.providerOrigin), {
       method: 'POST',
       headers: spendHeaders(grant.spend),
@@ -105,14 +163,14 @@ async function reachedUpstream(
 
 type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };
 
-function outboundBodyFor(crossing: Crossing): OutboundBody {
+function outboundBodyFor(crossing: Crossing, upstreamDialect: ProxyDialect): OutboundBody {
   const payload = ingressPayload(crossing.dialect, crossing.raw);
 
   if (payload === null) {
     return { refusal: emptyConversation() };
   }
 
-  const crossed = translateRequest(crossing.dialect, 'chat-completions', payload);
+  const crossed = translateRequest(crossing.dialect, upstreamDialect, payload);
 
   if ('outcome' in crossed) {
     return { body: { ...crossing.raw, model: crossing.providerModel } };
@@ -122,7 +180,9 @@ function outboundBodyFor(crossing: Crossing): OutboundBody {
     return { refusal: crossed.refusal };
   }
 
-  return { body: { ...crossed.value, model: crossing.providerModel, ...streamAsk(crossing.raw) } };
+  return {
+    body: { ...crossed.value, model: crossing.providerModel, ...streamAsk(crossing.raw) },
+  };
 }
 
 function streamAsk(raw: JsonObject): { stream?: boolean } {

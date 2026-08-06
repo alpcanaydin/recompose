@@ -111,6 +111,78 @@ export async function* chatFramesFrom(
   }
 }
 
+export async function* jsonEventsFrom(
+  body: ReadableStream<Uint8Array>,
+): AsyncIterable<JsonObject & { type: string }> {
+  for await (const line of linesFrom(body)) {
+    const payload = sseDataOf(line);
+
+    if (payload === null || payload === '[DONE]') {
+      continue;
+    }
+
+    yield jsonEventOf(payload);
+  }
+}
+
+function jsonEventOf(payload: string): JsonObject & { type: string } {
+  const parsed = parsedJson(payload);
+
+  if (!isJsonObject(parsed) || typeof parsed['type'] !== 'string') {
+    return { type: 'unknown' };
+  }
+
+  return { ...parsed, type: parsed['type'] };
+}
+
+function chatPayload(frame: ChatStreamFrame): string | null {
+  if (frame.type === 'done') {
+    return '[DONE]';
+  }
+
+  if (frame.type === 'chunk') {
+    return JSON.stringify(frame.chunk);
+  }
+
+  return frame.type === 'error' ? JSON.stringify({ error: frame.error }) : null;
+}
+
+export function chatSseBodyFrom(
+  frames: AsyncIterable<ChatStreamFrame>,
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const iterator = frames[Symbol.asyncIterator]();
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        for (;;) {
+          const step = await iterator.next();
+
+          if (step.done === true) {
+            controller.close();
+
+            return;
+          }
+
+          const payload = chatPayload(step.value);
+
+          if (payload !== null) {
+            controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+
+            return;
+          }
+        }
+      } catch (failure) {
+        controller.error(failure);
+      }
+    },
+    async cancel() {
+      await iterator.return?.(undefined);
+    },
+  });
+}
+
 export function namedSseBodyFrom(
   events: AsyncIterable<{ type: string }>,
 ): ReadableStream<Uint8Array> {

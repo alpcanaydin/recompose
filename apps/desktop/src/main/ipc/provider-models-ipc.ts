@@ -44,8 +44,9 @@ async function listModelsOf(ctx: ProviderModelsIpcContext, accountId: string) {
  * The channel that answers what one stored account serves.
  *
  * @summary An account that resolves to no target reads as unlisted rather than as a refusal, so a
- * subscription, a row that is gone, a provider recompose reaches nothing for, and a vault that
- * lost its secret all leave the screen saying the one thing a person can act on. Storage that
+ * row that is gone, a provider recompose reaches nothing for, and a vault that lost its secret all
+ * leave the screen saying the one thing a person can act on. Subscription accounts resolve through
+ * their provider-native credential document. Storage that
  * cannot be read at all is a different matter and travels as a failure. The credential the vault
  * gave up lives in this call and in the message that carries it to the child, and nowhere else.
  */

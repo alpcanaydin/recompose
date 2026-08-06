@@ -10,6 +10,7 @@ import type { ProviderModelsIpcContext } from './provider-models-ipc';
 import {
   aggregatorRow,
   contextFor,
+  holdSubscriptionCredential,
   keyRow,
   localRow,
   planRow,
@@ -75,13 +76,28 @@ describe('the account a look resolves against', () => {
 });
 
 describe('an account no look can stand on', () => {
-  test('a subscription answers unlisted, because it never stands as a target', async () => {
-    const { looks, handlers } = deskOver(await storageHolding([], [planRow]));
+  test('a subscription lists through its complete native credential document', async () => {
+    const userDataPath = await storageHolding([], [planRow]);
+    const credential = '{"claudeAiOauth":{"accessToken":"oauth-token"}}';
+
+    await holdSubscriptionCredential(userDataPath, 'anthropic', planRow.id, credential);
+
+    const { looks, handlers } = deskOver(userDataPath);
 
     const answer = await handlers['accounts:list-models']({ id: planRow.id });
 
-    expect(answer).toEqual({ ok: true, value: { standing: 'unlisted' } });
-    expect(looks).toEqual([]);
+    expect(answer).toEqual({ ok: true, value: gpt5 });
+    expect(looks).toEqual([
+      {
+        origin: 'https://api.anthropic.com',
+        custody: {
+          custody: 'subscription',
+          provider: 'anthropic',
+          accountId: planRow.id,
+          credential,
+        },
+      },
+    ]);
   });
 
   test('an id the registry never held answers unlisted, and asks the engine nothing', async () => {

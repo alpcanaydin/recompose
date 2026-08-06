@@ -77,30 +77,24 @@ describe('an account a virtual model may stand on', () => {
   });
 });
 
-describe('a subscription account never stands as a target', () => {
-  test('a config binding a subscription account is refused', () => {
-    expect(() =>
-      gatewayConfigSchemaAgainstAccounts(storedAccounts).parse(
-        configHolding([bindingOn('fast', 'acc-claude-max')]),
-      ),
-    ).toThrow(/subscription/);
-  });
-
-  test('a subscription bound by a later virtual model is refused too', () => {
-    expect(() =>
-      gatewayConfigSchemaAgainstAccounts(storedAccounts).parse(
-        configHolding([bindingOn('fast', 'acc-openrouter'), bindingOn('deep', 'acc-claude-max')]),
-      ),
-    ).toThrow(/subscription/);
-  });
-
-  test('the refusal points at the account the binding names', () => {
-    const refusal = gatewayConfigSchemaAgainstAccounts(storedAccounts).safeParse(
+describe('a subscription account standing as a target', () => {
+  test('a config binds a virtual model to a subscription account', () => {
+    const parsed = gatewayConfigSchemaAgainstAccounts(storedAccounts).parse(
       configHolding([bindingOn('fast', 'acc-claude-max')]),
     );
 
-    expect(refusal.success).toBe(false);
-    expect(refusal.error?.issues[0]?.path).toEqual(['virtualModels', 0, 'target', 'accountId']);
+    expect(parsed.virtualModels[0]?.target.accountId).toBe('acc-claude-max');
+  });
+
+  test('a subscription can stand beside targets held under other account kinds', () => {
+    const parsed = gatewayConfigSchemaAgainstAccounts(storedAccounts).parse(
+      configHolding([bindingOn('fast', 'acc-openrouter'), bindingOn('deep', 'acc-claude-max')]),
+    );
+
+    expect(parsed.virtualModels.map((model) => model.target.accountId)).toEqual([
+      'acc-openrouter',
+      'acc-claude-max',
+    ]);
   });
 });
 

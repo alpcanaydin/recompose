@@ -80,18 +80,19 @@ test('the target list holds the key, the aggregator and the local account', asyn
   await expect.element(screen.getByRole('button', { name: /Ollama/ })).toBeVisible();
 });
 
-test('a subscription account stands nowhere in the target list', async () => {
+test('a subscription account stands in the target list', async () => {
   const screen = await renderFlow();
 
   await expect.element(screen.getByText('API Keys', { exact: true })).toBeVisible();
-  await expect.element(screen.getByText('Claude', { exact: true })).not.toBeInTheDocument();
-  await expect.element(screen.getByText('Subscriptions', { exact: true })).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Claude', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Subscriptions', { exact: true })).toBeVisible();
 });
 
 test('the target list gathers the accounts under the kinds they are held as', async () => {
   const screen = await renderFlow();
 
   await expect.element(screen.getByText('API Keys', { exact: true })).toBeVisible();
+  await expect.element(screen.getByText('Subscriptions', { exact: true })).toBeVisible();
   await expect.element(screen.getByText('Aggregators', { exact: true })).toBeVisible();
   await expect.element(screen.getByText('Local Runtimes', { exact: true })).toBeVisible();
 });

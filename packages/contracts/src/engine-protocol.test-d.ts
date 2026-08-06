@@ -30,6 +30,8 @@ type CredentialedSpend = Extract<GrantedSpend, { custody: 'credentialed' }>;
 
 type OpenSpend = Extract<GrantedSpend, { custody: 'open' }>;
 
+type SubscriptionSpend = Extract<GrantedSpend, { custody: 'subscription' }>;
+
 type RuntimeProbeDirective = Extract<EngineDirective, { kind: 'probe-runtime' }>;
 
 type KeyCheckReportArm = Extract<EngineReport, { kind: 'key-check' }>;
@@ -192,8 +194,10 @@ describe('the grant lane one spend rides', () => {
 });
 
 describe('the spend a resolved grant authorizes', () => {
-  test('a spend is credentialed or open, so one branch decides the header', () => {
-    expectTypeOf<GrantedSpend['custody']>().toEqualTypeOf<'credentialed' | 'open'>();
+  test('a spend names credentialed, open, or subscription custody', () => {
+    expectTypeOf<GrantedSpend['custody']>().toEqualTypeOf<
+      'credentialed' | 'open' | 'subscription'
+    >();
   });
 
   test('a credentialed spend carries the credential, and nothing else', () => {
@@ -205,6 +209,12 @@ describe('the spend a resolved grant authorizes', () => {
     expectTypeOf<OpenSpend>().toEqualTypeOf<{ custody: 'open' }>();
     expectTypeOf<keyof OpenSpend>().toEqualTypeOf<'custody'>();
     expectTypeOf<OpenSpend>().not.toHaveProperty('credential');
+  });
+
+  test('a subscription spend carries the provider account and whole credential document', () => {
+    expectTypeOf<keyof SubscriptionSpend>().toEqualTypeOf<
+      'custody' | 'provider' | 'accountId' | 'credential'
+    >();
   });
 
   test('a refusal authorizes no spend', () => {

@@ -12,6 +12,7 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+  - node_modules/@node-wreq/**
 win:
   executableName: recompose
   icon: build/icon.ico

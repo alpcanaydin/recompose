@@ -29,6 +29,36 @@ const openToALocalRuntime = {
   },
 };
 
+const claudeSubscription = {
+  kind: 'spend-grant',
+  answers: 'g1',
+  grant: {
+    verdict: 'resolved',
+    providerOrigin: 'https://api.anthropic.com',
+    spend: {
+      custody: 'subscription',
+      provider: 'anthropic',
+      accountId: 'acc-claude-max',
+      credential: '{"claudeAiOauth":{"accessToken":"oauth-token"}}',
+    },
+  },
+};
+
+const codexSubscription = {
+  kind: 'spend-grant',
+  answers: 'g1',
+  grant: {
+    verdict: 'resolved',
+    providerOrigin: 'https://chatgpt.com/backend-api/codex',
+    spend: {
+      custody: 'subscription',
+      provider: 'openai',
+      accountId: 'acc-codex-plus',
+      credential: '{"tokens":{"access_token":"oauth-token"}}',
+    },
+  },
+};
+
 function aGrantSpending(spend: unknown): unknown {
   return { ...resolved, grant: { ...resolved.grant, spend } };
 }
@@ -101,6 +131,35 @@ describe('the spend a resolved grant authorizes', () => {
     expect(engineSpendGrantSchema.parse(openToALocalRuntime)).toEqual(openToALocalRuntime);
   });
 
+  test('a Claude subscription carries its live credential bundle and account identity', () => {
+    expect(engineSpendGrantSchema.parse(claudeSubscription)).toEqual(claudeSubscription);
+  });
+
+  test('a Codex subscription carries its live credential bundle and account identity', () => {
+    expect(engineSpendGrantSchema.parse(codexSubscription)).toEqual(codexSubscription);
+  });
+
+  test('a subscription spend missing any part of its custody is refused', () => {
+    const spend = claudeSubscription.grant.spend;
+
+    for (const field of ['provider', 'accountId', 'credential'] as const) {
+      const { [field]: omitted, ...incomplete } = spend;
+
+      expect(omitted).toBeDefined();
+      expect(() => engineSpendGrantSchema.parse(aGrantSpending(incomplete))).toThrow();
+    }
+  });
+
+  test('a subscription spend only names a subscription provider', () => {
+    expect(() =>
+      engineSpendGrantSchema.parse(
+        aGrantSpending({ ...claudeSubscription.grant.spend, provider: 'openrouter' }),
+      ),
+    ).toThrow();
+  });
+});
+
+describe('the non-subscription spend a resolved grant authorizes', () => {
   test('an open spend carries no credential under any name, because a local account stores none', () => {
     for (const smuggled of [
       { credential: 'sk-ant-api03-9f2c' },
@@ -126,8 +185,8 @@ describe('the spend a resolved grant authorizes', () => {
     ).toThrow();
   });
 
-  test('a custody outside the credentialed and the open one is refused', () => {
-    for (const custody of ['local', 'subscription', 'none', '']) {
+  test('a custody outside the three granted kinds is refused', () => {
+    for (const custody of ['local', 'none', '']) {
       expect(() => engineSpendGrantSchema.parse(aGrantSpending({ custody }))).toThrow();
     }
   });

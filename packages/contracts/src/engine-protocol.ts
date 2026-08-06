@@ -5,6 +5,7 @@ import { gatewayEngineStateSchema } from './engine-state';
 import { gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { loopbackAddressSchema, runtimeReachabilitySchema } from './local-runtimes';
 import { nonBlankString } from './non-blank';
+import { subscriptionProviderIdSchema } from './subscriptions';
 
 const targetStandingSchema = z.discriminatedUnion('standing', [
   z.strictObject({ standing: z.literal('bound'), providerModel: nonBlankString }),
@@ -30,6 +31,13 @@ export type EngineGateway = z.infer<typeof engineGatewaySchema>;
 
 export const directiveIdSchema = z.string().trim().min(1);
 
+const subscriptionCustodyShape = {
+  custody: z.literal('subscription'),
+  provider: subscriptionProviderIdSchema,
+  accountId: nonBlankString,
+  credential: nonBlankString,
+};
+
 /**
  * How a look at a provider's model list spells the credential it was handed, or that it has none.
  *
@@ -45,6 +53,7 @@ export const lookCustodySchema = z.discriminatedUnion('custody', [
     credential: nonBlankString,
   }),
   z.strictObject({ custody: z.literal('bearer'), credential: nonBlankString }),
+  z.strictObject(subscriptionCustodyShape),
   z.strictObject({ custody: z.literal('open') }),
 ]);
 
@@ -130,6 +139,7 @@ export type EngineSpendRequest = z.infer<typeof engineSpendRequestSchema>;
 
 const grantedSpendSchema = z.discriminatedUnion('custody', [
   z.strictObject({ custody: z.literal('credentialed'), credential: nonBlankString }),
+  z.strictObject(subscriptionCustodyShape),
   z.strictObject({ custody: z.literal('open') }),
 ]);
 
@@ -152,3 +162,25 @@ export const engineSpendGrantSchema = z.strictObject({
 });
 
 export type EngineSpendGrant = z.infer<typeof engineSpendGrantSchema>;
+
+export const engineSubscriptionCredentialUpdateSchema = z.strictObject({
+  kind: z.literal('subscription-credential-update'),
+  id: directiveIdSchema,
+  provider: subscriptionProviderIdSchema,
+  accountId: nonBlankString,
+  credential: nonBlankString,
+});
+
+export type EngineSubscriptionCredentialUpdate = z.infer<
+  typeof engineSubscriptionCredentialUpdateSchema
+>;
+
+export const engineSubscriptionCredentialUpdatedSchema = z.strictObject({
+  kind: z.literal('subscription-credential-updated'),
+  answers: directiveIdSchema,
+  verdict: z.enum(['stored', 'failed']),
+});
+
+export type EngineSubscriptionCredentialUpdated = z.infer<
+  typeof engineSubscriptionCredentialUpdatedSchema
+>;
