@@ -16,7 +16,7 @@ import {
 } from './gateway-wire';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
-import { reachSubscriptionCount } from './subscription/reach-count';
+import { reachAntigravityCount, reachSubscriptionCount } from './subscription/reach-count';
 import { countClaudeInputTokens, countCodexInputTokens } from './token-count';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
@@ -82,8 +82,10 @@ async function resolvedCount(
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch,
 ): Promise<Response> {
-  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
-    return geminiCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
+  const native = await nativeProviderCount(raw, grant, providerModel, subscriptions, fetchLike);
+
+  if (native !== null) {
+    return native;
   }
 
   if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'anthropic') {
@@ -96,6 +98,45 @@ async function resolvedCount(
     subscriptions,
     requestSessionId(c, raw),
   );
+}
+
+async function nativeProviderCount(
+  raw: JsonObject,
+  grant: ResolvedGrant,
+  providerModel: string,
+  subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+): Promise<Response | null> {
+  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
+    return geminiCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
+  }
+
+  if (grant.spend.custody === 'subscription' && grant.spend.provider === 'antigravity') {
+    return antigravityCount(raw, grant, providerModel, subscriptions);
+  }
+
+  return null;
+}
+
+async function antigravityCount(
+  raw: JsonObject,
+  grant: ResolvedGrant,
+  providerModel: string,
+  subscriptions: SubscriptionRuntime,
+): Promise<Response> {
+  const translated = geminiCountPayload(raw);
+
+  if (translated === null) {
+    return refusalResponse('anthropic', emptyConversation());
+  }
+
+  const answer = await reachAntigravityCount(
+    grant,
+    { ...translated, model: providerModel },
+    subscriptions,
+  );
+
+  return geminiCountAnswer(answer, await answer.json());
 }
 
 async function geminiCount(

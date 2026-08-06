@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
-import { antigravityProviderRequest } from './antigravity-request';
+import { antigravityCountTokensRequest, antigravityProviderRequest } from './antigravity-request';
 
 const credential = {
   accessToken: 'google-access',
@@ -98,5 +98,22 @@ describe('applying Antigravity model-specific request rules', () => {
     });
     expect(search).toMatchObject({ requestType: 'web_search' });
     expect(search).not.toHaveProperty('request.sessionId');
+  });
+});
+
+test('native countTokens strips routing fields and keeps Gemini contents', () => {
+  const request = antigravityCountTokensRequest(
+    'https://daily-cloudcode-pa.googleapis.com/',
+    {
+      model: 'gemini-3-flash',
+      contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+      safetySettings: [],
+    },
+    credential,
+  );
+
+  expect(request.url).toBe('https://daily-cloudcode-pa.googleapis.com/v1internal:countTokens');
+  expect(JSON.parse(request.body)).toEqual({
+    contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
   });
 });

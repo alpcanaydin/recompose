@@ -101,3 +101,27 @@ export function antigravityProviderRequest(
     body: JSON.stringify(envelope),
   };
 }
+
+export function antigravityCountTokensRequest(
+  providerOrigin: string,
+  body: JsonObject,
+  credential: ParsedSubscriptionCredential,
+): ProviderRequest {
+  const {
+    model: _model,
+    stream: _stream,
+    safetySettings: _safetySettings,
+    ...payload
+  } = structuredClone(body);
+
+  return {
+    url: `${providerOrigin.replace(/\/+$/u, '')}/v1internal:countTokens`,
+    headers: [
+      ['Content-Type', 'application/json'],
+      ['Authorization', `Bearer ${credential.accessToken}`],
+      ['User-Agent', USER_AGENT],
+      ['Connection', 'close'],
+    ],
+    body: JSON.stringify(payload),
+  };
+}
