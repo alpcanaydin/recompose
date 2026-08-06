@@ -108,15 +108,6 @@ const layoutSchema = z.strictObject({
     .optional(),
 });
 
-/**
- * The stored gateway shape, with every target resolved against the account registry it names.
- *
- * @summary A target carries no kind of its own, so the one binding the contract forbids, a
- * subscription account, only reads as forbidden once the registry answers what the account id
- * stands for. A caller holding the registry gets the refusal at parse. A target naming an account
- * the registry no longer holds still parses, because a removed target refuses on live traffic
- * where a person can read which account left.
- */
 export function gatewayConfigSchemaAgainstAccounts(accounts: readonly Account[]) {
   return z.strictObject({
     schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
