@@ -1,7 +1,7 @@
 ---
 tier: full
-phase: planning
-approvals: ['design']
+phase: implementation
+approvals: ['design', 'tasks']
 branch: worktree-gateway-virtual-models
 ---
 
