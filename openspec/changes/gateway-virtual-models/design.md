@@ -116,7 +116,7 @@ The response names the model that answered in the body and in `message_start`, r
 
 ### The credential grant lane
 
-A new correlated child-to-parent message asks for a spend grant by gateway slug and virtual model id. The parent answers a resolved grant carrying the credential and the provider origin, or a refused grant naming a missing target or a missing credential. The refused arms are enums with no message field.
+A new correlated child-to-parent message asks for a spend grant by gateway slug and virtual model id. The parent answers a resolved grant carrying the provider origin and, for a credentialed target, the credential, or a refused grant naming a missing target or a missing credential. A local target resolves without a credential, because a local account stores none and its runtime answers open on loopback. The missing-credential refusal therefore binds only to the credentialed kinds. The refused arms are enums with no message field. The proxy sends a granted credential as a bearer authorization header and sends no credential header on an open grant.
 
 ## Error handling
 

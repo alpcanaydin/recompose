@@ -25,9 +25,10 @@ Every task opens with a named failing test, captures the red run it started from
   - [ ] Rider #138: the proxy's outbound fetch bound lands in contracts beside the runtime look bound, not as a third private copy.
   - [ ] Layers: unit, integration against a fake provider origin, and stream.
 
-- [ ] **Task 5: the spend-grant round trip in main.** Owns the grant handler under `apps/desktop/src/main/engine-host` and its tests. Depends on tasks 1 and 2. Runs beside tasks 4 and 7 on disjoint files.
-  - [ ] Opens red: a grant request resolves a key account's credential from the vault and its provider origin, a removed account answers a missing target, and a vault miss answers a missing credential, before the handler exists.
-  - [ ] The parent-side handler resolves the target against `storage/accounts-store.ts` and pulls its secret from `storage/vault.ts` under the vault order, and maps the outcome onto the resolved or refused grant. The credential rides the message port, and the spawn site stays free of a secret on the command line or in the environment. The grant lives in the handler's function scope.
+- [ ] **Task 5: the spend-grant round trip in main.** Owns the grant handler under `apps/desktop/src/main/engine-host` and its tests, plus the snapshot resolution at the start path. Depends on tasks 1 and 2. Runs beside tasks 4 and 7 on disjoint files.
+  - [ ] Opens red: a grant request resolves a key account's credential from the vault and its provider origin, a local account resolves open with its stored address and no credential, a removed account answers a missing target, and a vault miss on a credentialed account answers a missing credential, before the handler exists.
+  - [ ] The parent-side handler resolves the target against `storage/accounts-store.ts` and pulls its secret from `storage/vault.ts` under the vault order, and maps the outcome onto the resolved or refused grant. A local target resolves without a credential. The credential rides the message port, and the spawn site stays free of a secret on the command line or in the environment. The grant lives in the handler's function scope.
+  - [ ] Snapshot resolution belongs here too: the start path reads the stored `virtualModels`, checks each target against the live registry, and mints the bound or removed standing the directive snapshot carries.
   - [ ] Layers: unit, integration.
 
 - [ ] **Task 6: the offered-kinds helper.** Owns `apps/desktop/src/renderer/src/entities/account/model/account-kind.ts`, its test, and the entity barrel. Depends on task 1. Runs beside tasks 4 and 5.
