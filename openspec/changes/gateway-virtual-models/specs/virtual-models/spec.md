@@ -12,6 +12,17 @@ A gateway MUST let a person define a virtual model by name and bind it to exactl
 - Then the Models list holds the definition as one row
 - And the row reads the virtual name over its target
 
+### Requirement: The gateway lists its defined models
+
+`GET /v1/models` MUST answer unauthenticated on loopback with the defined virtual models, serving both dialects. The Anthropic list shape and the OpenAI list shape each carry every model's id and display name. A defined model's `count_tokens` path MUST answer rather than a blanket 404.
+
+#### Scenario: the listing names every defined model on both dialects
+
+- Given a gateway holding two defined virtual models
+- When a client asks the gateway for its model listing
+- Then the listing names both models
+- And it answers the same set in the Anthropic and the OpenAI shape
+
 ### Requirement: A subscription account never stands as a target
 
 The target picker MUST offer the key, aggregator, and local kinds and MUST NOT offer a subscription account. The stored definition MUST refuse a subscription target at parse, so the prohibition holds as a contract rather than a screen habit.
