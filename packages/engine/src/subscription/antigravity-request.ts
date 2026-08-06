@@ -3,6 +3,7 @@ import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 
 import { isJsonObject } from '../gateway-wire';
+import { cleanAntigravityRequestSchemas } from './antigravity-request-schemas';
 
 const USER_AGENT = 'antigravity/hub';
 
@@ -39,6 +40,7 @@ function nestedRequest(body: JsonObject, model: string): JsonObject {
   } = structuredClone(body);
 
   delete request['safetySettings'];
+  cleanAntigravityRequestSchemas(request, model);
 
   if (!model.includes('claude')) {
     withoutGeminiMaxTokens(request);

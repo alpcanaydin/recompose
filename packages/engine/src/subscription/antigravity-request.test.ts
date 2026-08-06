@@ -117,3 +117,74 @@ test('native countTokens strips routing fields and keeps Gemini contents', () =>
     contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
   });
 });
+
+describe('sanitizing only schema-bearing Antigravity request fields', () => {
+  test('renames and cleans Claude parametersJsonSchema', () => {
+    const { body } = bodyOf({
+      model: 'claude-sonnet-4-6',
+      contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+      tools: [
+        {
+          functionDeclarations: [
+            {
+              name: 'search',
+              parametersJsonSchema: {
+                type: 'object',
+                properties: {
+                  query: { type: 'string', format: 'uri', 'x-extra': true },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(body).not.toHaveProperty('request.tools.0.functionDeclarations.0.parametersJsonSchema');
+    expect(body).toHaveProperty(
+      'request.tools.0.functionDeclarations.0.parameters.properties.query.description',
+      'format: uri',
+    );
+    expect(body).not.toHaveProperty(
+      'request.tools.0.functionDeclarations.0.parameters.properties.query.x-extra',
+    );
+  });
+});
+
+describe('protecting non-schema Antigravity payload data', () => {
+  test('does not mutate schema-like keys inside function-call history', () => {
+    const history = {
+      default: 'keep-default',
+      format: 'keep-format',
+      title: 'keep-title',
+      const: 'keep-const',
+    };
+    const { body } = bodyOf({
+      model: 'claude-sonnet-4-6',
+      contents: [{ role: 'model', parts: [{ functionCall: { name: 'tool', args: history } }] }],
+      tools: [{ functionDeclarations: [{ name: 'tool', parameters: { type: 'object' } }] }],
+    });
+
+    expect(body).toHaveProperty('request.contents.0.parts.0.functionCall.args', history);
+  });
+
+  test('cleans structured-output schemas without adding tool placeholders', () => {
+    const { body } = bodyOf({
+      model: 'gemini-3-flash',
+      contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+      generationConfig: {
+        responseJsonSchema: {
+          type: 'object',
+          properties: { result: { type: 'string', format: 'email' } },
+        },
+      },
+    });
+
+    expect(body).not.toHaveProperty(
+      'request.generationConfig.responseJsonSchema.properties.result.format',
+    );
+    expect(body).not.toHaveProperty(
+      'request.generationConfig.responseJsonSchema.properties.reason',
+    );
+  });
+});
