@@ -56,10 +56,10 @@ export function subscriptionRuntime(
   };
 }
 
-type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
-type SubscriptionSpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
+export type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
+export type SubscriptionSpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
 
-async function refreshedAndPersisted(
+export async function refreshedAndPersisted(
   spend: SubscriptionSpend,
   blob: string,
   runtime: SubscriptionRuntime,
@@ -223,7 +223,7 @@ function deviceIdFor(
   return credential.deviceIds?.[0] ?? runtime.newClaudeDeviceId();
 }
 
-function shouldRefreshUnauthorized(
+export function shouldRefreshUnauthorized(
   answer: Response,
   credential: ParsedSubscriptionCredential,
 ): boolean {
@@ -246,7 +246,7 @@ async function retryWithRefreshedCredential(
   );
 }
 
-async function readySubscriptionCredential(
+export async function readySubscriptionCredential(
   spend: SubscriptionSpend,
   runtime: SubscriptionRuntime,
 ): Promise<{ blob: string; credential: ParsedSubscriptionCredential }> {

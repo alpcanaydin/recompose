@@ -1,14 +1,13 @@
 import type { EngineGateway } from '@recompose/contracts';
-import type { Context } from 'hono';
 
 import { Hono } from 'hono';
 
 import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { ProxyDialect } from './gateway-wire';
 
-import { countTokensAnswerFor, modelListing } from './gateway-discovery';
+import { proxyTokenCountRequest } from './gateway-count-tokens';
+import { modelListing } from './gateway-discovery';
 import { proxyModelRequest, subscriptionRuntime } from './gateway-proxy';
-import { jsonResponse, readJsonBody, virtualNameOf } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
 import { unservedPath } from './refusals';
 
@@ -25,12 +24,6 @@ const MODEL_ROUTES: readonly (readonly [string, ProxyDialect])[] = [
 
 const COUNT_TOKENS_PATHS = ['/v1/messages/count_tokens', '/messages/count_tokens'];
 
-async function countedTokens(c: Context, gateway: EngineGateway): Promise<Response> {
-  const answer = countTokensAnswerFor(gateway, virtualNameOf(await readJsonBody(c)));
-
-  return jsonResponse(answer.body, answer.status);
-}
-
 export function createGatewayApp(
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
@@ -46,7 +39,9 @@ export function createGatewayApp(
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
 
   for (const path of COUNT_TOKENS_PATHS) {
-    app.post(path, async (c) => countedTokens(c, gateway));
+    app.post(path, async (c) =>
+      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing),
+    );
   }
 
   for (const [path, dialect] of MODEL_ROUTES) {

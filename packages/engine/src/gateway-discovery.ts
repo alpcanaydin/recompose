@@ -1,8 +1,4 @@
-import type { EngineGateway, EngineVirtualModel } from '@recompose/contracts';
-
-import type { AnthropicRefusal } from './refusals';
-
-import { renderRefusal, unknownModel } from './refusals';
+import type { EngineVirtualModel } from '@recompose/contracts';
 
 type ListedModel = { id: string; object: 'model'; type: 'model'; display_name: string };
 
@@ -33,26 +29,4 @@ export function modelListing(virtualModels: readonly EngineVirtualModel[]): Mode
     has_more: false,
     last_id: data.at(-1)?.id ?? null,
   };
-}
-
-function uncountableTokens(gatewayName: string, model: string): AnthropicRefusal {
-  return {
-    type: 'error',
-    error: {
-      type: 'invalid_request_error',
-      message: `The gateway "${gatewayName}" serves no token count for "${model}", because its target speaks a dialect without one.`,
-    },
-  };
-}
-
-export type CountTokensAnswer = { status: number; body: unknown };
-
-export function countTokensAnswerFor(gateway: EngineGateway, model: string): CountTokensAnswer {
-  const defined = gateway.virtualModels.find((virtualModel) => virtualModel.id === model);
-
-  if (defined === undefined) {
-    return renderRefusal('anthropic', unknownModel(model));
-  }
-
-  return { status: 400, body: uncountableTokens(gateway.displayName, model) };
 }

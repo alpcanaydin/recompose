@@ -184,14 +184,13 @@ export function claudeProviderRequest(
       : applyClaudeCredentialIdentity(rawBody, identity, ids.sessionId);
   const body = normalizedClaudeBody(identified);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
-  const stream = prepared.body['stream'] === true;
 
   return {
     url: `${providerOrigin.replace(/\/+$/u, '')}/v1/messages?beta=true`,
     body: signedClaudeBody(prepared.body),
     ...(Object.keys(prepared.reverse).length === 0 ? {} : { reverseToolNames: prepared.reverse }),
     headers: [
-      ['Accept', stream ? 'text/event-stream' : 'application/json'],
+      ['Accept', 'application/json'],
       ['Authorization', `Bearer ${accessToken}`],
       ['Content-Type', 'application/json'],
       ['User-Agent', 'claude-cli/2.1.220 (external, cli)'],
@@ -210,7 +209,7 @@ export function claudeProviderRequest(
       ['x-app', 'cli'],
       ['x-client-request-id', ids.requestId],
       ['Connection', 'keep-alive'],
-      ['Accept-Encoding', stream ? 'identity' : 'gzip, deflate, br, zstd'],
+      ['Accept-Encoding', 'gzip, deflate, br, zstd'],
     ],
   };
 }

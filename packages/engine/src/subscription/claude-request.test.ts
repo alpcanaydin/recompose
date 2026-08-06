@@ -26,7 +26,7 @@ const nativeBetas = [
 ].join(',');
 
 const nativeHeaders: [string, string][] = [
-  ['Accept', 'text/event-stream'],
+  ['Accept', 'application/json'],
   ['Authorization', 'Bearer claude-access'],
   ['Content-Type', 'application/json'],
   ['User-Agent', 'claude-cli/2.1.220 (external, cli)'],
@@ -45,7 +45,7 @@ const nativeHeaders: [string, string][] = [
   ['x-app', 'cli'],
   ['x-client-request-id', ids.requestId],
   ['Connection', 'keep-alive'],
-  ['Accept-Encoding', 'identity'],
+  ['Accept-Encoding', 'gzip, deflate, br, zstd'],
 ];
 
 function requestFor(body: JsonObject): ProviderRequest {
@@ -120,8 +120,8 @@ describe('Claude OAuth feature negotiation', () => {
     expect(beta).not.toContain('unknown-beta');
   });
 
-  test('non-streaming requests negotiate compressed JSON', () => {
-    const request = requestFor({ model: 'claude-sonnet-4-5', messages: [] });
+  test('all first-party stream modes negotiate compressed JSON', () => {
+    const request = requestFor({ model: 'claude-sonnet-4-5', messages: [], stream: true });
 
     expect(request.headers).toContainEqual(['Accept', 'application/json']);
     expect(request.headers).toContainEqual(['Accept-Encoding', 'gzip, deflate, br, zstd']);

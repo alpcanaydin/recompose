@@ -98,32 +98,31 @@ describe('the model listing a caller discovers', () => {
 
 describe('the count_tokens path of a defined model', () => {
   test.each(['/v1/messages/count_tokens', '/messages/count_tokens'])(
-    '%s answers a typed refusal naming the missing count, never a 404',
+    '%s resolves the target and reports a missing target, never a 404',
     async (path) => {
       const { answer } = await countTokensUnder('fast', path);
 
-      expect(answer.status).toBe(400);
+      expect(answer.status).toBe(502);
       expect(await answer.json()).toEqual({
         type: 'error',
         error: {
-          type: 'invalid_request_error',
-          message:
-            'The gateway "Codex" serves no token count for "fast", because its target speaks a dialect without one.',
+          type: 'api_error',
+          message: 'The gateway "Codex" holds no target for the virtual model "fast".',
         },
       });
     },
   );
 
-  test('a removed target still draws the count refusal, because the model lists', async () => {
+  test('a removed target draws the missing-target refusal', async () => {
     const { answer } = await countTokensUnder('slow');
 
-    expect(answer.status).toBe(400);
+    expect(answer.status).toBe(502);
   });
 
-  test('no grant round trip serves a count', async () => {
+  test('a bound model resolves a live grant for every count', async () => {
     const { asked } = await countTokensUnder('fast');
 
-    expect(asked).toEqual([]);
+    expect(asked).toEqual([{ slug: 'codex', virtualModel: 'fast' }]);
   });
 });
 

@@ -306,25 +306,6 @@ importers:
       node-wreq:
         specifier: 3.1.0
         version: 3.1.0
-    optionalDependencies:
-      '@node-wreq/darwin-arm64':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@node-wreq/darwin-x64':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@node-wreq/linux-arm64-gnu':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@node-wreq/linux-x64-gnu':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@node-wreq/linux-x64-musl':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@node-wreq/win32-x64-msvc':
-        specifier: 3.1.0
-        version: 3.1.0
     devDependencies:
       '@base-ui/react':
         specifier: 1.6.0
@@ -461,6 +442,25 @@ importers:
       vitest-browser-react:
         specifier: 2.2.0
         version: 2.2.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.10)
+    optionalDependencies:
+      '@node-wreq/darwin-arm64':
+        specifier: 3.1.0
+        version: 3.1.0
+      '@node-wreq/darwin-x64':
+        specifier: 3.1.0
+        version: 3.1.0
+      '@node-wreq/linux-arm64-gnu':
+        specifier: 3.1.0
+        version: 3.1.0
+      '@node-wreq/linux-x64-gnu':
+        specifier: 3.1.0
+        version: 3.1.0
+      '@node-wreq/linux-x64-musl':
+        specifier: 3.1.0
+        version: 3.1.0
+      '@node-wreq/win32-x64-msvc':
+        specifier: 3.1.0
+        version: 3.1.0
 
   packages/contracts:
     dependencies:
@@ -507,6 +507,9 @@ importers:
       hono:
         specifier: 4.12.32
         version: 4.12.32
+      js-tiktoken:
+        specifier: 1.0.21
+        version: 1.0.21
       node-wreq:
         specifier: 3.1.0
         version: 3.1.0
@@ -5877,6 +5880,9 @@ packages:
 
   js-md4@0.3.2:
     resolution: {integrity: sha512-/GDnfQYsltsjRswQhN9fhv3EMw2sCpUdrdxyWDOUK7eyD++r3gRhzgiQgc/x4MAv2i1iuQ4lxO5mvqM3vj4bwA==}
+
+  js-tiktoken@1.0.21:
+    resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
 
   js-tokens@10.0.0:
     resolution: {integrity: sha512-lM/UBzQmfJRo9ABXbPWemivdCW8V2G8FHaHdypQaIy523snUjog0W71ayWXTjiR+ixeMyVHN2XcpnTd/liPg/Q==}
@@ -12766,6 +12772,10 @@ snapshots:
   jose@6.2.4: {}
 
   js-md4@0.3.2: {}
+
+  js-tiktoken@1.0.21:
+    dependencies:
+      base64-js: 1.5.1
 
   js-tokens@10.0.0: {}
 

@@ -194,6 +194,23 @@ function speaksResponses(body: JsonObject): body is JsonObject & RequestOf['resp
 }
 
 export function ingressPayload(
+  dialect: 'anthropic',
+  body: JsonObject,
+): RequestOf['anthropic'] | null;
+export function ingressPayload(
+  dialect: 'chat-completions',
+  body: JsonObject,
+): RequestOf['chat-completions'] | null;
+export function ingressPayload(
+  dialect: 'responses',
+  body: JsonObject,
+): RequestOf['responses'] | null;
+export function ingressPayload(
+  dialect: ProxyDialect,
+  body: JsonObject,
+): RequestOf[ProxyDialect] | null;
+
+export function ingressPayload(
   dialect: ProxyDialect,
   body: JsonObject,
 ): RequestOf[ProxyDialect] | null {
