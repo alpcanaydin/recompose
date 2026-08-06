@@ -17,7 +17,7 @@ export function decodeResponse(response: AnthropicResponse): Translated<HubRespo
 
   return {
     value: {
-      content: response.content.map(hubBlockFrom),
+      content: response.content.map((block) => hubBlockFrom(block, fates)),
       stopReason: hubStopFrom(response.stop_reason),
       usage: hubUsageFrom(response.usage),
     },

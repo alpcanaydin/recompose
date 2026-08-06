@@ -149,12 +149,16 @@ export function samplingFrom(request: AnthropicRequest, fates: Fate[]): HubSampl
   return knobs;
 }
 
+function droppedEnvelopeFate(drop: (typeof anthropicDrops)[number]): Fate {
+  const dropped: Fate = { field: drop.field, disposition: 'mapped', to: 'absent' };
+
+  return drop.costBearing ? { ...dropped, costBearing: true } : dropped;
+}
+
 export function scanDrops(request: AnthropicRequest, fates: Fate[]): void {
-  for (const field of anthropicDrops) {
-    if (field in request) {
-      fates.push({ field, disposition: 'mapped', to: 'absent' });
-    }
-  }
+  const met = anthropicDrops.filter((drop) => drop.field in request);
+
+  fates.push(...met.map(droppedEnvelopeFate));
 }
 
 export function scanEnvelope(request: AnthropicRequest, fates: Fate[]): void {

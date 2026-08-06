@@ -144,14 +144,19 @@ describe('decodeRequest accounts for every source field', () => {
     expect(fates).toContainEqual({ field: 'top_k', disposition: 'mapped', to: 'absent' });
   });
 
-  it('drops the thinking configuration with a recorded fate', () => {
-    const { fates } = decodedValue(
-      anAnthropicAsk({ thinking: { type: 'enabled', budget_tokens: 2048 } }),
-    );
+  it('drops the thinking configuration with a cost-bearing fate', () => {
+    const { fates } = decodedValue(anAnthropicAsk({ thinking: { type: 'adaptive' } }));
 
-    expect(fates).toContainEqual({ field: 'thinking', disposition: 'mapped', to: 'absent' });
+    expect(fates).toContainEqual({
+      field: 'thinking',
+      disposition: 'mapped',
+      to: 'absent',
+      costBearing: true,
+    });
   });
+});
 
+describe('decodeRequest writes the ledger whole', () => {
   it('names every top-level source field with a fate, so nothing vanishes untraced', () => {
     const request = anAnthropicAsk({
       system: 'You answer concisely.',

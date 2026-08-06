@@ -124,10 +124,12 @@ type MessageEvent = Exclude<EnvelopeEvent, { type: 'ping' | 'error' }>;
 function decodeMessageEvent(event: MessageEvent, state: DecodeState): HubStreamEvent[] {
   switch (event.type) {
     case 'message_start':
-      return [{ type: 'message-begin', usage: hubUsageFrom(event.message.usage) }];
+      state.usage = hubUsageFrom(event.message.usage);
+
+      return [{ type: 'message-begin', usage: state.usage }];
     case 'message_delta':
       state.stopReason = hubStopFrom(event.delta.stop_reason);
-      state.usage = hubUsageFrom(event.usage);
+      state.usage = { ...state.usage, ...hubUsageFrom(event.usage) };
 
       return [];
     case 'message_stop':

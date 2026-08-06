@@ -26,7 +26,7 @@ function hubBlocksOf(block: AnthropicContentBlock, fates: Fate[]): readonly HubC
     return emptyTextFate(fates);
   }
 
-  return [hubBlockFrom(block)];
+  return [hubBlockFrom(block, fates)];
 }
 
 function hubContentFrom(message: AnthropicMessage, fates: Fate[]): readonly HubContentBlock[] {

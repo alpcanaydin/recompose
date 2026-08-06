@@ -56,10 +56,40 @@ const wireBlockKinds = new Set([
   'tool_result',
 ]);
 
-function isWireBlock(value: unknown): boolean {
+const toolResultPartKinds = new Set([
+  'text',
+  'image',
+  'search_result',
+  'document',
+  'tool_reference',
+]);
+
+function isToolResultPart(value: unknown): boolean {
   return (
-    isJsonObject(value) && typeof value['type'] === 'string' && wireBlockKinds.has(value['type'])
+    isJsonObject(value) &&
+    typeof value['type'] === 'string' &&
+    toolResultPartKinds.has(value['type'])
   );
+}
+
+function readsToolResultContent(content: unknown): boolean {
+  return (
+    content === undefined ||
+    typeof content === 'string' ||
+    (Array.isArray(content) && content.every(isToolResultPart))
+  );
+}
+
+function isWireBlock(value: unknown): boolean {
+  if (
+    !isJsonObject(value) ||
+    typeof value['type'] !== 'string' ||
+    !wireBlockKinds.has(value['type'])
+  ) {
+    return false;
+  }
+
+  return value['type'] !== 'tool_result' || readsToolResultContent(value['content']);
 }
 
 function isWireContent(content: unknown): boolean {

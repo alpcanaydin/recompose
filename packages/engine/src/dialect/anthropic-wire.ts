@@ -38,7 +38,33 @@ export type AnthropicToolUseBlock = {
   cache_control?: AnthropicCacheControl;
 };
 
-export type AnthropicToolResultContent = AnthropicTextBlock | AnthropicImageBlock;
+export type AnthropicSearchResultPart = {
+  type: 'search_result';
+  title: string;
+  source: string;
+  content: readonly AnthropicTextBlock[];
+  cache_control?: AnthropicCacheControl;
+};
+
+export type AnthropicDocumentPart = {
+  type: 'document';
+  source: HubJsonObject;
+  title?: string;
+  cache_control?: AnthropicCacheControl;
+};
+
+export type AnthropicToolReferencePart = {
+  type: 'tool_reference';
+  tool_name: string;
+  cache_control?: AnthropicCacheControl;
+};
+
+export type AnthropicToolResultContent =
+  | AnthropicTextBlock
+  | AnthropicImageBlock
+  | AnthropicSearchResultPart
+  | AnthropicDocumentPart
+  | AnthropicToolReferencePart;
 
 export type AnthropicToolResultBlock = {
   type: 'tool_result';
@@ -140,7 +166,7 @@ export type AnthropicKnownStreamEvent =
   | {
       type: 'message_delta';
       delta: { stop_reason: AnthropicStopReason; stop_sequence: string | null };
-      usage: AnthropicUsage;
+      usage?: Partial<AnthropicUsage>;
     }
   | { type: 'message_stop' }
   | { type: 'ping' }

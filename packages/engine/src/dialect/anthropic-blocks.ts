@@ -1,13 +1,17 @@
 import type {
   AnthropicCacheControl,
   AnthropicContentBlock,
+  AnthropicDocumentPart,
   AnthropicImageBlock,
   AnthropicImageSource,
+  AnthropicSearchResultPart,
   AnthropicTextBlock,
+  AnthropicToolReferencePart,
   AnthropicToolResultBlock,
   AnthropicToolResultContent,
   AnthropicToolUseBlock,
 } from './anthropic-wire';
+import type { Fate } from './fates';
 import type {
   HubCacheBreakpoint,
   HubContentBlock,
@@ -51,16 +55,56 @@ function hubTextFrom(block: AnthropicTextBlock): HubTextBlock {
   return { type: 'text', text: block.text, ...hubBreakpointOf(block.cache_control) };
 }
 
-function hubToolResultPartFrom(part: AnthropicToolResultContent): HubToolResultContent {
+function dropToolResultPart(
+  part: AnthropicSearchResultPart | AnthropicDocumentPart | AnthropicToolReferencePart,
+  fates: Fate[],
+): void {
+  switch (part.type) {
+    case 'search_result':
+    case 'document':
+      fates.push({
+        field: `tool_result[${part.type}]`,
+        disposition: 'mapped',
+        to: 'absent',
+        costBearing: true,
+      });
+
+      return;
+    case 'tool_reference':
+      fates.push({ field: 'tool_result[tool_reference]', disposition: 'mapped', to: 'absent' });
+
+      return;
+
+    default: {
+      const unknownPart: never = part;
+
+      throw new Error(
+        `hubBlockFrom met an unknown tool_result part: ${JSON.stringify(unknownPart)}`,
+      );
+    }
+  }
+}
+
+function hubToolResultPartFrom(
+  part: AnthropicToolResultContent,
+  fates: Fate[],
+): HubToolResultContent | undefined {
   if (part.type === 'text') {
     return hubTextFrom(part);
   }
 
-  return { type: 'image', source: hubSourceFrom(part.source) };
+  if (part.type === 'image') {
+    return { type: 'image', source: hubSourceFrom(part.source) };
+  }
+
+  dropToolResultPart(part, fates);
+
+  return undefined;
 }
 
 function hubToolResultContentFrom(
   content: AnthropicToolResultBlock['content'],
+  fates: Fate[],
 ): readonly HubToolResultContent[] {
   if (content === undefined) {
     return [];
@@ -70,14 +114,18 @@ function hubToolResultContentFrom(
     return [{ type: 'text', text: content }];
   }
 
-  return content.map(hubToolResultPartFrom);
+  return content.flatMap((part) => {
+    const carried = hubToolResultPartFrom(part, fates);
+
+    return carried === undefined ? [] : [carried];
+  });
 }
 
-function hubToolResultFrom(block: AnthropicToolResultBlock): HubToolResultBlock {
+function hubToolResultFrom(block: AnthropicToolResultBlock, fates: Fate[]): HubToolResultBlock {
   return {
     type: 'tool_result',
     toolUseId: block.tool_use_id,
-    content: hubToolResultContentFrom(block.content),
+    content: hubToolResultContentFrom(block.content, fates),
     ...(block.is_error === true ? { isError: true } : {}),
   };
 }
@@ -88,6 +136,7 @@ function hubContentBlockFrom(
     | AnthropicImageBlock
     | AnthropicToolUseBlock
     | AnthropicToolResultBlock,
+  fates: Fate[],
 ): HubContentBlock {
   switch (block.type) {
     case 'text':
@@ -97,7 +146,7 @@ function hubContentBlockFrom(
     case 'tool_use':
       return { type: 'tool_use', id: block.id, name: block.name, input: block.input };
     case 'tool_result':
-      return hubToolResultFrom(block);
+      return hubToolResultFrom(block, fates);
 
     default: {
       const unknownBlock: never = block;
@@ -107,7 +156,7 @@ function hubContentBlockFrom(
   }
 }
 
-export function hubBlockFrom(block: AnthropicContentBlock): HubContentBlock {
+export function hubBlockFrom(block: AnthropicContentBlock, fates: Fate[]): HubContentBlock {
   if (block.type === 'thinking') {
     return {
       type: 'thinking',
@@ -120,7 +169,7 @@ export function hubBlockFrom(block: AnthropicContentBlock): HubContentBlock {
     return { type: 'redacted_thinking', data: block.data };
   }
 
-  return hubContentBlockFrom(block);
+  return hubContentBlockFrom(block, fates);
 }
 
 function wireTextFrom(block: HubTextBlock): AnthropicTextBlock {

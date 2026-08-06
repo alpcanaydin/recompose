@@ -145,7 +145,101 @@ describe('decodeStream tolerates the unknown and ends on an error', () => {
 
     expect(events).toEqual([{ type: 'message-end', stopReason: 'end', usage: {} }]);
   });
+});
 
+describe('the usage accumulates across the stream envelope', () => {
+  it('keeps the message_start input counts when message_delta brings only output', async () => {
+    const wire: readonly AnthropicStreamEvent[] = [
+      {
+        type: 'message_start',
+        message: {
+          id: 'msg_01',
+          type: 'message',
+          role: 'assistant',
+          content: [],
+          stop_reason: null,
+          usage: { input_tokens: 25, output_tokens: 1, cache_read_input_tokens: 3 },
+        },
+      },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn', stop_sequence: null },
+        usage: { output_tokens: 15 },
+      },
+      { type: 'message_stop' },
+    ];
+
+    const events = await collect(decodeStream(streamOf(wire)));
+
+    expect(events.at(-1)).toEqual({
+      type: 'message-end',
+      stopReason: 'end',
+      usage: { inputTokens: 25, outputTokens: 15, cacheReadTokens: 3 },
+    });
+  });
+});
+
+describe('a delta names only what it changes', () => {
+  it('lets a delta name only the cache counts without erasing the rest', async () => {
+    const wire: readonly AnthropicStreamEvent[] = [
+      {
+        type: 'message_start',
+        message: {
+          id: 'msg_01',
+          type: 'message',
+          role: 'assistant',
+          content: [],
+          stop_reason: null,
+          usage: { input_tokens: 25, output_tokens: 9 },
+        },
+      },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn', stop_sequence: null },
+        usage: { cache_read_input_tokens: 4 },
+      },
+      { type: 'message_stop' },
+    ];
+
+    const events = await collect(decodeStream(streamOf(wire)));
+
+    expect(events.at(-1)).toEqual({
+      type: 'message-end',
+      stopReason: 'end',
+      usage: { inputTokens: 25, outputTokens: 9, cacheReadTokens: 4 },
+    });
+  });
+});
+
+describe('a message_delta naming no usage loses nothing', () => {
+  it('tolerates a message_delta naming no usage, keeping what arrived before', async () => {
+    const wire: readonly AnthropicStreamEvent[] = [
+      {
+        type: 'message_start',
+        message: {
+          id: 'msg_01',
+          type: 'message',
+          role: 'assistant',
+          content: [],
+          stop_reason: null,
+          usage: { input_tokens: 25, output_tokens: 1 },
+        },
+      },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null } },
+      { type: 'message_stop' },
+    ];
+
+    const events = await collect(decodeStream(streamOf(wire)));
+
+    expect(events.at(-1)).toEqual({
+      type: 'message-end',
+      stopReason: 'end',
+      usage: { inputTokens: 25, outputTokens: 1 },
+    });
+  });
+});
+
+describe('a beginning that names no usage stays empty', () => {
   it('reads a message_start naming no usage as an empty beginning', async () => {
     const wire: readonly AnthropicStreamEvent[] = [
       {

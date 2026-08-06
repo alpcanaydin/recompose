@@ -1,12 +1,14 @@
-export const anthropicDrops = [
-  'top_k',
-  'metadata',
-  'thinking',
-  'service_tier',
-  'container',
-  'inference_geo',
-  'output_config',
-  'cache_control',
-] as const;
+import type { VendorDrop } from './chat-completions-drops';
 
-export type AnthropicDropField = (typeof anthropicDrops)[number];
+export const anthropicDrops = [
+  { field: 'top_k', costBearing: false },
+  { field: 'metadata', costBearing: false },
+  { field: 'thinking', costBearing: true },
+  { field: 'service_tier', costBearing: false },
+  { field: 'inference_geo', costBearing: false },
+  { field: 'container', costBearing: false },
+  { field: 'output_config', costBearing: true },
+  { field: 'cache_control', costBearing: true },
+] as const satisfies readonly VendorDrop[];
+
+export type AnthropicDropField = (typeof anthropicDrops)[number]['field'];

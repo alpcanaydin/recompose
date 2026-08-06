@@ -1,14 +1,15 @@
 import type { AnthropicUsage } from './anthropic-wire';
 import type { HubUsage } from './hub';
 
-export function hubUsageFrom(usage: AnthropicUsage | undefined): HubUsage {
-  if (usage === undefined) {
-    return {};
-  }
-
+function hubTokenCounts(usage: Partial<AnthropicUsage>): HubUsage {
   return {
-    inputTokens: usage.input_tokens,
-    outputTokens: usage.output_tokens,
+    ...(usage.input_tokens === undefined ? {} : { inputTokens: usage.input_tokens }),
+    ...(usage.output_tokens === undefined ? {} : { outputTokens: usage.output_tokens }),
+  };
+}
+
+function hubCacheCounts(usage: Partial<AnthropicUsage>): HubUsage {
+  return {
     ...(usage.cache_read_input_tokens === undefined
       ? {}
       : { cacheReadTokens: usage.cache_read_input_tokens }),
@@ -16,6 +17,10 @@ export function hubUsageFrom(usage: AnthropicUsage | undefined): HubUsage {
       ? {}
       : { cacheWriteTokens: usage.cache_creation_input_tokens }),
   };
+}
+
+export function hubUsageFrom(usage: Partial<AnthropicUsage> | undefined): HubUsage {
+  return usage === undefined ? {} : { ...hubTokenCounts(usage), ...hubCacheCounts(usage) };
 }
 
 export function wireUsageFrom(usage: HubUsage): AnthropicUsage {
