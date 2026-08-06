@@ -14,17 +14,37 @@ export async function fetchOfferedPort(): Promise<number> {
   return unwrapIpcResult(await window.recompose['gateways:offer-port']());
 }
 
-/** Stores a new gateway, refusing a slug or a port a stored gateway already holds. */
-export function useSaveGateway() {
+type GatewayWrite = (gateway: GatewayConfig) => Promise<GatewayConfig[]>;
+
+function useStoredGatewaysAfter(write: GatewayWrite) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (gateway: GatewayConfig) =>
-      unwrapIpcResult(await window.recompose['gateways:save'](gateway)),
+    mutationFn: write,
     onSuccess: (gateways) => {
       queryClient.setQueryData(gatewaysQueryOptions.queryKey, gateways);
     },
   });
+}
+
+const storeNewGateway: GatewayWrite = async (gateway) =>
+  unwrapIpcResult(await window.recompose['gateways:save'](gateway));
+
+/** Stores a new gateway, refusing a slug or a port a stored gateway already holds. */
+export function useSaveGateway() {
+  return useStoredGatewaysAfter(storeNewGateway);
+}
+
+/**
+ * Stores the gateway that now carries one more virtual model.
+ *
+ * @summary The one place a definition reaches disk, so the whole Models surface is written against
+ * this act rather than against the channel under it. The save channel it rides today refuses a
+ * gateway it already holds, so a definition on a stored gateway reads that refusal until the lane
+ * that redefines one lands behind this act.
+ */
+export function useDefineVirtualModel() {
+  return useStoredGatewaysAfter(storeNewGateway);
 }
 
 /**

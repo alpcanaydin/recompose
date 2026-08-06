@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 
+const ADDRESS_COPIED = 'Address copied.';
+const COPYING_REFUSED = 'Copying failed.';
+
 type CopyButtonProps = {
   /** Accessible name of the button, naming the value it copies. */
   label: string;
   /** Text the button places on the clipboard. */
   value: string;
+  /** What a landed copy says out loud, wherever the value copied is not an address. */
+  announcement?: string;
 };
 
 const CONFIRMATION_LINGERS_MS = 2000;
 
-const announcements = {
-  copied: 'Address copied.',
-  refused: 'Copying failed.',
-} as const;
-
-type CopyOutcome = keyof typeof announcements;
+type CopyOutcome = 'copied' | 'refused';
 
 const copyGlyph = (
   <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 12 12" width="12">
@@ -49,8 +49,9 @@ const checkGlyph = (
  * A clipboard that refuses the write announces that instead, because a button that answers
  * nothing reads as a broken one.
  */
-export function CopyButton({ label, value }: CopyButtonProps) {
+export function CopyButton({ label, value, announcement = ADDRESS_COPIED }: CopyButtonProps) {
   const [outcome, setOutcome] = useState<CopyOutcome | undefined>(undefined);
+  const spoken = outcome === 'copied' ? announcement : COPYING_REFUSED;
 
   useEffect(() => {
     if (outcome === undefined) {
@@ -86,7 +87,7 @@ export function CopyButton({ label, value }: CopyButtonProps) {
         {outcome === 'copied' ? checkGlyph : copyGlyph}
       </button>
       <span className="sr-only" role="status">
-        {outcome === undefined ? '' : announcements[outcome]}
+        {outcome === undefined ? '' : spoken}
       </span>
     </>
   );

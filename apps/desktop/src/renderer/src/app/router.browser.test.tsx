@@ -179,11 +179,11 @@ test('the /settings route loader warms the settings and system caches before any
   });
 });
 
-test('a valid gateway slug shows the canvas placeholder for that gateway', async () => {
-  const screen = await renderAt('/gateways/my-gateway');
+test('a valid gateway slug opens the stage and the inspector for that gateway', async () => {
+  const screen = await renderAt('/gateways/codex', { gateways: [codex] });
 
-  await expect.element(screen.getByRole('heading', { name: 'my-gateway' })).toBeVisible();
-  await expect.element(screen.getByText('Canvas coming soon.')).toBeVisible();
+  await expect.element(screen.getByRole('heading', { name: 'Codex' })).toBeVisible();
+  await expect.element(screen.getByText('Virtual models serve from the drawer')).toBeVisible();
 });
 
 test('an invalid gateway slug lands on the not-found state', async () => {

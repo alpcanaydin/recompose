@@ -1,0 +1,155 @@
+import type { ReactNode, RefObject } from 'react';
+
+import { Field } from '@base-ui/react/field';
+
+import type { OptionGroup } from '../option-list/option-list';
+
+import { discoveryHint, previewWireId } from '../../lib/model-draft';
+import { OptionList } from '../option-list/option-list';
+
+export type ModelFieldsProps = {
+  /** Control the flow lands opening focus on. */
+  nameField: RefObject<HTMLInputElement | null>;
+  /** The name as it stands in the draft. */
+  name: string;
+  /** Sentence standing under the name field, where one applies. */
+  nameRefusal?: string | undefined;
+  /** Receives every keystroke in the name field. */
+  onNameChange: (typed: string) => void;
+  /** The accounts a target can name, gathered under the kinds they are held as. */
+  targets: readonly OptionGroup[];
+  /** The account picked as the target, or nothing while none is. */
+  target?: string | undefined;
+  /** Receives the account the person picked. */
+  onPickTarget: (accountId: string) => void;
+  /** What the picked account reads as, which names whose list the models come from. */
+  targetName?: string | undefined;
+  /** The model ids the picked account serves as of this look. */
+  models: readonly string[];
+  /** The real model picked, which is empty while none is. */
+  providerModel: string;
+  /** Receives the model the person picked. */
+  onPickModel: (providerModel: string) => void;
+  /** Sentence standing where a look at the model list answered nothing. */
+  modelRefusal?: string | undefined;
+};
+
+function servedUnder(name: string): ReactNode {
+  const wireId = previewWireId(name);
+
+  if (wireId === undefined) {
+    return null;
+  }
+
+  const hint = discoveryHint(wireId);
+
+  return (
+    <p className="mt-1.5 text-footnote text-ink-secondary">
+      Wire id <code className="font-mono text-ink-secondary">{wireId}</code>
+      {hint === undefined ? null : ` · ${hint}`}
+    </p>
+  );
+}
+
+function nameField(props: ModelFieldsProps): ReactNode {
+  return (
+    <div className="px-3 py-2.5">
+      <Field.Root>
+        <Field.Label className="mb-1.5 block text-caption font-semibold text-ink-secondary">
+          Name
+        </Field.Label>
+        <Field.Control
+          className="field-control w-full focus-ring placeholder:text-ink-tertiary"
+          onChange={(event) => {
+            props.onNameChange(event.currentTarget.value);
+          }}
+          placeholder="Fast"
+          ref={props.nameField}
+          value={props.name}
+        />
+        {props.nameRefusal === undefined ? null : (
+          <Field.Error className="mt-1.5 block text-caption text-danger-ink" match role="alert">
+            {props.nameRefusal}
+          </Field.Error>
+        )}
+      </Field.Root>
+      {servedUnder(props.name)}
+    </div>
+  );
+}
+
+function pickedFrom(label: ReactNode, control: ReactNode): ReactNode {
+  return (
+    <div className="border-t border-line-faint px-3 py-2.5">
+      <p className="mb-1 text-caption font-semibold text-ink-secondary">{label}</p>
+      {control}
+    </div>
+  );
+}
+
+function modelLabel(targetName: string | undefined): ReactNode {
+  return (
+    <>
+      <span>Model</span>
+      {targetName === undefined ? null : (
+        <span className="font-normal text-ink-secondary">
+          {' '}
+          · from {targetName}&apos;s live list
+        </span>
+      )}
+    </>
+  );
+}
+
+function modelControl(props: ModelFieldsProps): ReactNode {
+  if (props.modelRefusal !== undefined) {
+    return (
+      <p
+        className="rounded-control border border-danger/30 bg-danger/10 px-2.5 py-2 text-caption text-ink"
+        role="alert"
+      >
+        {props.modelRefusal}
+      </p>
+    );
+  }
+
+  if (props.target === undefined) {
+    return <p className="px-2 py-1.5 text-detail text-ink-secondary">Pick a target first.</p>;
+  }
+
+  return (
+    <OptionList
+      groups={[{ options: props.models.map((id) => ({ id, name: id })) }]}
+      nothingMatched="No model matches that."
+      onPick={props.onPickModel}
+      picked={props.providerModel === '' ? undefined : props.providerModel}
+      searchLabel="Search models"
+    />
+  );
+}
+
+/**
+ * The three things a definition needs, in the order a person settles them.
+ *
+ * @summary The name is typed and the other two are picked, because a target and a model both come
+ * from what is stored and what a provider actually serves. The id a client will ask for stands
+ * under the name as it is derived, and the model list belongs to the target, so it waits for one.
+ */
+export function ModelFields(props: ModelFieldsProps) {
+  return (
+    <div className="field-box">
+      {nameField(props)}
+      {pickedFrom(
+        'Target',
+        <OptionList
+          groups={props.targets}
+          nothingMatched="No account matches that."
+          onPick={props.onPickTarget}
+          picked={props.target}
+          searchLabel="Search accounts"
+        />,
+      )}
+      {pickedFrom(modelLabel(props.targetName), modelControl(props))}
+    </div>
+  );
+}

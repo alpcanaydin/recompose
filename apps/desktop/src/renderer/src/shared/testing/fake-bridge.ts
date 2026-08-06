@@ -10,6 +10,7 @@ import type {
   SubscriptionAccountView,
   SubscriptionTool,
   SystemState,
+  VirtualModel,
 } from '@recompose/contracts';
 
 import {
@@ -20,7 +21,9 @@ import {
   ipcChannels,
 } from '@recompose/contracts';
 
+import { serveProviderModelLook } from '../api';
 import { accountHandlers } from './fake-accounts';
+import { modelListLook, noModelLists, type SeededModelLists } from './fake-model-lists';
 import { noSubscriptions, noTools, subscriptionHandlers } from './fake-subscriptions';
 
 const emptyDocument: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
@@ -40,16 +43,23 @@ export type GatewaySeed = {
   displayName: string;
   /** Loopback port the gateway binds. */
   port: number;
+  /** Definitions the stored gateway already serves, which a fresh gateway holds none of. */
+  virtualModels?: readonly VirtualModel[];
 };
 
-/** A stored gateway document, filled out around the three fields a scenario cares about. */
-export function gatewaySeed({ slug, displayName, port }: GatewaySeed): GatewayConfig {
+/** A stored gateway document, filled out around the fields a scenario cares about. */
+export function gatewaySeed({
+  slug,
+  displayName,
+  port,
+  virtualModels = [],
+}: GatewaySeed): GatewayConfig {
   return {
     schemaVersion: GATEWAY_CONFIG_VERSION,
     slug,
     displayName,
     port,
-    virtualModels: [],
+    virtualModels: [...virtualModels],
     layout: { nodes: {} },
   };
 }
@@ -61,6 +71,8 @@ export type BridgeParameters = {
   /** The reading every runtime look answers, standing for what the machine says this run. */
   reachability?: RuntimeReachability;
   settings?: Settings;
+  /** The accounts whose model lists a look can read this run, and the ids each one serves. */
+  providerModels?: SeededModelLists;
   gateways?: readonly GatewayConfig[];
   engineStates?: EngineStates;
   subscriptions?: readonly SubscriptionAccountView[];
@@ -242,6 +254,7 @@ function seedsFrom(parameters: BridgeParameters) {
     accounts: emptyDocument,
     keyCheck: unreachableProvider,
     reachability: silentRuntime,
+    providerModels: noModelLists,
     gateways: noGateways,
     engineStates: noEngineStates,
     subscriptions: noSubscriptions,
@@ -254,6 +267,7 @@ export function installFakeBridge(parameters: BridgeParameters = {}): void {
   const seeds = seedsFrom(parameters);
 
   engineStateListeners.clear();
+  serveProviderModelLook(modelListLook(seeds.providerModels));
 
   const { landSubscription, ...accounts } = accountHandlers(
     seeds.accounts,
