@@ -84,3 +84,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0076](0076-dialect-translation-reaches-a-valid-target-or-refuses-typed.md)     | Dialect Translation Reaches a Valid Target or Refuses Typed                         | Accepted   | 2026-08-05 |
 | [0077](0077-bindings-ride-the-directive-and-secrets-ride-per-request-grants.md) | Bindings Ride the Directive, and Secrets Ride Per-Request Grants                    | Accepted   | 2026-08-06 |
 | [0078](0078-an-absent-model-is-404-and-broken-backing-is-502.md)                | An Absent Model Is 404, and Broken Backing Is 502                                   | Accepted   | 2026-08-06 |
+| [0079](0079-tests-and-snapshots-run-with-reduced-motion.md)                     | Tests and Snapshots Run With Reduced Motion                                         | Accepted   | 2026-08-06 |
