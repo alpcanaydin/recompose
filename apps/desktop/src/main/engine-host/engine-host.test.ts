@@ -10,7 +10,7 @@ import type { EngineChild } from './engine-host';
 
 import { createEngineHost, DIRECTIVE_TIMEOUT_MS } from './engine-host';
 
-const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 type Answer = (directive: EngineDirective) => GatewayEngineState | null;
 

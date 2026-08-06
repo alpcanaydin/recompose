@@ -3,7 +3,7 @@ import { describe, expect } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 const ANTHROPIC_MODEL_PATHS = ['/v1/messages', '/messages'];
 const OPENAI_MODEL_PATHS = ['/v1/chat/completions', '/chat/completions'];

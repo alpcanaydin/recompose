@@ -78,6 +78,7 @@ async function saveGateway(
       slug: config.slug,
       displayName: config.displayName,
       port: config.port,
+      virtualModels: [],
     });
 
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };

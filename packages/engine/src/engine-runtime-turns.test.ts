@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { createEngineRuntime, type OpenListeners } from './engine-runtime';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 function aLoopbackThatClosesSlowly() {
   const serving = new Set<number>();

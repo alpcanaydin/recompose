@@ -160,7 +160,9 @@ describe('starting one gateway', () => {
 
     await createEngineIpcHandlers(context)['engine:start']({ slug: 'codex' });
 
-    expect(recorded.started).toEqual([{ slug: 'codex', displayName: 'Codex', port: 8397 }]);
+    expect(recorded.started).toEqual([
+      { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] },
+    ]);
   });
 
   test('a failed start crosses as an answer carrying the port, not as a refusal', async () => {

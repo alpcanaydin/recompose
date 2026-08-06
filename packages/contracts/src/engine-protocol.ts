@@ -6,10 +6,24 @@ import { gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { loopbackAddressSchema, runtimeReachabilitySchema } from './local-runtimes';
 import { nonBlankString } from './non-blank';
 
+const targetStandingSchema = z.discriminatedUnion('standing', [
+  z.strictObject({ standing: z.literal('bound'), providerModel: nonBlankString }),
+  z.strictObject({ standing: z.literal('removed') }),
+]);
+
+export const engineVirtualModelSchema = z.strictObject({
+  id: gatewaySlugSchema,
+  displayName: nonBlankString,
+  target: targetStandingSchema,
+});
+
+export type EngineVirtualModel = z.infer<typeof engineVirtualModelSchema>;
+
 export const engineGatewaySchema = z.strictObject({
   slug: gatewaySlugSchema,
   displayName: z.string().trim().min(1),
   port: gatewayPortSchema,
+  virtualModels: z.array(engineVirtualModelSchema),
 });
 
 export type EngineGateway = z.infer<typeof engineGatewaySchema>;
@@ -59,3 +73,32 @@ export const engineReportSchema = z.discriminatedUnion('kind', [
 ]);
 
 export type EngineReport = z.infer<typeof engineReportSchema>;
+
+export const engineSpendRequestSchema = z.strictObject({
+  kind: z.literal('spend-request'),
+  id: directiveIdSchema,
+  slug: gatewaySlugSchema,
+  virtualModel: gatewaySlugSchema,
+});
+
+export type EngineSpendRequest = z.infer<typeof engineSpendRequestSchema>;
+
+export const spendGrantSchema = z.discriminatedUnion('verdict', [
+  z.strictObject({
+    verdict: z.literal('resolved'),
+    credential: nonBlankString,
+    providerOrigin: nonBlankString,
+  }),
+  z.strictObject({ verdict: z.literal('missing-target') }),
+  z.strictObject({ verdict: z.literal('missing-credential') }),
+]);
+
+export type SpendGrant = z.infer<typeof spendGrantSchema>;
+
+export const engineSpendGrantSchema = z.strictObject({
+  kind: z.literal('spend-grant'),
+  answers: directiveIdSchema,
+  grant: spendGrantSchema,
+});
+
+export type EngineSpendGrant = z.infer<typeof engineSpendGrantSchema>;

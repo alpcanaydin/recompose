@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DIRECTIVE_TIMEOUT_MS } from './engine-host';
 import { hostOver, nothing, scriptedChild } from './engine-host.testkit';
 
-const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 afterEach(() => {
   vi.useRealTimers();

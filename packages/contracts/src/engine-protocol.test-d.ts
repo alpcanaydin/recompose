@@ -4,13 +4,25 @@ import type {
   EngineDirective,
   EngineGateway,
   EngineReport,
+  EngineSpendGrant,
+  EngineSpendRequest,
+  EngineVirtualModel,
   GatewayEngineState,
   KeyCheckVerdict,
   KeyProviderId,
   RuntimeReachability,
+  SpendGrant,
 } from './index';
 
 type ProbeDirective = Extract<EngineDirective, { kind: 'probe' }>;
+
+type BoundTarget = Extract<EngineVirtualModel['target'], { standing: 'bound' }>;
+
+type RemovedTarget = Extract<EngineVirtualModel['target'], { standing: 'removed' }>;
+
+type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
+
+type RefusedGrant = Exclude<SpendGrant, { verdict: 'resolved' }>;
 
 type RuntimeProbeDirective = Extract<EngineDirective, { kind: 'probe-runtime' }>;
 
@@ -30,6 +42,7 @@ describe('the protocol the two processes speak', () => {
       slug: string;
       displayName: string;
       port: number;
+      virtualModels: EngineVirtualModel[];
     }>();
   });
 
@@ -104,5 +117,70 @@ describe('the report the child sends home', () => {
     expectTypeOf<RuntimeCheckReportArm>().not.toHaveProperty('address');
     expectTypeOf<RuntimeCheckReportArm>().not.toHaveProperty('body');
     expectTypeOf<RuntimeCheckReportArm>().not.toHaveProperty('verdict');
+  });
+});
+
+describe('the binding snapshot the child serves a listing from', () => {
+  test('a binding carries the id, the name, and the target standing, and nothing else', () => {
+    expectTypeOf<keyof EngineVirtualModel>().toEqualTypeOf<'id' | 'displayName' | 'target'>();
+    expectTypeOf<EngineVirtualModel['id']>().toEqualTypeOf<string>();
+    expectTypeOf<EngineVirtualModel['displayName']>().toEqualTypeOf<string>();
+  });
+
+  test('a binding carries no credential under any name', () => {
+    expectTypeOf<EngineVirtualModel>().not.toHaveProperty('credential');
+    expectTypeOf<EngineVirtualModel>().not.toHaveProperty('key');
+    expectTypeOf<EngineVirtualModel>().not.toHaveProperty('accountId');
+  });
+
+  test('a target either stands bound to a real model or stands removed', () => {
+    expectTypeOf<EngineVirtualModel['target']['standing']>().toEqualTypeOf<'bound' | 'removed'>();
+    expectTypeOf<keyof BoundTarget>().toEqualTypeOf<'standing' | 'providerModel'>();
+    expectTypeOf<BoundTarget['providerModel']>().toEqualTypeOf<string>();
+    expectTypeOf<keyof RemovedTarget>().toEqualTypeOf<'standing'>();
+  });
+});
+
+describe('the grant lane one spend rides', () => {
+  test('a spend request keys itself by the gateway and the virtual model, and answers to an id', () => {
+    expectTypeOf<keyof EngineSpendRequest>().toEqualTypeOf<
+      'kind' | 'id' | 'slug' | 'virtualModel'
+    >();
+    expectTypeOf<EngineSpendRequest['kind']>().toEqualTypeOf<'spend-request'>();
+  });
+
+  test('a spend request carries no credential, because it is the ask for one', () => {
+    expectTypeOf<EngineSpendRequest>().not.toHaveProperty('credential');
+    expectTypeOf<EngineSpendRequest>().not.toHaveProperty('key');
+  });
+
+  test('a grant is resolved, a missing target, or a missing credential', () => {
+    expectTypeOf<SpendGrant['verdict']>().toEqualTypeOf<
+      'resolved' | 'missing-target' | 'missing-credential'
+    >();
+  });
+
+  test('a resolved grant carries the credential and the origin, and nothing else', () => {
+    expectTypeOf<keyof ResolvedGrant>().toEqualTypeOf<
+      'verdict' | 'credential' | 'providerOrigin'
+    >();
+    expectTypeOf<ResolvedGrant['credential']>().toEqualTypeOf<string>();
+    expectTypeOf<ResolvedGrant['providerOrigin']>().toEqualTypeOf<string>();
+  });
+
+  test('a refusal names its state and carries no sentence and no credential', () => {
+    expectTypeOf<keyof RefusedGrant>().toEqualTypeOf<'verdict'>();
+    expectTypeOf<RefusedGrant['verdict']>().toEqualTypeOf<
+      'missing-target' | 'missing-credential'
+    >();
+    expectTypeOf<RefusedGrant>().not.toHaveProperty('message');
+    expectTypeOf<RefusedGrant>().not.toHaveProperty('credential');
+  });
+
+  test('a grant answers the spend request that asked and carries one grant', () => {
+    expectTypeOf<keyof EngineSpendGrant>().toEqualTypeOf<'kind' | 'answers' | 'grant'>();
+    expectTypeOf<EngineSpendGrant['kind']>().toEqualTypeOf<'spend-grant'>();
+    expectTypeOf<EngineSpendGrant['answers']>().toEqualTypeOf<string>();
+    expectTypeOf<EngineSpendGrant['grant']>().toEqualTypeOf<SpendGrant>();
   });
 });

@@ -155,7 +155,9 @@ describe('what a save asks the engine for', () => {
 
     await handlers['gateways:save'](codex);
 
-    expect(started).toEqual([{ slug: 'codex', displayName: 'Codex', port: 8397 }]);
+    expect(started).toEqual([
+      { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] },
+    ]);
   });
 
   test('a refused save asks the engine for nothing', async () => {
@@ -165,7 +167,9 @@ describe('what a save asks the engine for', () => {
     await handlers['gateways:save'](codex);
     await handlers['gateways:save'](gatewayNamed('codex', 'Codex', 9001));
 
-    expect(started).toEqual([{ slug: 'codex', displayName: 'Codex', port: 8397 }]);
+    expect(started).toEqual([
+      { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] },
+    ]);
   });
 
   test('a gateway on a free slug and a free port joins the list and serves', async () => {

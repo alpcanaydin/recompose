@@ -5,7 +5,7 @@ import type { OpenListeners } from './engine-runtime';
 import { attachEngineChild } from './engine-child';
 import { aLoopbackHolding, aParent, fetchAnswering, reportsReach } from './engine-child.testkit';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 describe('a directive the parent sends', () => {
   test('a start directive answers with a running report naming the gateway', async () => {

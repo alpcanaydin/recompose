@@ -93,7 +93,9 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
     requests.start('codex');
 
     await vi.waitFor(() => {
-      expect(recorded.started).toEqual([{ slug: 'codex', displayName: 'codex', port: 8397 }]);
+      expect(recorded.started).toEqual([
+        { slug: 'codex', displayName: 'codex', port: 8397, virtualModels: [] },
+      ]);
     });
   });
 
@@ -118,7 +120,9 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
     requests.restart('codex');
 
     await vi.waitFor(() => {
-      expect(recorded.restarted).toEqual([{ slug: 'codex', displayName: 'codex', port: 8397 }]);
+      expect(recorded.restarted).toEqual([
+        { slug: 'codex', displayName: 'codex', port: 8397, virtualModels: [] },
+      ]);
     });
   });
 
@@ -132,7 +136,9 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
     requests.start('gemini');
 
     await vi.waitFor(() => {
-      expect(recorded.started).toEqual([{ slug: 'gemini', displayName: 'gemini', port: 8398 }]);
+      expect(recorded.started).toEqual([
+        { slug: 'gemini', displayName: 'gemini', port: 8398, virtualModels: [] },
+      ]);
     });
   });
 });

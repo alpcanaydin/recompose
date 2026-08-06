@@ -22,7 +22,12 @@ export type EngineIpcHandlers = Pick<
 >;
 
 function asEngineGateway(config: GatewayConfig): EngineGateway {
-  return { slug: config.slug, displayName: config.displayName, port: config.port };
+  return {
+    slug: config.slug,
+    displayName: config.displayName,
+    port: config.port,
+    virtualModels: [],
+  };
 }
 
 function noSuchGateway(slug: string) {

@@ -20,5 +20,10 @@ export async function storedEngineGateway(
     return undefined;
   }
 
-  return { slug: found.slug, displayName: found.displayName, port: found.port };
+  return {
+    slug: found.slug,
+    displayName: found.displayName,
+    port: found.port,
+    virtualModels: [],
+  };
 }

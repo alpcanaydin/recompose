@@ -126,7 +126,9 @@ describe('moving a gateway off a port another process took', () => {
 
     await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
 
-    expect(recorded.restarted).toEqual([{ slug: 'codex', displayName: 'codex', port: 51234 }]);
+    expect(recorded.restarted).toEqual([
+      { slug: 'codex', displayName: 'codex', port: 51234, virtualModels: [] },
+    ]);
   });
 
   test('the port being abandoned is the one port the move never lands back on', async () => {

@@ -2,8 +2,8 @@ import { describe, expect, test } from 'vitest';
 
 import { createEngineRuntime, type OpenListeners } from './engine-runtime';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
-const gemini = { slug: 'gemini', displayName: 'Gemini', port: 8398 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
+const gemini = { slug: 'gemini', displayName: 'Gemini', port: 8398, virtualModels: [] };
 
 type Loopback = {
   serving: Set<number>;

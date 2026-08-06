@@ -3,7 +3,7 @@ import { describe, expect } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 const LOOPBACK_ADDRESSES = ['127.0.0.1', 'localhost', '[::1]'];
 
