@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
+import type { Account } from './accounts';
+
 import { migrateDocument, type Migration } from './migration';
 import { nonBlankString } from './non-blank';
 
-export const GATEWAY_CONFIG_VERSION = 1;
+export const GATEWAY_CONFIG_VERSION = 2;
 
 export const GATEWAY_PORT_RANGE = { min: 1024, max: 65535 } as const;
 
@@ -67,41 +69,37 @@ export function slugFromName(displayName: string): string {
   return derived === '' ? FALLBACK_GATEWAY_SLUG : derived;
 }
 
-const targetSchema = z.strictObject({
-  kind: z.literal('target'),
-  id: nonBlankString,
+export const targetSchema = z.strictObject({
   accountId: nonBlankString,
   providerModel: nonBlankString,
-  weight: z.int().min(0).max(100),
 });
 
-export type RoutingNode =
-  | z.infer<typeof targetSchema>
-  | {
-      kind: 'router';
-      id: string;
-      mode: 'failover' | 'round-robin';
-      children: RoutingNode[];
-    };
+export type Target = z.infer<typeof targetSchema>;
 
-const routingNodeSchema: z.ZodType<RoutingNode> = z.lazy(() =>
-  z.discriminatedUnion('kind', [
-    targetSchema,
-    z.strictObject({
-      kind: z.literal('router'),
-      id: nonBlankString,
-      mode: z.enum(['failover', 'round-robin']),
-      children: z.array(routingNodeSchema).min(1),
-    }),
-  ]),
-);
+function resolvesToASubscription(accounts: readonly Account[], accountId: string): boolean {
+  return accounts.some((account) => account.id === accountId && account.kind === 'subscription');
+}
 
-const virtualModelSchema = z.strictObject({
-  id: nonBlankString,
-  slug: gatewaySlugSchema,
-  displayName: z.string().trim().min(1),
-  routing: routingNodeSchema,
-});
+function targetSchemaAgainstAccounts(accounts: readonly Account[]): z.ZodType<Target> {
+  return targetSchema.refine((target) => !resolvesToASubscription(accounts, target.accountId), {
+    error: 'a subscription account never stands as a target',
+    path: ['accountId'],
+  });
+}
+
+function virtualModelSchemaAgainstAccounts(accounts: readonly Account[]) {
+  return z.strictObject({
+    id: gatewaySlugSchema,
+    displayName: nonBlankString,
+    target: targetSchemaAgainstAccounts(accounts),
+  });
+}
+
+const noRegistryToResolveAgainst: readonly Account[] = [];
+
+export const virtualModelSchema = virtualModelSchemaAgainstAccounts(noRegistryToResolveAgainst);
+
+export type VirtualModel = z.infer<typeof virtualModelSchema>;
 
 const layoutSchema = z.strictObject({
   nodes: z.record(gatewaySlugSchema, z.strictObject({ x: z.number(), y: z.number() })),
@@ -110,18 +108,36 @@ const layoutSchema = z.strictObject({
     .optional(),
 });
 
-export const gatewayConfigSchema = z.strictObject({
-  schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
-  slug: gatewaySlugSchema,
-  displayName: z.string().trim().min(1),
-  port: gatewayPortSchema,
-  virtualModels: z.array(virtualModelSchema),
-  layout: layoutSchema,
-});
+/**
+ * The stored gateway shape, with every target resolved against the account registry it names.
+ *
+ * @summary A target carries no kind of its own, so the one binding the contract forbids, a
+ * subscription account, only reads as forbidden once the registry answers what the account id
+ * stands for. A caller holding the registry gets the refusal at parse. A target naming an account
+ * the registry no longer holds still parses, because a removed target refuses on live traffic
+ * where a person can read which account left.
+ */
+export function gatewayConfigSchemaAgainstAccounts(accounts: readonly Account[]) {
+  return z.strictObject({
+    schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
+    slug: gatewaySlugSchema,
+    displayName: z.string().trim().min(1),
+    port: gatewayPortSchema,
+    virtualModels: z.array(virtualModelSchemaAgainstAccounts(accounts)),
+    layout: layoutSchema,
+  });
+}
+
+export const gatewayConfigSchema = gatewayConfigSchemaAgainstAccounts(noRegistryToResolveAgainst);
 
 export type GatewayConfig = z.infer<typeof gatewayConfigSchema>;
 
-const gatewayConfigMigrations: readonly Migration[] = [];
+const noStoredGatewayEverMintedAVirtualModel: Migration = {
+  from: 1,
+  migrate: (doc) => ({ ...doc, schemaVersion: 2 }),
+};
+
+const gatewayConfigMigrations: readonly Migration[] = [noStoredGatewayEverMintedAVirtualModel];
 
 export function loadGatewayConfig(doc: unknown): GatewayConfig {
   return gatewayConfigSchema.parse(

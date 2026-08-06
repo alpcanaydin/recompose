@@ -8,12 +8,9 @@ import {
   loadGatewayConfig,
 } from './gateway-config';
 
-const validTarget = {
-  kind: 'target' as const,
-  id: 't1',
-  accountId: 'acc-claude-max',
-  providerModel: 'claude-sonnet-5',
-  weight: 100,
+const boundTarget = {
+  accountId: 'acc-openrouter',
+  providerModel: 'anthropic/claude-sonnet-5',
 };
 
 const validConfig = {
@@ -21,149 +18,155 @@ const validConfig = {
   slug: 'my-gateway',
   displayName: 'My Gateway',
   port: 8397,
-  virtualModels: [
-    {
-      id: 'vm1',
-      slug: 'fast',
-      displayName: 'fast',
-      routing: {
-        kind: 'router' as const,
-        id: 'r1',
-        mode: 'failover' as const,
-        children: [validTarget, { ...validTarget, id: 't2', weight: 0 }],
-      },
-    },
-  ],
+  virtualModels: [{ id: 'fast', displayName: 'Fast', target: boundTarget }],
   layout: {
-    nodes: { gateway: { x: 0, y: 0 }, vm1: { x: 240, y: 0 } },
+    nodes: { gateway: { x: 0, y: 0 }, fast: { x: 240, y: 0 } },
   },
 };
 
-describe('gateway config schema: valid shapes', () => {
+describe('a virtual model bound to one target', () => {
   test('a canonical config parses and keeps its shape', () => {
     const parsed = gatewayConfigSchema.parse(validConfig);
 
     expect(parsed).toEqual(validConfig);
   });
 
-  test('a virtual model may route straight to a single target', () => {
-    const direct = {
+  test('a binding names the account it spends and the real model it asks for', () => {
+    const parsed = gatewayConfigSchema.parse(validConfig);
+
+    expect(parsed.virtualModels[0]?.target).toEqual({
+      accountId: 'acc-openrouter',
+      providerModel: 'anthropic/claude-sonnet-5',
+    });
+  });
+
+  test('a gateway holds several virtual models, each on its own target', () => {
+    const twoModels = {
       ...validConfig,
-      virtualModels: [{ id: 'vm1', slug: 'code', displayName: 'code', routing: validTarget }],
+      virtualModels: [
+        { id: 'fast', displayName: 'Fast', target: boundTarget },
+        { id: 'deep', displayName: 'Deep', target: { ...boundTarget, providerModel: 'gpt-5' } },
+      ],
     };
 
-    expect(gatewayConfigSchema.parse(direct).virtualModels[0]?.routing.kind).toBe('target');
+    expect(gatewayConfigSchema.parse(twoModels).virtualModels).toHaveLength(2);
   });
-});
 
-describe('a gateway that holds no virtual model yet', () => {
-  test('a gateway stores before any provider connects', () => {
+  test('a gateway stores before any virtual model exists', () => {
     const bare = { ...validConfig, virtualModels: [] };
 
     expect(gatewayConfigSchema.parse(bare).virtualModels).toEqual([]);
   });
 });
 
-describe('gateway config schema: routing tree', () => {
-  test('routers chain: a router child may itself be a router', () => {
-    const nested = {
+describe('the stored shape holds no ladder', () => {
+  test('a routing tree from the shape that came before is refused', () => {
+    const withRouter = {
       ...validConfig,
       virtualModels: [
         {
-          id: 'vm1',
-          slug: 'fast',
-          displayName: 'fast',
+          id: 'fast',
+          displayName: 'Fast',
           routing: {
-            kind: 'router' as const,
-            id: 'outer',
-            mode: 'round-robin' as const,
-            children: [
-              validTarget,
-              {
-                kind: 'router' as const,
-                id: 'inner',
-                mode: 'failover' as const,
-                children: [{ ...validTarget, id: 't3' }],
-              },
-            ],
+            kind: 'router',
+            id: 'r1',
+            mode: 'failover',
+            children: [{ kind: 'target', id: 't1', ...boundTarget, weight: 100 }],
           },
         },
       ],
     };
 
-    expect(() => gatewayConfigSchema.parse(nested)).not.toThrow();
+    expect(() => gatewayConfigSchema.parse(withRouter)).toThrow();
   });
 
-  test('a router needs at least one child', () => {
-    const empty = {
+  test('a weight on a target is refused, because one target needs no share', () => {
+    const weighted = {
       ...validConfig,
-      virtualModels: [
-        {
-          id: 'vm1',
-          slug: 'fast',
-          displayName: 'fast',
-          routing: { kind: 'router' as const, id: 'r1', mode: 'failover' as const, children: [] },
-        },
-      ],
+      virtualModels: [{ id: 'fast', displayName: 'Fast', target: { ...boundTarget, weight: 100 } }],
     };
 
-    expect(() => gatewayConfigSchema.parse(empty)).toThrow();
+    expect(() => gatewayConfigSchema.parse(weighted)).toThrow();
+  });
+
+  test('a list of targets under one virtual model is refused', () => {
+    const twoTargets = {
+      ...validConfig,
+      virtualModels: [{ id: 'fast', displayName: 'Fast', target: [boundTarget, boundTarget] }],
+    };
+
+    expect(() => gatewayConfigSchema.parse(twoTargets)).toThrow();
   });
 });
 
-describe('gateway config schema: rejections', () => {
+describe('a config with nowhere for a secret to hide', () => {
   test('secrets cannot hide in a config: unknown keys are rejected', () => {
     expect(() => gatewayConfigSchema.parse({ ...validConfig, apiKey: 'sk-oops' })).toThrow();
   });
 
-  test('secrets cannot hide in a nested router child either', () => {
-    const nestedSmuggle = {
+  test('secrets cannot hide inside a target either', () => {
+    const smuggled = {
       ...validConfig,
       virtualModels: [
-        {
-          id: 'vm1',
-          slug: 'fast',
-          displayName: 'fast',
-          routing: {
-            kind: 'router' as const,
-            id: 'outer',
-            mode: 'failover' as const,
-            children: [
-              {
-                kind: 'router' as const,
-                id: 'inner',
-                mode: 'failover' as const,
-                children: [{ ...validTarget, apiKey: 'sk-oops' }],
-              },
-            ],
-          },
-        },
+        { id: 'fast', displayName: 'Fast', target: { ...boundTarget, apiKey: 'sk-oops' } },
       ],
     };
 
-    expect(() => gatewayConfigSchema.parse(nestedSmuggle)).toThrow();
+    expect(() => gatewayConfigSchema.parse(smuggled)).toThrow();
+  });
+});
+
+describe('a binding the gateway refuses to store', () => {
+  test('a virtual model name that is no slug is rejected', () => {
+    for (const bad of ['Fast Model', 'UPPER', '-lead', 'trail-', 'a--b', '']) {
+      const hostile = {
+        ...validConfig,
+        virtualModels: [{ id: bad, displayName: 'Fast', target: boundTarget }],
+      };
+
+      expect(() => gatewayConfigSchema.parse(hostile)).toThrow();
+    }
   });
 
-  test('invalid slugs are rejected', () => {
-    for (const bad of ['My Gateway', 'UPPER', '-lead', 'trail-', 'a--b', '']) {
-      expect(() => gatewayConfigSchema.parse({ ...validConfig, slug: bad })).toThrow();
-    }
+  test('a blank display name on a virtual model is rejected', () => {
+    const blankName = {
+      ...validConfig,
+      virtualModels: [{ id: 'fast', displayName: '   ', target: boundTarget }],
+    };
+
+    expect(() => gatewayConfigSchema.parse(blankName)).toThrow();
   });
 
   test('a whitespace-only target accountId is rejected', () => {
     const blankAccountId = {
       ...validConfig,
       virtualModels: [
-        {
-          id: 'vm1',
-          slug: 'fast',
-          displayName: 'fast',
-          routing: { ...validTarget, accountId: '   ' },
-        },
+        { id: 'fast', displayName: 'Fast', target: { ...boundTarget, accountId: '   ' } },
       ],
     };
 
     expect(() => gatewayConfigSchema.parse(blankAccountId)).toThrow();
+  });
+
+  test('a whitespace-only real model name is rejected', () => {
+    const blankModel = {
+      ...validConfig,
+      virtualModels: [
+        { id: 'fast', displayName: 'Fast', target: { ...boundTarget, providerModel: '   ' } },
+      ],
+    };
+
+    expect(() => gatewayConfigSchema.parse(blankModel)).toThrow();
+  });
+
+  test('invalid gateway slugs are rejected', () => {
+    for (const bad of ['My Gateway', 'UPPER', '-lead', 'trail-', 'a--b', '']) {
+      expect(() => gatewayConfigSchema.parse({ ...validConfig, slug: bad })).toThrow();
+    }
+  });
+
+  test('a whitespace-only gateway display name is rejected', () => {
+    expect(() => gatewayConfigSchema.parse({ ...validConfig, displayName: '   ' })).toThrow();
   });
 });
 
@@ -194,45 +197,21 @@ describe('gateway config schema: layout node keys', () => {
   });
 });
 
-describe('gateway config schema: migration', () => {
-  test('loadGatewayConfig validates after migration', () => {
-    expect(loadGatewayConfig(validConfig)).toEqual(validConfig);
-    expect(() => loadGatewayConfig({ schemaVersion: 99 })).toThrow(/newer/);
-    expect(() => loadGatewayConfig({ schemaVersion: 1, slug: 'x!' })).toThrow();
-  });
-});
-
 const slugSegmentArb = fc.stringMatching(/^[a-z0-9]{1,6}$/);
 const slugArb = fc
   .array(slugSegmentArb, { minLength: 1, maxLength: 4 })
   .map((segments) => segments.join('-'))
   .filter((slug) => !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(slug));
 
-const targetArb = fc.record({
-  kind: fc.constant('target' as const),
-  id: fc.uuid(),
-  accountId: slugArb,
-  providerModel: fc.stringMatching(/^[a-z0-9][a-z0-9.-]{0,40}$/),
-  weight: fc.integer({ min: 0, max: 100 }),
-});
-
-const routingArb = fc.letrec((tie) => ({
-  node: fc.oneof(
-    { maxDepth: 3, withCrossShrink: true },
-    targetArb,
-    fc.record({
-      kind: fc.constant('router' as const),
-      id: fc.uuid(),
-      mode: fc.constantFrom('failover' as const, 'round-robin' as const),
-      children: fc.array(tie('node'), { minLength: 1, maxLength: 3 }),
-    }),
-  ),
-})).node;
-
 const trimmedDisplayNameArb = fc
   .string({ minLength: 1, maxLength: 40 })
   .map((value) => value.trim())
   .filter((value) => value.length > 0);
+
+const targetArb = fc.record({
+  accountId: slugArb,
+  providerModel: fc.stringMatching(/^[a-z0-9][a-z0-9./-]{0,40}$/),
+});
 
 const configArb = fc.record({
   schemaVersion: fc.constant(GATEWAY_CONFIG_VERSION),
@@ -240,12 +219,7 @@ const configArb = fc.record({
   displayName: trimmedDisplayNameArb,
   port: fc.integer({ min: GATEWAY_PORT_RANGE.min, max: GATEWAY_PORT_RANGE.max }),
   virtualModels: fc.array(
-    fc.record({
-      id: fc.uuid(),
-      slug: slugArb,
-      displayName: trimmedDisplayNameArb,
-      routing: routingArb,
-    }),
+    fc.record({ id: slugArb, displayName: trimmedDisplayNameArb, target: targetArb }),
     { minLength: 0, maxLength: 4 },
   ),
   layout: fc.record({

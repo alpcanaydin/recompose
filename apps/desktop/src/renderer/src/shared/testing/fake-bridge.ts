@@ -14,6 +14,7 @@ import type {
 
 import {
   ACCOUNTS_VERSION,
+  GATEWAY_CONFIG_VERSION,
   withSettingsPatch,
   defaultSettings,
   ipcChannels,
@@ -44,7 +45,7 @@ export type GatewaySeed = {
 /** A stored gateway document, filled out around the three fields a scenario cares about. */
 export function gatewaySeed({ slug, displayName, port }: GatewaySeed): GatewayConfig {
   return {
-    schemaVersion: 1,
+    schemaVersion: GATEWAY_CONFIG_VERSION,
     slug,
     displayName,
     port,
