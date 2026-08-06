@@ -88,7 +88,7 @@ The refusal vocabulary in `refusals.ts` gains a missing-target and a missing-cre
 
 ### The Models surface is a list, a sheet, and a picker
 
-The `gateway-canvas` page trades its placeholder for a Models list. A row reads in the shipped row language: a lead mark, the virtual name over its target on two lines, and a trailing state that reads the target-removed standing. The Copy model id act sits on the row. Adding a model runs through the shared `Sheet` primitive. The sheet orders its fields Name, Target, then Model. The target picker groups accounts by provider and offers the key, aggregator, and local kinds, with a search once the list outgrows the screen. The Model field fills from the target account's live model list. A person picks the model rather than typing it.
+The `gateway-canvas` page trades its placeholder for a Models list. A row reads in the shipped row language: a lead mark, the virtual name over its target on two lines, and a trailing state that reads the target-removed standing. The Copy model id act sits on the row. Adding a model runs through the shared `Sheet` primitive. The sheet orders its fields Name, Target, then Model. The target picker groups accounts by kind through the shipped `accountKindTitle` vocabulary and offers the key, aggregator, and local kinds, with a search once the list outgrows the screen. Provider display names live in a page slice a widget can't reach under Feature-Sliced Design. Each row leads with its provider mark instead, so the provider stays visible inside every group. The Model field fills from the target account's live model list. A person picks the model rather than typing it.
 
 ### The model list fills over a probe lane
 
@@ -133,6 +133,7 @@ The three refusals model expected failures as typed results rather than thrown s
 - `packages/engine/src/engine-child.ts`: the per-request spend-grant lane (modify)
 - `packages/engine/src/engine-runtime.ts`: the resolved bindings enter the running gateway through `start` (modify)
 - `apps/desktop/src/main/engine-host/spend-grants.ts`: the grant round trip resolving a target and its credential (create)
+- `apps/desktop/src/main/ipc/storage-ipc.ts`: `gateways:save` stays create-only, and a `gateways:update` channel rewrites the stored document for an existing slug, because adding a model amends a gateway that already stands (modify)
 - `apps/desktop/src/renderer/src/pages/gateway-canvas/model/*`: the Models list state, pages layer (create)
 - `apps/desktop/src/renderer/src/pages/gateway-canvas/ui/*`: the Models list rows, pages layer (create)
 - `apps/desktop/src/renderer/src/widgets/gateway/add-model/*`: the add-model sheet and its draft hook, widgets layer (create)
