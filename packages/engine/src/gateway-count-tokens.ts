@@ -6,13 +6,13 @@ import type { JsonObject } from './gateway-wire';
 
 import { translateRequest } from './dialect/dispatcher';
 import { translateRequestToGemini } from './dialect/gemini-bridge';
+import { requestSessionId } from './gateway-session';
 import {
   ingressPayload,
   isJsonObject,
   jsonResponse,
   readJsonBody,
   refusalResponse,
-  requestSessionId,
 } from './gateway-wire';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';

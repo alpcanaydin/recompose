@@ -27,6 +27,7 @@ export type Crossing = {
   virtualModel: string;
   providerModel: string;
   sessionId?: string | undefined;
+  replayScopeId?: string | undefined;
 };
 
 export function isJsonObject(value: unknown): value is JsonObject {
@@ -65,46 +66,6 @@ export function virtualNameOf(body: JsonObject): string {
 
 export function wantsStream(body: JsonObject): boolean {
   return body['stream'] === true;
-}
-
-function validSessionId(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length <= 256 && !hasInvalidSessionChar(value)
-    ? value
-    : undefined;
-}
-
-function hasInvalidSessionChar(value: string): boolean {
-  return value.split('').some((character) => {
-    const code = character.codePointAt(0) ?? 0;
-
-    return code <= 32 || code === 127;
-  });
-}
-
-function metadataSessionId(body: JsonObject): string | undefined {
-  const metadata = body['metadata'];
-
-  if (!isJsonObject(metadata) || typeof metadata['user_id'] !== 'string') {
-    return undefined;
-  }
-
-  const userId = parsedJson(metadata['user_id']);
-
-  return isJsonObject(userId) ? validSessionId(userId['session_id']) : undefined;
-}
-
-export function requestSessionId(c: Context, body: JsonObject): string | undefined {
-  const candidates = [
-    c.req.header('x-session-id'),
-    c.req.header('x-claude-code-session-id'),
-    body['session_id'],
-    body['sessionId'],
-    body['conversation_id'],
-    body['prompt_cache_key'],
-    metadataSessionId(body),
-  ];
-
-  return candidates.map(validSessionId).find((value) => value !== undefined);
 }
 
 const wireBlockKinds = new Set([

@@ -68,14 +68,18 @@ export function subscriptionRuntime(
 
 export type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
 type SubscriptionSpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
+type SubscriptionScope = {
+  sessionId: string;
+  sourceDialect: ProxyDialect;
+  replayScopeId: string;
+};
 
 function providerRequestFor(
   grant: ResolvedGrant,
   body: JsonObject,
   credential: ParsedSubscriptionCredential,
   runtime: SubscriptionRuntime,
-  sessionId: string,
-  sourceDialect: ProxyDialect,
+  scope: SubscriptionScope,
 ): ProviderRequest {
   const spend = grant.spend;
 
@@ -86,9 +90,12 @@ function providerRequestFor(
   if (spend.provider === 'anthropic') {
     return claudeProviderRequest(
       grant.providerOrigin,
-      injectClaudeDiagnostics(body, runtime.diagnostics.previous(diagnosticsKey(grant, sessionId))),
+      injectClaudeDiagnostics(
+        body,
+        runtime.diagnostics.previous(diagnosticsKey(grant, scope.sessionId)),
+      ),
       credential.accessToken,
-      { sessionId, requestId: runtime.randomUUID() },
+      { sessionId: scope.sessionId, requestId: runtime.randomUUID() },
       claudeIdentityOf(credential),
       runtime.now(),
     );
@@ -99,20 +106,20 @@ function providerRequestFor(
       runtime.antigravityReplay,
       spend.accountId,
       body,
-      sessionId,
+      scope.replayScopeId,
     );
 
     return antigravityProviderRequest(
       grant.providerOrigin,
       replayed,
       credential,
-      { sessionId, requestId: runtime.randomUUID() },
+      { sessionId: scope.sessionId, requestId: runtime.randomUUID() },
       runtime.now(),
       runtime.antigravitySensitiveWords,
     );
   }
 
-  const replayed = replayedCodexBody(body, runtime, sessionId, sourceDialect);
+  const replayed = replayedCodexBody(body, runtime, scope.replayScopeId, scope.sourceDialect);
 
   return codexProviderRequest(grant.providerOrigin, replayed, credential, runtime.randomUUID());
 }
@@ -150,9 +157,16 @@ export async function reachSubscription(
   runtime: SubscriptionRuntime,
   sessionId = runtime.randomUUID(),
   sourceDialect: ProxyDialect = 'responses',
+  replayScopeId?: string,
 ): Promise<Response> {
+  const scope = subscriptionScope(sessionId, sourceDialect, replayScopeId);
   const spend = subscriptionSpendOf(grant);
-  const preflight = antigravityPairingPreflight(spend, body, runtime.antigravityReplay, sessionId);
+  const preflight = antigravityPairingPreflight(
+    spend,
+    body,
+    runtime.antigravityReplay,
+    scope.replayScopeId,
+  );
 
   if (preflight !== null) return preflight;
 
@@ -160,22 +174,22 @@ export async function reachSubscription(
   const identified = await readyClaudeIdentity(spend, ready, runtime);
   const answer = await runtime.send(
     spend.provider,
-    providerRequestFor(grant, body, identified.credential, runtime, sessionId, sourceDialect),
+    providerRequestFor(grant, body, identified.credential, runtime, scope),
   );
 
   const finalAnswer = shouldRefreshUnauthorized(answer, identified.credential)
-    ? await retryWithRefreshedCredential(
-        grant,
-        spend,
-        body,
-        identified.blob,
-        runtime,
-        sessionId,
-        sourceDialect,
-      )
+    ? await retryWithRefreshedCredential(grant, spend, body, identified.blob, runtime, scope)
     : answer;
 
-  return observeSubscriptionAnswer(grant, body, finalAnswer, runtime, sessionId, sourceDialect);
+  return observeSubscriptionAnswer(grant, body, finalAnswer, runtime, scope);
+}
+
+function subscriptionScope(
+  sessionId: string,
+  sourceDialect: ProxyDialect,
+  replayScopeId: string | undefined,
+): SubscriptionScope {
+  return { sessionId, sourceDialect, replayScopeId: replayScopeId ?? sessionId };
 }
 
 function subscriptionSpendOf(grant: ResolvedGrant): SubscriptionSpend {
@@ -256,13 +270,12 @@ async function retryWithRefreshedCredential(
   body: JsonObject,
   blob: string,
   runtime: SubscriptionRuntime,
-  sessionId: string,
-  sourceDialect: ProxyDialect,
+  scope: SubscriptionScope,
 ): Promise<Response> {
   const retried = await refreshedAndPersisted(spend, blob, runtime);
 
   return runtime.send(
     spend.provider,
-    providerRequestFor(grant, body, retried.credential, runtime, sessionId, sourceDialect),
+    providerRequestFor(grant, body, retried.credential, runtime, scope),
   );
 }

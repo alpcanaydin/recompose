@@ -10,12 +10,12 @@ import type { SubscriptionRuntime } from './subscription/reach';
 import { translateRequest } from './dialect/dispatcher';
 import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
+import { requestSessions } from './gateway-session';
 import {
   ingressPayload,
   InvalidJsonBodyError,
   readJsonBody,
   refusalResponse,
-  requestSessionId,
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
@@ -48,15 +48,13 @@ export async function proxyModelRequest(
     return refusalResponse(dialect, missingTarget(gateway.displayName, name));
   }
 
-  const sessionId = requestSessionId(c, raw);
-
   const crossing: Crossing = {
     dialect,
     raw,
     gatewayName: gateway.displayName,
     virtualModel: virtualModel.id,
     providerModel: virtualModel.target.providerModel,
-    ...(sessionId === undefined ? {} : { sessionId }),
+    ...requestSessions(c, raw),
   };
 
   return forwardGranted(
@@ -163,6 +161,7 @@ async function reachedUpstream(
         subscriptions,
         crossing.sessionId,
         crossing.dialect,
+        crossing.replayScopeId,
       );
     }
 

@@ -19,6 +19,11 @@ type ObservationRuntime = {
   codexReplay?: CodexReasoningReplay;
   antigravityReplay?: AntigravityReasoningReplay;
 };
+type ObservationScope = {
+  sessionId: string;
+  sourceDialect: ProxyDialect;
+  replayScopeId: string;
+};
 
 function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
   return grant.spend.custody === 'subscription'
@@ -84,11 +89,10 @@ export async function observeSubscriptionAnswer(
   body: JsonObject,
   answer: Response,
   runtime: ObservationRuntime,
-  sessionId: string,
-  sourceDialect: ProxyDialect,
+  scope: ObservationScope,
 ): Promise<Response> {
   if (observesAntigravity(grant, runtime, body)) {
-    const key = antigravityReplayKey(subscriptionAccountId(grant), body, sessionId);
+    const key = antigravityReplayKey(subscriptionAccountId(grant), body, scope.replayScopeId);
 
     return observeAntigravityReasoning(
       answer,
@@ -98,11 +102,11 @@ export async function observeSubscriptionAnswer(
     );
   }
 
-  if (!observesCodex(grant, runtime, sourceDialect)) {
-    return observeClaudeAnswer(grant, answer, runtime, sessionId);
+  if (!observesCodex(grant, runtime, scope.sourceDialect)) {
+    return observeClaudeAnswer(grant, answer, runtime, scope.sessionId);
   }
 
-  const key = codexReplayKey(body, sessionId);
+  const key = codexReplayKey(body, scope.replayScopeId);
 
   return observeCodexReasoning(
     answer,
