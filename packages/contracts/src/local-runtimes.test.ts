@@ -6,6 +6,7 @@ import {
   localRuntimeIdSchema,
   localRuntimes,
   loopbackAddressSchema,
+  proxyFetchBoundMs,
   RUNTIME_PORT_RANGE,
   runtimeAddressFor,
   runtimeLookBoundMs,
@@ -132,6 +133,12 @@ describe('the address main mints from the table and a chosen port', () => {
 describe('the bound a look at a runtime waits under', () => {
   test('a look gives a loopback server three seconds before it counts as silence', () => {
     expect(runtimeLookBoundMs).toBe(3_000);
+  });
+});
+
+describe('the bound a proxied request waits under', () => {
+  test('the proxy gives a provider ten minutes before it counts as silence', () => {
+    expect(proxyFetchBoundMs).toBe(600_000);
   });
 });
 

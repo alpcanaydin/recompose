@@ -2,9 +2,13 @@ import {
   type EngineDirective,
   engineDirectiveSchema,
   engineReportSchema,
+  engineSpendGrantSchema,
+  engineSpendRequestSchema,
   type KeyProviderId,
+  type SpendGrant,
 } from '@recompose/contracts';
 
+import type { SpendGrantFor } from './gateway-app';
 import type { ParentPort } from './parent-port';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
@@ -112,14 +116,60 @@ async function reportBack(
   parentPort.postMessage(engineReportSchema.parse(await answerFor(runtime, fetchLike, directive)));
 }
 
+type SpendLane = {
+  grantFor: SpendGrantFor;
+  settle: (data: unknown) => boolean;
+};
+
+function openSpendLane(parentPort: ParentPort): SpendLane {
+  const pending = new Map<string, (grant: SpendGrant) => void>();
+
+  return {
+    grantFor: async (slug, virtualModel) =>
+      new Promise((resolve) => {
+        const id = crypto.randomUUID();
+
+        pending.set(id, resolve);
+        parentPort.postMessage(
+          engineSpendRequestSchema.parse({ kind: 'spend-request', id, slug, virtualModel }),
+        );
+      }),
+    settle: (data) => {
+      const answer = engineSpendGrantSchema.safeParse(data);
+
+      if (!answer.success) {
+        return false;
+      }
+
+      const resolve = pending.get(answer.data.answers);
+
+      if (resolve === undefined) {
+        console.error('The engine child heard a spend grant answering no open request.');
+
+        return true;
+      }
+
+      pending.delete(answer.data.answers);
+      resolve(answer.data.grant);
+
+      return true;
+    },
+  };
+}
+
 export function attachEngineChild(
   parentPort: ParentPort,
   openListeners: OpenListeners,
   fetchLike: typeof fetch = globalThis.fetch,
 ): void {
-  const runtime = createEngineRuntime(openListeners);
+  const spendLane = openSpendLane(parentPort);
+  const runtime = createEngineRuntime(openListeners, spendLane.grantFor, fetchLike);
 
   parentPort.on('message', (messageEvent) => {
+    if (spendLane.settle(messageEvent.data)) {
+      return;
+    }
+
     const directive = engineDirectiveSchema.safeParse(messageEvent.data);
 
     if (!directive.success) {

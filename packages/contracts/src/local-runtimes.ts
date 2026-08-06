@@ -19,6 +19,15 @@ export const localRuntimes = {
  */
 export const runtimeLookBoundMs = 3_000;
 
+/**
+ * How long the gateway's outbound fetch gives a provider before the request counts as silence.
+ *
+ * @summary Ten minutes matches the default request timeout the provider SDKs ship, so the gateway
+ * never gives up before the client that asked would have. It stands beside the runtime look bound
+ * so no process keeps a private copy of a fetch bound.
+ */
+export const proxyFetchBoundMs = 600_000;
+
 export const RUNTIME_PORT_RANGE = { min: 1, max: 65535 } as const;
 
 export const runtimePortSchema = z.int().min(RUNTIME_PORT_RANGE.min).max(RUNTIME_PORT_RANGE.max);

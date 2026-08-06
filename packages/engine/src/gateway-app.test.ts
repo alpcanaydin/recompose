@@ -2,19 +2,24 @@ import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
-
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
+import { aGatewayHolding, grantsNothing, neverFetches } from './gateway-app.testkit';
 
 const ANTHROPIC_MODEL_PATHS = ['/v1/messages', '/messages'];
 const OPENAI_MODEL_PATHS = ['/v1/chat/completions', '/chat/completions'];
-const SERVED_PATHS = ['/health', ...ANTHROPIC_MODEL_PATHS, ...OPENAI_MODEL_PATHS];
+const MODEL_PATHS = [...ANTHROPIC_MODEL_PATHS, ...OPENAI_MODEL_PATHS];
+const SERVED_PATHS = ['/health', '/v1/models', ...MODEL_PATHS];
 
 async function askCodex(path: string, init?: RequestInit): Promise<Response> {
-  return createGatewayApp(codex).request(`http://127.0.0.1:${codex.port}${path}`, init);
+  const codex = createGatewayApp(aGatewayHolding(), grantsNothing, neverFetches);
+
+  return codex.request(`http://127.0.0.1:8397${path}`, init);
 }
 
-async function sendModelRequest(path: string): Promise<Response> {
-  return askCodex(path, { method: 'POST' });
+async function sendModelRequest(path: string, body?: string): Promise<Response> {
+  return askCodex(path, {
+    method: 'POST',
+    body: body ?? JSON.stringify({ model: 'ghost', messages: [] }),
+  });
 }
 
 const unservedPathArb = fc
@@ -50,17 +55,14 @@ describe('the address a person copies', () => {
   });
 });
 
-describe('a model request against a gateway carrying no virtual model', () => {
-  test.each([...ANTHROPIC_MODEL_PATHS, ...OPENAI_MODEL_PATHS])(
-    '%s refuses with a status no client retries',
-    async (path) => {
-      const refusal = await sendModelRequest(path);
+describe('a model request naming a model nobody defined', () => {
+  test.each(MODEL_PATHS)('%s refuses with a status no client retries', async (path) => {
+    const refusal = await sendModelRequest(path);
 
-      expect(refusal.status).toBe(404);
-    },
-  );
+    expect(refusal.status).toBe(404);
+  });
 
-  test.each([...ANTHROPIC_MODEL_PATHS, ...OPENAI_MODEL_PATHS])(
+  test.each(MODEL_PATHS)(
     '%s refuses in JSON, never in a body an SDK cannot parse',
     async (path) => {
       const refusal = await sendModelRequest(path);
@@ -69,36 +71,50 @@ describe('a model request against a gateway carrying no virtual model', () => {
     },
   );
 
-  test.each(ANTHROPIC_MODEL_PATHS)(
-    '%s answers the Anthropic envelope, naming the gateway and the missing model',
-    async (path) => {
-      const refusal = await sendModelRequest(path);
+  test.each(MODEL_PATHS)('%s reads a request naming no model as unknown', async (path) => {
+    const refusal = await sendModelRequest(path, JSON.stringify({ messages: [] }));
 
-      expect(await refusal.json()).toEqual({
-        type: 'error',
-        error: {
-          type: 'not_found_error',
-          message: 'The gateway "Codex" holds no virtual model.',
-        },
-      });
-    },
-  );
+    expect(refusal.status).toBe(404);
+  });
 
-  test.each(OPENAI_MODEL_PATHS)(
-    '%s answers the OpenAI envelope, naming the gateway and the missing model',
-    async (path) => {
-      const refusal = await sendModelRequest(path);
+  test.each(MODEL_PATHS)('%s reads a request carrying no JSON body as unknown', async (path) => {
+    const refusal = await askCodex(path, { method: 'POST' });
 
-      expect(await refusal.json()).toEqual({
-        error: {
-          message: 'The gateway "Codex" holds no virtual model.',
-          type: 'invalid_request_error',
-          param: null,
-          code: 'model_not_found',
-        },
-      });
-    },
-  );
+    expect(refusal.status).toBe(404);
+  });
+});
+
+describe('the envelope an unknown model refuses in', () => {
+  test.each(ANTHROPIC_MODEL_PATHS)('%s answers the Anthropic envelope', async (path) => {
+    const refusal = await sendModelRequest(path);
+
+    expect(await refusal.json()).toEqual({
+      type: 'error',
+      error: { type: 'not_found_error', message: 'No model named "ghost" is defined.' },
+    });
+  });
+
+  test.each(OPENAI_MODEL_PATHS)('%s answers the OpenAI envelope', async (path) => {
+    const refusal = await sendModelRequest(path);
+
+    expect(await refusal.json()).toEqual({
+      error: {
+        message: 'No model named "ghost" is defined.',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'model_not_found',
+      },
+    });
+  });
+
+  test('a request naming no model reads the empty name back', async () => {
+    const refusal = await sendModelRequest('/v1/messages', JSON.stringify({ messages: [] }));
+
+    expect(await refusal.json()).toEqual({
+      type: 'error',
+      error: { type: 'not_found_error', message: 'No model named "" is defined.' },
+    });
+  });
 });
 
 describe('a path the gateway does not serve', () => {

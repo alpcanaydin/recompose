@@ -1,5 +1,6 @@
 import type { EngineGateway, GatewayEngineState } from '@recompose/contracts';
 
+import type { SpendGrantFor } from './gateway-app';
 import type { GatewayListeners, openGatewayListeners } from './gateway-listener';
 
 import { createGatewayApp } from './gateway-app';
@@ -41,12 +42,19 @@ function oneTurnPerGateway(): <Answer>(
   };
 }
 
-export function createEngineRuntime(openListeners: OpenListeners): EngineRuntime {
+export function createEngineRuntime(
+  openListeners: OpenListeners,
+  spendGrantFor: SpendGrantFor,
+  fetchLike: typeof fetch = globalThis.fetch,
+): EngineRuntime {
   const serving = new Map<string, GatewayListeners>();
   const inTurn = oneTurnPerGateway();
 
   async function openFor(gateway: EngineGateway): Promise<GatewayEngineState> {
-    const outcome = await openListeners(createGatewayApp(gateway), gateway.port);
+    const outcome = await openListeners(
+      createGatewayApp(gateway, spendGrantFor, fetchLike),
+      gateway.port,
+    );
 
     if (!('opened' in outcome)) {
       return { status: 'stopped', failure: outcome.failed };
