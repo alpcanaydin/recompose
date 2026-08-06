@@ -2,11 +2,22 @@ import type { Context } from 'hono';
 
 import type { ChatMessage } from './dialect/chat-completions-wire';
 import type { RequestOf } from './dialect/dispatcher';
-import type { HubMessage } from './dialect/hub';
+import type { HubContentBlock, HubMessage } from './dialect/hub';
+import type { TranslationRefusal } from './refusals';
+
+import { renderRefusal } from './refusals';
 
 export type ProxyDialect = 'anthropic' | 'chat-completions';
 
 export type JsonObject = Record<string, unknown>;
+
+export type Crossing = {
+  dialect: ProxyDialect;
+  raw: JsonObject;
+  gatewayName: string;
+  virtualModel: string;
+  providerModel: string;
+};
 
 export function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -36,14 +47,32 @@ export function wantsStream(body: JsonObject): boolean {
   return body['stream'] === true;
 }
 
+const hubBlockKinds = new Set([
+  'text',
+  'thinking',
+  'redacted_thinking',
+  'image',
+  'tool_use',
+  'tool_result',
+]);
+
+function isHubBlock(value: unknown): value is HubContentBlock {
+  return (
+    isJsonObject(value) && typeof value['type'] === 'string' && hubBlockKinds.has(value['type'])
+  );
+}
+
 function isHubMessage(value: unknown): value is HubMessage {
   if (!isJsonObject(value)) {
     return false;
   }
 
   const role = value['role'];
+  const content = value['content'];
 
-  return (role === 'user' || role === 'assistant') && Array.isArray(value['content']);
+  return (
+    (role === 'user' || role === 'assistant') && Array.isArray(content) && content.every(isHubBlock)
+  );
 }
 
 function speaksTheHub(body: JsonObject): body is JsonObject & RequestOf['anthropic'] {
@@ -86,4 +115,10 @@ export function jsonResponse(
     status,
     headers: { 'content-type': 'application/json', ...headers },
   });
+}
+
+export function refusalResponse(dialect: ProxyDialect, refusal: TranslationRefusal): Response {
+  const rendered = renderRefusal(dialect, refusal);
+
+  return jsonResponse(rendered.body, rendered.status);
 }

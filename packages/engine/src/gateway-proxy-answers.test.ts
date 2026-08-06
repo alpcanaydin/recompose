@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
 import { aCredentialedGrant, aGatewayHolding, aVirtualModel } from './gateway-app.testkit';
@@ -174,6 +174,10 @@ describe('a request whose messages the gateway cannot read', () => {
     ['/v1/messages', [null]],
     ['/v1/messages', [{ role: 'assistant', content: [] }, 42]],
     ['/v1/messages', [{ role: 'tool', content: [] }]],
+    ['/v1/messages', [{ role: 'user', content: [{ type: 'document', text: 'a report' }] }]],
+    ['/v1/messages', [{ role: 'user', content: [42] }]],
+    ['/v1/messages', [{ role: 'user', content: [null] }]],
+    ['/v1/messages', [{ role: 'user', content: [{ type: 'text', text: 'x' }, 42] }]],
     ['/v1/chat/completions', [null]],
     ['/v1/chat/completions', [{ role: 42 }]],
     ['/v1/chat/completions', [{ role: 'ghost', content: 'x' }]],
@@ -184,6 +188,26 @@ describe('a request whose messages the gateway cannot read', () => {
     const refusal = await ask(path, { model: 'fast', messages });
 
     expect(refusal.status).toBe(400);
+  });
+});
+
+describe('what an unreadable request leaves behind', () => {
+  test('an unreadable block keeps the caller words off the log', async () => {
+    const complaints = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      const ask = askingWith(aJsonUpstream(aChatAnswerText));
+
+      const refusal = await ask('/v1/messages', {
+        model: 'fast',
+        messages: [{ role: 'user', content: [{ type: 'document', text: 'the-quarterly-plan' }] }],
+      });
+
+      expect(refusal.status).toBe(400);
+      expect(JSON.stringify(complaints.mock.calls)).not.toContain('the-quarterly-plan');
+    } finally {
+      complaints.mockRestore();
+    }
   });
 
   test('the OpenAI dialect refuses it in its own envelope', async () => {

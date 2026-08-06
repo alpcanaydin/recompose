@@ -111,6 +111,39 @@ describe('a request arriving in the Anthropic dialect', () => {
 
     expect(bodySentIn(sent)['stream']).toBeUndefined();
   });
+});
+
+describe('the hub blocks a crossing request may carry', () => {
+  test('every hub block kind passes the guard and crosses', async () => {
+    const sent = await forwarded(aCredentialedGrant(), '/v1/messages', {
+      model: 'fast',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'hello' },
+            { type: 'image', source: { type: 'url', url: 'https://images.example/sky.png' } },
+            {
+              type: 'tool_result',
+              toolUseId: 'toolu_1',
+              content: [{ type: 'text', text: 'sunny' }],
+            },
+          ],
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'earlier' },
+            { type: 'thinking', text: 'quietly' },
+            { type: 'redacted_thinking', data: 'aGlkZGVu' },
+            { type: 'tool_use', id: 'toolu_1', name: 'get_weather', input: {} },
+          ],
+        },
+      ],
+    });
+
+    expect(bodySentIn(sent)['model']).toBe('gpt-5-mini');
+  });
 
   test('an assistant turn in the history crosses with the rest', async () => {
     const sent = await forwarded(aCredentialedGrant(), '/v1/messages', {

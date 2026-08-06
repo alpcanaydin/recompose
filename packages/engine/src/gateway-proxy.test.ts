@@ -100,6 +100,14 @@ describe('a grant the parent refuses', () => {
     );
 
     expect(answer.status).toBe(502);
+    expect(await answer.json()).toEqual({
+      error: {
+        message: 'The gateway "Codex" holds no target for the virtual model "fast".',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'missing_target',
+      },
+    });
     expect(asked).toEqual([{ slug: 'codex', virtualModel: 'fast' }]);
     expect(sent).toEqual([]);
   });

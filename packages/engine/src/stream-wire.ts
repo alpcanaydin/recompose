@@ -7,6 +7,10 @@ import type { JsonObject } from './gateway-wire';
 
 import { isJsonObject, parsedJson } from './gateway-wire';
 
+function withoutTrailingReturn(line: string): string {
+  return line.endsWith('\r') ? line.slice(0, -1) : line;
+}
+
 async function* linesFrom(body: ReadableStream<Uint8Array>): AsyncIterable<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -25,7 +29,7 @@ async function* linesFrom(body: ReadableStream<Uint8Array>): AsyncIterable<strin
       let newlineAt = buffered.indexOf('\n');
 
       while (newlineAt >= 0) {
-        yield buffered.slice(0, newlineAt);
+        yield withoutTrailingReturn(buffered.slice(0, newlineAt));
         buffered = buffered.slice(newlineAt + 1);
         newlineAt = buffered.indexOf('\n');
       }
@@ -34,7 +38,7 @@ async function* linesFrom(body: ReadableStream<Uint8Array>): AsyncIterable<strin
     buffered += decoder.decode();
 
     if (buffered !== '') {
-      yield buffered;
+      yield withoutTrailingReturn(buffered);
     }
   } finally {
     await reader.cancel().catch(() => undefined);
