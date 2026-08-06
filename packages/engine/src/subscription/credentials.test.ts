@@ -93,6 +93,7 @@ describe('reading Codex and malformed credential bundles', () => {
       ['anthropic', '{"claudeAiOauth":{"accessToken":"   "}}'],
       ['openai', '{"tokens":null}'],
       ['openai', '{"tokens":{"access_token":42}}'],
+      ['antigravity', '{"access_token":"token"}'],
     ] as const) {
       expect(parseSubscriptionCredential(provider, blob)).toBeNull();
     }

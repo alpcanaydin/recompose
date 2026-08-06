@@ -147,19 +147,66 @@ function webResponseFrom(upstream: WireResponse): Response {
   });
 }
 
-export async function sendSubscriptionRequest(
-  provider: SubscriptionProviderId,
-  request: ProviderRequest,
-  fetchLike: SubscriptionWireFetch = wreqFetch,
-): Promise<Response> {
-  const upstream = await fetchLike(request.url, {
+function requestOptions(provider: SubscriptionProviderId, request: ProviderRequest): WreqInit {
+  return {
     ...subscriptionTransportOptions(provider),
     method: 'POST',
     headers: request.headers,
     body: request.body,
     retry: 0,
     throwHttpErrors: false,
-  });
+  };
+}
+
+function antigravityFallbackUrl(url: string): string | null {
+  const parsed = new URL(url);
+
+  if (parsed.hostname !== 'daily-cloudcode-pa.googleapis.com') {
+    return null;
+  }
+
+  parsed.hostname = 'cloudcode-pa.googleapis.com';
+
+  return parsed.toString();
+}
+
+async function antigravityWireResponse(
+  request: ProviderRequest,
+  fetchLike: SubscriptionWireFetch,
+): Promise<WireResponse> {
+  const options = requestOptions('antigravity', request);
+  const fallback = antigravityFallbackUrl(request.url);
+
+  try {
+    const first = await fetchLike(request.url, options);
+
+    return first.status === 429 && fallback !== null ? await fetchLike(fallback, options) : first;
+  } catch (failure) {
+    if (fallback === null) throw failure;
+
+    return fetchLike(fallback, options);
+  }
+}
+
+async function providerWireResponse(
+  provider: SubscriptionProviderId,
+  request: ProviderRequest,
+  fetchLike: SubscriptionWireFetch,
+): Promise<WireResponse> {
+  const response =
+    provider === 'antigravity'
+      ? await antigravityWireResponse(request, fetchLike)
+      : await fetchLike(request.url, requestOptions(provider, request));
+
+  return response;
+}
+
+export async function sendSubscriptionRequest(
+  provider: SubscriptionProviderId,
+  request: ProviderRequest,
+  fetchLike: SubscriptionWireFetch = wreqFetch,
+): Promise<Response> {
+  const upstream = await providerWireResponse(provider, request, fetchLike);
 
   const decoded = await decodedProviderResponse(provider, webResponseFrom(upstream));
 

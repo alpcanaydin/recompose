@@ -152,10 +152,14 @@ function antigravityCredential(document: JsonObject): ParsedSubscriptionCredenti
   const projectId = firstNonBlank(document['project_id'], document['projectId']);
   const expiresAt = parsedDate(document['expired']);
 
+  if (projectId === undefined) {
+    return null;
+  }
+
   return {
     accessToken,
     ...(refreshToken === undefined ? {} : { refreshToken }),
-    ...(projectId === undefined ? {} : { projectId }),
+    projectId,
     ...(expiresAt === undefined ? {} : { expiresAt }),
   };
 }

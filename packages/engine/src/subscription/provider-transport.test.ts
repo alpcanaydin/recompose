@@ -112,6 +112,46 @@ test('Codex uses the Chrome transport profile used for its browser-facing API', 
   });
 });
 
+test('Antigravity uses HTTP/1.1 and falls back from daily to production on 429', async () => {
+  const antigravityRequest: ProviderRequest = {
+    ...request,
+    url: 'https://daily-cloudcode-pa.googleapis.com/v1internal:generateContent',
+  };
+  const fetchLike = vi
+    .fn()
+    .mockResolvedValueOnce(new Response('limited', { status: 429 }))
+    .mockResolvedValueOnce(Response.json({ response: { candidates: [] } }));
+
+  const response = await sendSubscriptionRequest('antigravity', antigravityRequest, fetchLike);
+
+  expect(subscriptionTransportOptions('antigravity')).toEqual({
+    http1Only: true,
+    disableDefaultHeaders: true,
+  });
+  expect(fetchLike).toHaveBeenNthCalledWith(
+    2,
+    'https://cloudcode-pa.googleapis.com/v1internal:generateContent',
+    expect.objectContaining({ http1Only: true, retry: 0 }),
+  );
+  await expect(response.json()).resolves.toEqual({ candidates: [] });
+});
+
+test('Antigravity falls back after a daily endpoint transport failure', async () => {
+  const antigravityRequest: ProviderRequest = {
+    ...request,
+    url: 'https://daily-cloudcode-pa.googleapis.com/v1internal:generateContent',
+  };
+  const fetchLike = vi
+    .fn()
+    .mockRejectedValueOnce(new Error('daily unavailable'))
+    .mockResolvedValueOnce(Response.json({ response: { candidates: [] } }));
+
+  await expect(
+    sendSubscriptionRequest('antigravity', antigravityRequest, fetchLike),
+  ).resolves.toBeInstanceOf(Response);
+  expect(fetchLike).toHaveBeenCalledTimes(2);
+});
+
 test('the native transport receives the exact ordered headers and streams its response', async () => {
   const upstream = new Response('answer', {
     status: 201,
