@@ -73,6 +73,19 @@ describe('the request the probe sends', () => {
     expect(headers.get('anthropic-version')).toBeNull();
   });
 
+  test('a Gemini probe uses the Generative Language catalog and Google key header', async () => {
+    const { sent, fetchLike } = fetchAnswering(200);
+
+    await probeKey(fetchLike, 'gemini', aKey);
+
+    const request = onlyRequestOf(sent);
+    const headers = new Headers(request.init.headers);
+
+    expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
+    expect(headers.get('x-goog-api-key')).toBe(aKey);
+    expect(headers.get('authorization')).toBeNull();
+  });
+
   test('a given origin substitutes for the vendor host', async () => {
     const { sent, fetchLike } = fetchAnswering(200);
 

@@ -98,6 +98,29 @@ describe('the request that crosses to the target', () => {
   });
 });
 
+describe('a request crossing to Gemini', () => {
+  const gemini = aCredentialedGrant('https://generativelanguage.googleapis.com', 'gemini');
+
+  test('uses generateContent and the native key header', async () => {
+    const sent = await forwarded(gemini, '/v1/chat/completions', aChatAsk);
+
+    expect(sent.at(0)?.url).toBe(
+      'https://generativelanguage.googleapis.com/v1beta/models/gpt-5-mini:generateContent',
+    );
+    expect(headersSentIn(sent).get('x-goog-api-key')).toBe('sk-live-40d1');
+    expect(headersSentIn(sent).get('authorization')).toBeNull();
+    expect(bodySentIn(sent)['contents']).toEqual([{ role: 'user', parts: [{ text: 'hello' }] }]);
+  });
+
+  test('selects streamGenerateContent SSE for a streaming ask', async () => {
+    const sent = await forwarded(gemini, '/v1/chat/completions', { ...aChatAsk, stream: true });
+
+    expect(sent.at(0)?.url).toBe(
+      'https://generativelanguage.googleapis.com/v1beta/models/gpt-5-mini:streamGenerateContent?alt=sse',
+    );
+  });
+});
+
 describe('a request arriving in the Anthropic dialect', () => {
   test('crosses to the chat dialect before it leaves the machine', async () => {
     const sent = await forwarded(aCredentialedGrant(), '/v1/messages', aWireAsk);

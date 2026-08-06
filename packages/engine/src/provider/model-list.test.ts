@@ -8,6 +8,7 @@ const credential = 'sk-ant-api03-long-secret-7f2c';
 
 const credentialed = { custody: 'bearer', provider: 'openrouter', credential } as const;
 const anthropicKey = { custody: 'provider-key', provider: 'anthropic', credential } as const;
+const geminiKey = { custody: 'provider-key', provider: 'gemini', credential } as const;
 const open = { custody: 'open' } as const;
 
 const twoModels = JSON.stringify({
@@ -56,6 +57,25 @@ function headersOf(request: SentRequest): Headers {
   return new Headers(request.init.headers);
 }
 
+async function verifyGeminiListing(): Promise<void> {
+  const body = JSON.stringify({
+    models: [{ name: 'models/gemini-3.1-pro-preview' }, { name: 'models/gemini-3-flash' }],
+  });
+  const { sent, fetchLike } = fetchAnswering(200, body);
+  const listing = await listProviderModels(
+    fetchLike,
+    'https://generativelanguage.googleapis.com',
+    geminiKey,
+  );
+
+  expect(onlyRequestOf(sent).url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
+  expect(headersOf(onlyRequestOf(sent)).get('x-goog-api-key')).toBe(credential);
+  expect(listing).toEqual({
+    standing: 'listed',
+    modelIds: ['gemini-3.1-pro-preview', 'gemini-3-flash'],
+  });
+}
+
 describe('the request the look sends', () => {
   test('the look asks the OpenAI-compatible model list at the origin it was handed', async () => {
     const { sent, fetchLike } = fetchAnswering(200, twoModels);
@@ -78,6 +98,10 @@ describe('the request the look sends', () => {
     expect(request.init.redirect).toBe('error');
     expect(request.init.signal).toBeInstanceOf(AbortSignal);
     expect(request.init.signal?.aborted).toBe(false);
+  });
+
+  test('a Gemini look reads model names from the native v1beta catalog', async () => {
+    await verifyGeminiListing();
   });
 
   test('the look gives up on the bound both processes read, rather than a private one', async () => {

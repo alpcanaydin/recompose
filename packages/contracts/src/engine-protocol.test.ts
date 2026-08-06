@@ -94,7 +94,7 @@ describe('the probe directive that asks a vendor about one stored key', () => {
   });
 
   test('a probe naming a provider no dialect covers is refused', () => {
-    expect(() => engineDirectiveSchema.parse({ ...probe, provider: 'gemini' })).toThrow();
+    expect(() => engineDirectiveSchema.parse({ ...probe, provider: 'xai' })).toThrow();
   });
 
   test('a probe carrying a blank key is refused, because it would ask about nothing', () => {

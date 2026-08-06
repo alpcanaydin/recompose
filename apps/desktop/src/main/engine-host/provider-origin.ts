@@ -3,6 +3,7 @@ import type { Account } from '@recompose/contracts';
 const servingOrigins = new Map<string, string>([
   ['anthropic', 'https://api.anthropic.com'],
   ['openai', 'https://api.openai.com'],
+  ['gemini', 'https://generativelanguage.googleapis.com'],
   ['openrouter', 'https://openrouter.ai/api'],
 ]);
 

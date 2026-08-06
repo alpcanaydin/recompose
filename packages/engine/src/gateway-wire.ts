@@ -9,6 +9,7 @@ import { duplicateJsonKey } from './json-duplicates';
 import { renderRefusal } from './refusals';
 
 export type ProxyDialect = 'anthropic' | 'chat-completions' | 'responses';
+export type ProviderDialect = ProxyDialect | 'gemini';
 
 export type JsonObject = Record<string, unknown>;
 

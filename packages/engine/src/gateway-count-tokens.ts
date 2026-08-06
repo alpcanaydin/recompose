@@ -5,8 +5,10 @@ import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { JsonObject } from './gateway-wire';
 
 import { translateRequest } from './dialect/dispatcher';
+import { translateRequestToGemini } from './dialect/gemini-bridge';
 import {
   ingressPayload,
+  isJsonObject,
   jsonResponse,
   readJsonBody,
   refusalResponse,
@@ -78,7 +80,12 @@ async function resolvedCount(
   grant: ResolvedGrant,
   providerModel: string,
   subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
 ): Promise<Response> {
+  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
+    return geminiCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
+  }
+
   if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'anthropic') {
     return localCount(raw, grant, providerModel);
   }
@@ -89,6 +96,52 @@ async function resolvedCount(
     subscriptions,
     requestSessionId(c, raw),
   );
+}
+
+async function geminiCount(
+  raw: JsonObject,
+  providerOrigin: string,
+  credential: string,
+  providerModel: string,
+  fetchLike: typeof fetch,
+): Promise<Response> {
+  const translated = geminiCountPayload(raw);
+
+  if (translated === null) {
+    return refusalResponse('anthropic', emptyConversation());
+  }
+
+  const origin = providerOrigin.replace(/\/+$/u, '');
+  const answer = await fetchLike(
+    `${origin}/v1beta/models/${encodeURIComponent(providerModel)}:countTokens`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': credential },
+      body: JSON.stringify(translated),
+    },
+  );
+
+  return geminiCountAnswer(answer, await answer.json());
+}
+
+function geminiCountPayload(raw: JsonObject): JsonObject | null {
+  const payload = ingressPayload('anthropic', raw);
+
+  if (payload === null) {
+    return null;
+  }
+
+  const translated = translateRequestToGemini('anthropic', payload);
+
+  return 'refusal' in translated ? null : translated.value;
+}
+
+function geminiCountAnswer(answer: Response, body: unknown): Response {
+  const total = isJsonObject(body) ? body['totalTokens'] : undefined;
+
+  return typeof total === 'number'
+    ? jsonResponse({ input_tokens: total }, answer.status)
+    : new Response(JSON.stringify(body), { status: answer.status });
 }
 
 type VirtualLookup = { virtual: EngineVirtualModel } | { refusal: Response };
@@ -113,6 +166,7 @@ async function countWithGrant(
   virtual: EngineVirtualModel,
   spendGrantFor: SpendGrantFor,
   subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
 ): Promise<Response> {
   const grant = await spendGrantFor(gateway.slug, model);
   const denied = deniedCount(gateway, model, grant);
@@ -127,7 +181,7 @@ async function countWithGrant(
 
   const providerModel = virtual.target.standing === 'bound' ? virtual.target.providerModel : model;
 
-  return safeResolvedCount(c, gateway, raw, model, grant, providerModel, subscriptions);
+  return safeResolvedCount(c, gateway, raw, model, grant, providerModel, subscriptions, fetchLike);
 }
 
 async function safeResolvedCount(
@@ -138,9 +192,10 @@ async function safeResolvedCount(
   grant: ResolvedGrant,
   providerModel: string,
   subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
 ): Promise<Response> {
   try {
-    return await resolvedCount(c, raw, grant, providerModel, subscriptions);
+    return await resolvedCount(c, raw, grant, providerModel, subscriptions, fetchLike);
   } catch (failure) {
     console.error(`recompose could not count tokens for virtual model "${model}"`, failure);
 
@@ -153,6 +208,7 @@ export async function proxyTokenCountRequest(
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
   subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch = globalThis.fetch,
 ): Promise<Response> {
   const raw = await readJsonBody(c);
   const model = typeof raw['model'] === 'string' ? raw['model'] : '';
@@ -162,5 +218,14 @@ export async function proxyTokenCountRequest(
     return lookup.refusal;
   }
 
-  return countWithGrant(c, gateway, raw, model, lookup.virtual, spendGrantFor, subscriptions);
+  return countWithGrant(
+    c,
+    gateway,
+    raw,
+    model,
+    lookup.virtual,
+    spendGrantFor,
+    subscriptions,
+    fetchLike,
+  );
 }

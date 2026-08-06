@@ -91,6 +91,7 @@ export function providerName(id: BrandMarkName): string {
 const keyHosts: Record<KeyProviderId, string> = {
   anthropic: 'api.anthropic.com',
   openai: 'api.openai.com',
+  gemini: 'generativelanguage.googleapis.com',
 };
 
 const runtimeHosts: Record<LocalRuntimeId, string> = {

@@ -57,7 +57,7 @@ export function createGatewayApp(
 
   for (const path of COUNT_TOKENS_PATHS) {
     app.post(path, async (c) =>
-      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing),
+      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing, fetchLike),
     );
   }
 

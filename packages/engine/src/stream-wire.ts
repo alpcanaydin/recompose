@@ -125,6 +125,24 @@ export async function* jsonEventsFrom(
   }
 }
 
+export async function* jsonObjectsFrom(
+  body: ReadableStream<Uint8Array>,
+): AsyncIterable<JsonObject> {
+  for await (const line of linesFrom(body)) {
+    const payload = sseDataOf(line);
+
+    if (payload === null || payload === '[DONE]') {
+      continue;
+    }
+
+    const parsed = parsedJson(payload);
+
+    if (isJsonObject(parsed)) {
+      yield parsed;
+    }
+  }
+}
+
 function jsonEventOf(payload: string): JsonObject & { type: string } {
   const parsed = parsedJson(payload);
 

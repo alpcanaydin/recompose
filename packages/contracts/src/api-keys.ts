@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const keyProviderIdSchema = z.enum(['anthropic', 'openai']);
+export const keyProviderIdSchema = z.enum(['anthropic', 'openai', 'gemini']);
 
 export type KeyProviderId = z.infer<typeof keyProviderIdSchema>;
 

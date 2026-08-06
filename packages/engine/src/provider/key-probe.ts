@@ -5,6 +5,7 @@ const probeFetchBoundMs = 10_000;
 export const firstPartyProbeOrigins: Readonly<Record<KeyProviderId, string>> = {
   anthropic: 'https://api.anthropic.com',
   openai: 'https://api.openai.com',
+  gemini: 'https://generativelanguage.googleapis.com',
 };
 
 const modelsPath = '/v1/models';
@@ -24,6 +25,8 @@ export function authHeadersFor(provider: KeyProviderId, key: string): Record<str
       return { 'x-api-key': key, 'anthropic-version': anthropicVersion };
     case 'openai':
       return { Authorization: `Bearer ${key}` };
+    case 'gemini':
+      return { 'x-goog-api-key': key };
 
     default: {
       const unknownProvider: never = provider;
@@ -31,6 +34,10 @@ export function authHeadersFor(provider: KeyProviderId, key: string): Record<str
       throw new Error(`no probe speaks to the provider: ${String(unknownProvider)}`);
     }
   }
+}
+
+function modelsPathFor(provider: KeyProviderId): string {
+  return provider === 'gemini' ? '/v1beta/models' : modelsPath;
 }
 
 function verdictFor(status: number): KeyCheckVerdict {
@@ -52,7 +59,7 @@ export async function probeKey(
   origin: string = firstPartyProbeOrigins[provider],
 ): Promise<KeyCheckReport> {
   try {
-    const response = await fetchLike(`${origin}${modelsPath}`, {
+    const response = await fetchLike(`${origin}${modelsPathFor(provider)}`, {
       method: 'GET',
       headers: authHeadersFor(provider, key),
       redirect: 'error',

@@ -3,11 +3,12 @@ import type { Context } from 'hono';
 
 import { proxyFetchBoundMs } from '@recompose/contracts';
 
-import type { Crossing, JsonObject, ProxyDialect } from './gateway-wire';
+import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
 import type { TranslationRefusal } from './refusals';
 import type { SubscriptionRuntime } from './subscription/reach';
 
 import { translateRequest } from './dialect/dispatcher';
+import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
 import {
   ingressPayload,
@@ -133,16 +134,17 @@ function hasMalformedSubscription(grant: SpendGrant): boolean {
   );
 }
 
-function dialectFor(grant: SpendGrant): ProxyDialect {
+function dialectFor(grant: SpendGrant): ProviderDialect {
   if (grant.verdict !== 'resolved' || grant.spend.custody === 'open') {
     return 'chat-completions';
   }
 
-  if (grant.spend.provider === 'anthropic') {
-    return 'anthropic';
-  }
+  const direct = new Map<string, ProviderDialect>([
+    ['anthropic', 'anthropic'],
+    ['gemini', 'gemini'],
+  ]).get(grant.spend.provider);
 
-  return grant.spend.custody === 'subscription' ? 'responses' : 'chat-completions';
+  return direct ?? (grant.spend.custody === 'subscription' ? 'responses' : 'chat-completions');
 }
 
 async function reachedUpstream(
@@ -163,7 +165,7 @@ async function reachedUpstream(
       );
     }
 
-    return await fetchLike(credentialedUrl(grant), {
+    return await fetchLike(credentialedUrl(grant, crossing), {
       method: 'POST',
       headers: spendHeaders(grant.spend),
       body: JSON.stringify(body),
@@ -182,14 +184,17 @@ async function reachedUpstream(
 
 type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };
 
-function outboundBodyFor(crossing: Crossing, upstreamDialect: ProxyDialect): OutboundBody {
+function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): OutboundBody {
   const payload = ingressPayload(crossing.dialect, crossing.raw);
 
   if (payload === null) {
     return { refusal: emptyConversation() };
   }
 
-  const crossed = translateRequest(crossing.dialect, upstreamDialect, payload);
+  const crossed =
+    upstreamDialect === 'gemini'
+      ? translateRequestToGemini(crossing.dialect, payload)
+      : translateRequest(crossing.dialect, upstreamDialect, payload);
 
   if ('outcome' in crossed) {
     return { body: { ...crossing.raw, model: crossing.providerModel } };
@@ -208,11 +213,24 @@ function streamAsk(raw: JsonObject): { stream?: boolean } {
   return wantsStream(raw) ? { stream: true } : {};
 }
 
-function credentialedUrl(grant: Extract<SpendGrant, { verdict: 'resolved' }>): string {
+function credentialedUrl(
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  crossing: Crossing,
+): string {
   const origin = grant.providerOrigin.replace(/\/+$/u, '');
   const anthropic = grant.spend.custody === 'credentialed' && grant.spend.provider === 'anthropic';
 
+  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
+    return geminiUrl(origin, crossing);
+  }
+
   return `${origin}${anthropic ? '/v1/messages' : '/v1/chat/completions'}`;
+}
+
+function geminiUrl(origin: string, crossing: Crossing): string {
+  const action = wantsStream(crossing.raw) ? 'streamGenerateContent?alt=sse' : 'generateContent';
+
+  return `${origin}/v1beta/models/${encodeURIComponent(crossing.providerModel)}:${action}`;
 }
 
 type GrantedSpend = Extract<SpendGrant, { verdict: 'resolved' }>['spend'];
@@ -226,5 +244,7 @@ function spendHeaders(spend: GrantedSpend): Record<string, string> {
 
   return spend.provider === 'anthropic'
     ? { ...shared, 'x-api-key': spend.credential, 'anthropic-version': '2023-06-01' }
-    : { ...shared, authorization: `Bearer ${spend.credential}` };
+    : spend.provider === 'gemini'
+      ? { ...shared, 'x-goog-api-key': spend.credential }
+      : { ...shared, authorization: `Bearer ${spend.credential}` };
 }

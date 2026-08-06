@@ -1,11 +1,12 @@
 import type { AnthropicResponse } from './dialect/anthropic-wire';
 import type { ChatCompletionsResponse } from './dialect/chat-completions-wire';
 import type { ResponsesResponse } from './dialect/responses-wire';
-import type { Crossing, JsonObject } from './gateway-wire';
+import type { Crossing, JsonObject, ProviderDialect } from './gateway-wire';
 import type { AnthropicRefusal } from './refusals';
 
 import { answeredBy } from './dialect/anthropic-attribution';
 import { translateResponse } from './dialect/dispatcher';
+import { isGeminiResponse, translateResponseFromGemini } from './dialect/gemini-bridge';
 import { translatedStreamBody } from './gateway-stream-answers';
 import {
   isJsonObject,
@@ -72,7 +73,7 @@ function passedAlong(upstream: Response, attribution: Record<string, string>): R
 export async function answerFrom(
   crossing: Crossing,
   upstream: Response,
-  upstreamDialect: Crossing['dialect'] = 'chat-completions',
+  upstreamDialect: ProviderDialect = 'chat-completions',
 ): Promise<Response> {
   const attribution = attributionOf(crossing);
 
@@ -91,7 +92,7 @@ async function streamedAnswer(
   crossing: Crossing,
   upstream: Response,
   attribution: Record<string, string>,
-  upstreamDialect: Crossing['dialect'],
+  upstreamDialect: ProviderDialect,
 ): Promise<Response> {
   if (needsCompletedResponses(upstreamDialect, crossing)) {
     return completedResponsesAnswer(crossing, upstream, attribution);
@@ -119,10 +120,7 @@ async function streamedAnswer(
   });
 }
 
-function needsCompletedResponses(
-  upstreamDialect: Crossing['dialect'],
-  crossing: Crossing,
-): boolean {
+function needsCompletedResponses(upstreamDialect: ProviderDialect, crossing: Crossing): boolean {
   return upstreamDialect === 'responses' && !wantsStream(crossing.raw);
 }
 
@@ -180,7 +178,7 @@ async function translatedAnswer(
   crossing: Crossing,
   upstream: Response,
   attribution: Record<string, string>,
-  upstreamDialect: Crossing['dialect'],
+  upstreamDialect: ProviderDialect,
 ): Promise<Response> {
   const text = await upstream.text();
   const answer = parsedJson(text);
@@ -192,11 +190,11 @@ async function translatedAnswer(
   return translatedJsonAnswer(crossing, upstreamDialect, answer, text, upstream, attribution);
 }
 
-function translatedResponse(
-  from: Crossing['dialect'],
-  to: Crossing['dialect'],
-  answer: JsonObject,
-) {
+function translatedResponse(from: ProviderDialect, to: Crossing['dialect'], answer: JsonObject) {
+  if (from === 'gemini') {
+    return isGeminiResponse(answer) ? translateResponseFromGemini(to, answer) : null;
+  }
+
   if (from === 'chat-completions') {
     return translatedChatResponse(to, answer);
   }
@@ -224,7 +222,7 @@ function translatedProviderResponse(
 
 function translatedJsonAnswer(
   crossing: Crossing,
-  upstreamDialect: Crossing['dialect'],
+  upstreamDialect: ProviderDialect,
   answer: JsonObject,
   text: string,
   upstream: Response,

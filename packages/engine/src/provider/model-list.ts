@@ -90,7 +90,7 @@ async function answerOrSilence(
   custody: LookCustody,
 ): Promise<Response | null> {
   try {
-    return await fetchLike(`${origin}${modelsPath}`, {
+    return await fetchLike(`${origin}${modelsPathFor(custody)}`, {
       method: 'GET',
       headers: headersFor(custody),
       redirect: 'error',
@@ -103,18 +103,25 @@ async function answerOrSilence(
   }
 }
 
+function modelsPathFor(custody: LookCustody): string {
+  return custody.custody === 'provider-key' && custody.provider === 'gemini'
+    ? '/v1beta/models'
+    : modelsPath;
+}
+
 async function bodyOrNothing(response: Response): Promise<unknown> {
   return response.json().catch(() => undefined);
 }
 
 function idOf(entry: unknown): string | null {
-  if (typeof entry !== 'object' || entry === null || !('id' in entry)) {
+  if (!isJsonObject(entry)) {
     return null;
   }
 
-  const id = nonBlankString.safeParse(entry.id);
+  const named = entry['id'] ?? entry['name'];
+  const id = nonBlankString.safeParse(named);
 
-  return id.success ? id.data : null;
+  return id.success ? id.data.replace(/^models\//u, '') : null;
 }
 
 function catalogEntriesIn(body: unknown): unknown[] | null {
@@ -122,9 +129,17 @@ function catalogEntriesIn(body: unknown): unknown[] | null {
     return null;
   }
 
-  const entries = 'data' in body ? body.data : null;
+  const entries = entriesValue(body);
 
   return Array.isArray(entries) ? entries : null;
+}
+
+function entriesValue(body: object): unknown {
+  if ('data' in body) {
+    return body.data;
+  }
+
+  return 'models' in body ? body.models : null;
 }
 
 function listedIdsIn(body: unknown): string[] | null {
