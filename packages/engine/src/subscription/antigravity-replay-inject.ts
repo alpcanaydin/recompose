@@ -2,6 +2,7 @@ import type { JsonObject } from '../gateway-wire';
 import type { AntigravityReplayItem } from './antigravity-replay-items';
 
 import { isJsonObject } from '../gateway-wire';
+import { restoreAntigravityToolProvenance } from './antigravity-provenance';
 import {
   functionCallObjectKey,
   itemPart,
@@ -197,11 +198,12 @@ export function injectAntigravityReplay(
   body: JsonObject,
   items: readonly AntigravityReplayItem[],
 ): JsonObject {
-  const rawContents = body['contents'];
+  const restored = restoreAntigravityToolProvenance(body, items);
+  const rawContents = restored['contents'];
 
-  if (!Array.isArray(rawContents) || items.length === 0) return body;
+  if (!Array.isArray(rawContents) || items.length === 0) return restored;
 
   const contents: unknown[] = rawContents;
 
-  return { ...body, contents: injectedContents(contents, items) };
+  return { ...restored, contents: injectedContents(contents, items) };
 }

@@ -2,6 +2,8 @@ import type { Fate, Translated } from './fates';
 import type { GeminiPart, GeminiResponse, GeminiUsage } from './gemini-wire';
 import type { HubContentBlock, HubResponse, HubStopReason, HubUsage } from './hub';
 
+import { geminiClaudeToolUseId } from './gemini-tool-provenance';
+
 const stopReasons = new Map<string, HubStopReason>([
   ['STOP', 'end'],
   ['MAX_TOKENS', 'max_output'],
@@ -28,7 +30,11 @@ export function geminiUsage(usage: GeminiUsage): HubUsage {
   return hub;
 }
 
-function functionBlock(part: GeminiPart, index: number): HubContentBlock | null {
+function functionBlock(
+  part: GeminiPart,
+  index: number,
+  claudeProvenance: boolean,
+): HubContentBlock | null {
   const call = part.functionCall;
 
   if (call === undefined) {
@@ -37,14 +43,25 @@ function functionBlock(part: GeminiPart, index: number): HubContentBlock | null 
 
   return {
     type: 'tool_use',
-    id: call.id ?? `call_${String(index)}`,
+    id: toolUseId(call.id ?? `call_${String(index)}`, call.name, call.args ?? {}, claudeProvenance),
     name: call.name,
     input: call.args ?? {},
   };
 }
 
-function partFrom(part: GeminiPart, index: number, fates: Fate[]): HubContentBlock | null {
-  const call = functionBlock(part, index);
+function toolUseId(id: string, name: string, args: unknown, provenance: boolean): string {
+  const stable = provenance ? geminiClaudeToolUseId(id, name, args) : '';
+
+  return stable === '' ? id : stable;
+}
+
+function partFrom(
+  part: GeminiPart,
+  index: number,
+  fates: Fate[],
+  claudeProvenance: boolean,
+): HubContentBlock | null {
+  const call = functionBlock(part, index, claudeProvenance);
 
   if (call !== null) {
     return call;
@@ -75,11 +92,15 @@ function firstCandidate(response: GeminiResponse) {
   return response.candidates === undefined ? undefined : response.candidates[0];
 }
 
-function decodedParts(parts: GeminiPart[], fates: Fate[]): HubContentBlock[] {
+function decodedParts(
+  parts: GeminiPart[],
+  fates: Fate[],
+  claudeProvenance: boolean,
+): HubContentBlock[] {
   const content: HubContentBlock[] = [];
 
   for (const [index, part] of parts.entries()) {
-    const decoded = partFrom(part, index, fates);
+    const decoded = partFrom(part, index, fates, claudeProvenance);
 
     if (decoded !== null) content.push(decoded);
   }
@@ -97,9 +118,12 @@ function finishOf(response: GeminiResponse): string | undefined {
   return firstCandidate(response)?.finishReason;
 }
 
-export function decodeResponse(response: GeminiResponse): Translated<HubResponse> {
+export function decodeResponse(
+  response: GeminiResponse,
+  claudeProvenance = false,
+): Translated<HubResponse> {
   const fates: Fate[] = [];
-  const content = decodedParts(partsOf(response), fates);
+  const content = decodedParts(partsOf(response), fates, claudeProvenance);
 
   return {
     value: {

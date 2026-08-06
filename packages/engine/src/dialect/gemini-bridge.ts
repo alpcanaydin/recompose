@@ -69,7 +69,7 @@ export function translateResponseFromGemini<To extends ProxyDialect>(
   to: To,
   body: GeminiResponse,
 ): TranslateResult<ResponseOf[To], TranslationRefusal> {
-  const decoded = decodeGemini(body);
+  const decoded = decodeGemini(body, to === 'anthropic');
   const encode: (value: HubResponse) => TranslateResult<ResponseOf[To], TranslationRefusal> =
     responseEncoders[to];
   const encoded = encode(decoded.value);
@@ -92,5 +92,5 @@ export function translateStreamFromGemini<To extends ProxyDialect>(
   const encode: (events: ReturnType<typeof decodeGeminiStream>) => StreamOf[To] =
     streamEncoders[to];
 
-  return encode(decodeGeminiStream(source));
+  return encode(decodeGeminiStream(source, to === 'anthropic'));
 }

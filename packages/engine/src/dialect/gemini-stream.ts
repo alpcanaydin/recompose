@@ -2,21 +2,52 @@ import type { GeminiPart, GeminiResponse } from './gemini-wire';
 import type { HubBlockDelta, HubBlockOpening, HubStreamEvent } from './hub';
 
 import { geminiStopReason, geminiUsage } from './gemini-response';
+import { geminiClaudeToolUseId } from './gemini-tool-provenance';
 
-function openingOf(part: GeminiPart, index: number): HubBlockOpening | null {
-  if (part.functionCall !== undefined) {
-    return {
-      kind: 'tool',
-      id: part.functionCall.id ?? `call_${String(index)}`,
-      name: part.functionCall.name,
-    };
-  }
+function openingOf(
+  part: GeminiPart,
+  index: number,
+  claudeProvenance: boolean,
+): HubBlockOpening | null {
+  const call = callOpening(part, index, claudeProvenance);
+
+  if (call !== null) return call;
 
   if (part.text === undefined) {
     return null;
   }
 
   return { kind: part.thought === true ? 'thinking' : 'text' };
+}
+
+function callOpening(
+  part: GeminiPart,
+  index: number,
+  claudeProvenance: boolean,
+): HubBlockOpening | null {
+  const call = part.functionCall;
+
+  if (call === undefined) return null;
+
+  const nativeId = nativeCallId(call.id, index);
+
+  return {
+    kind: 'tool',
+    id: provenanceId(nativeId, call.name, call.args, claudeProvenance),
+    name: call.name,
+  };
+}
+
+function nativeCallId(id: string | undefined, index: number): string {
+  return id ?? `call_${String(index)}`;
+}
+
+function provenanceId(id: string, name: string, args: unknown, enabled: boolean): string {
+  if (!enabled) return id;
+
+  const stable = geminiClaudeToolUseId(id, name, args === undefined ? {} : args);
+
+  return stable === '' ? id : stable;
 }
 
 function callDeltas(part: GeminiPart): HubBlockDelta[] | null {
@@ -48,8 +79,12 @@ function deltasOf(part: GeminiPart): HubBlockDelta[] {
   return callDeltas(part) ?? textDeltas(part);
 }
 
-function* blockEvents(part: GeminiPart, index: number): Iterable<HubStreamEvent> {
-  const opening = openingOf(part, index);
+function* blockEvents(
+  part: GeminiPart,
+  index: number,
+  claudeProvenance: boolean,
+): Iterable<HubStreamEvent> {
+  const opening = openingOf(part, index, claudeProvenance);
 
   if (opening === null) {
     return;
@@ -78,12 +113,12 @@ function* beginning(began: boolean, response: GeminiResponse): Iterable<HubStrea
   }
 }
 
-function chunkEvents(response: GeminiResponse, firstIndex: number) {
+function chunkEvents(response: GeminiResponse, firstIndex: number, claudeProvenance: boolean) {
   const events: HubStreamEvent[] = [];
   let index = firstIndex;
 
   for (const part of partsIn(response)) {
-    events.push(...blockEvents(part, index));
+    events.push(...blockEvents(part, index, claudeProvenance));
     index += 1;
   }
 
@@ -100,6 +135,7 @@ function chunkEvents(response: GeminiResponse, firstIndex: number) {
 
 export async function* decodeStream(
   source: AsyncIterable<GeminiResponse>,
+  claudeProvenance = false,
 ): AsyncIterable<HubStreamEvent> {
   let began = false;
   let index = 0;
@@ -108,7 +144,7 @@ export async function* decodeStream(
     yield* beginning(began, response);
     began = true;
 
-    const chunk = chunkEvents(response, index);
+    const chunk = chunkEvents(response, index, claudeProvenance);
 
     yield* chunk.events;
     index = chunk.nextIndex;
