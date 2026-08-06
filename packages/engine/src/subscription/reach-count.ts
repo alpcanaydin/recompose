@@ -3,6 +3,8 @@ import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 import type { ResolvedGrant, SubscriptionRuntime } from './reach';
 
+import { antigravityPairingPreflight } from './antigravity-pairing';
+import { replayedAntigravityBody } from './antigravity-replay';
 import { antigravityCountTokensRequest } from './antigravity-request';
 import { claudeCountTokensProviderRequest } from './claude-count-tokens';
 import {
@@ -63,9 +65,38 @@ export async function reachAntigravityCount(
   grant: ResolvedGrant,
   body: JsonObject,
   runtime: SubscriptionRuntime,
+  replayScopeId = runtime.randomUUID(),
 ): Promise<Response> {
   if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'antigravity') {
     throw new Error('a non-Antigravity subscription reached its token-count transport');
+  }
+
+  const preflight = antigravityPairingPreflight(
+    grant.spend,
+    body,
+    runtime.antigravityReplay,
+    replayScopeId,
+  );
+
+  if (preflight !== null) return preflight;
+
+  const replayed = replayedAntigravityBody(
+    runtime.antigravityReplay,
+    grant.spend.accountId,
+    body,
+    replayScopeId,
+  );
+
+  return sendAntigravityCount(grant, replayed, runtime);
+}
+
+async function sendAntigravityCount(
+  grant: ResolvedGrant,
+  body: JsonObject,
+  runtime: SubscriptionRuntime,
+): Promise<Response> {
+  if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'antigravity') {
+    throw new Error('a non-Antigravity subscription reached its token-count sender');
   }
 
   const ready = await readySubscriptionCredential(grant.spend, runtime);

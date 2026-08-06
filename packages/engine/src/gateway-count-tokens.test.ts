@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 
+import { geminiClaudeToolUseId } from './dialect/gemini-tool-provenance';
 import { createGatewayApp } from './gateway-app';
-import { aGatewayHolding, granting, neverFetches } from './gateway-app.testkit';
+import { aGatewayHolding, aVirtualModel, granting, neverFetches } from './gateway-app.testkit';
 import {
   claudeCredential,
   codexCredential,
@@ -9,7 +10,12 @@ import {
   subscriptionGrant,
   subscriptionModel,
 } from './gateway-proxy-subscription.testkit';
-import { isJsonObject } from './gateway-wire';
+import { isJsonObject, parsedJson } from './gateway-wire';
+import {
+  AntigravityReasoningReplay,
+  antigravityReplayKey,
+} from './subscription/antigravity-replay';
+import { nativeSignature } from './subscription/antigravity-replay.testkit';
 
 function countBody() {
   return {
@@ -94,4 +100,70 @@ describe('token counting through a subscription target', () => {
       },
     });
   });
+});
+
+const replayItem = {
+  id: 'native-count-call',
+  name: 'Bash',
+  args: { command: 'true' },
+  signature: nativeSignature(),
+};
+
+function compactedCountBody(opaqueId: string) {
+  return {
+    model: 'fast',
+    tools: [
+      {
+        name: 'Bash',
+        input_schema: {
+          type: 'object',
+          properties: { command: { type: 'string' } },
+          required: ['command'],
+        },
+      },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: opaqueId, content: 'ok' }],
+      },
+    ],
+  };
+}
+
+test('Antigravity reconstructs compacted Claude tool history before counting', async () => {
+  const providerModel = 'gemini-3.6-flash-high';
+  const opaqueId = geminiClaudeToolUseId(replayItem.id, replayItem.name, replayItem.args);
+  const replay = new AntigravityReasoningReplay();
+  const replayScope = 'execution:count-replay';
+
+  replay.commit(antigravityReplayKey('acc-antigravity', { model: providerModel }, replayScope), [
+    replayItem,
+  ]);
+
+  const answering = runtimeAnswering(() => Response.json({ totalTokens: 23 }));
+  const grants = granting(subscriptionGrant('antigravity', subscriptionCredential('antigravity')));
+  const model = aVirtualModel({ target: { standing: 'bound', providerModel } });
+  const app = createGatewayApp(aGatewayHolding(model), grants.grantFor, neverFetches, {
+    ...answering.runtime,
+    antigravityReplay: replay,
+  });
+  const answer = await app.request('http://127.0.0.1:8397/v1/messages/count_tokens', {
+    method: 'POST',
+    headers: { 'x-session-id': 'count-replay' },
+    body: JSON.stringify(compactedCountBody(opaqueId)),
+  });
+  const sent = parsedJson(answering.sent[0]?.request.body ?? '{}');
+
+  expect(await answer.json()).toEqual({ input_tokens: 23 });
+  expect(sent).toHaveProperty(
+    'request.contents.0.parts.0.functionCall',
+    expect.objectContaining({ id: replayItem.id, name: replayItem.name, args: replayItem.args }),
+  );
+  expect(sent).toHaveProperty('request.contents.0.parts.0.thoughtSignature', replayItem.signature);
+  expect(sent).toHaveProperty(
+    'request.contents.1.parts.0.functionResponse',
+    expect.objectContaining({ id: replayItem.id, name: replayItem.name }),
+  );
+  expect(JSON.stringify(sent)).not.toContain('cpa_gemini_');
 });

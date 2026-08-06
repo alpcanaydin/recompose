@@ -6,7 +6,7 @@ import type { JsonObject } from './gateway-wire';
 
 import { translateRequest } from './dialect/dispatcher';
 import { translateRequestToGemini } from './dialect/gemini-bridge';
-import { requestSessionId } from './gateway-session';
+import { requestSessionId, requestSessions } from './gateway-session';
 import {
   ingressPayload,
   isJsonObject,
@@ -82,7 +82,7 @@ async function resolvedCount(
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch,
 ): Promise<Response> {
-  const native = await nativeProviderCount(raw, grant, providerModel, subscriptions, fetchLike);
+  const native = await nativeProviderCount(c, raw, grant, providerModel, subscriptions, fetchLike);
 
   if (native !== null) {
     return native;
@@ -101,6 +101,7 @@ async function resolvedCount(
 }
 
 async function nativeProviderCount(
+  c: Context,
   raw: JsonObject,
   grant: ResolvedGrant,
   providerModel: string,
@@ -112,13 +113,14 @@ async function nativeProviderCount(
   }
 
   if (grant.spend.custody === 'subscription' && grant.spend.provider === 'antigravity') {
-    return antigravityCount(raw, grant, providerModel, subscriptions);
+    return antigravityCount(c, raw, grant, providerModel, subscriptions);
   }
 
   return null;
 }
 
 async function antigravityCount(
+  c: Context,
   raw: JsonObject,
   grant: ResolvedGrant,
   providerModel: string,
@@ -134,6 +136,7 @@ async function antigravityCount(
     grant,
     { ...translated, model: providerModel },
     subscriptions,
+    requestSessions(c, raw).replayScopeId,
   );
 
   return geminiCountAnswer(answer, await answer.json());
