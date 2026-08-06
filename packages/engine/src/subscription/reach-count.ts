@@ -9,7 +9,7 @@ import {
   readySubscriptionCredential,
   refreshedAndPersisted,
   shouldRefreshUnauthorized,
-} from './reach';
+} from './reach-credential';
 
 function countRequestFor(
   grant: ResolvedGrant,

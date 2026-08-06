@@ -8,6 +8,7 @@ import type { ParsedSubscriptionCredential } from './credentials';
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
+import { antigravityPairingPreflight } from './antigravity-pairing';
 import { AntigravityReasoningReplay, replayedAntigravityBody } from './antigravity-replay';
 import { antigravityProviderRequest } from './antigravity-request';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
@@ -21,8 +22,12 @@ import {
   sendSubscriptionRequest,
   subscriptionRefreshFetch,
 } from './provider-transport';
+import {
+  readySubscriptionCredential,
+  refreshedAndPersisted,
+  shouldRefreshUnauthorized,
+} from './reach-credential';
 import { observeSubscriptionAnswer } from './reach-observation';
-import { credentialNeedsRefresh, refreshSubscriptionCredential } from './refresh';
 
 export type SubscriptionRuntime = {
   send: (provider: SubscriptionProviderId, request: ProviderRequest) => Promise<Response>;
@@ -61,30 +66,7 @@ export function subscriptionRuntime(
 }
 
 export type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
-export type SubscriptionSpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
-
-export async function refreshedAndPersisted(
-  spend: SubscriptionSpend,
-  blob: string,
-  runtime: SubscriptionRuntime,
-): Promise<{ blob: string; credential: ParsedSubscriptionCredential }> {
-  const refreshed = await refreshSubscriptionCredential(
-    spend.provider,
-    blob,
-    runtime.refreshFetch,
-    runtime.now(),
-  );
-
-  await runtime.persist(spend.provider, spend.accountId, refreshed);
-
-  const credential = parseSubscriptionCredential(spend.provider, refreshed);
-
-  if (credential === null) {
-    throw new Error('the refreshed subscription credential could not be read');
-  }
-
-  return { blob: refreshed, credential };
-}
+type SubscriptionSpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
 
 function providerRequestFor(
   grant: ResolvedGrant,
@@ -167,21 +149,22 @@ export async function reachSubscription(
   sessionId = runtime.randomUUID(),
   sourceDialect: ProxyDialect = 'responses',
 ): Promise<Response> {
-  if (grant.spend.custody !== 'subscription') {
-    throw new Error('a non-subscription spend reached the subscription transport');
-  }
+  const spend = subscriptionSpendOf(grant);
+  const preflight = antigravityPairingPreflight(spend, body, runtime.antigravityReplay, sessionId);
 
-  const ready = await readySubscriptionCredential(grant.spend, runtime);
-  const identified = await readyClaudeIdentity(grant.spend, ready, runtime);
+  if (preflight !== null) return preflight;
+
+  const ready = await readySubscriptionCredential(spend, runtime);
+  const identified = await readyClaudeIdentity(spend, ready, runtime);
   const answer = await runtime.send(
-    grant.spend.provider,
+    spend.provider,
     providerRequestFor(grant, body, identified.credential, runtime, sessionId, sourceDialect),
   );
 
   const finalAnswer = shouldRefreshUnauthorized(answer, identified.credential)
     ? await retryWithRefreshedCredential(
         grant,
-        grant.spend,
+        spend,
         body,
         identified.blob,
         runtime,
@@ -191,6 +174,14 @@ export async function reachSubscription(
     : answer;
 
   return observeSubscriptionAnswer(grant, body, finalAnswer, runtime, sessionId, sourceDialect);
+}
+
+function subscriptionSpendOf(grant: ResolvedGrant): SubscriptionSpend {
+  if (grant.spend.custody !== 'subscription') {
+    throw new Error('a non-subscription spend reached the subscription transport');
+  }
+
+  return grant.spend;
 }
 
 function codexReplayKey(body: JsonObject, sessionId: string): string {
@@ -257,13 +248,6 @@ function deviceIdFor(
   return credential.deviceIds?.[0] ?? runtime.newClaudeDeviceId();
 }
 
-export function shouldRefreshUnauthorized(
-  answer: Response,
-  credential: ParsedSubscriptionCredential,
-): boolean {
-  return answer.status === 401 && credential.refreshToken !== undefined;
-}
-
 async function retryWithRefreshedCredential(
   grant: ResolvedGrant,
   spend: SubscriptionSpend,
@@ -279,19 +263,4 @@ async function retryWithRefreshedCredential(
     spend.provider,
     providerRequestFor(grant, body, retried.credential, runtime, sessionId, sourceDialect),
   );
-}
-
-export async function readySubscriptionCredential(
-  spend: SubscriptionSpend,
-  runtime: SubscriptionRuntime,
-): Promise<{ blob: string; credential: ParsedSubscriptionCredential }> {
-  const credential = parseSubscriptionCredential(spend.provider, spend.credential);
-
-  if (credential === null) {
-    throw new Error('the subscription credential could not be read');
-  }
-
-  return credentialNeedsRefresh(credential, runtime.now(), spend.provider)
-    ? refreshedAndPersisted(spend, spend.credential, runtime)
-    : { blob: spend.credential, credential };
 }
