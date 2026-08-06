@@ -3,7 +3,12 @@ import type { AntigravityReplayItem } from './antigravity-replay-items';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
 import { injectAntigravityReplay } from './antigravity-replay-inject';
-import { functionCallKey, mergedReplayItems, scanReplayParts } from './antigravity-replay-items';
+import { mergedReplayItems, replayItemKey, scanReplayParts } from './antigravity-replay-items';
+import {
+  finalizeTextReplay,
+  scanTextReplayParts,
+  type TextReplayState,
+} from './antigravity-replay-text';
 import { observingSseLines } from './observing-sse';
 
 const MAX_SESSIONS = 4096;
@@ -108,17 +113,22 @@ function invalidSignature(response: Response, text: string): boolean {
 type ReplayObservation = {
   items: AntigravityReplayItem[];
   pendingSignature?: string;
+  text: TextReplayState;
   completed: boolean;
 };
 
 function observedValue(value: unknown, accumulated: ReplayObservation): ReplayObservation {
-  const scan = scanReplayParts(candidateParts(value), accumulated.pendingSignature);
+  const parts = candidateParts(value);
+  const scan = scanReplayParts(parts, accumulated.pendingSignature);
+  const rawText = scanTextReplayParts(parts, accumulated.text);
+  const text = completed(value) ? finalizeTextReplay(rawText) : rawText;
   const pendingSignature = scan.pendingSignature;
-  const incoming = offsetOccurrences(accumulated.items, scan.items);
+  const incoming = offsetOccurrences(accumulated.items, [...scan.items, ...text.items]);
 
   return {
     items: mergedReplayItems(accumulated.items, incoming),
     ...(pendingSignature === undefined ? {} : { pendingSignature }),
+    text: text.state,
     completed: completed(value),
   };
 }
@@ -127,16 +137,37 @@ function offsetOccurrences(
   accumulated: AntigravityReplayItem[],
   incoming: AntigravityReplayItem[],
 ): AntigravityReplayItem[] {
-  return incoming.map((item) => {
-    if (item.id !== '') return item;
+  const counts = occurrenceCounts(accumulated);
 
-    const key = functionCallKey(item.name, item.args);
-    const offset = accumulated.filter(
-      (candidate) => candidate.id === '' && functionCallKey(candidate.name, candidate.args) === key,
-    ).length;
+  return incoming.map((item) => withNextOccurrence(item, counts));
+}
 
-    return { ...item, occurrence: offset + (item.occurrence ?? 0) };
-  });
+function occurrenceCounts(items: AntigravityReplayItem[]): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  for (const item of items) {
+    if (item.id !== '') continue;
+
+    const key = replayItemKey(item);
+
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+function withNextOccurrence(
+  item: AntigravityReplayItem,
+  counts: Map<string, number>,
+): AntigravityReplayItem {
+  if (item.id !== '') return item;
+
+  const key = replayItemKey(item);
+  const occurrence = counts.get(key) ?? 0;
+
+  counts.set(key, occurrence + 1);
+
+  return { ...item, occurrence };
 }
 
 function observeLine(line: string, accumulated: ReplayObservation): ReplayObservation {
@@ -149,7 +180,11 @@ function observingStream(
   body: ReadableStream<Uint8Array>,
   commit: (items: AntigravityReplayItem[]) => void,
 ): ReadableStream<Uint8Array> {
-  let observation: ReplayObservation = { items: [], completed: false };
+  let observation: ReplayObservation = {
+    items: [],
+    text: { buffer: '', thought: false },
+    completed: false,
+  };
 
   return observingSseLines(body, (line) => {
     observation = observeLine(line, observation);
@@ -168,7 +203,11 @@ async function observeJson(
   if (invalidSignature(response, text)) clear();
   if (!response.ok) return response;
 
-  const observed = observedValue(parsedJson(text), { items: [], completed: false });
+  const observed = observedValue(parsedJson(text), {
+    items: [],
+    text: { buffer: '', thought: false },
+    completed: false,
+  });
 
   if (observed.completed) commit(observed.items);
 

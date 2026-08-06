@@ -7,6 +7,7 @@ import {
   itemPart,
   matchesCall,
   matchesResponse,
+  textReplayKey,
 } from './antigravity-replay-items';
 import { nativeGeminiSignature } from './antigravity-signature-envelope';
 
@@ -101,9 +102,31 @@ function enrichedPart(
 
   const call = part['functionCall'];
 
-  if (!isJsonObject(call)) return part;
+  if (!isJsonObject(call)) return enrichedTextPart(part, items, occurrences);
 
   return enrichedCallPart(part, call, items, occurrences);
+}
+
+function enrichedTextPart(
+  part: JsonObject,
+  items: readonly AntigravityReplayItem[],
+  occurrences: Map<string, number>,
+): JsonObject {
+  if (typeof part['text'] !== 'string' || hasNativeSignature(part)) return part;
+
+  const key = textReplayKey(part['text'], part['thought'] === true);
+  const occurrence = occurrences.get(key) ?? 0;
+
+  occurrences.set(key, occurrence + 1);
+
+  const item = items.find(
+    (candidate) =>
+      candidate.text === part['text'] &&
+      candidate.thought === (part['thought'] === true) &&
+      candidate.occurrence === occurrence,
+  );
+
+  return enrichedWithSignature(part, item?.signature);
 }
 
 function enrichedCallPart(

@@ -10,6 +10,8 @@ export type AntigravityReplayItem = {
   args: JsonObject;
   signature?: string;
   occurrence?: number;
+  text?: string;
+  thought?: boolean;
 };
 
 function functionCall(part: unknown): JsonObject | null {
@@ -131,10 +133,23 @@ function captureDetached(scan: MutableReplayScan, signature: string | undefined)
 }
 
 function sameIdentity(left: AntigravityReplayItem, right: AntigravityReplayItem): boolean {
+  if (hasTextIdentity(left, right)) return sameTextIdentity(left, right);
   if (left.id !== '' && right.id !== '') return left.id === right.id;
 
   return (
     functionCallKey(left.name, left.args) === functionCallKey(right.name, right.args) &&
+    left.occurrence === right.occurrence
+  );
+}
+
+function hasTextIdentity(left: AntigravityReplayItem, right: AntigravityReplayItem): boolean {
+  return left.text !== undefined || right.text !== undefined;
+}
+
+function sameTextIdentity(left: AntigravityReplayItem, right: AntigravityReplayItem): boolean {
+  return (
+    left.text === right.text &&
+    left.thought === right.thought &&
     left.occurrence === right.occurrence
   );
 }
@@ -156,6 +171,12 @@ export function mergedReplayItems(
 }
 
 export function matchesResponse(item: AntigravityReplayItem, response: JsonObject): boolean {
+  if (item.text !== undefined) return false;
+
+  return matchesFunctionResponse(item, response);
+}
+
+function matchesFunctionResponse(item: AntigravityReplayItem, response: JsonObject): boolean {
   const id = stringField(response, 'id');
   const name = stringField(response, 'name');
 
@@ -168,6 +189,16 @@ export function matchesCall(
   item: AntigravityReplayItem,
   call: JsonObject,
   occurrence = 0,
+): boolean {
+  if (item.text !== undefined) return false;
+
+  return matchesFunctionCall(item, call, occurrence);
+}
+
+function matchesFunctionCall(
+  item: AntigravityReplayItem,
+  call: JsonObject,
+  occurrence: number,
 ): boolean {
   const id = stringField(call, 'id');
   const name = stringField(call, 'name');
@@ -187,7 +218,7 @@ function conflictingOccurrence(id: string, cached: number | undefined, current: 
   return id === '' && cached !== current;
 }
 
-export function functionCallKey(name: string, args: JsonObject): string {
+function functionCallKey(name: string, args: JsonObject): string {
   return `${name}\0${canonicalJson(args)}`;
 }
 
@@ -198,11 +229,33 @@ export function functionCallObjectKey(call: JsonObject): string {
   return functionCallKey(name, args);
 }
 
+export function replayItemKey(item: AntigravityReplayItem): string {
+  return item.text === undefined
+    ? `call\0${functionCallKey(item.name, item.args)}`
+    : textReplayKey(item.text, item.thought === true);
+}
+
+export function textReplayKey(text: string, thought: boolean): string {
+  return `text\0${thought ? 'thought' : 'visible'}\0${text}`;
+}
+
 function conflictingCallId(current: string, cached: string): boolean {
   return current !== '' && cached !== '' && current !== cached;
 }
 
 export function itemPart(item: AntigravityReplayItem, first: boolean): JsonObject {
+  return item.text === undefined ? callItemPart(item, first) : textItemPart(item);
+}
+
+function textItemPart(item: AntigravityReplayItem): JsonObject {
+  return {
+    text: item.text ?? '',
+    ...(item.thought === true ? { thought: true } : {}),
+    ...(item.signature === undefined ? {} : { thoughtSignature: item.signature }),
+  };
+}
+
+function callItemPart(item: AntigravityReplayItem, first: boolean): JsonObject {
   return {
     functionCall: {
       ...(item.id === '' ? {} : { id: item.id }),
