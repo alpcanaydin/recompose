@@ -3,7 +3,7 @@ import type { AntigravityReplayItem } from './antigravity-replay-items';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
 import { injectAntigravityReplay } from './antigravity-replay-inject';
-import { mergedReplayItems, replayItemsFromParts } from './antigravity-replay-items';
+import { mergedReplayItems, scanReplayParts } from './antigravity-replay-items';
 import { observingSseLines } from './observing-sse';
 
 const MAX_SESSIONS = 4096;
@@ -105,14 +105,25 @@ function invalidSignature(response: Response, text: string): boolean {
   return /thought_?signature|signature/iu.test(text);
 }
 
-function observedValue(value: unknown, accumulated: AntigravityReplayItem[]) {
-  const items = replayItemsFromParts(candidateParts(value));
+type ReplayObservation = {
+  items: AntigravityReplayItem[];
+  pendingSignature?: string;
+  completed: boolean;
+};
 
-  return { items: mergedReplayItems(accumulated, items), completed: completed(value) };
+function observedValue(value: unknown, accumulated: ReplayObservation): ReplayObservation {
+  const scan = scanReplayParts(candidateParts(value), accumulated.pendingSignature);
+  const pendingSignature = scan.pendingSignature;
+
+  return {
+    items: mergedReplayItems(accumulated.items, scan.items),
+    ...(pendingSignature === undefined ? {} : { pendingSignature }),
+    completed: completed(value),
+  };
 }
 
-function observeLine(line: string, accumulated: AntigravityReplayItem[]) {
-  if (!line.startsWith('data:')) return { items: accumulated, completed: false };
+function observeLine(line: string, accumulated: ReplayObservation): ReplayObservation {
+  if (!line.startsWith('data:')) return { ...accumulated, completed: false };
 
   return observedValue(parsedJson(line.slice(5).trim()), accumulated);
 }
@@ -121,13 +132,12 @@ function observingStream(
   body: ReadableStream<Uint8Array>,
   commit: (items: AntigravityReplayItem[]) => void,
 ): ReadableStream<Uint8Array> {
-  let items: AntigravityReplayItem[] = [];
+  let observation: ReplayObservation = { items: [], completed: false };
 
   return observingSseLines(body, (line) => {
-    const observed = observeLine(line, items);
+    observation = observeLine(line, observation);
 
-    items = observed.items;
-    if (observed.completed) commit(items);
+    if (observation.completed) commit(observation.items);
   });
 }
 
@@ -141,7 +151,7 @@ async function observeJson(
   if (invalidSignature(response, text)) clear();
   if (!response.ok) return response;
 
-  const observed = observedValue(parsedJson(text), []);
+  const observed = observedValue(parsedJson(text), { items: [], completed: false });
 
   if (observed.completed) commit(observed.items);
 

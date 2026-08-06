@@ -2,6 +2,7 @@ import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
 import { nativeGeminiSignature } from './antigravity-signature-envelope';
+import { canonicalJson } from './canonical-json';
 
 export type AntigravityReplayItem = {
   id: string;
@@ -58,32 +59,66 @@ function detachedSignature(part: JsonObject): string | undefined {
   return functionCall(part) === null ? directSignature(part) : undefined;
 }
 
-export function replayItemsFromParts(parts: unknown[]): AntigravityReplayItem[] {
-  const items: AntigravityReplayItem[] = [];
-  let prefix: string | undefined;
+export type AntigravityReplayScan = {
+  items: AntigravityReplayItem[];
+  pendingSignature?: string;
+};
+
+type MutableReplayScan = { items: AntigravityReplayItem[]; prefix?: string };
+
+function attachDetachedSignature(items: AntigravityReplayItem[], signature: string): boolean {
+  const last = items.at(-1);
+
+  if (last === undefined || last.signature !== undefined) return false;
+
+  items[items.length - 1] = { ...last, signature };
+
+  return true;
+}
+
+export function scanReplayParts(
+  parts: unknown[],
+  pendingSignature?: string,
+): AntigravityReplayScan {
+  const scan: MutableReplayScan = {
+    items: [],
+    ...(pendingSignature === undefined ? {} : { prefix: pendingSignature }),
+  };
 
   for (const value of parts) {
-    if (!isJsonObject(value)) continue;
-
-    const detached = detachedSignature(value);
-
-    if (detached !== undefined) prefix = detached;
-
-    const item = replayItem(value, prefix);
-
-    if (item !== null) {
-      items.push(item);
-      prefix = undefined;
-    }
+    scanReplayPart(scan, value);
   }
 
-  return items;
+  return {
+    items: scan.items,
+    ...(scan.prefix === undefined ? {} : { pendingSignature: scan.prefix }),
+  };
+}
+
+function scanReplayPart(scan: MutableReplayScan, value: unknown): void {
+  if (!isJsonObject(value)) return;
+
+  captureDetached(scan, detachedSignature(value));
+
+  const item = replayItem(value, scan.prefix);
+
+  if (item === null) return;
+
+  scan.items.push(item);
+  delete scan.prefix;
+}
+
+function captureDetached(scan: MutableReplayScan, signature: string | undefined): void {
+  if (signature === undefined) return;
+
+  if (attachDetachedSignature(scan.items, signature)) delete scan.prefix;
+  else scan.prefix = signature;
 }
 
 function sameIdentity(left: AntigravityReplayItem, right: AntigravityReplayItem): boolean {
   if (left.id !== '' && right.id !== '') return left.id === right.id;
 
-  return left.name === right.name && JSON.stringify(left.args) === JSON.stringify(right.args);
+  return left.name === right.name && canonicalJson(left.args) === canonicalJson(right.args);
 }
 
 export function mergedReplayItems(
@@ -118,7 +153,7 @@ export function matchesCall(item: AntigravityReplayItem, call: JsonObject): bool
 
   if (conflictingCallId(id, item.id)) return false;
 
-  return name === item.name && JSON.stringify(args) === JSON.stringify(item.args);
+  return name === item.name && canonicalJson(args) === canonicalJson(item.args);
 }
 
 function conflictingCallId(current: string, cached: string): boolean {

@@ -8,38 +8,8 @@ import {
   antigravityReplayKey,
   observeAntigravityReasoning,
 } from './antigravity-replay';
+import { nativeSignature, responseOf, toolResultBody } from './antigravity-replay.testkit';
 import { reachSubscription, subscriptionRuntime } from './reach';
-
-function nativeSignature(): string {
-  const payload = Buffer.from([0x01, 0x0c, 0x39]);
-  const inner = Buffer.concat([Buffer.from([0x0a, payload.length]), payload]);
-
-  return Buffer.concat([Buffer.from([0x12, inner.length]), inner]).toString('base64');
-}
-
-function responseOf(parts: unknown[], finishReason: string | null = 'STOP') {
-  return {
-    candidates: [
-      {
-        content: { role: 'model', parts },
-        ...(finishReason === null ? {} : { finishReason }),
-      },
-    ],
-  };
-}
-
-function toolResultBody(model = 'gemini-3.6-flash-high') {
-  return {
-    model,
-    contents: [
-      { role: 'user', parts: [{ text: 'run it' }] },
-      {
-        role: 'user',
-        parts: [{ functionResponse: { id: 'call-1', name: 'Bash', response: { ok: true } } }],
-      },
-    ],
-  };
-}
 
 describe('Antigravity reasoning replay cache', () => {
   test('injects a cached native tool call before its compacted function response', () => {
@@ -74,7 +44,9 @@ describe('Antigravity reasoning replay cache', () => {
       ),
     ).toBe(body);
   });
+});
 
+describe('restoring Antigravity signatures onto existing calls', () => {
   test('restores a missing signature onto an unchanged existing function call', () => {
     const replay = new AntigravityReasoningReplay();
     const body = {
@@ -90,6 +62,28 @@ describe('Antigravity reasoning replay cache', () => {
     const signature = nativeSignature();
 
     replay.commit(key, [{ id: 'call-1', name: 'Bash', args: { command: 'true' }, signature }]);
+
+    expect(replay.inject(key, body)).toHaveProperty(
+      'contents.0.parts.0.thoughtSignature',
+      signature,
+    );
+  });
+
+  test('canonicalizes argument key order before restoring a signature', () => {
+    const replay = new AntigravityReasoningReplay();
+    const body = {
+      model: 'gemini-3.6-flash-high',
+      contents: [
+        {
+          role: 'model',
+          parts: [{ functionCall: { id: 'call-1', name: 'Bash', args: { b: 2, a: 1 } } }],
+        },
+      ],
+    };
+    const key = antigravityReplayKey('account-1', body, 'session-1');
+    const signature = nativeSignature();
+
+    replay.commit(key, [{ id: 'call-1', name: 'Bash', args: { a: 1, b: 2 }, signature }]);
 
     expect(replay.inject(key, body)).toHaveProperty(
       'contents.0.parts.0.thoughtSignature',
@@ -121,34 +115,6 @@ describe('observing complete Antigravity reasoning chains', () => {
       () => {
         replay.clear(key);
       },
-    );
-
-    expect(replay.inject(key, body)).toHaveProperty(
-      'contents.1.parts.0.thoughtSignature',
-      signature,
-    );
-  });
-});
-
-describe('associating Antigravity signature carriers', () => {
-  test('associates a detached signature carrier with the following function call', async () => {
-    const replay = new AntigravityReasoningReplay();
-    const body = toolResultBody();
-    const key = antigravityReplayKey('account-1', body, 'session-1');
-    const signature = nativeSignature();
-    const response = Response.json(
-      responseOf([
-        { text: '', thought: true, thoughtSignature: signature },
-        { functionCall: { id: 'call-1', name: 'Bash', args: {} } },
-      ]),
-    );
-
-    await observeAntigravityReasoning(
-      response,
-      (items) => {
-        replay.commit(key, items);
-      },
-      () => {},
     );
 
     expect(replay.inject(key, body)).toHaveProperty(
