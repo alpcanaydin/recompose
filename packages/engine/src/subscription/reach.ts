@@ -97,6 +97,7 @@ function providerRequestFor(
       credential.accessToken,
       { sessionId, requestId: runtime.randomUUID() },
       claudeIdentityOf(credential),
+      runtime.now(),
     );
   }
 

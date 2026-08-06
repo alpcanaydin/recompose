@@ -5,6 +5,7 @@ import { claudeBetas, requestedClaudeBetas } from './claude-betas';
 import { signedClaudeBody } from './claude-cch';
 import { applyClaudeCredentialIdentity } from './claude-identity';
 import { sanitizeClaudeSignatures } from './claude-signatures';
+import { claudeCountTokensSystem, claudeMessagesSystem } from './claude-system';
 import { prepareClaudeTools } from './claude-tools';
 
 export type ProviderRequest = {
@@ -170,19 +171,35 @@ function normalizedClaudeBody(rawBody: JsonObject): JsonObject {
   return normalizedCacheControls(thinkingSafe);
 }
 
+function identifiedBody(
+  body: JsonObject,
+  identity: ClaudeIdentity | undefined,
+  sessionId: string,
+): JsonObject {
+  return identity === undefined ? body : applyClaudeCredentialIdentity(body, identity, sessionId);
+}
+
+function shapedSystemBody(
+  body: JsonObject,
+  now: number,
+  mode: 'messages' | 'count-tokens',
+): JsonObject {
+  return mode === 'count-tokens' ? claudeCountTokensSystem(body) : claudeMessagesSystem(body, now);
+}
+
 export function claudeProviderRequest(
   providerOrigin: string,
   rawBody: JsonObject,
   accessToken: string,
   ids: ClaudeRequestIds,
   identity?: ClaudeIdentity,
+  now = Date.now(),
+  mode: 'messages' | 'count-tokens' = 'messages',
 ): ProviderRequest {
   const requested = requestedClaudeBetas(rawBody);
-  const identified =
-    identity === undefined
-      ? rawBody
-      : applyClaudeCredentialIdentity(rawBody, identity, ids.sessionId);
-  const body = normalizedClaudeBody(identified);
+  const identified = identifiedBody(rawBody, identity, ids.sessionId);
+  const shaped = shapedSystemBody(identified, now, mode);
+  const body = normalizedClaudeBody(shaped);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
 
   return {

@@ -93,16 +93,22 @@ describe('serving a Claude subscription target', () => {
 
     expect(provider.sent).toHaveLength(1);
     expect(provider.sent[0]?.provider).toBe('anthropic');
-    expect(JSON.parse(provider.sent[0]?.request.body ?? '{}')).toMatchObject({
-      model: 'claude-sonnet-4-5',
-      messages: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+    const sentBody: unknown = JSON.parse(provider.sent[0]?.request.body ?? '{}');
+
+    expect(sentBody).toHaveProperty('model', 'claude-sonnet-4-5');
+    expect(sentBody).toHaveProperty('messages.0.content.1', {
+      type: 'text',
+      text: 'hello',
+      cache_control: { type: 'ephemeral' },
     });
     expect(await answer.json()).toMatchObject({
       choices: [{ message: { role: 'assistant', content: 'hello back' } }],
     });
     expect(provider.persist).not.toHaveBeenCalled();
   });
+});
 
+describe('preparing a Claude subscription identity', () => {
   test('a missing Claude identity is fetched, persisted, and sent upstream', async () => {
     const provider = runtimeAnswering(() => claudeAnswer());
     const credential = JSON.stringify({
