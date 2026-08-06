@@ -8,6 +8,11 @@ import type { ParsedSubscriptionCredential } from './credentials';
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
+import {
+  ClaudeDiagnostics,
+  injectClaudeDiagnostics,
+  observeClaudeDiagnostics,
+} from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
 import { codexProviderRequest } from './codex-request';
@@ -31,6 +36,7 @@ export type SubscriptionRuntime = {
   randomUUID: () => string;
   newClaudeDeviceId: () => string;
   fetchClaudeProfile: (accessToken: string) => Promise<ClaudeProfile>;
+  diagnostics: ClaudeDiagnostics;
 };
 
 export function subscriptionRuntime(
@@ -46,6 +52,7 @@ export function subscriptionRuntime(
     randomUUID,
     newClaudeDeviceId,
     fetchClaudeProfile,
+    diagnostics: new ClaudeDiagnostics(),
   };
 }
 
@@ -80,13 +87,17 @@ function providerRequestFor(
   body: JsonObject,
   credential: ParsedSubscriptionCredential,
   runtime: SubscriptionRuntime,
+  sessionId: string,
 ): ProviderRequest {
   return grant.spend.custody === 'subscription' && grant.spend.provider === 'anthropic'
     ? claudeProviderRequest(
         grant.providerOrigin,
-        body,
+        injectClaudeDiagnostics(
+          body,
+          runtime.diagnostics.previous(diagnosticsKey(grant, sessionId)),
+        ),
         credential.accessToken,
-        { sessionId: runtime.randomUUID(), requestId: runtime.randomUUID() },
+        { sessionId, requestId: runtime.randomUUID() },
         claudeIdentityOf(credential),
       )
     : codexProviderRequest(grant.providerOrigin, body, credential, runtime.randomUUID());
@@ -104,6 +115,7 @@ export async function reachSubscription(
   grant: ResolvedGrant,
   body: JsonObject,
   runtime: SubscriptionRuntime,
+  sessionId = runtime.randomUUID(),
 ): Promise<Response> {
   if (grant.spend.custody !== 'subscription') {
     throw new Error('a non-subscription spend reached the subscription transport');
@@ -113,12 +125,44 @@ export async function reachSubscription(
   const identified = await readyClaudeIdentity(grant.spend, ready, runtime);
   const answer = await runtime.send(
     grant.spend.provider,
-    providerRequestFor(grant, body, identified.credential, runtime),
+    providerRequestFor(grant, body, identified.credential, runtime, sessionId),
   );
 
-  return shouldRefreshUnauthorized(answer, identified.credential)
-    ? retryWithRefreshedCredential(grant, grant.spend, body, identified.blob, runtime)
+  const finalAnswer = shouldRefreshUnauthorized(answer, identified.credential)
+    ? await retryWithRefreshedCredential(
+        grant,
+        grant.spend,
+        body,
+        identified.blob,
+        runtime,
+        sessionId,
+      )
     : answer;
+
+  return observeClaudeAnswer(grant, finalAnswer, runtime, sessionId);
+}
+
+function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
+  return grant.spend.custody === 'subscription'
+    ? `${grant.spend.accountId}\0${sessionId}`
+    : sessionId;
+}
+
+async function observeClaudeAnswer(
+  grant: ResolvedGrant,
+  answer: Response,
+  runtime: SubscriptionRuntime,
+  sessionId: string,
+): Promise<Response> {
+  if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'anthropic') {
+    return answer;
+  }
+
+  const key = diagnosticsKey(grant, sessionId);
+
+  return observeClaudeDiagnostics(answer, (messageId) => {
+    runtime.diagnostics.commit(key, messageId);
+  });
 }
 
 type ReadyCredential = { blob: string; credential: ParsedSubscriptionCredential };
@@ -192,10 +236,14 @@ async function retryWithRefreshedCredential(
   body: JsonObject,
   blob: string,
   runtime: SubscriptionRuntime,
+  sessionId: string,
 ): Promise<Response> {
   const retried = await refreshedAndPersisted(spend, blob, runtime);
 
-  return runtime.send(spend.provider, providerRequestFor(grant, body, retried.credential, runtime));
+  return runtime.send(
+    spend.provider,
+    providerRequestFor(grant, body, retried.credential, runtime, sessionId),
+  );
 }
 
 async function readySubscriptionCredential(

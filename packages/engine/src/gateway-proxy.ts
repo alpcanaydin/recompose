@@ -13,6 +13,7 @@ import {
   ingressPayload,
   readJsonBody,
   refusalResponse,
+  requestSessionId,
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
@@ -45,12 +46,15 @@ export async function proxyModelRequest(
     return refusalResponse(dialect, missingTarget(gateway.displayName, name));
   }
 
+  const sessionId = requestSessionId(c, raw);
+
   const crossing: Crossing = {
     dialect,
     raw,
     gatewayName: gateway.displayName,
     virtualModel: virtualModel.id,
     providerModel: virtualModel.target.providerModel,
+    ...(sessionId === undefined ? {} : { sessionId }),
   };
 
   return forwardGranted(
@@ -145,7 +149,7 @@ async function reachedUpstream(
 ): Promise<Response | null> {
   try {
     if (grant.spend.custody === 'subscription') {
-      return await reachSubscription(grant, body, subscriptions);
+      return await reachSubscription(grant, body, subscriptions, crossing.sessionId);
     }
 
     return await fetchLike(chatCompletionsUrl(grant.providerOrigin), {

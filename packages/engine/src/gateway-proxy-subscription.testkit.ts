@@ -6,6 +6,7 @@ import { vi } from 'vitest';
 import type { ProviderRequest } from './subscription/claude-request';
 
 import { aVirtualModel } from './gateway-app.testkit';
+import { ClaudeDiagnostics } from './subscription/claude-diagnostics';
 
 export const subscriptionModel = aVirtualModel({
   target: { standing: 'bound', providerModel: 'claude-sonnet-4-5' },
@@ -60,6 +61,7 @@ export function runtimeAnswering(answer: () => Response) {
 
         return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
       },
+      diagnostics: new ClaudeDiagnostics(),
     },
   };
 }
@@ -98,9 +100,14 @@ export function claudeAnswer(content: readonly unknown[] = []): Response {
   });
 }
 
-export async function chatRequest(app: Hono, stream = false): Promise<Response> {
+export async function chatRequest(
+  app: Hono,
+  stream = false,
+  sessionId?: string,
+): Promise<Response> {
   const response = await app.request('http://127.0.0.1:8397/v1/chat/completions', {
     method: 'POST',
+    headers: sessionId === undefined ? {} : { 'x-session-id': sessionId },
     body: JSON.stringify({
       model: 'fast',
       ...(stream ? { stream: true } : {}),

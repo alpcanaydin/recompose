@@ -15,6 +15,7 @@ import {
   neverFetches,
   openedApp,
 } from './gateway-app.testkit';
+import { ClaudeDiagnostics } from './subscription/claude-diagnostics';
 
 const credential = JSON.stringify({
   account_uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -42,6 +43,7 @@ function subscriptionOverrides(send: SubscriptionRuntime['send']) {
 
       return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
     },
+    diagnostics: new ClaudeDiagnostics(),
   };
 }
 

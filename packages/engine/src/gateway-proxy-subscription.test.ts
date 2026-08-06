@@ -13,6 +13,7 @@ import {
   subscriptionModel,
 } from './gateway-proxy-subscription.testkit';
 import { isJsonObject } from './gateway-wire';
+import { ClaudeDiagnostics } from './subscription/claude-diagnostics';
 
 function claudeApp(credential: string, runtime: Parameters<typeof createGatewayApp>[3]) {
   const grants = granting(subscriptionGrant('anthropic', credential));
@@ -69,6 +70,7 @@ function orderedRefreshRuntime(order: string[]) {
 
         return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
       },
+      diagnostics: new ClaudeDiagnostics(),
     },
   };
 }
@@ -124,6 +126,29 @@ describe('serving a Claude subscription target', () => {
   });
 });
 
+describe('tracking Claude subscription continuity', () => {
+  test('successful turns advance Claude diagnostics within one downstream session', async () => {
+    const provider = runtimeAnswering(() => claudeAnswer());
+    const app = claudeApp(claudeCredential('claude-access', 1_800_000_000_000), provider.runtime);
+
+    await chatRequest(app, false, 'conversation-1');
+    await chatRequest(app, false, 'conversation-1');
+
+    const bodies: unknown[] = provider.sent.map(({ request }) => {
+      const parsed: unknown = JSON.parse(request.body);
+
+      return parsed;
+    });
+    const headers = provider.sent.flatMap(({ request }) => request.headers);
+
+    expect(bodies).toEqual([
+      expect.objectContaining({ diagnostics: { previous_message_id: null } }),
+      expect.objectContaining({ diagnostics: { previous_message_id: 'msg_1' } }),
+    ]);
+    expect(headers).toContainEqual(['X-Claude-Code-Session-Id', 'conversation-1']);
+  });
+});
+
 describe('rotating a Claude subscription credential', () => {
   test('an expired token is persisted before the provider request is sent', async () => {
     const order: string[] = [];
@@ -169,6 +194,7 @@ describe('rotating a Claude subscription credential', () => {
 
         return { account: { uuid: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' } };
       },
+      diagnostics: new ClaudeDiagnostics(),
     });
     const answer = await chatRequest(app);
 
