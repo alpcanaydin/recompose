@@ -1,7 +1,9 @@
 import type { Hono } from 'hono';
 
-import { getRequestListener } from '@hono/node-server';
-import { createServer, type Server } from 'node:http';
+import { createAdaptorServer, type ServerType } from '@hono/node-server';
+import { createServer } from 'node:http';
+
+import { NodeWebSocketServer } from './node-websocket-server';
 
 const IPV4_LOOPBACK = '127.0.0.1';
 const IPV6_LOOPBACK = '::1';
@@ -10,16 +12,18 @@ export type GatewayListeners = {
   close: () => Promise<void>;
 };
 
-type BindOutcome = { bound: Server } | { refused: 'port-taken' | 'address-unavailable' };
+type BoundListener = { server: ServerType; websocket: NodeWebSocketServer };
+type BindOutcome = { bound: BoundListener } | { refused: 'port-taken' | 'address-unavailable' };
 
 type OpenOutcome = { opened: GatewayListeners } | { failed: { port: number } };
 
 async function bindTo(app: Hono, address: string, port: number): Promise<BindOutcome> {
-  const answer = getRequestListener(app.fetch);
-
   return new Promise<BindOutcome>((settle) => {
-    const server = createServer((incoming, outgoing) => {
-      void answer(incoming, outgoing);
+    const websocket = new NodeWebSocketServer();
+    const server = createAdaptorServer({
+      fetch: app.fetch,
+      createServer,
+      websocket: { server: websocket },
     });
 
     const refuseTheBind = (error: NodeJS.ErrnoException): void => {
@@ -32,21 +36,30 @@ async function bindTo(app: Hono, address: string, port: number): Promise<BindOut
       server.on('error', (error: NodeJS.ErrnoException) => {
         console.error(`The gateway listening on ${address}:${String(port)} hit an error.`, error);
       });
-      settle({ bound: server });
+      settle({ bound: { server, websocket } });
     });
   });
 }
 
-async function stopServing(server: Server): Promise<void> {
+function closeAllConnections(server: ServerType): void {
+  if ('closeAllConnections' in server && typeof server.closeAllConnections === 'function') {
+    server.closeAllConnections();
+  }
+}
+
+async function stopServing(bound: BoundListener): Promise<void> {
+  bound.websocket.terminateAll();
+  bound.websocket.close();
+
   return new Promise<void>((settle) => {
-    server.close(() => {
+    bound.server.close(() => {
       settle();
     });
-    server.closeAllConnections();
+    closeAllConnections(bound.server);
   });
 }
 
-function isBound(outcome: BindOutcome): outcome is { bound: Server } {
+function isBound(outcome: BindOutcome): outcome is { bound: BoundListener } {
   return 'bound' in outcome;
 }
 

@@ -24,6 +24,10 @@ function restoredValue(value: unknown, refs: Record<string, NamespaceRef>): unkn
   return restoredCall(restored, refs);
 }
 
+export function restoreXAIToolPayload(value: unknown, refs: Record<string, NamespaceRef>): unknown {
+  return restoredValue(value, refs);
+}
+
 function restoredLine(line: string, refs: Record<string, NamespaceRef>): string {
   const trimmed = line.endsWith('\r') ? line.slice(0, -1) : line;
 

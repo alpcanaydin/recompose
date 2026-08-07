@@ -10,6 +10,7 @@ import { modelListing } from './gateway-discovery';
 import { type ImagePath, proxyImageRequest } from './gateway-images';
 import { proxyModelRequest, subscriptionRuntime } from './gateway-proxy';
 import { proxyVideoRequest } from './gateway-videos';
+import { registerGatewayWebSockets } from './gateway-websocket';
 import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
 import { invalidJson, unservedPath } from './refusals';
@@ -97,6 +98,7 @@ export function createGatewayApp(
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
+  registerGatewayWebSockets(app, gateway, spendGrantFor);
 
   for (const path of COUNT_TOKENS_PATHS) {
     app.post(path, async (c) =>
