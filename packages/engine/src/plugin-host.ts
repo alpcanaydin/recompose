@@ -3,6 +3,15 @@ import type { PluginClient, PluginRPCErrorShape } from './plugin-abi';
 import { isJsonObject } from './gateway-wire';
 import { callPlugin, lifecycleRequest, pluginMethods, pluginSchemaVersion } from './plugin-abi';
 import { loadNativePlugin } from './plugin-native-loader';
+import {
+  type ModelRouteDecision,
+  type ModelRouteRequest,
+  pickPluginAuth,
+  type PluginRoutingRecord,
+  routePluginModel,
+  type SchedulerDecision,
+  type SchedulerRequest,
+} from './plugin-routing';
 
 type PluginCapabilities = {
   executor: boolean;
@@ -147,6 +156,37 @@ export class PluginHost {
     return [...this.plugins.values()]
       .sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id))
       .map(({ registration: current }) => structuredClone(current));
+  }
+
+  public routingRecords(): PluginRoutingRecord[] {
+    return [...this.plugins.values()]
+      .filter(({ fused }) => !fused)
+      .sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id))
+      .map((record) => ({
+        id: record.id,
+        priority: record.priority,
+        metadata: structuredClone(record.registration.metadata),
+        ...record.registration.capabilities,
+      }));
+  }
+
+  public async pickAuth(
+    request: SchedulerRequest,
+    signal?: AbortSignal,
+  ): Promise<SchedulerDecision> {
+    const decision = await pickPluginAuth(this, request, signal);
+
+    return decision;
+  }
+
+  public async routeModel(
+    request: ModelRouteRequest,
+    skipPluginId = '',
+    signal?: AbortSignal,
+  ): Promise<ModelRouteDecision> {
+    const decision = await routePluginModel(this, request, skipPluginId, signal);
+
+    return decision;
   }
 
   public async call<T>(
