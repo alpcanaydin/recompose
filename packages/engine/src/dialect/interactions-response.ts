@@ -78,10 +78,12 @@ function applyUsage(result: HubUsage, field: keyof HubUsage, value: number | und
 
 export function interactionsUsage(usage: HubUsage): InteractionsUsage {
   const result: InteractionsUsage = {};
+  const cachedTokens = totalCachedTokens(usage);
 
   applyInteractionUsage(result, 'total_input_tokens', usage.inputTokens);
   applyInteractionUsage(result, 'total_output_tokens', usage.outputTokens);
-  applyInteractionUsage(result, 'cached_tokens', usage.cacheReadTokens);
+  applyInteractionUsage(result, 'cached_tokens', cachedTokens);
+  applyInteractionUsage(result, 'total_cached_tokens', cachedTokens);
   applyInteractionUsage(result, 'reasoning_tokens', usage.reasoningTokens);
   applyInteractionUsage(result, 'total_tokens', totalTokens(usage));
 
@@ -100,6 +102,12 @@ function totalTokens(usage: HubUsage): number | undefined {
   return usage.inputTokens === undefined && usage.outputTokens === undefined
     ? undefined
     : (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0);
+}
+
+function totalCachedTokens(usage: HubUsage): number | undefined {
+  return usage.cacheReadTokens === undefined && usage.cacheWriteTokens === undefined
+    ? undefined
+    : (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
 }
 
 function thoughtStep(block: Extract<HubContentBlock, { type: 'thinking' }>): InteractionsStep {

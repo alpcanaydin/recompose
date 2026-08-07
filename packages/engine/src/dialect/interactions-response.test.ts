@@ -46,6 +46,22 @@ describe('Gemini responses crossing through Interactions', () => {
       total_output_tokens: 3,
       total_tokens: 5,
       cached_tokens: 4,
+      total_cached_tokens: 4,
+    });
+  });
+});
+
+describe('Interactions cached usage', () => {
+  it('should combine cache reads and writes', () => {
+    const encoded = encodeResponse({
+      content: [],
+      stopReason: 'end',
+      usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: 1, cacheWriteTokens: 4 },
+    }).value;
+
+    expect(encoded.usage).toMatchObject({
+      cached_tokens: 5,
+      total_cached_tokens: 5,
     });
   });
 });
