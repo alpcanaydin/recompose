@@ -148,6 +148,7 @@ export type ResponsesStreamItem = {
   id?: string;
   call_id?: string;
   name?: string;
+  arguments?: string;
   encrypted_content?: string;
 };
 

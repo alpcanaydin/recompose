@@ -31,6 +31,77 @@ describe('Responses to Anthropic parallel function-call streaming', () => {
   });
 });
 
+describe('Responses terminal function-call hydration', () => {
+  it('should complete interleaved arguments and close calls from terminal output', async () => {
+    const events = await translated([
+      { type: 'response.created', response: { id: 'r', status: 'in_progress', output: [] } },
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { type: 'function_call', call_id: 'call_a', name: 'Read' },
+      },
+      {
+        type: 'response.output_item.added',
+        output_index: 1,
+        item: { type: 'function_call', call_id: 'call_b', name: 'Read' },
+      },
+      { type: 'response.function_call_arguments.delta', output_index: 0, delta: '{"path":' },
+      {
+        type: 'response.completed',
+        response: {
+          id: 'r',
+          status: 'completed',
+          output: [
+            { type: 'function_call', call_id: 'call_a', name: 'Read', arguments: '{"path":"a"}' },
+            { type: 'function_call', call_id: 'call_b', name: 'Read', arguments: '{"path":"b"}' },
+          ],
+        },
+      },
+    ]);
+
+    expect(blockLifecycle(events)).toEqual([
+      { index: 0, id: 'call_a', arguments: '{"path":"a"}' },
+      { index: 1, id: 'call_b', arguments: '{"path":"b"}' },
+    ]);
+  });
+});
+
+describe('Responses unnamed terminal function calls', () => {
+  it('should defer an unnamed call until terminal output names it', async () => {
+    const events = await translated([
+      { type: 'response.created', response: { id: 'r', status: 'in_progress', output: [] } },
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { type: 'function_call', call_id: 'call_a' },
+      },
+      {
+        type: 'response.output_item.added',
+        output_index: 1,
+        item: { type: 'message', role: 'assistant' },
+      },
+      { type: 'response.output_text.delta', output_index: 1, delta: 'done' },
+      { type: 'response.output_item.done', output_index: 1 },
+      {
+        type: 'response.completed',
+        response: {
+          id: 'r',
+          status: 'completed',
+          output: [
+            { type: 'function_call', call_id: 'call_a', name: 'Read', arguments: '{"path":"a"}' },
+          ],
+        },
+      },
+    ]);
+
+    expect(blockLifecycle(events)).toEqual([
+      { index: 0, id: '', arguments: '' },
+      { index: 1, id: 'call_a', arguments: '{"path":"a"}' },
+    ]);
+    expect(textDeltas(events)).toEqual(['done']);
+  });
+});
+
 // Helpers
 
 async function translated(
@@ -151,4 +222,12 @@ function blockLifecycle(events: readonly AnthropicStreamEvent[]) {
   for (const event of knownEvents(events)) handleLifecycle(state, event);
 
   return state.blocks;
+}
+
+function textDeltas(events: readonly AnthropicStreamEvent[]): string[] {
+  return knownEvents(events).flatMap((event) =>
+    event.type === 'content_block_delta' && event.delta.type === 'text_delta'
+      ? [event.delta.text]
+      : [],
+  );
 }

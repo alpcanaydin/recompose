@@ -2,13 +2,17 @@ import type { HubStreamEvent } from './hub';
 import type {
   ResponsesKnownStreamEvent,
   ResponsesStreamEvent,
-  ResponsesStreamItem,
   ResponsesStreamResponse,
 } from './responses-wire';
 
 import { codexEventError, codexEventErrorCode } from '../provider/codex-event-error';
 import { stopReasonFromResponse, toHubUsage } from './responses-shared';
-import { sanitizeToolId } from './tool-id';
+import {
+  decodeResponsesBlockEvent,
+  hydrateResponsesBlocksAtTerminal,
+  newResponsesBlockState,
+  type ResponsesBlockState,
+} from './responses-stream-blocks';
 
 const knownStreamTypes = new Set<string>([
   'response.created',
@@ -25,28 +29,6 @@ const knownStreamTypes = new Set<string>([
 
 function isKnownStreamEvent(event: ResponsesStreamEvent): event is ResponsesKnownStreamEvent {
   return knownStreamTypes.has(event.type);
-}
-
-function synthesizedToolId(item: { id?: string; call_id?: string }, index: number): string {
-  return sanitizeToolId(item.call_id ?? item.id ?? `toolu_stream_${String(index)}`);
-}
-
-function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
-  switch (item.type) {
-    case 'message':
-      return { type: 'block-open', index, opening: { kind: 'text' } };
-    case 'function_call':
-      return {
-        type: 'block-open',
-        index,
-        opening: { kind: 'tool', id: synthesizedToolId(item, index), name: item.name ?? '' },
-      };
-    case 'reasoning':
-      return { type: 'block-open', index, opening: { kind: 'thinking' } };
-
-    default:
-      return undefined;
-  }
 }
 
 function terminalStatus(
@@ -73,115 +55,23 @@ function messageEndOf(response: ResponsesStreamResponse): HubStreamEvent {
   return { type: 'message-end', stopReason: outcome.stopReason, usage: toHubUsage(response.usage) };
 }
 
-type ResponsesBlockEvent = Extract<
-  ResponsesKnownStreamEvent,
-  {
-    type:
-      | 'response.output_item.added'
-      | 'response.output_text.delta'
-      | 'response.reasoning_summary_text.delta'
-      | 'response.function_call_arguments.delta'
-      | 'response.output_item.done';
-  }
->;
-
-function openBlock(
-  event: ResponsesBlockEvent & { type: 'response.output_item.added' },
-  skipped: Set<number>,
-): HubStreamEvent[] {
-  const open = blockOpenOf(event.output_index, event.item);
-
-  if (open === undefined) {
-    skipped.add(event.output_index);
-
-    return [];
-  }
-
-  return [open];
-}
-
-function closeBlock(
-  event: Extract<ResponsesBlockEvent, { type: 'response.output_item.done' }>,
-): HubStreamEvent[] {
-  const signature = event.item?.encrypted_content;
-  const signatureEvent: HubStreamEvent[] =
-    event.item?.type === 'reasoning' && signature !== undefined
-      ? [
-          {
-            type: 'block-delta',
-            index: event.output_index,
-            delta: { kind: 'signature', signature },
-          },
-        ]
-      : [];
-
-  return [...signatureEvent, { type: 'block-close', index: event.output_index }];
-}
-
-function decodeDeltaOrClose(
-  event: Exclude<ResponsesBlockEvent, { type: 'response.output_item.added' }>,
-): HubStreamEvent[] {
-  switch (event.type) {
-    case 'response.output_text.delta':
-      return [
-        {
-          type: 'block-delta',
-          index: event.output_index,
-          delta: { kind: 'text', text: event.delta },
-        },
-      ];
-    case 'response.reasoning_summary_text.delta':
-      return [
-        {
-          type: 'block-delta',
-          index: event.output_index,
-          delta: { kind: 'thinking', text: event.delta },
-        },
-      ];
-    case 'response.function_call_arguments.delta':
-      return [
-        {
-          type: 'block-delta',
-          index: event.output_index,
-          delta: { kind: 'json-args', partialJson: event.delta },
-        },
-      ];
-    case 'response.output_item.done':
-      return closeBlock(event);
-
-    default: {
-      const unhandled: never = event;
-
-      throw new Error(`unhandled responses block event: ${JSON.stringify(unhandled)}`);
-    }
-  }
-}
-
-function decodeBlockEvent(event: ResponsesBlockEvent, skipped: Set<number>): HubStreamEvent[] {
-  if (event.type === 'response.output_item.added') {
-    return openBlock(event, skipped);
-  }
-
-  return skipped.has(event.output_index) ? [] : decodeDeltaOrClose(event);
-}
-
 function decodeKnownEvent(
   event: ResponsesKnownStreamEvent,
-  skipped: Set<number>,
+  blocks: ResponsesBlockState,
 ): HubStreamEvent[] {
   if (event.type === 'response.created') {
     return [{ type: 'message-begin' }];
   }
 
   if (isTerminalResponseEvent(event)) {
-    return terminalEvents(event);
+    return [...hydrateResponsesBlocksAtTerminal(blocks, event.response), ...terminalEvents(event)];
   }
 
   if (event.type === 'error') {
     return [streamErrorEvent(event)];
   }
 
-  return decodeBlockEvent(event, skipped);
+  return decodeResponsesBlockEvent(blocks, event);
 }
 
 type TerminalResponseEvent = Extract<
@@ -238,14 +128,14 @@ function isTerminal(event: HubStreamEvent): boolean {
 export async function* decodeStream(
   source: AsyncIterable<ResponsesStreamEvent>,
 ): AsyncIterable<HubStreamEvent> {
-  const skipped = new Set<number>();
+  const blocks = newResponsesBlockState();
 
   for await (const event of source) {
     if (!isKnownStreamEvent(event)) {
       continue;
     }
 
-    const hubEvents = decodeKnownEvent(event, skipped);
+    const hubEvents = decodeKnownEvent(event, blocks);
 
     for (const hubEvent of hubEvents) {
       yield hubEvent;
