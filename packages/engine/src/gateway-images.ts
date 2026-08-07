@@ -4,7 +4,14 @@ import type { Context } from 'hono';
 import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { JsonObject } from './gateway-wire';
 
-import { readImageBody } from './gateway-images-body';
+import { type PreparedImageBody, readImageBody } from './gateway-images-body';
+import { requestSessions } from './gateway-session';
+import {
+  codexImageJsonResponse,
+  codexImageStreamResponse,
+} from './subscription/codex-image-response';
+import { codexImageResponsesBody } from './subscription/codex-image-responses';
+import { reachSubscription } from './subscription/reach';
 import { reachCodexImage } from './subscription/reach-image';
 
 export type ImagePath = '/images/generations' | '/images/edits';
@@ -33,6 +40,76 @@ function providerBody(body: JsonObject, providerModel: string, stream: boolean):
     : { ...body, model: providerModel };
 }
 
+function imageAction(path: ImagePath): 'generate' | 'edit' {
+  return path === '/images/generations' ? 'generate' : 'edit';
+}
+
+function streamPrefix(path: ImagePath): string {
+  return path === '/images/generations' ? 'image_generation' : 'image_edit';
+}
+
+function responseFormat(body: JsonObject): string {
+  return typeof body['response_format'] === 'string' ? body['response_format'] : 'b64_json';
+}
+
+async function responsesImageAnswer(
+  c: Context,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  providerModel: string,
+  prepared: PreparedImageBody,
+  path: ImagePath,
+  runtime: SubscriptionRuntime,
+): Promise<Response> {
+  const body = codexImageResponsesBody(prepared.body, providerModel, imageAction(path));
+  const sessions = requestSessions(c, prepared.body);
+  const answer = await reachSubscription(
+    grant,
+    body,
+    runtime,
+    sessions.sessionId,
+    'responses',
+    sessions.replayScopeId,
+  );
+  const format = responseFormat(prepared.body);
+
+  return prepared.stream
+    ? codexImageStreamResponse(answer, streamPrefix(path), format)
+    : codexImageJsonResponse(answer, format);
+}
+
+async function directImageAnswer(
+  c: Context,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  providerModel: string,
+  prepared: PreparedImageBody,
+  path: ImagePath,
+  runtime: SubscriptionRuntime,
+): Promise<Response> {
+  return reachCodexImage(
+    grant,
+    path,
+    providerBody(prepared.body, providerModel, prepared.stream),
+    c.req.raw.headers,
+    prepared.stream,
+    runtime,
+  );
+}
+
+async function servedImageAnswer(
+  c: Context,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  providerModel: string,
+  prepared: PreparedImageBody,
+  path: ImagePath,
+  runtime: SubscriptionRuntime,
+): Promise<Response> {
+  const direct = directImageModel(providerModel);
+
+  return direct === null
+    ? responsesImageAnswer(c, grant, providerModel, prepared, path, runtime)
+    : directImageAnswer(c, grant, direct, prepared, path, runtime);
+}
+
 export async function proxyImageRequest(
   c: Context,
   gateway: EngineGateway,
@@ -47,20 +124,9 @@ export async function proxyImageRequest(
     return imageError(`The model "${prepared.model}" does not exist.`, 404);
   if (virtual.target.standing !== 'bound') return imageError('The image model has no target.');
 
-  const providerModel = directImageModel(virtual.target.providerModel);
-
-  if (providerModel === null) return imageError('The target is not a direct Codex image model.');
-
   const grant = await spendGrantFor(gateway.slug, virtual.id);
 
   if (!imageGrant(grant)) return imageError('The image target has no Codex subscription.');
 
-  return reachCodexImage(
-    grant,
-    path,
-    providerBody(prepared.body, providerModel, prepared.stream),
-    c.req.raw.headers,
-    prepared.stream,
-    runtime,
-  );
+  return servedImageAnswer(c, grant, virtual.target.providerModel, prepared, path, runtime);
 }

@@ -38,6 +38,12 @@ function onlyRequest(answering: ReturnType<typeof runtimeAnswering>) {
   return request;
 }
 
+function responsesStream(events: unknown[]): Response {
+  const body = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('');
+
+  return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+}
+
 test('forwards image JSON to the native Codex endpoint with its identity', async () => {
   const upstream = { created: 1_713_833_628, data: [{ b64_json: 'AA==' }] };
   const { app, answering } = imageApp(() => Response.json(upstream));
@@ -163,4 +169,74 @@ test('rewrites multipart Codex image files to JSON data URLs', async () => {
   expect(body).toHaveProperty('images.0.image_url', 'data:image/png;base64,cG5nLWRhdGE=');
   expect(body).toHaveProperty('mask.image_url', 'data:image/png;base64,bWFzay1kYXRh');
   expect(body['stream']).toBeUndefined();
+});
+
+test('converts a Codex Responses image call to an Images API response', async () => {
+  const completed = {
+    type: 'response.completed',
+    response: {
+      created_at: 555,
+      output: [
+        {
+          type: 'image_generation_call',
+          result: 'IMAGE',
+          output_format: 'webp',
+          revised_prompt: 'A refined otter',
+        },
+      ],
+      tool_usage: { image_gen: { total_tokens: 12 } },
+    },
+  };
+  const { app, answering } = imageApp(() => responsesStream([completed]), 'gpt-5.4-mini');
+  const answer = await app.request('http://127.0.0.1:8397/v1/images/generations', {
+    method: 'POST',
+    body: JSON.stringify({ model: 'fast', prompt: 'otter', response_format: 'url' }),
+  });
+  const request = onlyRequest(answering);
+
+  expect(request.url).toBe('https://chatgpt.com/backend-api/codex/responses');
+  expect(sentBody(request.body)).toMatchObject({
+    model: 'gpt-5.4-mini',
+    stream: true,
+    tool_choice: { type: 'image_generation' },
+    tools: [{ type: 'image_generation', action: 'generate', model: 'gpt-image-2' }],
+  });
+  expect(await answer.json()).toEqual({
+    created: 555,
+    data: [
+      {
+        url: 'data:image/webp;base64,IMAGE',
+        revised_prompt: 'A refined otter',
+      },
+    ],
+    output_format: 'webp',
+    usage: { total_tokens: 12 },
+  });
+});
+
+test('converts Codex Responses partial and completed images to Images SSE', async () => {
+  const partial = {
+    type: 'response.image_generation_call.partial_image',
+    partial_image_b64: 'PARTIAL',
+    partial_image_index: 0,
+    output_format: 'png',
+  };
+  const completed = {
+    type: 'response.completed',
+    response: {
+      created_at: 666,
+      output: [{ type: 'image_generation_call', result: 'FINAL', output_format: 'png' }],
+    },
+  };
+  const { app } = imageApp(() => responsesStream([partial, completed]), 'gpt-5.4-mini');
+  const answer = await app.request('http://127.0.0.1:8397/v1/images/generations', {
+    method: 'POST',
+    body: JSON.stringify({ model: 'fast', prompt: 'otter', stream: true }),
+  });
+  const body = await answer.text();
+
+  expect(body).toContain('event: image_generation.partial_image');
+  expect(body).toContain('"b64_json":"PARTIAL"');
+  expect(body).toContain('event: image_generation.completed');
+  expect(body).toContain('"b64_json":"FINAL"');
 });
