@@ -47,6 +47,10 @@ describe('the origin a target account is spent against', () => {
     expect(providerOriginOf(keyRow('gemini'))).toBe('https://generativelanguage.googleapis.com');
   });
 
+  test('a Kimi credential is spent against the Coding API', () => {
+    expect(providerOriginOf(keyRow('kimi'))).toBe('https://api.kimi.com/coding');
+  });
+
   test('an OpenRouter key is spent against the aggregator serving base', () => {
     expect(providerOriginOf(keyRow('openrouter', 'aggregator'))).toBe('https://openrouter.ai/api');
   });

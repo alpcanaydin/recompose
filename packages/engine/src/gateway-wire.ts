@@ -29,6 +29,7 @@ export type Crossing = {
   sessionId?: string | undefined;
   replayScopeId?: string | undefined;
   responsesLite?: boolean | undefined;
+  anthropicBeta?: string | undefined;
 };
 
 export function isJsonObject(value: unknown): value is JsonObject {

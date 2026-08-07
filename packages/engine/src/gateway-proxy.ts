@@ -19,7 +19,12 @@ import {
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
-import { cappedGeminiOutput } from './provider/gemini-model-limits';
+import {
+  credentialedDialect,
+  credentialedRequestBody,
+  credentialedRequestHeaders,
+  credentialedRequestUrl,
+} from './provider/credentialed-target';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
@@ -56,7 +61,8 @@ export async function proxyModelRequest(
     virtualModel: virtualModel.id,
     providerModel: virtualModel.target.providerModel,
     ...requestSessions(c, raw),
-    ...(responsesLite(c) ? { responsesLite: true } : {}),
+    responsesLite: responsesLite(c),
+    anthropicBeta: c.req.header('anthropic-beta'),
   };
 
   return forwardGranted(
@@ -92,7 +98,7 @@ async function forwardResolved(
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
 ): Promise<Response> {
-  const upstreamDialect = dialectFor(grant);
+  const upstreamDialect = dialectFor(grant, crossing.dialect);
   const outbound = outboundBodyFor(crossing, upstreamDialect);
 
   if ('refusal' in outbound) {
@@ -134,18 +140,22 @@ function hasMalformedSubscription(grant: SpendGrant): boolean {
   );
 }
 
-function dialectFor(grant: SpendGrant): ProviderDialect {
-  if (grant.verdict !== 'resolved' || grant.spend.custody === 'open') {
-    return 'chat-completions';
+function subscriptionDialect(provider: string): ProviderDialect {
+  if (provider === 'anthropic') return 'anthropic';
+  if (provider === 'antigravity') return 'gemini';
+
+  return 'responses';
+}
+
+function dialectFor(grant: SpendGrant, sourceDialect: ProxyDialect): ProviderDialect {
+  if (grant.verdict !== 'resolved') return 'chat-completions';
+  if (grant.spend.custody === 'open') return 'chat-completions';
+
+  if (grant.spend.custody === 'credentialed') {
+    return credentialedDialect(grant.spend.provider, sourceDialect);
   }
 
-  const direct = new Map<string, ProviderDialect>([
-    ['anthropic', 'anthropic'],
-    ['gemini', 'gemini'],
-    ['antigravity', 'gemini'],
-  ]).get(grant.spend.provider);
-
-  return direct ?? (grant.spend.custody === 'subscription' ? 'responses' : 'chat-completions');
+  return subscriptionDialect(grant.spend.provider);
 }
 
 async function reachedUpstream(
@@ -168,10 +178,10 @@ async function reachedUpstream(
       );
     }
 
-    return await fetchLike(credentialedUrl(grant, crossing), {
+    return await fetchLike(credentialedRequestUrl(grant, crossing), {
       method: 'POST',
-      headers: spendHeaders(grant.spend),
-      body: JSON.stringify(credentialedBody(grant, crossing, body)),
+      headers: credentialedRequestHeaders(grant.spend, crossing),
+      body: JSON.stringify(credentialedRequestBody(grant, crossing, body)),
       signal: AbortSignal.timeout(proxyFetchBoundMs),
     });
   } catch (failure) {
@@ -183,16 +193,6 @@ async function reachedUpstream(
 
     return null;
   }
-}
-
-function credentialedBody(
-  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
-  crossing: Crossing,
-  body: JsonObject,
-): JsonObject {
-  return grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini'
-    ? cappedGeminiOutput(body, crossing.providerModel)
-    : body;
 }
 
 function responsesLite(c: Context): boolean {
@@ -228,40 +228,4 @@ function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): 
 
 function streamAsk(raw: JsonObject): { stream?: boolean } {
   return wantsStream(raw) ? { stream: true } : {};
-}
-
-function credentialedUrl(
-  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
-  crossing: Crossing,
-): string {
-  const origin = grant.providerOrigin.replace(/\/+$/u, '');
-  const anthropic = grant.spend.custody === 'credentialed' && grant.spend.provider === 'anthropic';
-
-  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
-    return geminiUrl(origin, crossing);
-  }
-
-  return `${origin}${anthropic ? '/v1/messages' : '/v1/chat/completions'}`;
-}
-
-function geminiUrl(origin: string, crossing: Crossing): string {
-  const action = wantsStream(crossing.raw) ? 'streamGenerateContent?alt=sse' : 'generateContent';
-
-  return `${origin}/v1beta/models/${encodeURIComponent(crossing.providerModel)}:${action}`;
-}
-
-type GrantedSpend = Extract<SpendGrant, { verdict: 'resolved' }>['spend'];
-
-function spendHeaders(spend: GrantedSpend): Record<string, string> {
-  const shared = { 'content-type': 'application/json' };
-
-  if (spend.custody !== 'credentialed') {
-    return shared;
-  }
-
-  return spend.provider === 'anthropic'
-    ? { ...shared, 'x-api-key': spend.credential, 'anthropic-version': '2023-06-01' }
-    : spend.provider === 'gemini'
-      ? { ...shared, 'x-goog-api-key': spend.credential }
-      : { ...shared, authorization: `Bearer ${spend.credential}` };
 }
