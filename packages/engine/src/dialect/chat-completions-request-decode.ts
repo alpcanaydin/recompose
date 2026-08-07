@@ -21,6 +21,7 @@ import {
   toolChoiceFrom,
   toolsFrom,
 } from './chat-completions-request-fields';
+import { hubOptionsFromChat } from './chat-completions-request-options';
 import { toolResultBlockFrom } from './chat-completions-tool-result';
 import { userBlocks } from './chat-completions-user-decode';
 import { mergeAdjacentSameRole } from './hub-build';
@@ -232,6 +233,7 @@ function assembleHubRequest(request: ChatCompletionsRequest, acc: DecodeAcc): Hu
     ...(tools ? { tools } : {}),
     ...(toolChoice ? { toolChoice } : {}),
     sampling: samplingFrom(request, acc.fates),
+    ...hubOptionsFromChat(request, acc.fates),
   };
 }
 

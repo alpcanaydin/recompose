@@ -25,6 +25,7 @@ import {
   chatToolChoiceInto,
   chatToolsInto,
 } from './chat-completions-request-fields-encode';
+import { chatOptionsInto } from './chat-completions-request-options';
 
 function imageUrl(block: HubImageBlock): string {
   const source = block.source;
@@ -174,6 +175,8 @@ export function encodeRequest(hub: HubRequest): Translated<ChatCompletionsReques
     ...chatToolChoiceInto(hub, fates),
     ...chatSamplingInto(hub, fates),
   };
+
+  chatOptionsInto(request, hub, fates);
 
   return { value: request, fates };
 }

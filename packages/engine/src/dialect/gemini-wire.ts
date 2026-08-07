@@ -31,7 +31,16 @@ export type GeminiRequest = {
     temperature?: number;
     topP?: number;
     stopSequences?: readonly string[];
+    thinkingConfig?: {
+      thinkingLevel?: string;
+      thinkingBudget?: number;
+      includeThoughts?: boolean;
+    };
+    responseModalities?: readonly string[];
+    responseMimeType?: string;
+    responseJsonSchema?: unknown;
   };
+  service_tier?: string;
 };
 
 export type GeminiUsage = {

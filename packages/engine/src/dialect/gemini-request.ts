@@ -10,6 +10,7 @@ import type {
 } from './hub';
 
 import { geminiReplaySignature } from '../provider/gemini-signature';
+import { geminiOptionsInto } from './gemini-request-options';
 
 function imagePart(block: Extract<HubContentBlock, { type: 'image' }>): GeminiPart {
   return block.source.type === 'base64'
@@ -175,6 +176,8 @@ export function encodeRequest(hub: HubRequest): Translated<GeminiRequest> {
     ...toolConfig(hub.toolChoice),
     ...(config === undefined ? {} : { generationConfig: config }),
   };
+
+  geminiOptionsInto(value, hub);
 
   return { value, fates: [] };
 }

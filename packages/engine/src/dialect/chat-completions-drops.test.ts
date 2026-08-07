@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { chatCompletionsDrops } from './chat-completions-drops';
 
-describe('the Chat Completions vendor drop table lifts the ignored fields verbatim', () => {
-  it('names every field Anthropic marks ignored on the OpenAI compatibility table', () => {
+describe('the Chat Completions vendor drop table names only unsupported fields', () => {
+  it('keeps fields with no honest hub representation', () => {
     const fields = chatCompletionsDrops.map((drop) => drop.field);
 
     expect(fields).toEqual(
@@ -11,17 +11,13 @@ describe('the Chat Completions vendor drop table lifts the ignored fields verbat
         'logprobs',
         'top_logprobs',
         'metadata',
-        'response_format',
         'prediction',
         'presence_penalty',
         'frequency_penalty',
         'seed',
-        'service_tier',
         'logit_bias',
         'store',
         'user',
-        'reasoning_effort',
-        'modalities',
         'audio',
       ]),
     );
@@ -38,7 +34,7 @@ describe('the Chat Completions vendor drop table lifts the ignored fields verbat
       .filter((drop) => drop.costBearing)
       .map((drop) => drop.field);
 
-    expect(costBearing).toEqual(expect.arrayContaining(['audio', 'modalities']));
+    expect(costBearing).toEqual(['audio']);
   });
 
   it('leaves the pure-metadata drops free of cost, since dropping them changes no bill', () => {

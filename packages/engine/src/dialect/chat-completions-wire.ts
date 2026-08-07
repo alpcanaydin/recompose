@@ -92,6 +92,11 @@ export type ChatCompletionsRequestCore = {
   temperature?: number;
   top_p?: number;
   stop?: string | readonly string[];
+  response_format?: unknown;
+  service_tier?: string;
+  reasoning_effort?: string;
+  modalities?: readonly string[];
+  parallel_tool_calls?: boolean;
 };
 
 export type ChatCompletionsRequest = ChatCompletionsRequestCore & ChatIgnoredFields;
