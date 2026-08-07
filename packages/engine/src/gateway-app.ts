@@ -7,6 +7,7 @@ import type { ProxyDialect } from './gateway-wire';
 
 import { proxyTokenCountRequest } from './gateway-count-tokens';
 import { modelListing } from './gateway-discovery';
+import { type ImagePath, proxyImageRequest } from './gateway-images';
 import { proxyModelRequest, subscriptionRuntime } from './gateway-proxy';
 import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
@@ -24,6 +25,12 @@ const MODEL_ROUTES: readonly (readonly [string, ProxyDialect])[] = [
 ];
 
 const COUNT_TOKENS_PATHS = ['/v1/messages/count_tokens', '/messages/count_tokens'];
+const IMAGE_ROUTES: readonly (readonly [string, ImagePath])[] = [
+  ['/v1/images/generations', '/images/generations'],
+  ['/images/generations', '/images/generations'],
+  ['/v1/images/edits', '/images/edits'],
+  ['/images/edits', '/images/edits'],
+];
 
 function dialectForPath(path: string): ProxyDialect {
   if (path.endsWith('/responses')) {
@@ -31,6 +38,19 @@ function dialectForPath(path: string): ProxyDialect {
   }
 
   return path.includes('/messages') ? 'anthropic' : 'chat-completions';
+}
+
+function registerImageRoutes(
+  app: Hono,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  subscriptionServing: SubscriptionRuntime,
+): void {
+  for (const [route, path] of IMAGE_ROUTES) {
+    app.post(route, async (c) =>
+      proxyImageRequest(c, gateway, path, spendGrantFor, subscriptionServing),
+    );
+  }
 }
 
 export function createGatewayApp(
@@ -60,6 +80,8 @@ export function createGatewayApp(
       proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing, fetchLike),
     );
   }
+
+  registerImageRoutes(app, gateway, spendGrantFor, subscriptionServing);
 
   for (const [path, dialect] of MODEL_ROUTES) {
     app.all(path, async (c) =>

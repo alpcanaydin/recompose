@@ -13,6 +13,10 @@ type JsonObject = Record<string, unknown>;
 
 const WEB_SEARCH_ALIASES = new Set(['web_search_preview', 'web_search_preview_2025_03_11']);
 
+export const CODEX_USER_AGENT =
+  'codex-tui/0.146.0 (Mac OS 26.5.0; arm64) iTerm.app/3.6.10 (codex-tui; 0.146.0)';
+export const CODEX_ORIGINATOR = 'codex-tui';
+
 const REMOVED_FIELDS = [
   'previous_response_id',
   'generate',
@@ -244,14 +248,11 @@ export function codexProviderRequest(
   const headers: [string, string][] = [
     ['Content-Type', 'application/json'],
     ['Authorization', `Bearer ${credential.accessToken}`],
-    [
-      'User-Agent',
-      'codex-tui/0.146.0 (Mac OS 26.5.0; arm64) iTerm.app/3.6.10 (codex-tui; 0.146.0)',
-    ],
+    ['User-Agent', CODEX_USER_AGENT],
     ['Session_id', sessionId],
     ['Accept', 'text/event-stream'],
     ['Connection', 'Keep-Alive'],
-    ['Originator', 'codex-tui'],
+    ['Originator', CODEX_ORIGINATOR],
   ];
 
   if (credential.accountId !== undefined) {
