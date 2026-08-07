@@ -21,19 +21,14 @@ import {
   interactionsImagePart,
   interactionsPartFromHubMedia,
   interactionsToolCall,
+  isHubInteractionsMedia,
 } from './interactions-content';
 import { interactionsOptionsInto } from './interactions-request-options';
 
 function contentPart(block: HubContentBlock): InteractionsContentPart | null {
   if (block.type === 'text') return { type: 'text', text: block.text };
 
-  return isHubMedia(block) ? interactionsPartFromHubMedia(block) : null;
-}
-
-function isHubMedia(
-  block: HubContentBlock,
-): block is Extract<HubContentBlock, { type: 'image' | 'audio' | 'video' | 'document' }> {
-  return ['image', 'audio', 'video', 'document'].includes(block.type);
+  return isHubInteractionsMedia(block) ? interactionsPartFromHubMedia(block) : null;
 }
 
 function resultValue(block: HubToolResultBlock): unknown {

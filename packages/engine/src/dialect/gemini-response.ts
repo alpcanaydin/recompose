@@ -2,6 +2,7 @@ import type { Fate, Translated } from './fates';
 import type { GeminiPart, GeminiResponse, GeminiUsage } from './gemini-wire';
 import type { HubContentBlock, HubResponse, HubStopReason, HubUsage } from './hub';
 
+import { geminiMediaBlock } from './gemini-media-decode';
 import { geminiClaudeToolUseId } from './gemini-tool-provenance';
 
 const stopReasons = new Map<string, HubStopReason>([
@@ -79,11 +80,9 @@ function partFrom(
   fates: Fate[],
   claudeProvenance: boolean,
 ): HubContentBlock | null {
-  const call = functionBlock(part, index, claudeProvenance);
+  const structured = structuredBlock(part, index, claudeProvenance);
 
-  if (call !== null) {
-    return call;
-  }
+  if (structured !== null) return structured;
 
   if (part.text === undefined) {
     fates.push({
@@ -104,6 +103,14 @@ function partFrom(
   }
 
   return { type: 'text', text: part.text };
+}
+
+function structuredBlock(
+  part: GeminiPart,
+  index: number,
+  claudeProvenance: boolean,
+): HubContentBlock | null {
+  return functionBlock(part, index, claudeProvenance) ?? geminiMediaBlock(part);
 }
 
 function firstCandidate(response: GeminiResponse) {

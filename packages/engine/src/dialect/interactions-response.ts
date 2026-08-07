@@ -9,8 +9,10 @@ import type {
 import { parseToolArguments } from './hub-build';
 import {
   hubBlocksFromInteractionsContent,
+  interactionsPartFromHubMedia,
   interactionsText,
   interactionsToolCall,
+  isHubInteractionsMedia,
 } from './interactions-content';
 
 function thoughtBlock(step: Extract<InteractionsStep, { type: 'thought' }>): HubContentBlock {
@@ -79,6 +81,14 @@ function toolStep(block: Extract<HubContentBlock, { type: 'tool_use' }>): Intera
   return interactionsToolCall(block);
 }
 
+function mediaStep(
+  block: Extract<HubContentBlock, { type: 'image' | 'audio' | 'video' | 'document' }>,
+): InteractionsStep | null {
+  const part = interactionsPartFromHubMedia(block);
+
+  return part === null ? null : { type: 'model_output', content: [part] };
+}
+
 function outputStep(block: HubContentBlock): InteractionsStep | null {
   if (block.type === 'text') {
     return { type: 'model_output', content: [{ type: 'text', text: block.text }] };
@@ -86,6 +96,7 @@ function outputStep(block: HubContentBlock): InteractionsStep | null {
 
   if (block.type === 'thinking') return thoughtStep(block);
   if (block.type === 'tool_use') return toolStep(block);
+  if (isHubInteractionsMedia(block)) return mediaStep(block);
 
   return null;
 }

@@ -44,6 +44,29 @@ describe('Gemini responses crossing through Interactions', () => {
   });
 });
 
+describe('Gemini media responses crossing through Interactions', () => {
+  it('should preserve inline image output as an Interactions model step', () => {
+    const decoded = decodeGemini({
+      candidates: [
+        {
+          content: {
+            role: 'model',
+            parts: [{ inlineData: { mimeType: 'image/png', data: 'aGVsbG8=' } }],
+          },
+          finishReason: 'STOP',
+        },
+      ],
+    });
+
+    expect(encodeResponse(decoded.value).value.steps).toEqual([
+      {
+        type: 'model_output',
+        content: [{ type: 'image', mime_type: 'image/png', data: 'aGVsbG8=' }],
+      },
+    ]);
+  });
+});
+
 describe('Interactions responses crossing into the hub', () => {
   it('should restore thought and function-call output with usage', () => {
     const decoded = decodeResponse({

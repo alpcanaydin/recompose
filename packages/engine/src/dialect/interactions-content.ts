@@ -134,6 +134,12 @@ export function interactionsPartFromHubMedia(
     : null;
 }
 
+export function isHubInteractionsMedia(
+  block: HubContentBlock,
+): block is Extract<HubContentBlock, { type: 'image' | 'audio' | 'video' | 'document' }> {
+  return ['image', 'audio', 'video', 'document'].includes(block.type);
+}
+
 export function interactionsToolCall(block: HubToolUseBlock): InteractionsStep {
   return {
     type: 'function_call',
