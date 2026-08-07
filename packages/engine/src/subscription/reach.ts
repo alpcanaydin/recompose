@@ -15,6 +15,7 @@ import { antigravityProviderRequest } from './antigravity-request';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
+import { normalizeCodexError } from './codex-errors';
 import { CodexReasoningReplay } from './codex-replay';
 import { codexProviderRequest } from './codex-request';
 import { sendInterceptedSubscription } from './intercepted-send';
@@ -76,6 +77,14 @@ type SubscriptionScope = {
   replayScopeId: string;
   responsesLite: boolean;
 };
+
+async function normalizedSubscriptionAnswer(
+  provider: SubscriptionProviderId,
+  answer: Response,
+  now: number,
+): Promise<Response> {
+  return provider === 'openai' ? normalizeCodexError(answer, now) : answer;
+}
 
 function providerRequestFor(
   grant: ResolvedGrant,
@@ -197,9 +206,15 @@ export async function reachSubscription(
     pluginContext,
   );
 
-  return finalAttempt.terminated
-    ? finalAttempt.answer
-    : observeSubscriptionAnswer(grant, body, finalAttempt.answer, runtime, scope);
+  if (finalAttempt.terminated) return finalAttempt.answer;
+
+  const normalized = await normalizedSubscriptionAnswer(
+    spend.provider,
+    finalAttempt.answer,
+    runtime.now(),
+  );
+
+  return observeSubscriptionAnswer(grant, body, normalized, runtime, scope);
 }
 
 function subscriptionScope(

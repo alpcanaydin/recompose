@@ -168,3 +168,54 @@ describe('carrying Claude documents to a Codex subscription', () => {
     });
   });
 });
+
+describe('normalizing Codex subscription failures', () => {
+  test('a usage limit becomes 429 with its provider reset delay', async () => {
+    const { app } = codexApp(() =>
+      Response.json(
+        {
+          error: {
+            type: 'usage_limit_reached',
+            message: 'usage exhausted',
+            resets_in_seconds: 120,
+          },
+        },
+        { status: 400 },
+      ),
+    );
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(429);
+    expect(answer.headers.get('retry-after')).toBe('120');
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { type: 'usage_limit_reached', message: 'usage exhausted' },
+    });
+  });
+
+  test('a context failure receives the stable Codex error code', async () => {
+    const { app } = codexApp(() =>
+      Response.json(
+        {
+          error: {
+            type: 'invalid_request_error',
+            code: 'context_length_exceeded',
+            message: 'context length exceeded',
+          },
+        },
+        { status: 413 },
+      ),
+    );
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(413);
+    await expect(answer.json()).resolves.toEqual({
+      error: {
+        message: 'context length exceeded',
+        type: 'invalid_request_error',
+        code: 'context_too_large',
+      },
+    });
+  });
+});
