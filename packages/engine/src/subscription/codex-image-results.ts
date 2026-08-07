@@ -1,6 +1,7 @@
 import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { orderedCodexItems } from './codex-output-items';
 
 export type CodexImageResult = {
   result: string;
@@ -49,10 +50,6 @@ function imageResults(items: readonly unknown[]): CodexImageResult[] {
   });
 }
 
-function orderedItems(indexed: ReadonlyMap<number, JsonObject>): JsonObject[] {
-  return [...indexed.entries()].sort(([left], [right]) => left - right).map(([, item]) => item);
-}
-
 function completedOutput(response: JsonObject): unknown[] {
   return Array.isArray(response['output']) ? response['output'] : [];
 }
@@ -61,7 +58,7 @@ function fallbackOutput(
   indexed: ReadonlyMap<number, JsonObject>,
   fallback: readonly JsonObject[],
 ): JsonObject[] {
-  return [...orderedItems(indexed), ...fallback];
+  return [...orderedCodexItems(indexed), ...fallback];
 }
 
 function createdAt(response: JsonObject, now: () => number): number {

@@ -1,27 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { createGatewayApp } from './gateway-app';
-import { aGatewayHolding, granting, neverFetches } from './gateway-app.testkit';
 import {
-  chatRequest,
-  codexCredential,
-  runtimeAnswering,
-  subscriptionGrant,
-  subscriptionModel,
-} from './gateway-proxy-subscription.testkit';
-
-function codexApp(answer: () => Response) {
-  const grants = granting(subscriptionGrant('openai', codexCredential()));
-  const provider = runtimeAnswering(answer);
-  const app = createGatewayApp(
-    aGatewayHolding(subscriptionModel),
-    grants.grantFor,
-    neverFetches,
-    provider.runtime,
-  );
-
-  return { app, provider };
-}
+  codexSse as sseFor,
+  codexSubscriptionApp as codexApp,
+} from './gateway-proxy-codex-subscription.testkit';
+import { chatRequest } from './gateway-proxy-subscription.testkit';
 
 const completed = {
   type: 'response.completed',
@@ -50,12 +33,6 @@ const streamEvents = [
   { type: 'response.output_item.done', output_index: 0 },
   { type: 'response.completed', response: { id: 'resp_1', status: 'completed', output: [] } },
 ];
-
-function sseFor(events: readonly unknown[]): Response {
-  return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(''), {
-    headers: { 'content-type': 'text/event-stream' },
-  });
-}
 
 describe('serving a Codex subscription target', () => {
   test('a non-streaming Anthropic request consumes Codex SSE into one Messages document', async () => {

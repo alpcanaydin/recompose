@@ -17,6 +17,7 @@ import { completeSubscriptionAttempt } from './attempt-completion';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
+import { hydrateCodexCompletionStream } from './codex-completion';
 import { normalizeCodexError } from './codex-errors';
 import { CodexReasoningReplay } from './codex-replay';
 import { codexProviderRequest } from './codex-request';
@@ -83,7 +84,10 @@ async function normalizedSubscriptionAnswer(
   answer: Response,
   now: number,
 ): Promise<Response> {
-  if (provider === 'openai') return normalizeCodexError(answer, now);
+  if (provider === 'openai') {
+    return hydrateCodexCompletionStream(await normalizeCodexError(answer, now));
+  }
+
   if (provider === 'antigravity') return normalizeAntigravityError(answer);
 
   return answer;
