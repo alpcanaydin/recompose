@@ -80,7 +80,7 @@ function normalizedInputItem(item: unknown): unknown {
   return item['type'] === 'custom_tool_call_output' ? normalizedCustomOutput(item) : item;
 }
 
-function validGrokEncryptedContent(value: unknown): boolean {
+export function validGrokEncryptedContent(value: unknown): boolean {
   if (typeof value !== 'string' || value.trim() === '') return false;
 
   try {
