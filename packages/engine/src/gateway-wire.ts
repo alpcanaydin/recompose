@@ -33,6 +33,14 @@ export type Crossing = {
   requestHeaders?: Record<string, string[]> | undefined;
   requestQuery?: Record<string, string[]> | undefined;
   pluginRequestId?: string | undefined;
+  pluginExecution?:
+    | {
+        requestHeaders: Record<string, string[]>;
+        originalRequest: Uint8Array;
+        requestBody: Uint8Array;
+        skipPluginId: string;
+      }
+    | undefined;
   xaiNamespaceTools?: Record<string, { namespace: string; name: string }> | undefined;
 };
 

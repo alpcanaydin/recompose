@@ -15,6 +15,7 @@ import {
   claudeCredential,
   codexCredential,
   runtimeAnswering,
+  subscriptionProviderAnswer,
   subscriptionGrant,
   subscriptionModel,
 } from './gateway-proxy-subscription.testkit';
@@ -62,7 +63,7 @@ describe('subscription after-auth plugin rewriting', () => {
           Body: encodedBody({ ...decodedBody(request), plugin_marker: fixture.provider }),
         };
       });
-      const provider = runtimeAnswering(() => providerAnswer(fixture.provider));
+      const provider = runtimeAnswering(() => subscriptionProviderAnswer(fixture.provider));
       const app = subscriptionApp(fixture, provider.runtime, plugin);
 
       const answer = await chatRequest(app);
@@ -187,34 +188,6 @@ function decodedBody(request: Record<string, unknown>): Record<string, unknown> 
 
 function encodedBody(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString('base64');
-}
-
-function providerAnswer(provider: SubscriptionProviderId): Response {
-  if (provider === 'anthropic') return claudeAnswer();
-
-  if (provider === 'antigravity') {
-    return Response.json({
-      candidates: [{ content: { role: 'model', parts: [{ text: 'ok' }] }, finishReason: 'STOP' }],
-    });
-  }
-
-  return new Response(
-    `data: ${JSON.stringify({
-      type: 'response.completed',
-      response: {
-        id: 'resp_1',
-        status: 'completed',
-        output: [
-          {
-            type: 'message',
-            role: 'assistant',
-            content: [{ type: 'output_text', text: 'ok' }],
-          },
-        ],
-      },
-    })}\n\n`,
-    { headers: { 'content-type': 'text/event-stream' } },
-  );
 }
 
 function refreshRuntime() {

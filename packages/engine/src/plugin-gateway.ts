@@ -7,6 +7,7 @@ import type { PluginHost } from './plugin-host';
 import { requestHeaderMap, requestQueryMap } from './gateway-request-metadata';
 import { afterAuthPlugins } from './plugin-after-auth';
 import { pluginAccountId, pluginCredential } from './plugin-auth';
+import { notePluginExecution } from './plugin-execution-context';
 import { PluginExecutorAdapter, pluginExecutorForProvider } from './plugin-executor';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
@@ -175,7 +176,9 @@ async function preparedExecutorRequest(
   crossing: Crossing,
   request: Parameters<PluginExecutorAdapter['execute']>[0],
   plugins?: PluginHost,
-): Promise<Parameters<PluginExecutorAdapter['execute']>[0] | Response> {
+): Promise<
+  { bodyChanged: boolean; request: Parameters<PluginExecutorAdapter['execute']>[0] } | Response
+> {
   const intercepted = await afterAuthPlugins(
     crossing,
     target.inputDialect,
@@ -187,7 +190,14 @@ async function preparedExecutorRequest(
 
   return 'response' in intercepted
     ? intercepted.response
-    : { ...request, headers: intercepted.headers, payload: intercepted.body };
+    : {
+        bodyChanged: !sameBytes(intercepted.body, request.payload),
+        request: { ...request, headers: intercepted.headers, payload: intercepted.body },
+      };
+}
+
+function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function executorRequest(
@@ -223,9 +233,18 @@ export async function reachPluginExecutor(
   plugins?: PluginHost,
 ): Promise<Response> {
   const request = executorRequest(target, crossing, grant, body);
-  const prepared = await preparedExecutorRequest(target, crossing, request, plugins);
+  const intercepted = await preparedExecutorRequest(target, crossing, request, plugins);
 
-  if (prepared instanceof Response) return prepared;
+  if (intercepted instanceof Response) return intercepted;
+  const prepared = intercepted.request;
+
+  notePluginExecution(
+    crossing,
+    prepared.headers,
+    prepared.payload,
+    intercepted.bodyChanged,
+    target.adapter.id(),
+  );
 
   if (prepared.stream) {
     const response = await target.adapter.executeStream(prepared);

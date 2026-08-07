@@ -6,6 +6,7 @@ import type { PluginHeaderMap } from '../plugin-wire';
 import type { ProviderRequest } from './claude-request';
 
 import { afterAuthPlugins } from '../plugin-after-auth';
+import { notePluginExecution } from '../plugin-execution-context';
 import { sendObservedSubscription } from './observed-send';
 
 type SubscriptionSend = (
@@ -44,11 +45,13 @@ function providerHeaders(headers: PluginHeaderMap): [string, string][] {
   );
 }
 
+type PreparedRequest = { bodyChanged: boolean; request: ProviderRequest };
+
 async function interceptedRequest(
   provider: SubscriptionProviderId,
   request: ProviderRequest,
   context: SubscriptionPluginContext,
-): Promise<ProviderRequest | Response> {
+): Promise<PreparedRequest | Response> {
   const intercepted = await afterAuthPlugins(
     context.crossing,
     providerDialect(provider),
@@ -57,13 +60,14 @@ async function interceptedRequest(
     context.plugins,
   );
 
-  return 'response' in intercepted
-    ? intercepted.response
-    : {
-        ...request,
-        headers: providerHeaders(intercepted.headers),
-        body: new TextDecoder().decode(intercepted.body),
-      };
+  if ('response' in intercepted) return intercepted.response;
+
+  const body = new TextDecoder().decode(intercepted.body);
+
+  return {
+    bodyChanged: body !== request.body,
+    request: { ...request, headers: providerHeaders(intercepted.headers), body },
+  };
 }
 
 export async function sendInterceptedSubscription(
@@ -75,12 +79,23 @@ export async function sendInterceptedSubscription(
   context?: SubscriptionPluginContext,
 ): Promise<SubscriptionAttempt> {
   const prepared =
-    context === undefined ? request : await interceptedRequest(provider, request, context);
+    context === undefined
+      ? { bodyChanged: false, request }
+      : await interceptedRequest(provider, request, context);
 
   if (prepared instanceof Response) return { answer: prepared, terminated: true };
 
+  if (context !== undefined) {
+    notePluginExecution(
+      context.crossing,
+      pluginHeaders(prepared.request.headers),
+      new TextEncoder().encode(prepared.request.body),
+      prepared.bodyChanged,
+    );
+  }
+
   return {
-    answer: await sendObservedSubscription(provider, accountId, body, prepared, send),
+    answer: await sendObservedSubscription(provider, accountId, body, prepared.request, send),
     terminated: false,
   };
 }

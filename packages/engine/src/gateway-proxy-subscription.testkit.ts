@@ -115,6 +115,36 @@ export function claudeAnswer(content: readonly unknown[] = []): Response {
   });
 }
 
+export function subscriptionProviderAnswer(
+  provider: 'anthropic' | 'openai' | 'antigravity',
+): Response {
+  if (provider === 'anthropic') return claudeAnswer();
+
+  if (provider === 'antigravity') {
+    return Response.json({
+      candidates: [{ content: { role: 'model', parts: [{ text: 'ok' }] }, finishReason: 'STOP' }],
+    });
+  }
+
+  return new Response(
+    `data: ${JSON.stringify({
+      type: 'response.completed',
+      response: {
+        id: 'resp_1',
+        status: 'completed',
+        output: [
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'ok' }],
+          },
+        ],
+      },
+    })}\n\n`,
+    { headers: { 'content-type': 'text/event-stream' } },
+  );
+}
+
 export async function chatRequest(
   app: Hono,
   stream = false,

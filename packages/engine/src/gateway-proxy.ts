@@ -11,8 +11,9 @@ import type { SubscriptionRuntime } from './subscription/reach';
 
 import { translateRequest } from './dialect/dispatcher';
 import { translateRequestToGemini } from './dialect/gemini-bridge';
-import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
+import { unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
 import { beforeGatewayPlugins } from './gateway-plugin-before';
+import { answerThroughPlugins } from './gateway-plugin-response';
 import { gatewayRequestCrossing } from './gateway-request-crossing';
 import { ingressPayload, InvalidJsonBodyError, refusalResponse, streamAsk } from './gateway-wire';
 import { pluginGatewayTarget, reachPluginExecutor } from './plugin-gateway';
@@ -156,7 +157,7 @@ async function forwardProviderResolved(
     return unreachableTargetAnswer(effectiveCrossing);
   }
 
-  return answerFrom(effectiveCrossing, upstream, upstreamDialect);
+  return answerThroughPlugins(effectiveCrossing, upstream, upstreamDialect, plugins);
 }
 
 async function forwardPluginExecutor(
@@ -171,7 +172,7 @@ async function forwardPluginExecutor(
 
   const upstream = await reachPluginExecutor(target, crossing, grant, outbound.body, plugins);
 
-  return answerFrom(crossing, upstream, target.outputDialect);
+  return answerThroughPlugins(crossing, upstream, target.outputDialect, plugins);
 }
 
 function deniedGrantAnswer(crossing: Crossing, grant: SpendGrant): Response | null {

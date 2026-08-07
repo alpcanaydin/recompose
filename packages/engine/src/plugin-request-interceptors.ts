@@ -2,6 +2,11 @@ import type { PluginRoutingHost, PluginRoutingRecord } from './plugin-routing';
 
 import { isJsonObject } from './gateway-wire';
 import { pluginMethods } from './plugin-abi';
+import {
+  interceptorField,
+  interceptorStringList,
+  mergedPluginHeaders,
+} from './plugin-interceptor-headers';
 import { pluginBytes, pluginHeaders, type PluginHeaderMap as HeaderMap } from './plugin-wire';
 
 export type PluginRequestIntercept = {
@@ -28,16 +33,6 @@ export type PluginRequestInterceptResult = {
 
 type InterceptorResponse = PluginRequestInterceptResult & { clearHeaders: string[] };
 
-function field(value: Record<string, unknown>, lower: string, upper: string): unknown {
-  return value[lower] ?? value[upper];
-}
-
-function stringList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
-    : [];
-}
-
 function statusCode(value: unknown): number {
   return typeof value === 'number' && value >= 100 && value <= 599 ? Math.trunc(value) : 403;
 }
@@ -46,30 +41,14 @@ function interceptorResponse(value: unknown): InterceptorResponse {
   if (!isJsonObject(value)) throw new Error('plugin request interceptor response is invalid');
 
   return {
-    headers: pluginHeaders(field(value, 'headers', 'Headers')),
-    body: pluginBytes(field(value, 'body', 'Body')),
-    clearHeaders: stringList(field(value, 'clear_headers', 'ClearHeaders')),
-    terminate: field(value, 'terminate', 'Terminate') === true,
-    statusCode: statusCode(field(value, 'status_code', 'StatusCode')),
-    responseHeaders: pluginHeaders(field(value, 'response_headers', 'ResponseHeaders')),
-    responseBody: pluginBytes(field(value, 'response_body', 'ResponseBody')),
+    headers: pluginHeaders(interceptorField(value, 'headers', 'Headers')),
+    body: pluginBytes(interceptorField(value, 'body', 'Body')),
+    clearHeaders: interceptorStringList(interceptorField(value, 'clear_headers', 'ClearHeaders')),
+    terminate: interceptorField(value, 'terminate', 'Terminate') === true,
+    statusCode: statusCode(interceptorField(value, 'status_code', 'StatusCode')),
+    responseHeaders: pluginHeaders(interceptorField(value, 'response_headers', 'ResponseHeaders')),
+    responseBody: pluginBytes(interceptorField(value, 'response_body', 'ResponseBody')),
   };
-}
-
-function withoutHeaders(current: HeaderMap, clear: readonly string[]): HeaderMap {
-  const removed = new Set(clear.map((name) => name.toLowerCase()));
-
-  return Object.fromEntries(
-    Object.entries(current).filter(([name]) => !removed.has(name.toLowerCase())),
-  );
-}
-
-function mergedHeaders(current: HeaderMap, next: HeaderMap, clear: readonly string[]): HeaderMap {
-  const merged = withoutHeaders(structuredClone(current), clear);
-
-  for (const [name, values] of Object.entries(next)) merged[name] = [...values];
-
-  return merged;
 }
 
 function requestWire(request: PluginRequestIntercept, headers_: HeaderMap, body: Uint8Array) {
@@ -110,7 +89,7 @@ function appliedResponse(
 ): PluginRequestInterceptResult {
   return {
     ...current,
-    headers: mergedHeaders(current.headers, response.headers, response.clearHeaders),
+    headers: mergedPluginHeaders(current.headers, response.headers, response.clearHeaders),
     body: response.body.length > 0 ? response.body : current.body,
     terminate: response.terminate,
     statusCode: response.statusCode,

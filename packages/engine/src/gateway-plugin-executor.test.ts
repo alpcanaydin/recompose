@@ -38,6 +38,7 @@ describe('gateway plugin executor inference', () => {
     const sent = fixture.requests.get(pluginMethods.executorExecute);
 
     expect(body).toMatchObject({ choices: [{ message: { content: 'plugin answer' } }] });
+    expect(fixture.requests.has(pluginMethods.responseInterceptAfter)).toBe(false);
     expect(sent).toMatchObject({
       AuthID: 'acc-plugin',
       AuthProvider: 'plugin-provider',
@@ -63,6 +64,7 @@ describe('gateway plugin executor inference', () => {
 
     expect(answer.headers.get('content-type')).toContain('text/event-stream');
     await expect(answer.text()).resolves.toContain('plugin stream');
+    expect(fixture.requests.has(pluginMethods.responseInterceptStreamChunk)).toBe(false);
   });
 });
 
@@ -254,6 +256,8 @@ function registrationAnswer(): Uint8Array {
         executor_model_scope: 'both',
         executor_input_formats: ['chat-completions', 'anthropic'],
         executor_output_formats: ['chat-completions'],
+        response_interceptor: true,
+        response_stream_interceptor: true,
       },
     },
   });

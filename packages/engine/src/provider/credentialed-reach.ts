@@ -7,6 +7,7 @@ import type { PluginHost } from '../plugin-host';
 import type { AIStudioRelay, RelayRequest } from './ai-studio-relay';
 
 import { afterAuthPlugins, flattenedHeaders, headerMap } from '../plugin-after-auth';
+import { notePluginExecution } from '../plugin-execution-context';
 import { reachAIStudio } from './ai-studio-request';
 import {
   credentialedDialect,
@@ -79,7 +80,7 @@ async function interceptedRequest(
   grant: ResolvedGrant,
   prepared: RelayRequest,
   plugins?: PluginHost,
-): Promise<RelayRequest | Response> {
+): Promise<{ bodyChanged: boolean; request: RelayRequest } | Response> {
   const dialect =
     grant.spend.custody === 'credentialed'
       ? credentialedDialect(grant.spend.provider, crossing.dialect)
@@ -92,13 +93,14 @@ async function interceptedRequest(
     plugins,
   );
 
-  return 'response' in intercepted
-    ? intercepted.response
-    : {
-        ...prepared,
-        headers: flattenedHeaders(intercepted.headers),
-        body: new TextDecoder().decode(intercepted.body),
-      };
+  if ('response' in intercepted) return intercepted.response;
+
+  const body = new TextDecoder().decode(intercepted.body);
+
+  return {
+    bodyChanged: body !== prepared.body,
+    request: { ...prepared, headers: flattenedHeaders(intercepted.headers), body },
+  };
 }
 
 export async function reachCredentialed(
@@ -110,9 +112,17 @@ export async function reachCredentialed(
   plugins?: PluginHost,
 ): Promise<Response> {
   const prepared = requestFor(grant, crossing, body);
-  const request = await interceptedRequest(crossing, grant, prepared, plugins);
+  const intercepted = await interceptedRequest(crossing, grant, prepared, plugins);
 
-  if (request instanceof Response) return request;
+  if (intercepted instanceof Response) return intercepted;
+  const request = intercepted.request;
+
+  notePluginExecution(
+    crossing,
+    headerMap(request.headers),
+    new TextEncoder().encode(request.body),
+    intercepted.bodyChanged,
+  );
   const spend = grant.spend;
   const span = providerObservability().start({
     provider: spend.custody === 'credentialed' ? spend.provider : 'open',
