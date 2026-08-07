@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import { credentialNeedsRefresh, refreshSubscriptionCredential } from './refresh';
+import { antigravityRefreshBlob } from './refresh.testkit';
 
 const claudeBlob = JSON.stringify({
   claudeAiOauth: {
@@ -97,6 +98,55 @@ describe('refreshing an Antigravity OAuth credential', () => {
       body: capturedBody,
     });
     expect(new URLSearchParams(capturedBody).get('refresh_token')).toBe('google-refresh');
+  });
+});
+
+describe('deduplicating Antigravity OAuth refresh', () => {
+  test('shared-token refresh preserves each account project metadata', async () => {
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const fetchLike = vi.fn(async () => {
+      await held;
+
+      return Response.json({
+        access_token: 'new-access',
+        refresh_token: 'new-refresh',
+        expires_in: 3600,
+      });
+    });
+    const first = refreshSubscriptionCredential(
+      'antigravity',
+      antigravityRefreshBlob('project-a'),
+      fetchLike,
+      1_700_000_000_000,
+    );
+    const second = refreshSubscriptionCredential(
+      'antigravity',
+      antigravityRefreshBlob('project-b'),
+      fetchLike,
+      1_700_000_000_000,
+    );
+
+    await vi.waitFor(() => {
+      expect(fetchLike).toHaveBeenCalledOnce();
+    });
+    release?.();
+
+    const [firstBlob, secondBlob] = await Promise.all([first, second]);
+
+    expect(JSON.parse(firstBlob)).toMatchObject({
+      access_token: 'new-access',
+      refresh_token: 'new-refresh',
+      project_id: 'project-a',
+    });
+    expect(JSON.parse(secondBlob)).toMatchObject({
+      access_token: 'new-access',
+      refresh_token: 'new-refresh',
+      project_id: 'project-b',
+    });
+    expect(fetchLike).toHaveBeenCalledOnce();
   });
 });
 

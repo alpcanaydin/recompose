@@ -27,7 +27,7 @@ const CLAUDE_SCOPE =
 const CLAUDE_REFRESH_MIN_BACKOFF_MS = 5_000;
 const CLAUDE_REFRESH_MAX_BACKOFF_MS = 5 * 60 * 1_000;
 
-const refreshing = new Map<string, Promise<string>>();
+const refreshing = new Map<string, Promise<RefreshedTokens>>();
 const claudeRefreshBlockedUntil = new Map<string, number>();
 
 export function credentialNeedsRefresh(
@@ -186,11 +186,10 @@ function rememberRateLimit(
 
 async function refreshOnce(
   provider: SubscriptionProviderId,
-  blob: string,
   refreshToken: string,
   fetchLike: RefreshFetch,
   now: number,
-): Promise<string> {
+): Promise<RefreshedTokens> {
   const [url, init] = refreshRequest(provider, refreshToken);
   const response = await fetchLike(url, init);
 
@@ -208,7 +207,7 @@ async function refreshOnce(
     throw new Error('subscription token refresh returned a malformed response');
   }
 
-  return refreshedCredentialBlob(provider, blob, refreshed, now);
+  return refreshed;
 }
 
 function assertRefreshAllowed(
@@ -243,14 +242,14 @@ export async function refreshSubscriptionCredential(
   const standing = refreshing.get(key);
 
   if (standing !== undefined) {
-    return standing;
+    return refreshedCredentialBlob(provider, blob, await standing, now);
   }
 
-  const started = refreshOnce(provider, blob, refreshToken, fetchLike, now).finally(() => {
+  const started = refreshOnce(provider, refreshToken, fetchLike, now).finally(() => {
     refreshing.delete(key);
   });
 
   refreshing.set(key, started);
 
-  return started;
+  return refreshedCredentialBlob(provider, blob, await started, now);
 }
