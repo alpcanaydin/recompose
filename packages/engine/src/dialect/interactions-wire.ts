@@ -118,6 +118,7 @@ export type InteractionsGenerationConfig = {
 
 export type InteractionsRequest = {
   model?: string;
+  agent?: string;
   input:
     | string
     | InteractionsStep

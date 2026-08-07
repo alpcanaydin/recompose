@@ -244,9 +244,19 @@ function interactionsPayload(body: JsonObject): RequestOf['interactions'] | null
 }
 
 function speaksInteractions(body: JsonObject): body is JsonObject & RequestOf['interactions'] {
-  const input = body['input'];
+  return validInteractionsInput(body['input']) && validStream(body['stream']) && oneTarget(body);
+}
 
+function validInteractionsInput(input: unknown): boolean {
   return typeof input === 'string' || Array.isArray(input) || isJsonObject(input);
+}
+
+function validStream(stream: unknown): boolean {
+  return stream === undefined || typeof stream === 'boolean';
+}
+
+function oneTarget(body: JsonObject): boolean {
+  return (typeof body['model'] === 'string') !== (typeof body['agent'] === 'string');
 }
 
 function chatPayload(body: JsonObject): RequestOf['chat-completions'] | null {

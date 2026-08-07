@@ -67,6 +67,34 @@ describe('native Gemini Interactions serving', () => {
       steps: [{ type: 'model_output' }],
     });
   });
+
+  it('should serve the native v1beta route alias', async () => {
+    const upstream = fetchAnsweringWith(interactionAnswer);
+    const answer = await appFor(upstream.fetchLike).request(
+      'http://127.0.0.1:8397/v1beta/interactions',
+      {
+        method: 'POST',
+        body: JSON.stringify({ model: 'fast', input: 'hello' }),
+      },
+    );
+
+    expect(answer.status).toBe(200);
+    expect(upstream.sent).toHaveLength(1);
+  });
+
+  it.each([
+    { model: 'fast', agent: 'agents/test-agent', input: 'hi' },
+    { model: 'fast', stream: 'true', input: 'hi' },
+  ])('should reject invalid native request controls before provider spend', async (body) => {
+    const upstream = fetchAnsweringWith(interactionAnswer);
+    const answer = await appFor(upstream.fetchLike).request(
+      'http://127.0.0.1:8397/v1beta/interactions',
+      { method: 'POST', body: JSON.stringify(body) },
+    );
+
+    expect(answer.status).toBe(400);
+    expect(upstream.sent).toEqual([]);
+  });
 });
 
 describe('Anthropic requests crossing through Gemini Interactions', () => {

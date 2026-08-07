@@ -34,6 +34,7 @@ const MODEL_ROUTES: readonly (readonly [string, ProxyDialect])[] = [
   ['/v1/responses', 'responses'],
   ['/responses', 'responses'],
   ['/v1/interactions', 'interactions'],
+  ['/v1beta/interactions', 'interactions'],
   ['/interactions', 'interactions'],
 ];
 

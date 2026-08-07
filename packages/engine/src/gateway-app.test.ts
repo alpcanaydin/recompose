@@ -7,7 +7,7 @@ import { aGatewayHolding, grantsNothing, neverFetches } from './gateway-app.test
 const ANTHROPIC_MODEL_PATHS = ['/v1/messages', '/messages'];
 const OPENAI_MODEL_PATHS = ['/v1/chat/completions', '/chat/completions'];
 const RESPONSES_MODEL_PATHS = ['/v1/responses', '/responses'];
-const INTERACTIONS_MODEL_PATHS = ['/v1/interactions', '/interactions'];
+const INTERACTIONS_MODEL_PATHS = ['/v1/interactions', '/v1beta/interactions', '/interactions'];
 const MODEL_PATHS = [
   ...ANTHROPIC_MODEL_PATHS,
   ...OPENAI_MODEL_PATHS,
