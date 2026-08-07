@@ -82,6 +82,8 @@ const AUTHORED_BY_THE_FIXTURE: readonly string[] = [
   'user.email=fixture@example.invalid',
   '-c',
   'user.name=fixture',
+  '-c',
+  'commit.gpgsign=false',
 ];
 
 function runGit(workingDirectory: string, args: readonly string[]): void {
