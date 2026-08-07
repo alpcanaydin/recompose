@@ -133,7 +133,13 @@ export type ResponsesStreamResponse = {
   output: readonly ResponsesOutputItem[];
   incomplete_details?: { reason: string };
   usage?: ResponsesUsage;
-  error?: { code?: string; message?: string };
+  error?: {
+    type?: string;
+    code?: string;
+    message?: string;
+    resets_at?: number;
+    resets_in_seconds?: number;
+  };
 };
 
 export type ResponsesStreamItem = {
@@ -155,7 +161,18 @@ export type ResponsesKnownStreamEvent =
   | { type: 'response.completed'; response: ResponsesStreamResponse }
   | { type: 'response.incomplete'; response: ResponsesStreamResponse }
   | { type: 'response.failed'; response: ResponsesStreamResponse }
-  | { type: 'error'; code: string; message: string };
+  | {
+      type: 'error';
+      code?: string;
+      message?: string;
+      error?: {
+        type?: string;
+        code?: string;
+        message?: string;
+        resets_at?: number;
+        resets_in_seconds?: number;
+      };
+    };
 
 type ResponsesUnknownStreamEvent = { type: string };
 

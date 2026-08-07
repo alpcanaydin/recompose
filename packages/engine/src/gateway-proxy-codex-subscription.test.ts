@@ -219,3 +219,55 @@ describe('normalizing Codex subscription failures', () => {
     });
   });
 });
+
+describe('normalizing Codex terminal SSE failures', () => {
+  test('a terminal SSE context error becomes a failed HTTP response', async () => {
+    const { app } = codexApp(() =>
+      sseFor([
+        {
+          type: 'error',
+          error: {
+            type: 'invalid_request_error',
+            code: 'context_length_exceeded',
+            message: 'Your input exceeds the context window',
+          },
+        },
+      ]),
+    );
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { type: 'invalid_request_error', code: 'context_too_large' },
+    });
+  });
+
+  test('a terminal SSE usage limit becomes 429 with Retry-After', async () => {
+    const { app } = codexApp(() =>
+      sseFor([
+        {
+          type: 'response.failed',
+          response: {
+            id: 'resp_failed',
+            status: 'failed',
+            output: [],
+            error: {
+              type: 'usage_limit_reached',
+              message: 'usage limit reached',
+              resets_in_seconds: 60,
+            },
+          },
+        },
+      ]),
+    );
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(429);
+    expect(answer.headers.get('retry-after')).toBe('60');
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { type: 'usage_limit_reached', message: 'usage limit reached' },
+    });
+  });
+});

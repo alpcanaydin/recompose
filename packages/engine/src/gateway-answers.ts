@@ -7,6 +7,7 @@ import type { AnthropicRefusal } from './refusals';
 import { answeredBy } from './dialect/anthropic-attribution';
 import { translateResponse } from './dialect/dispatcher';
 import { isGeminiResponse, translateResponseFromGemini } from './dialect/gemini-bridge';
+import { isResponsesAnswer, terminalResponseIn } from './dialect/responses-answer-shape';
 import { translatedStreamBody } from './gateway-stream-answers';
 import {
   isJsonObject,
@@ -16,6 +17,7 @@ import {
   wantsStream,
 } from './gateway-wire';
 import { jsonEventsFrom } from './stream-wire';
+import { codexTerminalErrorAnswer } from './subscription/codex-terminal-error';
 
 function attributionOf(crossing: Crossing): Record<string, string> {
   return {
@@ -165,16 +167,6 @@ function hasAnthropicPayload(value: JsonObject): boolean {
   return Array.isArray(value['content']) && (typeof stopReason === 'string' || stopReason === null);
 }
 
-function isResponsesAnswer(value: JsonObject): value is JsonObject & ResponsesResponse {
-  return (
-    typeof value['id'] === 'string' &&
-    (value['status'] === 'completed' ||
-      value['status'] === 'incomplete' ||
-      value['status'] === 'failed') &&
-    Array.isArray(value['output'])
-  );
-}
-
 async function translatedAnswer(
   crossing: Crossing,
   upstream: Response,
@@ -262,6 +254,10 @@ async function completedResponsesAnswer(
   let completed: (JsonObject & ResponsesResponse) | null = null;
 
   for await (const event of jsonEventsFrom(upstream.body)) {
+    const failure = await codexTerminalErrorAnswer(event, crossing.dialect, attribution);
+
+    if (failure !== null) return failure;
+
     const response = terminalResponseIn(event);
 
     if (response !== null) {
@@ -269,6 +265,15 @@ async function completedResponsesAnswer(
     }
   }
 
+  return completedResponsesResult(crossing, upstream, attribution, completed);
+}
+
+function completedResponsesResult(
+  crossing: Crossing,
+  upstream: Response,
+  attribution: Record<string, string>,
+  completed: (JsonObject & ResponsesResponse) | null,
+): Response {
   return completed === null
     ? unreachableTargetAnswer(crossing)
     : translatedJsonAnswer(
@@ -279,12 +284,4 @@ async function completedResponsesAnswer(
         upstream,
         attribution,
       );
-}
-
-function terminalResponseIn(
-  event: JsonObject & { type: string },
-): (JsonObject & ResponsesResponse) | null {
-  const response = event['response'];
-
-  return isJsonObject(response) && isResponsesAnswer(response) ? response : null;
 }

@@ -6,6 +6,7 @@ import type {
   ResponsesStreamResponse,
 } from './responses-wire';
 
+import { codexEventError, codexEventErrorCode } from '../provider/codex-event-error';
 import { stopReasonFromResponse, toHubUsage } from './responses-shared';
 import { sanitizeToolId } from './tool-id';
 
@@ -177,7 +178,7 @@ function decodeKnownEvent(
   }
 
   if (event.type === 'error') {
-    return [{ type: 'stream-error', error: { type: event.code, message: event.message } }];
+    return [streamErrorEvent(event)];
   }
 
   return decodeBlockEvent(event, skipped);
@@ -207,11 +208,25 @@ function terminalEvents(event: TerminalResponseEvent): HubStreamEvent[] {
 }
 
 function failedResponseEvent(response: ResponsesStreamResponse): HubStreamEvent {
+  const parsed = codexEventError({ type: 'response.failed', response });
+
   return {
     type: 'stream-error',
     error: {
-      type: response.error?.code ?? 'api_error',
-      message: response.error?.message ?? 'Codex response failed',
+      type: parsed === null ? 'api_error' : codexEventErrorCode(parsed),
+      message: parsed?.message ?? 'Codex response failed',
+    },
+  };
+}
+
+function streamErrorEvent(event: ResponsesKnownStreamEvent & { type: 'error' }): HubStreamEvent {
+  const parsed = codexEventError(event);
+
+  return {
+    type: 'stream-error',
+    error: {
+      type: parsed === null ? 'api_error' : codexEventErrorCode(parsed),
+      message: parsed?.message ?? 'Codex response failed',
     },
   };
 }
