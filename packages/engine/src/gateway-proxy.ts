@@ -12,19 +12,13 @@ import type { SubscriptionRuntime } from './subscription/reach';
 import { translateRequest } from './dialect/dispatcher';
 import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
-import { requestSessions, requestsResponsesLite } from './gateway-session';
-import {
-  ingressPayload,
-  InvalidJsonBodyError,
-  readJsonBody,
-  refusalResponse,
-  virtualNameOf,
-  wantsStream,
-} from './gateway-wire';
+import { beforeGatewayPlugins } from './gateway-plugin-before';
+import { gatewayRequestCrossing } from './gateway-request-crossing';
+import { ingressPayload, InvalidJsonBodyError, refusalResponse, wantsStream } from './gateway-wire';
 import { pluginGatewayTarget, reachPluginExecutor } from './plugin-gateway';
 import { reachCredentialed } from './provider/credentialed-reach';
 import { credentialedDialect } from './provider/credentialed-target';
-import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
+import { emptyConversation, missingCredential, missingTarget } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
 
@@ -43,34 +37,24 @@ export async function proxyModelRequest(
   aiStudio?: AIStudioRelay,
   plugins?: PluginHost,
 ): Promise<Response> {
-  const raw = await readJsonBody(c);
-  const name = virtualNameOf(raw);
-  const virtualModel = gateway.virtualModels.find((candidate) => candidate.id === name);
+  const lookup = await gatewayRequestCrossing(c, dialect, gateway);
 
-  if (virtualModel === undefined) {
-    return refusalResponse(dialect, unknownModel(name));
-  }
+  if ('response' in lookup) return lookup.response;
 
-  if (virtualModel.target.standing === 'removed') {
-    return refusalResponse(dialect, missingTarget(gateway.displayName, name));
-  }
+  const { crossing, virtualModel } = lookup;
 
-  const crossing: Crossing = {
-    dialect,
-    raw,
-    gatewayName: gateway.displayName,
-    virtualModel: virtualModel.id,
-    providerModel: virtualModel.target.providerModel,
-    ...requestSessions(c, raw),
-    responsesLite: requestsResponsesLite(c),
-    anthropicBeta: c.req.header('anthropic-beta'),
-  };
+  const intercepted = await beforeGatewayPlugins(c, crossing, plugins);
 
+  if ('response' in intercepted) return intercepted.response;
+
+  const effectiveCrossing = intercepted.crossing;
   const grant = await spendGrantFor(gateway.slug, virtualModel.id);
   const pluginTarget =
-    grant.verdict === 'resolved' ? await pluginGatewayTarget(c, crossing, grant, plugins) : null;
+    grant.verdict === 'resolved'
+      ? await pluginGatewayTarget(c, effectiveCrossing, grant, plugins)
+      : null;
 
-  return forwardGranted(crossing, grant, fetchLike, subscriptions, aiStudio, pluginTarget);
+  return forwardGranted(effectiveCrossing, grant, fetchLike, subscriptions, aiStudio, pluginTarget);
 }
 
 async function forwardGranted(

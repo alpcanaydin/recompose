@@ -32,6 +32,7 @@ export type Crossing = {
   anthropicBeta?: string | undefined;
   requestHeaders?: Record<string, string[]> | undefined;
   requestQuery?: Record<string, string[]> | undefined;
+  pluginRequestId?: string | undefined;
   xaiNamespaceTools?: Record<string, { namespace: string; name: string }> | undefined;
 };
 

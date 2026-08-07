@@ -4,6 +4,7 @@ import type { Context } from 'hono';
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
 import type { PluginHost } from './plugin-host';
 
+import { requestHeaderMap, requestQueryMap } from './gateway-request-metadata';
 import { pluginAccountId, pluginCredential } from './plugin-auth';
 import { PluginExecutorAdapter, pluginExecutorForProvider } from './plugin-executor';
 
@@ -20,26 +21,6 @@ export type PluginGatewayTarget =
 
 function providerOf(grant: ResolvedGrant): string | null {
   return grant.spend.custody === 'open' ? null : grant.spend.provider;
-}
-
-function headerRecord(c: Context): Record<string, string[]> {
-  const headers: Record<string, string[]> = {};
-
-  c.req.raw.headers.forEach((value, name) => {
-    headers[name] = [...(headers[name] ?? []), value];
-  });
-
-  return headers;
-}
-
-function queryRecord(c: Context): Record<string, string[]> {
-  const query: Record<string, string[]> = {};
-
-  new URL(c.req.url).searchParams.forEach((value, name) => {
-    query[name] = [...(query[name] ?? []), value];
-  });
-
-  return query;
 }
 
 const pluginFormats = new Map<string, ProviderDialect>([
@@ -109,8 +90,8 @@ async function routedTarget(
     sourceFormat: crossing.dialect,
     requestedModel: crossing.virtualModel,
     stream: crossing.raw['stream'] === true,
-    headers: headerRecord(c),
-    query: queryRecord(c),
+    headers: requestHeaderMap(c),
+    query: requestQueryMap(c),
     body: new TextEncoder().encode(JSON.stringify(crossing.raw)),
     metadata: {},
     availableProviders: provider === null ? [] : [provider],
@@ -133,8 +114,8 @@ export async function pluginGatewayTarget(
 ): Promise<PluginGatewayTarget | null> {
   if (plugins === undefined) return null;
 
-  crossing.requestHeaders = headerRecord(c);
-  crossing.requestQuery = queryRecord(c);
+  crossing.requestHeaders = requestHeaderMap(c);
+  crossing.requestQuery = requestQueryMap(c);
 
   const routed = await routedTarget(c, crossing, grant, plugins);
 
