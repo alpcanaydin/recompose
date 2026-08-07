@@ -1,6 +1,7 @@
 import type { JsonObject, ProxyDialect } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { normalizeKimiToolHistory } from './kimi-tool-history';
 
 type ParsedKimiModel = { base: string; suffix?: string };
 const KIMI_SUFFIX = /\(([^()]*)\)\s*$/u;
@@ -73,10 +74,12 @@ export function kimiProviderBody(
   const parsed = parsedKimiModel(requestedModel);
   const normalized = { ...body, model: parsed.base };
   const effort = kimiEffort(parsed.suffix);
+  const configured =
+    effort === undefined
+      ? normalized
+      : sourceDialect === 'anthropic'
+        ? withClaudeEffort(normalized, effort)
+        : withChatEffort(normalized, effort);
 
-  if (effort === undefined) return normalized;
-
-  return sourceDialect === 'anthropic'
-    ? withClaudeEffort(normalized, effort)
-    : withChatEffort(normalized, effort);
+  return sourceDialect === 'anthropic' ? configured : normalizeKimiToolHistory(configured);
 }

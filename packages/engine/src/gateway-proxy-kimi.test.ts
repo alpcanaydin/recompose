@@ -87,12 +87,28 @@ test('sends Chat Completions to Kimi with native thinking fields', async () => {
 
   await app.request('http://127.0.0.1:8397/v1/chat/completions', {
     method: 'POST',
-    body: JSON.stringify({ model: 'fast', messages: [{ role: 'user', content: 'hello' }] }),
+    body: JSON.stringify({
+      model: 'fast',
+      messages: [
+        {
+          role: 'assistant',
+          tool_calls: [
+            {
+              id: 'call_1',
+              type: 'function',
+              function: { name: 'list_directory', arguments: '{}' },
+            },
+          ],
+        },
+        { role: 'tool', call_id: 'call_1', content: '[]' },
+      ],
+    }),
   });
 
   expect(sent[0]?.url).toBe('https://api.kimi.com/coding/v1/chat/completions');
   expect(requestBody(sent[0]?.init)).toMatchObject({
     model: 'k3',
     thinking: { type: 'enabled', effort: 'medium' },
+    messages: [{ reasoning_content: '[reasoning unavailable]' }, { tool_call_id: 'call_1' }],
   });
 });
