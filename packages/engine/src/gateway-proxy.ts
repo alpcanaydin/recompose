@@ -25,6 +25,7 @@ import {
   credentialedRequestHeaders,
   credentialedRequestUrl,
 } from './provider/credentialed-target';
+import { observeKimiReplay } from './provider/kimi-replay-runtime';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
@@ -178,12 +179,14 @@ async function reachedUpstream(
       );
     }
 
-    return await fetchLike(credentialedRequestUrl(grant, crossing), {
+    const answer = await fetchLike(credentialedRequestUrl(grant, crossing), {
       method: 'POST',
       headers: credentialedRequestHeaders(grant.spend, crossing),
       body: JSON.stringify(credentialedRequestBody(grant, crossing, body)),
       signal: AbortSignal.timeout(proxyFetchBoundMs),
     });
+
+    return await observedCredentialedAnswer(grant, crossing, answer);
   } catch (failure) {
     if (failure instanceof InvalidJsonBodyError) {
       throw failure;
@@ -193,6 +196,16 @@ async function reachedUpstream(
 
     return null;
   }
+}
+
+async function observedCredentialedAnswer(
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  crossing: Crossing,
+  answer: Response,
+): Promise<Response> {
+  return grant.spend.custody === 'credentialed' && grant.spend.provider === 'kimi'
+    ? observeKimiReplay(crossing, answer)
+    : answer;
 }
 
 function responsesLite(c: Context): boolean {

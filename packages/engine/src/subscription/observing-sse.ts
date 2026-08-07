@@ -1,6 +1,7 @@
 export function observingSseLines(
   body: ReadableStream<Uint8Array>,
   observe: (line: string) => void,
+  finish: () => void = () => undefined,
 ): ReadableStream<Uint8Array> {
   const decoder = new TextDecoder();
   let buffer = '';
@@ -17,6 +18,7 @@ export function observingSseLines(
       },
       flush() {
         observe(buffer + decoder.decode());
+        finish();
       },
     }),
   );

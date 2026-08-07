@@ -3,6 +3,7 @@ import type { SpendGrant } from '@recompose/contracts';
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from '../gateway-wire';
 
 import { cappedGeminiOutput } from './gemini-model-limits';
+import { prepareKimiReplay } from './kimi-replay-runtime';
 import { kimiProviderBody } from './kimi-request';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
@@ -26,9 +27,13 @@ export function credentialedRequestBody(
     return cappedGeminiOutput(body, crossing.providerModel);
   }
 
-  return grant.spend.provider === 'kimi'
-    ? kimiProviderBody(body, crossing.providerModel, crossing.dialect)
-    : body;
+  if (grant.spend.provider !== 'kimi') return body;
+
+  return kimiProviderBody(
+    prepareKimiReplay(crossing, body),
+    crossing.providerModel,
+    crossing.dialect,
+  );
 }
 
 function geminiUrl(origin: string, crossing: Crossing): string {
