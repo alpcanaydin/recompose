@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { HubStreamEvent } from './hub';
 
+import { encodeGeminiResponsesCarrier } from '../provider/gemini-responses-carrier';
 import { aHubStreamOfAToolCall } from './hub.testkit';
 import { encodeStream } from './responses-codec';
 import { collect, streamOf } from './responses.testkit';
+
+const signature = 'EjQKMgEMOdbHO0Gd+c9Mxk4ELwPGbpCEcp2mFfYYLix2UVtBH3fL8GECc4+JITVnHF4qZDsA';
 
 async function encode(events: readonly HubStreamEvent[]) {
   return collect(encodeStream(streamOf(events)));
@@ -40,6 +43,12 @@ describe('encodeStream: hub events fold back out to Responses events', () => {
 describe('encodeStream: the whole tool-call stream folds event for event', () => {
   it('folds the hub tool-call stream into the Responses event sequence', async () => {
     const events = await encode(aHubStreamOfAToolCall());
+    const completedCall = {
+      type: 'function_call',
+      call_id: 'toolu_weather',
+      name: 'get_weather',
+      arguments: '{"city":"Paris"}',
+    };
 
     expect(events).toEqual([
       {
@@ -61,17 +70,95 @@ describe('encodeStream: the whole tool-call stream folds event for event', () =>
         output_index: 0,
         delta: '{"city":"Paris"}',
       },
-      { type: 'response.output_item.done', output_index: 0 },
+      {
+        type: 'response.output_item.done',
+        output_index: 0,
+        item: { ...completedCall, id: 'toolu_weather' },
+      },
       {
         type: 'response.completed',
         response: {
           id: 'resp_translated',
           status: 'completed',
-          output: [],
+          output: [completedCall],
           usage: { input_tokens: 12, output_tokens: 8 },
         },
       },
     ]);
+  });
+});
+
+describe('encodeStream: Gemini tool signatures cross as Responses carriers', () => {
+  it('emits the carrier before the function call and retains both terminal items', async () => {
+    const events = await encode([
+      { type: 'message-begin' },
+      {
+        type: 'block-open',
+        index: 0,
+        opening: { kind: 'tool', id: 'native-call', name: 'run', signature },
+      },
+      { type: 'block-delta', index: 0, delta: { kind: 'json-args', partialJson: '{}' } },
+      { type: 'block-close', index: 0 },
+      { type: 'message-end', stopReason: 'tool_use', usage: {} },
+    ]);
+    const encryptedContent = encodeGeminiResponsesCarrier({
+      signature,
+      direction: 'next',
+      target: 'function',
+    });
+    const carrier = {
+      type: 'reasoning',
+      id: 'rs_stream_0',
+      summary: [],
+      content: null,
+      encrypted_content: encryptedContent,
+    };
+
+    expect(events).toContainEqual({
+      type: 'response.output_item.added',
+      output_index: 0,
+      item: carrier,
+    });
+    expect(events).toContainEqual({
+      type: 'response.output_item.done',
+      output_index: 0,
+      item: carrier,
+    });
+    expect(events).toContainEqual({
+      type: 'response.output_item.added',
+      output_index: 1,
+      item: { type: 'function_call', id: 'native-call', call_id: 'native-call', name: 'run' },
+    });
+    expect(events).toHaveProperty('5.item.arguments', '{}');
+    expect(events).toHaveProperty('6.response.output.0.encrypted_content', encryptedContent);
+    expect(events).toHaveProperty('6.response.output.1.arguments', '{}');
+  });
+});
+
+describe('encodeStream: unsafe Gemini tool signatures', () => {
+  it('does not expose bypass or malformed signatures as carriers', async () => {
+    const events = await encode([
+      {
+        type: 'block-open',
+        index: 0,
+        opening: {
+          kind: 'tool',
+          id: 'call_a',
+          name: 'run',
+          signature: 'skip_thought_signature_validator',
+        },
+      },
+      { type: 'block-close', index: 0 },
+      {
+        type: 'block-open',
+        index: 1,
+        opening: { kind: 'tool', id: 'call_b', name: 'run', signature: 'not-native' },
+      },
+      { type: 'block-close', index: 1 },
+    ]);
+
+    expect(events.filter((event) => event.type === 'response.output_item.added')).toHaveLength(2);
+    expect(JSON.stringify(events)).not.toContain('cpa-gemini-responses-carrier-v1:');
   });
 });
 

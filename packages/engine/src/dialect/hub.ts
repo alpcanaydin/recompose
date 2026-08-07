@@ -140,7 +140,7 @@ export type HubResponse = {
 export type HubBlockOpening =
   | { kind: 'text' }
   | { kind: 'thinking' }
-  | { kind: 'tool'; id: string; name: string };
+  | { kind: 'tool'; id: string; name: string; signature?: string };
 
 export type HubBlockDelta =
   | { kind: 'text'; text: string }

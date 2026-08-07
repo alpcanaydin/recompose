@@ -1,6 +1,7 @@
 import type { GeminiPart, GeminiResponse } from './gemini-wire';
 import type { HubBlockDelta, HubBlockOpening, HubStreamEvent } from './hub';
 
+import { isGeminiBypass, nativeGeminiSignature } from '../provider/gemini-signature';
 import { geminiStopReason, geminiUsage } from './gemini-response';
 import { geminiClaudeToolUseId } from './gemini-tool-provenance';
 
@@ -30,12 +31,20 @@ function callOpening(
   if (call === undefined) return null;
 
   const nativeId = nativeCallId(call.id, index);
+  const signature = carriedToolSignature(part.thoughtSignature);
 
   return {
     kind: 'tool',
     id: provenanceId(nativeId, call.name, call.args, claudeProvenance),
     name: call.name,
+    ...(signature === undefined ? {} : { signature }),
   };
+}
+
+function carriedToolSignature(value: unknown): string | undefined {
+  const signature = nativeGeminiSignature(value);
+
+  return signature === null || isGeminiBypass(signature) ? undefined : signature;
 }
 
 function nativeCallId(id: string | undefined, index: number): string {
