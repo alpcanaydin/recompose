@@ -12,12 +12,16 @@ function eventText(data: unknown): string | undefined {
   return typeof data === 'string' ? data : undefined;
 }
 
-function xaiWebSocketEvents(gateway: EngineGateway, spendGrantFor: SpendGrantFor): WSEvents {
+function xaiWebSocketEvents(
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  fetchLike: typeof fetch,
+): WSEvents {
   let proxy: XAIWebSocketProxy | undefined;
 
   return {
     onOpen(_event, socket) {
-      proxy = new XAIWebSocketProxy(socket, gateway, spendGrantFor);
+      proxy = new XAIWebSocketProxy(socket, gateway, spendGrantFor, fetchLike);
     },
     onMessage(event) {
       const text = eventText(Reflect.get(event, 'data'));
@@ -35,13 +39,14 @@ export function registerGatewayWebSockets(
   app: Hono,
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
+  fetchLike: typeof fetch,
 ): void {
   app.get(
     '/v1/responses',
-    upgradeWebSocket(() => xaiWebSocketEvents(gateway, spendGrantFor)),
+    upgradeWebSocket(() => xaiWebSocketEvents(gateway, spendGrantFor, fetchLike)),
   );
   app.get(
     '/responses',
-    upgradeWebSocket(() => xaiWebSocketEvents(gateway, spendGrantFor)),
+    upgradeWebSocket(() => xaiWebSocketEvents(gateway, spendGrantFor, fetchLike)),
   );
 }

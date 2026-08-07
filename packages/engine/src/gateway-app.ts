@@ -98,7 +98,7 @@ export function createGatewayApp(
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
-  registerGatewayWebSockets(app, gateway, spendGrantFor);
+  registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike);
 
   for (const path of COUNT_TOKENS_PATHS) {
     app.post(path, async (c) =>

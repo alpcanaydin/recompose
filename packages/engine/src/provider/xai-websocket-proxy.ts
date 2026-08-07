@@ -1,15 +1,17 @@
-import type { EngineGateway, SpendGrant } from '@recompose/contracts';
+import type { EngineGateway } from '@recompose/contracts';
 import type { WSContext } from 'hono/ws';
 
 import { WebSocket, type RawData } from 'ws';
 
 import type { SpendGrantFor } from '../gateway-proxy';
 import type { Crossing, JsonObject } from '../gateway-wire';
+import type { XAIWebSocketGrant } from './xai-websocket-prepare';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
-import { credentialedRequestBody, credentialedRequestHeaders } from './credentialed-target';
 import { restoreXAIToolPayload } from './xai-tool-response';
+import { XAIWebSocketCompaction, type XAITranscriptTurn } from './xai-websocket-compaction';
 import { messageTooBigPayload, parseXAIWebSocketError } from './xai-websocket-error';
+import { prepareXAIWebSocketTarget } from './xai-websocket-prepare';
 import {
   upstreamXAIWebSocketUrl,
   xaiWebSocketErrorPayload,
@@ -17,62 +19,21 @@ import {
   xaiWebSocketText,
 } from './xai-websocket-wire';
 
-type XAIGrant = Extract<SpendGrant, { verdict: 'resolved' }> & {
-  spend: { custody: 'credentialed'; provider: 'xai'; credential: string };
-};
-type SocketTarget = { body: JsonObject; virtualModel: string; providerModel: string };
 type PreparedRequest = {
   body: JsonObject;
   crossing: Crossing;
-  grant: XAIGrant;
+  grant: XAIWebSocketGrant;
   headers: Record<string, string>;
   key: string;
+  transcriptReset: boolean;
 };
 type ActiveConnection = {
   socket: WebSocket;
   key: string;
   ready: Promise<void>;
   crossing: Crossing;
+  pending: XAITranscriptTurn | undefined;
 };
-
-function xaiGrant(grant: SpendGrant): grant is XAIGrant {
-  return (
-    grant.verdict === 'resolved' &&
-    grant.spend.custody === 'credentialed' &&
-    grant.spend.provider === 'xai'
-  );
-}
-
-function socketTarget(gateway: EngineGateway, message: JsonObject): SocketTarget | null {
-  const body = isJsonObject(message['response']) ? message['response'] : message;
-  const model = typeof body['model'] === 'string' ? body['model'] : '';
-  const virtual = gateway.virtualModels.find((candidate) => candidate.id === model);
-
-  return virtual?.target.standing === 'bound'
-    ? { body, virtualModel: virtual.id, providerModel: virtual.target.providerModel }
-    : null;
-}
-
-function crossingFor(gateway: EngineGateway, target: SocketTarget): Crossing {
-  const session =
-    typeof target.body['prompt_cache_key'] === 'string'
-      ? target.body['prompt_cache_key']
-      : undefined;
-
-  return {
-    dialect: 'responses',
-    raw: target.body,
-    gatewayName: gateway.displayName,
-    virtualModel: target.virtualModel,
-    providerModel: target.providerModel,
-    sessionId: session,
-    replayScopeId: session === undefined ? undefined : `prompt-cache:${session}`,
-  };
-}
-
-function connectionKey(grant: XAIGrant, crossing: Crossing): string {
-  return `${grant.providerOrigin}\0${grant.spend.credential}\0${crossing.providerModel}`;
-}
 
 async function readyPromise(socket: WebSocket): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -91,13 +52,20 @@ export class XAIWebSocketProxy {
   private readonly downstream: WSContext;
   private readonly gateway: EngineGateway;
   private readonly spendGrantFor: SpendGrantFor;
+  private readonly compaction: XAIWebSocketCompaction;
   private terminal = false;
   private turn: Promise<void> = Promise.resolve();
 
-  public constructor(downstream: WSContext, gateway: EngineGateway, spendGrantFor: SpendGrantFor) {
+  public constructor(
+    downstream: WSContext,
+    gateway: EngineGateway,
+    spendGrantFor: SpendGrantFor,
+    fetchLike: typeof fetch,
+  ) {
     this.downstream = downstream;
     this.gateway = gateway;
     this.spendGrantFor = spendGrantFor;
+    this.compaction = new XAIWebSocketCompaction(fetchLike);
   }
 
   public async receive(text: string): Promise<void> {
@@ -133,31 +101,36 @@ export class XAIWebSocketProxy {
   }
 
   private async prepare(message: JsonObject): Promise<PreparedRequest | null> {
-    const target = socketTarget(this.gateway, message);
+    const prepared = await prepareXAIWebSocketTarget(this.gateway, this.spendGrantFor, message);
 
-    if (target === null) {
-      this.downstream.close(1008, 'unknown virtual model');
-
-      return null;
-    }
-
-    const grant = await this.spendGrantFor(this.gateway.slug, target.virtualModel);
-
-    if (!xaiGrant(grant)) {
-      this.downstream.close(1008, 'xAI target unavailable');
+    if ('error' in prepared) {
+      this.downstream.close(1008, prepared.error);
 
       return null;
     }
 
-    const crossing = crossingFor(this.gateway, target);
-    const normalized = credentialedRequestBody(grant, crossing, target.body);
+    if (this.compaction.isTrigger(prepared.normalized)) {
+      const event = await this.compaction.compact(
+        prepared.grant,
+        prepared.crossing,
+        prepared.normalized,
+        prepared.headers,
+      );
+
+      this.downstream.send(JSON.stringify(event));
+
+      return null;
+    }
+
+    const transcript = this.compaction.prepare(prepared.normalized);
 
     return {
-      body: xaiWebSocketRequestBody(normalized),
-      crossing,
-      grant,
-      headers: credentialedRequestHeaders(grant.spend, crossing),
-      key: connectionKey(grant, crossing),
+      body: xaiWebSocketRequestBody(transcript.body),
+      crossing: prepared.crossing,
+      grant: prepared.grant,
+      headers: prepared.headers,
+      key: prepared.key,
+      transcriptReset: transcript.reset,
     };
   }
 
@@ -165,11 +138,10 @@ export class XAIWebSocketProxy {
     const active = this.connectionFor(prepared);
 
     active.crossing = prepared.crossing;
+    active.pending = { request: prepared.body, reset: prepared.transcriptReset };
     await active.ready;
 
-    if (canSend(this.active, active)) {
-      active.socket.send(JSON.stringify(prepared.body));
-    }
+    if (canSend(this.active, active)) active.socket.send(JSON.stringify(prepared.body));
   }
 
   private connectionFor(prepared: PreparedRequest): ActiveConnection {
@@ -196,6 +168,7 @@ export class XAIWebSocketProxy {
       key: prepared.key,
       ready: readyPromise(socket),
       crossing: prepared.crossing,
+      pending: undefined,
     };
 
     this.bindUpstream(active);
@@ -219,20 +192,42 @@ export class XAIWebSocketProxy {
   }
 
   private upstreamMessage(active: ActiveConnection, data: RawData): void {
-    if (this.active !== active || this.terminal) return;
+    if (!this.acceptsMessage(active)) return;
 
     const value = parsedJson(xaiWebSocketText(data));
 
-    if (parseXAIWebSocketError(value) !== null) {
-      this.sendError(value);
-      active.socket.close();
-
-      return;
-    }
+    if (this.handleUpstreamError(active, value)) return;
 
     const restored = restoreXAIToolPayload(value, active.crossing.xaiNamespaceTools ?? {});
+    const synthetic = this.observeTranscript(active, value);
 
     this.downstream.send(JSON.stringify(restored));
+    if (synthetic !== undefined) this.downstream.send(JSON.stringify(synthetic));
+  }
+
+  private acceptsMessage(active: ActiveConnection): boolean {
+    return this.active === active && !this.terminal;
+  }
+
+  private handleUpstreamError(active: ActiveConnection, value: unknown): boolean {
+    if (parseXAIWebSocketError(value) === null) return false;
+
+    this.sendError(value);
+    active.socket.close();
+
+    return true;
+  }
+
+  private observeTranscript(active: ActiveConnection, value: unknown): JsonObject | undefined {
+    if (!isJsonObject(value)) return undefined;
+
+    const synthetic = this.compaction.observe(active.pending, value);
+
+    if (value['type'] === 'response.completed' || synthetic !== undefined) {
+      active.pending = undefined;
+    }
+
+    return synthetic;
   }
 
   private upstreamClose(active: ActiveConnection, code: number, reason: Buffer): void {

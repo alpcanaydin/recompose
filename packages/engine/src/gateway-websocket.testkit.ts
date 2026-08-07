@@ -1,4 +1,10 @@
-import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 
 import { createGatewayApp } from './gateway-app';
@@ -10,7 +16,7 @@ import { xaiWebSocketText } from './provider/xai-websocket-wire';
 
 type Deferred<T> = { promise: Promise<T>; resolve: (value: T) => void };
 export type UpstreamMode = 'success' | 'bare-error' | 'message-too-big' | 'handshake-429';
-type UpstreamStats = { connections: number; messages: unknown[] };
+type UpstreamStats = { connections: number; messages: unknown[]; compactBodies: unknown[] };
 
 function deferred<T>(): Deferred<T> {
   let resolve = (_value: T): void => undefined;
@@ -99,12 +105,54 @@ function attachUpstream(
   });
 }
 
+async function requestText(request: IncomingMessage): Promise<string> {
+  request.setEncoding('utf8');
+
+  return new Promise<string>((resolve, reject) => {
+    let text = '';
+
+    request.on('data', (chunk: string) => {
+      text += chunk;
+    });
+    request.once('end', () => {
+      resolve(text);
+    });
+    request.once('error', reject);
+  });
+}
+
+async function handleCompact(
+  request: IncomingMessage,
+  response: ServerResponse,
+  stats: UpstreamStats,
+): Promise<void> {
+  if (request.url !== '/v1/responses/compact') {
+    response.writeHead(404).end();
+
+    return;
+  }
+
+  stats.compactBodies.push(parsedJson(await requestText(request)));
+  const encrypted = Buffer.alloc(256, 9).toString('base64').replace(/=+$/u, '');
+
+  response.setHeader('content-type', 'application/json');
+  response.end(
+    JSON.stringify({
+      id: 'resp_compact',
+      model: 'grok-4.3',
+      output: [{ type: 'compaction', encrypted_content: encrypted }],
+    }),
+  );
+}
+
 export async function upstreamFixture(mode: UpstreamMode = 'success') {
   const received = deferred<unknown>();
   const disconnected = deferred<void>();
-  const server = createServer();
+  const stats: UpstreamStats = { connections: 0, messages: [], compactBodies: [] };
+  const server = createServer((request, response) => {
+    void handleCompact(request, response, stats);
+  });
   const websocket = new WebSocketServer({ noServer: true });
-  const stats: UpstreamStats = { connections: 0, messages: [] };
   let headers: IncomingHttpHeaders = {};
   let path = '';
 
