@@ -6,6 +6,7 @@ import type { JsonObject } from './gateway-wire';
 
 import { type PreparedImageBody, readImageBody } from './gateway-images-body';
 import { requestSessions } from './gateway-session';
+import { reachXAIImage } from './provider/xai-image';
 import {
   codexImageJsonResponse,
   codexImageStreamResponse,
@@ -26,11 +27,19 @@ function directImageModel(model: string): string | null {
   return base === 'gpt-image-1.5' || base === 'gpt-image-2' ? base : null;
 }
 
-function imageGrant(grant: SpendGrant): grant is Extract<SpendGrant, { verdict: 'resolved' }> {
+function codexImageGrant(grant: SpendGrant): grant is Extract<SpendGrant, { verdict: 'resolved' }> {
   return (
     grant.verdict === 'resolved' &&
     grant.spend.custody === 'subscription' &&
     grant.spend.provider === 'openai'
+  );
+}
+
+function xaiImageGrant(grant: SpendGrant): grant is Extract<SpendGrant, { verdict: 'resolved' }> {
+  return (
+    grant.verdict === 'resolved' &&
+    grant.spend.custody === 'credentialed' &&
+    grant.spend.provider === 'xai'
   );
 }
 
@@ -110,12 +119,47 @@ async function servedImageAnswer(
     : directImageAnswer(c, grant, direct, prepared, path, runtime);
 }
 
+async function xaiImageAnswer(
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  providerModel: string,
+  prepared: PreparedImageBody,
+  path: ImagePath,
+  fetchLike: typeof fetch,
+): Promise<Response> {
+  if (grant.spend.custody !== 'credentialed')
+    return imageError('The xAI image credential is missing.');
+
+  return reachXAIImage(
+    grant.providerOrigin,
+    path,
+    grant.spend.credential,
+    providerBody(prepared.body, providerModel, prepared.stream),
+    fetchLike,
+  );
+}
+
+async function targetImageAnswer(
+  c: Context,
+  grant: SpendGrant,
+  providerModel: string,
+  prepared: PreparedImageBody,
+  path: ImagePath,
+  runtime: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+): Promise<Response> {
+  if (xaiImageGrant(grant)) return xaiImageAnswer(grant, providerModel, prepared, path, fetchLike);
+  if (!codexImageGrant(grant)) return imageError('The image target has no supported credential.');
+
+  return servedImageAnswer(c, grant, providerModel, prepared, path, runtime);
+}
+
 export async function proxyImageRequest(
   c: Context,
   gateway: EngineGateway,
   path: ImagePath,
   spendGrantFor: SpendGrantFor,
   runtime: SubscriptionRuntime,
+  fetchLike: typeof fetch,
 ): Promise<Response> {
   const prepared = await readImageBody(c);
   const virtual = gateway.virtualModels.find((candidate) => candidate.id === prepared.model);
@@ -126,7 +170,13 @@ export async function proxyImageRequest(
 
   const grant = await spendGrantFor(gateway.slug, virtual.id);
 
-  if (!imageGrant(grant)) return imageError('The image target has no Codex subscription.');
-
-  return servedImageAnswer(c, grant, virtual.target.providerModel, prepared, path, runtime);
+  return targetImageAnswer(
+    c,
+    grant,
+    virtual.target.providerModel,
+    prepared,
+    path,
+    runtime,
+    fetchLike,
+  );
 }

@@ -45,10 +45,11 @@ function registerImageRoutes(
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
   subscriptionServing: SubscriptionRuntime,
+  fetchLike: typeof fetch,
 ): void {
   for (const [route, path] of IMAGE_ROUTES) {
     app.post(route, async (c) =>
-      proxyImageRequest(c, gateway, path, spendGrantFor, subscriptionServing),
+      proxyImageRequest(c, gateway, path, spendGrantFor, subscriptionServing, fetchLike),
     );
   }
 }
@@ -81,7 +82,7 @@ export function createGatewayApp(
     );
   }
 
-  registerImageRoutes(app, gateway, spendGrantFor, subscriptionServing);
+  registerImageRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike);
 
   for (const [path, dialect] of MODEL_ROUTES) {
     app.all(path, async (c) =>
