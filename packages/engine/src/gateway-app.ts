@@ -9,6 +9,7 @@ import { proxyTokenCountRequest } from './gateway-count-tokens';
 import { modelListing } from './gateway-discovery';
 import { type ImagePath, proxyImageRequest } from './gateway-images';
 import { proxyModelRequest, subscriptionRuntime } from './gateway-proxy';
+import { proxyVideoRequest } from './gateway-videos';
 import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
 import { invalidJson, unservedPath } from './refusals';
@@ -31,6 +32,16 @@ const IMAGE_ROUTES: readonly (readonly [string, ImagePath])[] = [
   ['/v1/images/edits', '/images/edits'],
   ['/images/edits', '/images/edits'],
 ];
+const VIDEO_ROUTES = [
+  ['/v1/videos/generations', '/videos/generations'],
+  ['/videos/generations', '/videos/generations'],
+  ['/v1/videos/edits', '/videos/edits'],
+  ['/videos/edits', '/videos/edits'],
+  ['/v1/videos/extensions', '/videos/extensions'],
+  ['/videos/extensions', '/videos/extensions'],
+  ['/v1/videos', ''],
+  ['/videos', ''],
+] as const;
 
 function dialectForPath(path: string): ProxyDialect {
   if (path.endsWith('/responses')) {
@@ -51,6 +62,17 @@ function registerImageRoutes(
     app.post(route, async (c) =>
       proxyImageRequest(c, gateway, path, spendGrantFor, subscriptionServing, fetchLike),
     );
+  }
+}
+
+function registerVideoRoutes(
+  app: Hono,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  fetchLike: typeof fetch,
+): void {
+  for (const [route, path] of VIDEO_ROUTES) {
+    app.post(route, async (c) => proxyVideoRequest(c, gateway, path, spendGrantFor, fetchLike));
   }
 }
 
@@ -83,6 +105,7 @@ export function createGatewayApp(
   }
 
   registerImageRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike);
+  registerVideoRoutes(app, gateway, spendGrantFor, fetchLike);
 
   for (const [path, dialect] of MODEL_ROUTES) {
     app.all(path, async (c) =>
