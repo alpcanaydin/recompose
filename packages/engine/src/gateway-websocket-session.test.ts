@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 
+import { closeGatewayWebSocket, openGatewayWebSocket } from './gateway-websocket-client.testkit';
 import {
   gatewayConversation,
   gatewayFixture,
@@ -46,6 +47,7 @@ test('reconnects xAI upstream when the virtual target changes without closing do
   expect(second.stats.connections).toBe(1);
   expect(second.stats.messages[0]).toMatchObject({ model: 'grok-4.5', type: 'response.create' });
   await first.disconnected.promise;
+  expect(first.stats.closes).toBe(1);
 
   await gateway.listeners.close();
   await first.close();
@@ -81,6 +83,32 @@ test('routes xAI compaction through HTTP and replays compacted state on append',
   expect(upstream.stats.messages[1]).toHaveProperty('input.1.id', 'msg-2');
 
   await gateway.listeners.close();
+  await upstream.close();
+});
+
+test('listener drain closes its active xAI upstream exactly once', async () => {
+  const upstream = await upstreamFixture();
+  const gateway = await gatewayFixture(upstream);
+  const active = openGatewayWebSocket(gateway.port, xaiWebSocketPayload);
+
+  await expect(active.firstMessage).resolves.toMatchObject({ type: 'response.completed' });
+  await gateway.listeners.close();
+  await upstream.disconnected.promise;
+
+  expect(upstream.stats.closes).toBe(1);
+  await upstream.close();
+});
+
+test('downstream close racing listener drain closes owned upstream exactly once', async () => {
+  const upstream = await upstreamFixture();
+  const gateway = await gatewayFixture(upstream);
+  const active = openGatewayWebSocket(gateway.port, xaiWebSocketPayload);
+
+  await active.firstMessage;
+  await Promise.all([closeGatewayWebSocket(active.client), gateway.listeners.close()]);
+  await upstream.disconnected.promise;
+
+  expect(upstream.stats.closes).toBe(1);
   await upstream.close();
 });
 

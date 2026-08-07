@@ -20,7 +20,12 @@ import { parsedJson } from './gateway-wire';
 import { xaiWebSocketText } from './provider/xai-websocket-wire';
 
 type Deferred<T> = { promise: Promise<T>; resolve: (value: T) => void };
-type UpstreamStats = { connections: number; messages: unknown[]; compactBodies: unknown[] };
+type UpstreamStats = {
+  connections: number;
+  closes: number;
+  messages: unknown[];
+  compactBodies: unknown[];
+};
 
 function deferred<T>(): Deferred<T> {
   let resolve = (_value: T): void => undefined;
@@ -76,6 +81,7 @@ function attachUpstream(
       respondUpstream(client, mode, message);
     });
     client.once('close', () => {
+      stats.closes += 1;
       disconnected.resolve();
     });
   });
@@ -124,7 +130,7 @@ async function handleCompact(
 export async function upstreamFixture(mode: UpstreamMode = 'success') {
   const received = deferred<unknown>();
   const disconnected = deferred<void>();
-  const stats: UpstreamStats = { connections: 0, messages: [], compactBodies: [] };
+  const stats: UpstreamStats = { connections: 0, closes: 0, messages: [], compactBodies: [] };
   const server = createServer((request, response) => {
     void handleCompact(request, response, stats);
   });
