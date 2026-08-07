@@ -6,6 +6,7 @@ const servingOrigins = new Map<string, string>([
   ['gemini', 'https://generativelanguage.googleapis.com'],
   ['kimi', 'https://api.kimi.com/coding'],
   ['openrouter', 'https://openrouter.ai/api'],
+  ['xai', 'https://api.x.ai/v1'],
 ]);
 
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]']);

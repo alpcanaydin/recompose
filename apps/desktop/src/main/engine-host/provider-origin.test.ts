@@ -51,6 +51,10 @@ describe('the origin a target account is spent against', () => {
     expect(providerOriginOf(keyRow('kimi'))).toBe('https://api.kimi.com/coding');
   });
 
+  test('an xAI credential is spent against the official API', () => {
+    expect(providerOriginOf(keyRow('xai'))).toBe('https://api.x.ai/v1');
+  });
+
   test('an OpenRouter key is spent against the aggregator serving base', () => {
     expect(providerOriginOf(keyRow('openrouter', 'aggregator'))).toBe('https://openrouter.ai/api');
   });

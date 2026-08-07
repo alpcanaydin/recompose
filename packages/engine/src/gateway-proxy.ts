@@ -26,6 +26,7 @@ import {
   credentialedRequestUrl,
 } from './provider/credentialed-target';
 import { observeKimiReplay } from './provider/kimi-replay-runtime';
+import { withXaiRetryAfter } from './provider/xai-response';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
@@ -203,9 +204,10 @@ async function observedCredentialedAnswer(
   crossing: Crossing,
   answer: Response,
 ): Promise<Response> {
-  return grant.spend.custody === 'credentialed' && grant.spend.provider === 'kimi'
-    ? observeKimiReplay(crossing, answer)
-    : answer;
+  if (grant.spend.custody !== 'credentialed') return answer;
+  if (grant.spend.provider === 'kimi') return observeKimiReplay(crossing, answer);
+
+  return grant.spend.provider === 'xai' ? withXaiRetryAfter(answer) : answer;
 }
 
 function responsesLite(c: Context): boolean {

@@ -54,10 +54,11 @@ export function unreachableTargetAnswer(crossing: Crossing): Response {
 
 function upstreamHeaders(upstream: Response, attribution: Record<string, string>): Headers {
   const headers = new Headers(attribution);
-  const contentType = upstream.headers.get('content-type');
 
-  if (contentType !== null) {
-    headers.set('content-type', contentType);
+  for (const name of ['content-type', 'retry-after']) {
+    const value = upstream.headers.get(name);
+
+    if (value !== null) headers.set(name, value);
   }
 
   return headers;
