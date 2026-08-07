@@ -15,6 +15,7 @@
   "dependencies": {
     "@hono/node-server": "2.0.12",
     "@recompose/contracts": "workspace:*",
+    "fflate": "0.8.3",
     "hono": "4.12.32",
     "js-tiktoken": "1.0.21",
     "node-wreq": "3.1.0",
