@@ -14,6 +14,7 @@ import {
   credentialedRequestHeaders,
 } from './provider/credentialed-target';
 import { restoreXAIToolPayload } from './provider/xai-tool-response';
+import { messageTooBigPayload, parseXAIWebSocketError } from './provider/xai-websocket-error';
 
 type XAIGrant = Extract<SpendGrant, { verdict: 'resolved' }> & {
   spend: { custody: 'credentialed'; provider: 'xai'; credential: string };
@@ -66,6 +67,26 @@ function eventText(data: unknown): string | undefined {
   return typeof data === 'string' ? data : undefined;
 }
 
+function wireErrorPayload(
+  parsed: ReturnType<typeof parseXAIWebSocketError>,
+  fallbackStatus: number,
+): JsonObject {
+  if (parsed === null) {
+    return {
+      type: 'error',
+      status: fallbackStatus,
+      error: { message: 'upstream WebSocket error' },
+    };
+  }
+
+  return {
+    ...parsed.payload,
+    ...(parsed.retryAfterSeconds === undefined
+      ? {}
+      : { retry_after_seconds: parsed.retryAfterSeconds }),
+  };
+}
+
 function socketTarget(gateway: EngineGateway, message: JsonObject): SocketTarget | null {
   const body = isJsonObject(message['response']) ? message['response'] : message;
   const model = typeof body['model'] === 'string' ? body['model'] : '';
@@ -99,6 +120,7 @@ function crossingFor(gateway: EngineGateway, target: SocketTarget): Crossing {
 
 class XAIWebSocketProxy {
   private upstream?: WebSocket;
+  private terminal = false;
   private readonly downstream: WSContext;
   private readonly gateway: EngineGateway;
   private readonly spendGrantFor: SpendGrantFor;
@@ -128,7 +150,17 @@ class XAIWebSocketProxy {
   }
 
   public close(): void {
+    this.terminal = true;
     this.upstream?.close();
+  }
+
+  private sendError(value: unknown, fallbackStatus = 500): void {
+    const parsed = parseXAIWebSocketError(value);
+    const payload = wireErrorPayload(parsed, fallbackStatus);
+
+    this.downstream.send(JSON.stringify(payload));
+    this.downstream.close(parsed?.status === 429 ? 1013 : 1011, 'upstream WebSocket error');
+    this.terminal = true;
   }
 
   private async connect(message: JsonObject): Promise<void> {
@@ -169,15 +201,42 @@ class XAIWebSocketProxy {
     });
     upstream.on('message', (data) => {
       const value = parsedJson(rawText(data));
+
+      if (parseXAIWebSocketError(value) !== null) {
+        this.sendError(value);
+        upstream.close();
+
+        return;
+      }
+
       const restored = restoreXAIToolPayload(value, crossing.xaiNamespaceTools ?? {});
 
       this.downstream.send(JSON.stringify(restored));
     });
     upstream.once('close', (code, reason) => {
+      if (this.terminal) return;
+
+      if (code === 1009)
+        this.downstream.send(JSON.stringify(messageTooBigPayload(reason.toString())));
+
       this.downstream.close(code, reason.toString());
+      this.terminal = true;
     });
     upstream.once('error', () => {
-      this.downstream.close(1011, 'upstream WebSocket error');
+      if (!this.terminal) this.sendError(undefined);
+    });
+    upstream.once('unexpected-response', (_request, response) => {
+      let text = '';
+
+      response.on('data', (chunk) => {
+        text += Buffer.from(chunk).toString();
+      });
+      response.on('end', () => {
+        const value = parsedJson(text);
+        const body = isJsonObject(value) ? { ...value, status: response.statusCode } : value;
+
+        this.sendError(body, response.statusCode ?? 500);
+      });
     });
   }
 }
