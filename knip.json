@@ -22,7 +22,8 @@
     },
     "packages/engine": {
       "entry": ["src/dialect/index.ts", "src/**/*.test-d.ts", "vitest.mutation.config.ts"],
-      "ignoreDependencies": ["fast-check"]
+      "ignoreDependencies": ["fast-check"],
+      "ignoreBinaries": ["cc"]
     },
     ".": {
       "entry": ["steiger.config.ts", "probity.config.ts"],
