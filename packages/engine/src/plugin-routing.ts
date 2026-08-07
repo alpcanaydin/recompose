@@ -11,6 +11,9 @@ export type PluginRoutingRecord = {
   executorOutputFormats: string[];
   scheduler: boolean;
   modelRouter: boolean;
+  requestInterceptor: boolean;
+  responseInterceptor: boolean;
+  streamChunkInterceptor: boolean;
 };
 
 type SchedulerCandidate = {

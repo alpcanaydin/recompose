@@ -15,6 +15,10 @@ export const pluginMethods = {
   schedulerPick: 'scheduler.pick',
   modelRoute: 'model.route',
   hostHTTPDo: 'host.http.do',
+  requestInterceptBefore: 'request.intercept_before',
+  requestInterceptAfter: 'request.intercept_after',
+  responseInterceptAfter: 'response.intercept_after',
+  responseInterceptStreamChunk: 'response.intercept_stream_chunk',
 } as const;
 
 export type PluginRPCErrorShape = {

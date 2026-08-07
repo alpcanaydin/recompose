@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import { isJsonObject, parsedJson } from './gateway-wire';
 import { pluginMethods } from './plugin-abi';
+import { pluginBytes, pluginHeaders, webHeaders } from './plugin-wire';
 import { providerObservability } from './provider/provider-observability';
 
 export type PluginHostHTTPRequest = {
@@ -21,35 +22,6 @@ export type PluginHostHTTPTransport = (request: PluginHostHTTPRequest) => Plugin
 
 function field(value: Record<string, unknown>, lower: string, upper: string): unknown {
   return value[lower] ?? value[upper];
-}
-
-function bytes(value: unknown): Uint8Array {
-  return typeof value === 'string' ? Buffer.from(value, 'base64') : new Uint8Array();
-}
-
-function headers(value: unknown): Record<string, string[]> {
-  if (!isJsonObject(value)) return {};
-
-  return Object.fromEntries(
-    Object.entries(value).map(([name, raw]) => [
-      name,
-      Array.isArray(raw)
-        ? raw.filter((item): item is string => typeof item === 'string')
-        : typeof raw === 'string'
-          ? [raw]
-          : [],
-    ]),
-  );
-}
-
-function webHeaders(values: Record<string, string[]>): Headers {
-  const output = new Headers();
-
-  for (const [name, items] of Object.entries(values)) {
-    for (const item of items) output.append(name, item);
-  }
-
-  return output;
 }
 
 function safeHTTPURL(value: unknown): string {
@@ -78,8 +50,8 @@ function hostHTTPRequest(data: Uint8Array): PluginHostHTTPRequest {
   return {
     method: requestMethod(method),
     url: safeHTTPURL(url),
-    headers: headers(field(parsed, 'headers', 'Headers')),
-    body: bytes(field(parsed, 'body', 'Body')),
+    headers: pluginHeaders(field(parsed, 'headers', 'Headers')),
+    body: pluginBytes(field(parsed, 'body', 'Body')),
   };
 }
 
@@ -163,8 +135,8 @@ function childResponse(stdout: string): PluginHostHTTPResponse {
 
   return {
     statusCode: parsed['statusCode'],
-    headers: headers(parsed['headers']),
-    body: bytes(parsed['body']),
+    headers: pluginHeaders(parsed['headers']),
+    body: pluginBytes(parsed['body']),
   };
 }
 

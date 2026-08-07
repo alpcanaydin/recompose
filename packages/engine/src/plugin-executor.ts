@@ -2,6 +2,7 @@ import type { PluginRoutingHost, PluginRoutingRecord } from './plugin-routing';
 
 import { isJsonObject } from './gateway-wire';
 import { pluginMethods } from './plugin-abi';
+import { pluginBytes, pluginHeaders, webHeaders } from './plugin-wire';
 
 export type PluginExecutorRequest = {
   authId: string;
@@ -46,36 +47,6 @@ export type PluginExecutorHTTPResponse = {
   body: Uint8Array;
 };
 
-function bytes(value: unknown): Uint8Array {
-  if (typeof value === 'string') return Buffer.from(value, 'base64');
-
-  if (Array.isArray(value) && value.every((item) => typeof item === 'number')) {
-    return Uint8Array.from(value);
-  }
-
-  return new Uint8Array();
-}
-
-function headerValues(value: unknown): string[] {
-  if (typeof value === 'string') return [value];
-
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
-    : [];
-}
-
-function headers(value: unknown): Headers {
-  const output = new Headers();
-
-  if (!isJsonObject(value)) return output;
-
-  for (const [name, raw] of Object.entries(value)) {
-    for (const item of headerValues(raw)) output.append(name, item);
-  }
-
-  return output;
-}
-
 function record(value: unknown): Record<string, unknown> {
   return isJsonObject(value) ? structuredClone(value) : {};
 }
@@ -88,8 +59,8 @@ function executorResponse(value: unknown): PluginExecutorResponse {
   if (!isJsonObject(value)) throw new Error('plugin executor response is not an object');
 
   return {
-    payload: bytes(field(value, 'payload', 'Payload')),
-    headers: headers(field(value, 'headers', 'Headers')),
+    payload: pluginBytes(field(value, 'payload', 'Payload')),
+    headers: webHeaders(pluginHeaders(field(value, 'headers', 'Headers'))),
     metadata: record(field(value, 'metadata', 'Metadata')),
   };
 }
@@ -100,7 +71,7 @@ function streamChunk(value: unknown): PluginExecutorChunk | null {
   const error = field(value, 'error', 'Error');
 
   return {
-    payload: bytes(field(value, 'payload', 'Payload')),
+    payload: pluginBytes(field(value, 'payload', 'Payload')),
     ...(typeof error === 'string' && error !== '' ? { error } : {}),
   };
 }
@@ -113,7 +84,7 @@ function executorStream(value: unknown): PluginExecutorStream {
     ? rawChunks.map(streamChunk).filter((chunk): chunk is PluginExecutorChunk => chunk !== null)
     : [];
 
-  return { headers: headers(field(value, 'headers', 'Headers')), chunks };
+  return { headers: webHeaders(pluginHeaders(field(value, 'headers', 'Headers'))), chunks };
 }
 
 function identifierResponse(value: unknown): string {
@@ -139,8 +110,8 @@ function httpResponse(value: unknown): PluginExecutorHTTPResponse {
 
   return {
     statusCode: status,
-    headers: headers(field(value, 'headers', 'Headers')),
-    body: bytes(field(value, 'body', 'Body')),
+    headers: webHeaders(pluginHeaders(field(value, 'headers', 'Headers'))),
+    body: pluginBytes(field(value, 'body', 'Body')),
   };
 }
 

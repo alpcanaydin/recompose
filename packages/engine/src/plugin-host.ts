@@ -26,6 +26,9 @@ type PluginCapabilities = {
   scheduler: boolean;
   modelRouter: boolean;
   requestLifecycle: boolean;
+  requestInterceptor: boolean;
+  responseInterceptor: boolean;
+  streamChunkInterceptor: boolean;
   management: boolean;
 };
 
@@ -103,6 +106,9 @@ function registration(value: unknown): PluginRegistration {
       scheduler: booleanAt(capabilities, 'scheduler'),
       modelRouter: booleanAt(capabilities, 'model_router'),
       requestLifecycle: booleanAt(capabilities, 'request_lifecycle_plugin'),
+      requestInterceptor: booleanAt(capabilities, 'request_interceptor'),
+      responseInterceptor: booleanAt(capabilities, 'response_interceptor'),
+      streamChunkInterceptor: booleanAt(capabilities, 'response_stream_interceptor'),
       management: booleanAt(capabilities, 'management_api'),
     },
   };
