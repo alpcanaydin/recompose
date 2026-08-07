@@ -43,10 +43,28 @@ function functionBlock(
 
   return {
     type: 'tool_use',
-    id: toolUseId(call.id ?? `call_${String(index)}`, call.name, call.args ?? {}, claudeProvenance),
+    id: toolUseId(
+      geminiCallId(call.id, index),
+      call.name,
+      geminiCallInput(call.args),
+      claudeProvenance,
+    ),
     name: call.name,
-    input: call.args ?? {},
+    input: geminiCallInput(call.args),
+    ...geminiCallSignature(part.thoughtSignature),
   };
+}
+
+function geminiCallId(id: string | undefined, index: number): string {
+  return id ?? `call_${String(index)}`;
+}
+
+function geminiCallInput(args: Record<string, unknown> | undefined): Record<string, unknown> {
+  return args ?? {};
+}
+
+function geminiCallSignature(signature: string | undefined): { signature?: string } {
+  return signature === undefined ? {} : { signature };
 }
 
 function toolUseId(id: string, name: string, args: unknown, provenance: boolean): string {

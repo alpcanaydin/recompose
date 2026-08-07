@@ -9,6 +9,8 @@ import type {
   HubToolChoice,
 } from './hub';
 
+import { geminiReplaySignature } from '../provider/gemini-signature';
+
 function imagePart(block: Extract<HubContentBlock, { type: 'image' }>): GeminiPart {
   return block.source.type === 'base64'
     ? { inlineData: { mimeType: block.source.mediaType, data: block.source.data } }
@@ -61,7 +63,10 @@ function mediaPart(block: HubContentBlock): GeminiPart | null {
 
 function actionPart(block: HubContentBlock): GeminiPart | null {
   if (block.type === 'tool_use') {
-    return { functionCall: { name: block.name, args: { ...block.input }, id: block.id } };
+    return {
+      functionCall: { name: block.name, args: { ...block.input }, id: block.id },
+      thoughtSignature: geminiReplaySignature(block.signature),
+    };
   }
 
   return block.type === 'tool_result' ? resultPart(block) : null;

@@ -39,6 +39,7 @@ export type HubToolUseBlock = {
   id: string;
   name: string;
   input: HubJsonObject;
+  signature?: string;
 };
 
 export type HubToolResultContent = HubTextBlock | HubImageBlock;

@@ -16,7 +16,14 @@ export type ChatContentPart = ChatTextPart | ChatImagePart;
 export type ChatToolCall = {
   id: string;
   type: 'function';
-  function: { name: string; arguments: string };
+  function: {
+    name: string;
+    arguments: string;
+    extra_content?: { google?: { thought_signature?: string } };
+  };
+  extra_content?: { google?: { thought_signature?: string } };
+  thoughtSignature?: string;
+  thought_signature?: string;
 };
 
 export type ChatSystemMessage = {

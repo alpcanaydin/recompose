@@ -8,15 +8,36 @@ import type {
   HubToolUseBlock,
 } from './hub';
 
+import { geminiReplaySignature } from '../provider/gemini-signature';
 import { parseToolArguments } from './hub-build';
 import { sanitizeToolId } from './tool-id';
 
+function googleThoughtSignature(
+  extra: { google?: { thought_signature?: string } } | undefined,
+): string | undefined {
+  return extra?.google?.thought_signature;
+}
+
+function chatToolSignature(call: ChatToolCall): string | undefined {
+  const candidates = [
+    googleThoughtSignature(call.extra_content),
+    googleThoughtSignature(call.function.extra_content),
+    call.thoughtSignature,
+    call.thought_signature,
+  ];
+
+  return candidates.find((value): value is string => typeof value === 'string');
+}
+
 export function hubToolUseFromChatCall(call: ChatToolCall): HubToolUseBlock {
+  const signature = chatToolSignature(call);
+
   return {
     type: 'tool_use',
     id: sanitizeToolId(call.id),
     name: call.function.name,
     input: parseToolArguments(call.function.arguments),
+    ...(signature === undefined ? {} : { signature: geminiReplaySignature(signature) }),
   };
 }
 
@@ -25,6 +46,9 @@ function chatCallFromHubToolUse(block: HubToolUseBlock): ChatToolCall {
     id: block.id,
     type: 'function',
     function: { name: block.name, arguments: JSON.stringify(block.input) },
+    ...(block.signature === undefined
+      ? {}
+      : { extra_content: { google: { thought_signature: `gemini#${block.signature}` } } }),
   };
 }
 
