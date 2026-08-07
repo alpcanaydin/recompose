@@ -9,9 +9,11 @@ import type { SubscriptionAttempt, SubscriptionPluginContext } from './intercept
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
+import { normalizeAntigravityError } from './antigravity-errors';
 import { antigravityPairingPreflight } from './antigravity-pairing';
 import { AntigravityReasoningReplay, replayedAntigravityBody } from './antigravity-replay';
 import { antigravityProviderRequest } from './antigravity-request';
+import { completeSubscriptionAttempt } from './attempt-completion';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
 import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
@@ -24,11 +26,7 @@ import {
   sendSubscriptionRequest,
   subscriptionRefreshFetch,
 } from './provider-transport';
-import {
-  readySubscriptionCredential,
-  refreshedAndPersisted,
-  shouldRefreshUnauthorized,
-} from './reach-credential';
+import { readySubscriptionCredential, refreshedAndPersisted } from './reach-credential';
 import { observeSubscriptionAnswer, subscriptionDiagnosticsKey } from './reach-observation';
 import { readyClaudeIdentity } from './ready-claude-identity';
 
@@ -48,6 +46,7 @@ export type SubscriptionRuntime = {
   codexReplay?: CodexReasoningReplay;
   antigravityReplay?: AntigravityReasoningReplay;
   antigravitySensitiveWords?: readonly string[];
+  wait?: ((milliseconds: number) => Promise<void>) | undefined;
 };
 
 export function subscriptionRuntime(
@@ -77,13 +76,41 @@ type SubscriptionScope = {
   replayScopeId: string;
   responsesLite: boolean;
 };
+type ReadyCredential = { blob: string; credential: ParsedSubscriptionCredential };
 
 async function normalizedSubscriptionAnswer(
   provider: SubscriptionProviderId,
   answer: Response,
   now: number,
 ): Promise<Response> {
-  return provider === 'openai' ? normalizeCodexError(answer, now) : answer;
+  if (provider === 'openai') return normalizeCodexError(answer, now);
+  if (provider === 'antigravity') return normalizeAntigravityError(answer);
+
+  return answer;
+}
+
+function attemptCallbacks(
+  grant: ResolvedGrant,
+  spend: SubscriptionSpend,
+  body: JsonObject,
+  ready: ReadyCredential,
+  runtime: SubscriptionRuntime,
+  scope: SubscriptionScope,
+  pluginContext?: SubscriptionPluginContext,
+) {
+  return {
+    resend: async () =>
+      sendInterceptedSubscription(
+        spend.provider,
+        spend.accountId,
+        body,
+        providerRequestFor(grant, body, ready.credential, runtime, scope),
+        runtime.send,
+        pluginContext,
+      ),
+    refresh: async () =>
+      retryWithRefreshedCredential(grant, spend, body, ready.blob, runtime, scope, pluginContext),
+  };
 }
 
 function providerRequestFor(
@@ -195,16 +222,13 @@ export async function reachSubscription(
     pluginContext,
   );
 
-  const finalAttempt = await completedAttempt(
+  const finalAttempt = await completeSubscriptionAttempt({
     attempt,
-    grant,
-    spend,
-    body,
-    identified,
-    runtime,
-    scope,
-    pluginContext,
-  );
+    provider: spend.provider,
+    credential: identified.credential,
+    wait: runtime.wait,
+    ...attemptCallbacks(grant, spend, body, identified, runtime, scope, pluginContext),
+  });
 
   if (finalAttempt.terminated) return finalAttempt.answer;
 
@@ -243,33 +267,6 @@ function codexReplayKey(body: JsonObject, sessionId: string): string {
   const model = typeof body['model'] === 'string' ? body['model'] : '';
 
   return `${model}\0${sessionId}`;
-}
-
-type ReadyCredential = { blob: string; credential: ParsedSubscriptionCredential };
-
-async function completedAttempt(
-  attempt: SubscriptionAttempt,
-  grant: ResolvedGrant,
-  spend: SubscriptionSpend,
-  body: JsonObject,
-  ready: ReadyCredential,
-  runtime: SubscriptionRuntime,
-  scope: SubscriptionScope,
-  pluginContext?: SubscriptionPluginContext,
-): Promise<SubscriptionAttempt> {
-  if (attempt.terminated || !shouldRefreshUnauthorized(attempt.answer, ready.credential)) {
-    return attempt;
-  }
-
-  return retryWithRefreshedCredential(
-    grant,
-    spend,
-    body,
-    ready.blob,
-    runtime,
-    scope,
-    pluginContext,
-  );
 }
 
 async function retryWithRefreshedCredential(

@@ -48,3 +48,104 @@ describe('serving an Antigravity subscription target', () => {
     });
   });
 });
+
+describe('retrying Antigravity subscription rate limits', () => {
+  test('a transient resource exhaustion retries the same target once', async () => {
+    let attempts = 0;
+    const waits: number[] = [];
+    const provider = runtimeAnswering(() => {
+      attempts += 1;
+
+      return attempts === 1
+        ? Response.json(
+            { error: { status: 'RESOURCE_EXHAUSTED', message: 'Resource has been exhausted' } },
+            { status: 429 },
+          )
+        : antigravitySuccess();
+    });
+    const app = antigravityApp(provider.runtime, async (milliseconds) => {
+      await Promise.resolve();
+      waits.push(milliseconds);
+    });
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(200);
+    expect(provider.sent).toHaveLength(2);
+    expect(waits).toEqual([500]);
+  });
+
+  test('explicit quota exhaustion does not retry', async () => {
+    const provider = runtimeAnswering(
+      () => new Response(reasonBody('QUOTA_EXHAUSTED'), { status: 429 }),
+    );
+    const app = antigravityApp(provider.runtime);
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(429);
+    expect(provider.sent).toHaveLength(1);
+  });
+
+  test('a longer rate limit exposes Retry-After without retrying', async () => {
+    const provider = runtimeAnswering(() => new Response(rateLimitBody('10s'), { status: 429 }));
+    const app = antigravityApp(provider.runtime);
+
+    const answer = await chatRequest(app);
+
+    expect(answer.status).toBe(429);
+    expect(answer.headers.get('retry-after')).toBe('10');
+    expect(provider.sent).toHaveLength(1);
+  });
+});
+
+// Helpers
+
+function antigravityApp(
+  runtime: Parameters<typeof createGatewayApp>[3],
+  wait?: (milliseconds: number) => Promise<void>,
+) {
+  const grants = granting(subscriptionGrant('antigravity', antigravityCredential()));
+
+  return createGatewayApp(
+    aGatewayHolding(subscriptionModel),
+    grants.grantFor,
+    neverFetches,
+    runtime === undefined ? undefined : { ...runtime, ...(wait === undefined ? {} : { wait }) },
+  );
+}
+
+function antigravitySuccess(): Response {
+  return Response.json({
+    candidates: [{ content: { role: 'model', parts: [{ text: 'ok' }] }, finishReason: 'STOP' }],
+  });
+}
+
+function reasonBody(reason: string): string {
+  return JSON.stringify({
+    error: {
+      status: 'RESOURCE_EXHAUSTED',
+      details: [
+        {
+          '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+          reason,
+        },
+      ],
+    },
+  });
+}
+
+function rateLimitBody(retryDelay: string): string {
+  return JSON.stringify({
+    error: {
+      status: 'RESOURCE_EXHAUSTED',
+      details: [
+        {
+          '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+          reason: 'RATE_LIMIT_EXCEEDED',
+        },
+        { '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay },
+      ],
+    },
+  });
+}
