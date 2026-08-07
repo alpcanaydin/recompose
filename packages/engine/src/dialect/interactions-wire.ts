@@ -15,12 +15,37 @@ type InteractionsFilePart = {
   data?: string;
   mime_type?: string;
   name?: string;
+  file?: { filename?: string; file_data: string };
+};
+
+type InteractionsAudioPart = {
+  type: 'audio';
+  data: string;
+  mime_type: string;
+  name?: string;
+};
+
+type InteractionsVideoPart = {
+  type: 'video';
+  data: string;
+  mime_type: string;
+  name?: string;
+};
+
+type InteractionsDocumentPart = {
+  type: 'document';
+  data: string;
+  mime_type: string;
+  name?: string;
 };
 
 export type InteractionsContentPart =
   | InteractionsTextPart
   | InteractionsImagePart
-  | InteractionsFilePart;
+  | InteractionsFilePart
+  | InteractionsAudioPart
+  | InteractionsVideoPart
+  | InteractionsDocumentPart;
 
 type InteractionsUserInput = {
   type: 'user_input';
