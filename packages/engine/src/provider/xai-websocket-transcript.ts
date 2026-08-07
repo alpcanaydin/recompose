@@ -41,6 +41,7 @@ export function validateXAICompactionResponse(value: unknown): ValidatedCompacti
 }
 
 export class XAIWebSocketTranscript {
+  private compactResponseId: string | undefined;
   private replayOnReset = false;
   private transcript: JsonObject[] = [];
 
@@ -55,6 +56,7 @@ export class XAIWebSocketTranscript {
     if (reset) {
       this.transcript = [];
       this.replayOnReset = false;
+      this.compactResponseId = undefined;
     }
 
     if (input.length === 0 && output.length === 0) return;
@@ -62,35 +64,61 @@ export class XAIWebSocketTranscript {
     this.transcript.push(...structuredClone(input), ...structuredClone(output));
   }
 
-  public replaceWithCompaction(item: JsonObject): boolean {
+  public replaceWithCompaction(item: JsonObject, responseId?: string): boolean {
     if (!compactionItem(item)) return false;
 
     this.transcript = [structuredClone(item)];
     this.replayOnReset = true;
+    this.compactResponseId = responseId;
 
     return true;
   }
 
   public prepare(body: JsonObject): PreparedTranscript {
-    const input = objectItems(body['input']);
+    const context = this.requestContext(body);
 
-    if (previousResponse(body) !== undefined) return { body, replayed: false };
-
-    if (input.length === 0) {
-      this.transcript = [];
-      this.replayOnReset = false;
-
-      return { body, replayed: false };
-    }
-
-    if (!this.replayOnReset || this.transcript.length === 0) return { body, replayed: false };
+    if (context.blocked) return { body, replayed: false };
+    if (context.input.length === 0) return this.emptyReset(context.source);
+    if (!this.shouldReplay()) return { body: context.source, replayed: false };
 
     this.replayOnReset = false;
 
     return {
-      body: { ...body, input: [...structuredClone(this.transcript), ...input] },
+      body: {
+        ...context.source,
+        input: [...structuredClone(this.transcript), ...context.input],
+      },
       replayed: true,
     };
+  }
+
+  private requestContext(body: JsonObject): {
+    source: JsonObject;
+    input: JsonObject[];
+    blocked: boolean;
+  } {
+    const previous = previousResponse(body);
+    const compactedPrevious = previous !== undefined && previous === this.compactResponseId;
+    const { previous_response_id: _previous, ...withoutPrevious } = body;
+    const source = compactedPrevious ? withoutPrevious : body;
+
+    return {
+      source,
+      input: objectItems(source['input']),
+      blocked: previous !== undefined && !compactedPrevious,
+    };
+  }
+
+  private emptyReset(source: JsonObject): PreparedTranscript {
+    this.transcript = [];
+    this.replayOnReset = false;
+    this.compactResponseId = undefined;
+
+    return { body: source, replayed: false };
+  }
+
+  private shouldReplay(): boolean {
+    return this.replayOnReset && this.transcript.length > 0;
   }
 
   public compactionPayload(body: JsonObject): JsonObject {

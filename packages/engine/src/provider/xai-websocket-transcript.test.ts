@@ -28,54 +28,69 @@ describe('validateXAICompactionResponse', () => {
   });
 });
 
-describe('XAIWebSocketTranscript', () => {
-  test('records request input and completed output in order', () => {
-    const transcript = new XAIWebSocketTranscript();
+test('records xAI request input and completed output in order', () => {
+  const transcript = new XAIWebSocketTranscript();
 
-    transcript.record({ input: [user] }, { response: { output: [assistant] } }, false);
+  transcript.record({ input: [user] }, { response: { output: [assistant] } }, false);
 
-    expect(transcript.snapshot()).toEqual([user, assistant]);
+  expect(transcript.snapshot()).toEqual([user, assistant]);
+});
+
+test('replays xAI compacted transcript on a full append without previous_response_id', () => {
+  const transcript = new XAIWebSocketTranscript();
+
+  transcript.replaceWithCompaction(compaction);
+  const prepared = transcript.prepare({
+    type: 'response.append',
+    input: [{ type: 'message', role: 'user', content: 'after compact' }],
   });
 
-  test('replays compacted transcript on the next full append without previous_response_id', () => {
-    const transcript = new XAIWebSocketTranscript();
+  expect(prepared.replayed).toBe(true);
+  expect(prepared.body['input']).toEqual([
+    compaction,
+    { type: 'message', role: 'user', content: 'after compact' },
+  ]);
+});
 
-    transcript.replaceWithCompaction(compaction);
-    const prepared = transcript.prepare({
-      type: 'response.append',
-      input: [{ type: 'message', role: 'user', content: 'after compact' }],
-    });
+test('maps an xAI compact response ID to replay without upstream previous state', () => {
+  const transcript = new XAIWebSocketTranscript();
 
-    expect(prepared.replayed).toBe(true);
-    expect(prepared.body['input']).toEqual([
-      compaction,
-      { type: 'message', role: 'user', content: 'after compact' },
-    ]);
+  transcript.replaceWithCompaction(compaction, 'resp_compact');
+  const prepared = transcript.prepare({
+    previous_response_id: 'resp_compact',
+    input: [{ type: 'message', role: 'user', content: 'next' }],
   });
 
-  test('keeps replayed compaction context after a generate-false warmup turn', () => {
-    const transcript = new XAIWebSocketTranscript();
-    const warmup = {
-      generate: false,
-      input: [{ type: 'message', role: 'user', content: 'warm up' }],
-    };
+  expect(prepared.replayed).toBe(true);
+  expect(prepared.body['previous_response_id']).toBeUndefined();
+  expect(prepared.body['input']).toEqual([
+    compaction,
+    { type: 'message', role: 'user', content: 'next' },
+  ]);
+});
 
-    transcript.replaceWithCompaction(compaction);
-    const prepared = transcript.prepare(warmup);
+test('keeps xAI compaction context after a generate-false warmup turn', () => {
+  const transcript = new XAIWebSocketTranscript();
+  const warmup = {
+    generate: false,
+    input: [{ type: 'message', role: 'user', content: 'warm up' }],
+  };
 
-    transcript.record(prepared.body, { response: { output: [] } }, prepared.replayed);
+  transcript.replaceWithCompaction(compaction);
+  const prepared = transcript.prepare(warmup);
 
-    expect(transcript.compactionPayload({ model: 'grok-4.3' })['input']).toEqual([
-      compaction,
-      { type: 'message', role: 'user', content: 'warm up' },
-    ]);
-  });
+  transcript.record(prepared.body, { response: { output: [] } }, prepared.replayed);
 
-  test('an empty full reset clears pending compacted replay', () => {
-    const transcript = new XAIWebSocketTranscript();
+  expect(transcript.compactionPayload({ model: 'grok-4.3' })['input']).toEqual([
+    compaction,
+    { type: 'message', role: 'user', content: 'warm up' },
+  ]);
+});
 
-    transcript.replaceWithCompaction(compaction);
-    expect(transcript.prepare({ input: [] }).replayed).toBe(false);
-    expect(transcript.snapshot()).toEqual([]);
-  });
+test('an empty xAI full reset clears pending compacted replay', () => {
+  const transcript = new XAIWebSocketTranscript();
+
+  transcript.replaceWithCompaction(compaction);
+  expect(transcript.prepare({ input: [] }).replayed).toBe(false);
+  expect(transcript.snapshot()).toEqual([]);
 });
