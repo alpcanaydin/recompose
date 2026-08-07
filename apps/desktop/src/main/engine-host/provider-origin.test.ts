@@ -55,6 +55,10 @@ describe('the origin a target account is spent against', () => {
     expect(providerOriginOf(keyRow('xai'))).toBe('https://api.x.ai/v1');
   });
 
+  test('a Vertex credential is spent against the AI Platform endpoint', () => {
+    expect(providerOriginOf(keyRow('vertex'))).toBe('https://aiplatform.googleapis.com');
+  });
+
   test('an OpenRouter key is spent against the aggregator serving base', () => {
     expect(providerOriginOf(keyRow('openrouter', 'aggregator'))).toBe('https://openrouter.ai/api');
   });

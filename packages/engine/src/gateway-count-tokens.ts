@@ -5,18 +5,12 @@ import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { JsonObject } from './gateway-wire';
 
 import { translateRequest } from './dialect/dispatcher';
-import { translateRequestToGemini } from './dialect/gemini-bridge';
-import { requestSessionId, requestSessions } from './gateway-session';
-import {
-  ingressPayload,
-  isJsonObject,
-  jsonResponse,
-  readJsonBody,
-  refusalResponse,
-} from './gateway-wire';
+import { requestSessionId } from './gateway-session';
+import { ingressPayload, jsonResponse, readJsonBody, refusalResponse } from './gateway-wire';
+import { nativeProviderCount } from './provider/native-token-count';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
-import { reachAntigravityCount, reachSubscriptionCount } from './subscription/reach-count';
+import { reachSubscriptionCount } from './subscription/reach-count';
 import { countClaudeInputTokens, countCodexInputTokens } from './token-count';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
@@ -98,94 +92,6 @@ async function resolvedCount(
     subscriptions,
     requestSessionId(c, raw),
   );
-}
-
-async function nativeProviderCount(
-  c: Context,
-  raw: JsonObject,
-  grant: ResolvedGrant,
-  providerModel: string,
-  subscriptions: SubscriptionRuntime,
-  fetchLike: typeof fetch,
-): Promise<Response | null> {
-  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
-    return geminiCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
-  }
-
-  if (grant.spend.custody === 'subscription' && grant.spend.provider === 'antigravity') {
-    return antigravityCount(c, raw, grant, providerModel, subscriptions);
-  }
-
-  return null;
-}
-
-async function antigravityCount(
-  c: Context,
-  raw: JsonObject,
-  grant: ResolvedGrant,
-  providerModel: string,
-  subscriptions: SubscriptionRuntime,
-): Promise<Response> {
-  const translated = geminiCountPayload(raw);
-
-  if (translated === null) {
-    return refusalResponse('anthropic', emptyConversation());
-  }
-
-  const answer = await reachAntigravityCount(
-    grant,
-    { ...translated, model: providerModel },
-    subscriptions,
-    requestSessions(c, raw).replayScopeId,
-  );
-
-  return geminiCountAnswer(answer, await answer.json());
-}
-
-async function geminiCount(
-  raw: JsonObject,
-  providerOrigin: string,
-  credential: string,
-  providerModel: string,
-  fetchLike: typeof fetch,
-): Promise<Response> {
-  const translated = geminiCountPayload(raw);
-
-  if (translated === null) {
-    return refusalResponse('anthropic', emptyConversation());
-  }
-
-  const origin = providerOrigin.replace(/\/+$/u, '');
-  const answer = await fetchLike(
-    `${origin}/v1beta/models/${encodeURIComponent(providerModel)}:countTokens`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': credential },
-      body: JSON.stringify(translated),
-    },
-  );
-
-  return geminiCountAnswer(answer, await answer.json());
-}
-
-function geminiCountPayload(raw: JsonObject): JsonObject | null {
-  const payload = ingressPayload('anthropic', raw);
-
-  if (payload === null) {
-    return null;
-  }
-
-  const translated = translateRequestToGemini('anthropic', payload);
-
-  return 'refusal' in translated ? null : translated.value;
-}
-
-function geminiCountAnswer(answer: Response, body: unknown): Response {
-  const total = isJsonObject(body) ? body['totalTokens'] : undefined;
-
-  return typeof total === 'number'
-    ? jsonResponse({ input_tokens: total }, answer.status)
-    : new Response(JSON.stringify(body), { status: answer.status });
 }
 
 type VirtualLookup = { virtual: EngineVirtualModel } | { refusal: Response };

@@ -5,15 +5,24 @@ import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from '../gat
 import { cappedGeminiOutput } from './gemini-model-limits';
 import { prepareKimiReplay } from './kimi-replay-runtime';
 import { kimiProviderBody } from './kimi-request';
+import {
+  parseVertexCredential,
+  vertexHeaders,
+  vertexProviderBody,
+  vertexRequestUrl,
+} from './vertex-request';
 import { prepareXAIReplay } from './xai-replay-runtime';
 import { xaiProviderBody } from './xai-request';
 import { collectXAINamespaceTools } from './xai-tools';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
 type GrantedSpend = ResolvedGrant['spend'];
+type BodyBuilder = (crossing: Crossing, body: JsonObject) => JsonObject;
+type HeaderBuilder = (credential: string, crossing: Crossing) => Record<string, string>;
 const CREDENTIALED_DIALECTS = new Map<string, ProviderDialect>([
   ['anthropic', 'anthropic'],
   ['gemini', 'gemini'],
+  ['vertex', 'gemini'],
   ['xai', 'responses'],
 ]);
 
@@ -32,23 +41,30 @@ export function credentialedRequestBody(
 ): JsonObject {
   if (grant.spend.custody !== 'credentialed') return body;
 
-  if (grant.spend.provider === 'gemini') {
-    return cappedGeminiOutput(body, crossing.providerModel);
-  }
+  return BODY_BUILDERS.get(grant.spend.provider)?.(crossing, body) ?? body;
+}
 
-  if (grant.spend.provider === 'xai') {
-    crossing.xaiNamespaceTools = collectXAINamespaceTools(body);
+function xaiBody(crossing: Crossing, body: JsonObject): JsonObject {
+  crossing.xaiNamespaceTools = collectXAINamespaceTools(body);
 
-    return xaiProviderBody(prepareXAIReplay(crossing, body), crossing);
-  }
+  return xaiProviderBody(prepareXAIReplay(crossing, body), crossing);
+}
 
-  if (grant.spend.provider !== 'kimi') return body;
+const BODY_BUILDERS = new Map<string, BodyBuilder>([
+  ['gemini', (crossing, body) => cappedGeminiOutput(body, crossing.providerModel)],
+  ['xai', xaiBody],
+  ['vertex', (crossing, body) => vertexProviderBody(body, crossing)],
+  [
+    'kimi',
+    (crossing, body) =>
+      kimiProviderBody(prepareKimiReplay(crossing, body), crossing.providerModel, crossing.dialect),
+  ],
+]);
 
-  return kimiProviderBody(
-    prepareKimiReplay(crossing, body),
-    crossing.providerModel,
-    crossing.dialect,
-  );
+function vertexUrl(origin: string, credential: string, crossing: Crossing): string | null {
+  const parsed = parseVertexCredential(credential);
+
+  return parsed === null ? null : vertexRequestUrl(origin, parsed, crossing);
 }
 
 function geminiUrl(origin: string, crossing: Crossing): string {
@@ -69,13 +85,14 @@ function providerPath(provider: string, crossing: Crossing): string {
 export function credentialedRequestUrl(grant: ResolvedGrant, crossing: Crossing): string {
   const origin = grant.providerOrigin.replace(/\/+$/u, '');
 
-  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini') {
-    return geminiUrl(origin, crossing);
-  }
+  if (grant.spend.custody !== 'credentialed') return `${origin}${providerPath('', crossing)}`;
 
-  const provider = grant.spend.custody === 'credentialed' ? grant.spend.provider : '';
+  if (grant.spend.provider === 'gemini') return geminiUrl(origin, crossing);
 
-  return `${origin}${providerPath(provider, crossing)}`;
+  const vertex =
+    grant.spend.provider === 'vertex' ? vertexUrl(origin, grant.spend.credential, crossing) : null;
+
+  return vertex ?? `${origin}${providerPath(grant.spend.provider, crossing)}`;
 }
 
 function kimiBetas(client: string | undefined): string {
@@ -106,20 +123,30 @@ function xaiHeaders(credential: string, crossing: Crossing): Record<string, stri
   };
 }
 
+function vertexCredentialHeaders(credential: string): Record<string, string> {
+  const parsed = parseVertexCredential(credential);
+
+  return parsed === null ? {} : vertexHeaders(parsed);
+}
+
+const HEADER_BUILDERS = new Map<string, HeaderBuilder>([
+  ['anthropic', (credential) => ({ 'x-api-key': credential, 'anthropic-version': '2023-06-01' })],
+  ['gemini', (credential) => ({ 'x-goog-api-key': credential })],
+  ['vertex', vertexCredentialHeaders],
+  ['kimi', kimiHeaders],
+  ['xai', xaiHeaders],
+]);
+
 function providerHeaders(
   provider: string,
   credential: string,
   crossing: Crossing,
 ): Record<string, string> {
-  if (provider === 'anthropic') {
-    return { 'x-api-key': credential, 'anthropic-version': '2023-06-01' };
-  }
+  const built = HEADER_BUILDERS.get(provider);
 
-  if (provider === 'gemini') return { 'x-goog-api-key': credential };
-  if (provider === 'kimi') return kimiHeaders(credential, crossing);
-  if (provider === 'xai') return xaiHeaders(credential, crossing);
-
-  return { authorization: `Bearer ${credential}` };
+  return built === undefined
+    ? { authorization: `Bearer ${credential}` }
+    : built(credential, crossing);
 }
 
 export function credentialedRequestHeaders(

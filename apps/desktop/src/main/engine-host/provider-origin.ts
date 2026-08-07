@@ -6,6 +6,7 @@ const servingOrigins = new Map<string, string>([
   ['gemini', 'https://generativelanguage.googleapis.com'],
   ['kimi', 'https://api.kimi.com/coding'],
   ['openrouter', 'https://openrouter.ai/api'],
+  ['vertex', 'https://aiplatform.googleapis.com'],
   ['xai', 'https://api.x.ai/v1'],
 ]);
 
