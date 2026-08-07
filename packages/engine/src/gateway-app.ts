@@ -13,6 +13,7 @@ import { proxyVideoRequest } from './gateway-videos';
 import { registerGatewayWebSockets } from './gateway-websocket';
 import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
+import { type AIStudioRelay, aiStudioRelayRuntime } from './provider/ai-studio-relay';
 import { invalidJson, unservedPath } from './refusals';
 
 export type { SpendGrantFor } from './gateway-proxy';
@@ -43,6 +44,10 @@ const VIDEO_ROUTES = [
   ['/v1/videos', ''],
   ['/videos', ''],
 ] as const;
+
+function chosenAIStudioRelay(relay?: AIStudioRelay): AIStudioRelay {
+  return relay ?? aiStudioRelayRuntime();
+}
 
 function dialectForPath(path: string): ProxyDialect {
   if (path.endsWith('/responses')) {
@@ -82,9 +87,11 @@ export function createGatewayApp(
   spendGrantFor: SpendGrantFor,
   fetchLike: typeof fetch = globalThis.fetch,
   subscriptions?: SubscriptionRuntime,
+  aiStudio?: AIStudioRelay,
 ): Hono {
   const app = new Hono();
   const subscriptionServing = subscriptions ?? subscriptionRuntime();
+  const relay = chosenAIStudioRelay(aiStudio);
 
   app.use(guardLoopback(gateway.port));
 
@@ -98,7 +105,7 @@ export function createGatewayApp(
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
-  registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike);
+  registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike, relay);
 
   for (const path of COUNT_TOKENS_PATHS) {
     app.post(path, async (c) =>
