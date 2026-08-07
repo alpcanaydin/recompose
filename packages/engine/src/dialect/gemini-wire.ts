@@ -1,3 +1,5 @@
+import type { HubJsonObject } from './hub';
+
 export type GeminiPart = {
   text?: string;
   thought?: boolean;
@@ -39,6 +41,10 @@ export type GeminiRequest = {
     responseModalities?: readonly string[];
     responseMimeType?: string;
     responseJsonSchema?: unknown;
+    responseSchema?: unknown;
+    seed?: number;
+    contextWindowCompression?: HubJsonObject;
+    [key: string]: unknown;
   };
   service_tier?: string;
 };
@@ -57,6 +63,8 @@ type GeminiCandidate = {
 };
 
 export type GeminiResponse = {
+  responseId?: string;
+  modelVersion?: string;
   candidates?: GeminiCandidate[];
   usageMetadata?: GeminiUsage;
 };

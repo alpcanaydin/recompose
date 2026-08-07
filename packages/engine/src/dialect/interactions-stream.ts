@@ -55,7 +55,21 @@ function startEvents(
   state.open.add(event.index);
   state.sawTool ||= opening.kind === 'tool';
 
-  return [{ type: 'block-open', index: event.index, opening }];
+  return [
+    { type: 'block-open', index: event.index, opening },
+    ...initialArgumentEvents(event.index, event.step),
+  ];
+}
+
+function initialArgumentEvents(index: number, step: InteractionsStep): HubStreamEvent[] {
+  if (step.type !== 'function_call') return [];
+
+  const argumentsText =
+    typeof step.arguments === 'string' ? step.arguments : JSON.stringify(step.arguments);
+
+  return argumentsText === '' || argumentsText === '{}'
+    ? []
+    : [{ type: 'block-delta', index, delta: { kind: 'json-args', partialJson: argumentsText } }];
 }
 
 function deltaEvents(
@@ -139,12 +153,52 @@ function failedEvents(
   ];
 }
 
-function createdEvents(state: StreamState): HubStreamEvent[] {
+function doneEvents(state: StreamState): HubStreamEvent[] {
+  if (state.ended) return [];
+
+  state.ended = true;
+
+  return [
+    {
+      type: 'message-end',
+      stopReason: terminalReason(undefined, state.sawTool),
+      usage: {},
+    },
+  ];
+}
+
+function requiresActionEvents(
+  state: StreamState,
+  event: Extract<InteractionsKnownStreamEvent, { event_type: 'interaction.requires_action' }>,
+): HubStreamEvent[] {
+  if (state.ended) return [];
+
+  state.ended = true;
+
+  return [
+    {
+      type: 'message-end',
+      stopReason: 'tool_use',
+      usage: hubUsageFromInteractions(event.interaction.usage),
+    },
+  ];
+}
+
+function createdEvents(
+  state: StreamState,
+  event: Extract<InteractionsKnownStreamEvent, { event_type: 'interaction.created' }>,
+): HubStreamEvent[] {
   if (state.began) return [];
 
   state.began = true;
 
-  return [{ type: 'message-begin' }];
+  return [
+    {
+      type: 'message-begin',
+      ...(event.interaction.id === undefined ? {} : { id: event.interaction.id }),
+      ...(event.interaction.model === undefined ? {} : { model: event.interaction.model }),
+    },
+  ];
 }
 
 function blockEvents(state: StreamState, event: InteractionsKnownStreamEvent): HubStreamEvent[] {
@@ -157,14 +211,24 @@ function blockEvents(state: StreamState, event: InteractionsKnownStreamEvent): H
 
 function knownEvents(state: StreamState, event: InteractionsKnownStreamEvent): HubStreamEvent[] {
   if (event.event_type === 'interaction.created') {
-    return createdEvents(state);
+    return createdEvents(state, event);
   }
 
   if (event.event_type === 'interaction.completed') return completedEvents(state, event);
+
+  return alternateTerminalEvents(state, event) ?? blockEvents(state, event);
+}
+
+function alternateTerminalEvents(
+  state: StreamState,
+  event: InteractionsKnownStreamEvent,
+): HubStreamEvent[] | null {
   if (event.event_type === 'interaction.failed') return failedEvents(state, event);
   if (event.event_type === 'finish') return finishEvents(state, event);
+  if (event.event_type === 'interaction.requires_action') return requiresActionEvents(state, event);
+  if (event.event_type === 'done') return doneEvents(state);
 
-  return blockEvents(state, event);
+  return null;
 }
 
 function isKnown(event: InteractionsStreamEvent): event is InteractionsKnownStreamEvent {

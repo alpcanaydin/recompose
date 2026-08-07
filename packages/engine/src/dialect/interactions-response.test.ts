@@ -6,6 +6,8 @@ import { decodeResponse, encodeResponse } from './interactions-codec';
 describe('Gemini responses crossing through Interactions', () => {
   it('should preserve text, function calls, signatures, and usage', () => {
     const decoded = decodeGemini({
+      responseId: 'response_1',
+      modelVersion: 'gemini-3.5-flash',
       candidates: [
         {
           content: {
@@ -25,6 +27,9 @@ describe('Gemini responses crossing through Interactions', () => {
     });
     const encoded = encodeResponse(decoded.value).value;
 
+    expect(encoded.id).toBe('response_1');
+    expect(encoded.model).toBe('gemini-3.5-flash');
+
     expect(encoded.steps).toEqual([
       { type: 'model_output', content: [{ type: 'text', text: 'ok' }] },
       {
@@ -39,6 +44,7 @@ describe('Gemini responses crossing through Interactions', () => {
     expect(encoded.usage).toEqual({
       total_input_tokens: 2,
       total_output_tokens: 3,
+      total_tokens: 5,
       cached_tokens: 4,
     });
   });
@@ -81,6 +87,7 @@ describe('Interactions responses crossing into the hub', () => {
     });
 
     expect(decoded.value).toEqual({
+      id: 'interaction_1',
       content: [
         { type: 'thinking', text: 'consider', signature: 'sig_1' },
         { type: 'text', text: 'ok' },
@@ -88,6 +95,27 @@ describe('Interactions responses crossing into the hub', () => {
       ],
       stopReason: 'tool_use',
       usage: { inputTokens: 3, outputTokens: 4, reasoningTokens: 2 },
+    });
+  });
+
+  it('should accept native and aggregate usage aliases', () => {
+    const decoded = decodeResponse({
+      id: 'interaction_2',
+      status: 'completed',
+      steps: [{ type: 'model_output', content: 'ok' }],
+      usage: {
+        input_tokens: 11,
+        output_tokens: 13,
+        total_cached_tokens: 5,
+        total_thought_tokens: 7,
+      },
+    });
+
+    expect(decoded.value.usage).toEqual({
+      inputTokens: 11,
+      outputTokens: 13,
+      cacheReadTokens: 5,
+      reasoningTokens: 7,
     });
   });
 });

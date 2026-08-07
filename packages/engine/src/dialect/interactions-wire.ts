@@ -99,11 +99,19 @@ export type InteractionsFunctionTool = {
   parameters?: HubJsonObject;
 };
 
+type InteractionsFunctionToolGroup = {
+  functionDeclarations?: readonly Omit<InteractionsFunctionTool, 'type'>[];
+  function_declarations?: readonly Omit<InteractionsFunctionTool, 'type'>[];
+};
+
+export type InteractionsTool = InteractionsFunctionTool | InteractionsFunctionToolGroup;
+
 export type InteractionsToolChoice =
   | 'auto'
   | 'none'
   | 'required'
-  | { type: 'function'; name: string };
+  | { type: 'function'; name: string }
+  | { type: 'function'; function: { name: string } };
 
 export type InteractionsGenerationConfig = {
   max_output_tokens?: number;
@@ -114,6 +122,11 @@ export type InteractionsGenerationConfig = {
   thinking_level?: string;
   thinking_budget?: number;
   thinking_summaries?: string;
+  response_schema?: unknown;
+  seed?: number;
+  thinking_config?: HubJsonObject;
+  context_window_compression?: HubJsonObject;
+  [key: string]: unknown;
 };
 
 export type InteractionsRequest = {
@@ -125,8 +138,10 @@ export type InteractionsRequest = {
     | InteractionsTurn
     | readonly (InteractionsStep | InteractionsTurn)[];
   system_instruction?: string;
-  tools?: readonly InteractionsFunctionTool[];
+  tools?: readonly InteractionsTool[];
   generation_config?: InteractionsGenerationConfig;
+  tool_choice?: InteractionsToolChoice;
+  reasoning?: { effort?: string; summary?: string };
   previous_interaction_id?: string;
   stream?: boolean;
   response_modalities?: readonly string[];
@@ -140,6 +155,12 @@ export type InteractionsUsage = {
   total_tokens?: number;
   cached_tokens?: number;
   reasoning_tokens?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_cached_tokens?: number;
+  total_thought_tokens?: number;
 };
 
 export type InteractionsResponse = {

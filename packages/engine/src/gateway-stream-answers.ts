@@ -53,23 +53,37 @@ function translatedGeminiStream(
 ): ReadableStream<Uint8Array> {
   if (crossing.dialect === 'chat-completions') {
     return chatSseBodyFrom(
-      translateStreamFromGemini('chat-completions', geminiResponsesFrom(body)),
+      translateStreamFromGemini(
+        'chat-completions',
+        geminiResponsesFrom(body),
+        crossing.geminiToolNames,
+      ),
     );
   }
 
   if (crossing.dialect === 'anthropic') {
-    const crossed = translateStreamFromGemini('anthropic', geminiResponsesFrom(body));
+    const crossed = translateStreamFromGemini(
+      'anthropic',
+      geminiResponsesFrom(body),
+      crossing.geminiToolNames,
+    );
 
     return namedSseBodyFrom(answeringModelInto(crossed, crossing.providerModel));
   }
 
   if (crossing.dialect === 'interactions') {
     return interactionSseBodyFrom(
-      translateStreamFromGemini('interactions', geminiResponsesFrom(body)),
+      translateStreamFromGemini(
+        'interactions',
+        geminiResponsesFrom(body),
+        crossing.geminiToolNames,
+      ),
     );
   }
 
-  return namedSseBodyFrom(translateStreamFromGemini('responses', geminiResponsesFrom(body)));
+  return namedSseBodyFrom(
+    translateStreamFromGemini('responses', geminiResponsesFrom(body), crossing.geminiToolNames),
+  );
 }
 
 function translatedChatStream(

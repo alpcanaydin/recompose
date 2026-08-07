@@ -1,18 +1,39 @@
 import type { HubReasoning, HubRequest } from './hub';
 import type { InteractionsRequest } from './interactions-wire';
 
-function reasoningFrom(request: InteractionsRequest): HubReasoning | undefined {
-  const config = request.generation_config;
+import {
+  geminiConfigFromInteractions,
+  geminiConfigIntoInteractions,
+} from './gemini-generation-config';
 
-  if (config === undefined) return undefined;
+function reasoningFrom(request: InteractionsRequest): HubReasoning | undefined {
+  if (request.generation_config === undefined && request.reasoning === undefined) return undefined;
 
   const reasoning: HubReasoning = {};
 
-  if (config.thinking_level !== undefined) reasoning.effort = config.thinking_level;
-  if (config.thinking_summaries !== undefined) reasoning.summary = config.thinking_summaries;
-  if (config.thinking_budget !== undefined) reasoning.budgetTokens = config.thinking_budget;
+  applyReasoningEffort(reasoning, request);
+  applyReasoningSummary(reasoning, request);
+  applyReasoningBudget(reasoning, request);
 
   return nonEmptyReasoning(reasoning);
+}
+
+function applyReasoningEffort(reasoning: HubReasoning, request: InteractionsRequest): void {
+  const effort = request.generation_config?.thinking_level ?? request.reasoning?.effort;
+
+  if (effort !== undefined) reasoning.effort = effort;
+}
+
+function applyReasoningSummary(reasoning: HubReasoning, request: InteractionsRequest): void {
+  const summary = request.generation_config?.thinking_summaries ?? request.reasoning?.summary;
+
+  if (summary !== undefined) reasoning.summary = summary;
+}
+
+function applyReasoningBudget(reasoning: HubReasoning, request: InteractionsRequest): void {
+  const budget = request.generation_config?.thinking_budget;
+
+  if (budget !== undefined) reasoning.budgetTokens = budget;
 }
 
 function nonEmptyReasoning(reasoning: HubReasoning): HubReasoning | undefined {
@@ -56,6 +77,7 @@ export function hubOptionsFromInteractions(request: InteractionsRequest): Partia
     ...modalitiesOption(request),
     ...formatOption(request),
     ...serviceOption(request),
+    ...geminiConfigFromInteractions(request),
   };
 }
 
@@ -104,4 +126,5 @@ export function interactionsOptionsInto(value: InteractionsRequest, request: Hub
   modalitiesInto(value, request);
   formatInto(value, request);
   serviceInto(value, request);
+  geminiConfigIntoInteractions(value, request);
 }

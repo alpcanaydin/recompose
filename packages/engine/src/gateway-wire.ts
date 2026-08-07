@@ -6,6 +6,7 @@ import type { RequestOf } from './dialect/dispatcher';
 import type { TranslationRefusal } from './refusals';
 
 import { duplicateJsonKey } from './json-duplicates';
+import { parsePreciseJson } from './json-precise';
 import { renderRefusal } from './refusals';
 
 export type ProxyDialect = 'anthropic' | 'chat-completions' | 'interactions' | 'responses';
@@ -42,6 +43,7 @@ export type Crossing = {
       }
     | undefined;
   xaiNamespaceTools?: Record<string, { namespace: string; name: string }> | undefined;
+  geminiToolNames?: Readonly<Record<string, string>> | undefined;
 };
 
 export function isJsonObject(value: unknown): value is JsonObject {
@@ -50,7 +52,7 @@ export function isJsonObject(value: unknown): value is JsonObject {
 
 export function parsedJson(text: string): unknown {
   try {
-    return JSON.parse(text);
+    return parsePreciseJson(text);
   } catch {
     return undefined;
   }
@@ -72,10 +74,14 @@ export async function readJsonBody(c: Context): Promise<JsonObject> {
   return body;
 }
 
-export function virtualNameOf(body: JsonObject): string {
+export function virtualNameOf(body: JsonObject, dialect?: ProxyDialect): string {
   const model = body['model'];
 
-  return typeof model === 'string' ? model : '';
+  if (typeof model === 'string') return model;
+
+  const agent = body['agent'];
+
+  return dialect === 'interactions' && typeof agent === 'string' ? agent : '';
 }
 
 export function wantsStream(body: JsonObject): boolean {

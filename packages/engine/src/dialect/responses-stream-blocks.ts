@@ -1,10 +1,5 @@
 import type { HubStreamEvent } from './hub';
-import type {
-  ResponsesKnownStreamEvent,
-  ResponsesOutputItem,
-  ResponsesStreamItem,
-  ResponsesStreamResponse,
-} from './responses-wire';
+import type { ResponsesKnownStreamEvent, ResponsesStreamItem } from './responses-wire';
 
 import { sanitizeToolId } from './tool-id';
 
@@ -23,19 +18,26 @@ type ResponsesBlockEvent = Extract<
 export type ResponsesBlockState = {
   skipped: Set<number>;
   open: Set<number>;
+  closed: Set<number>;
   pending: Map<number, ResponsesStreamItem>;
   arguments: Map<number, string>;
 };
 
 export function newResponsesBlockState(): ResponsesBlockState {
-  return { skipped: new Set(), open: new Set(), pending: new Map(), arguments: new Map() };
+  return {
+    skipped: new Set(),
+    open: new Set(),
+    closed: new Set(),
+    pending: new Map(),
+    arguments: new Map(),
+  };
 }
 
 function synthesizedToolId(item: { id?: string; call_id?: string }, index: number): string {
   return sanitizeToolId(item.call_id ?? item.id ?? `toolu_stream_${String(index)}`);
 }
 
-function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
+export function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
   switch (item.type) {
     case 'message':
       return { type: 'block-open', index, opening: { kind: 'text' } };
@@ -123,7 +125,7 @@ function missingArgumentSuffix(current: string, complete: string): string {
   return complete.startsWith(current) ? complete.slice(current.length) : '';
 }
 
-function argumentCompletion(
+export function argumentCompletion(
   state: ResponsesBlockState,
   index: number,
   complete: string | undefined,
@@ -140,7 +142,7 @@ function argumentCompletion(
     : [{ type: 'block-delta', index, delta: { kind: 'json-args', partialJson: suffix } }];
 }
 
-function signatureCompletion(
+export function signatureCompletion(
   index: number,
   item: ResponsesStreamItem | undefined,
 ): HubStreamEvent[] {
@@ -151,7 +153,7 @@ function signatureCompletion(
     : [];
 }
 
-function pendingDoneEvents(
+export function pendingDoneEvents(
   state: ResponsesBlockState,
   index: number,
   item: ResponsesStreamItem,
@@ -162,6 +164,7 @@ function pendingDoneEvents(
 
   state.pending.delete(index);
   state.arguments.delete(index);
+  state.closed.add(index);
 
   return [
     open,
@@ -177,18 +180,31 @@ function doneEvent(
 ): HubStreamEvent[] {
   const pending = state.pending.get(event.output_index);
   const item = event.item === undefined ? pending : { ...pending, ...event.item };
+  const synthesized = synthesizedDoneEvents(state, event.output_index, item, pending);
 
-  if (item !== undefined && pending !== undefined) {
-    return pendingDoneEvents(state, event.output_index, item);
-  }
+  if (synthesized !== null) return synthesized;
 
   state.open.delete(event.output_index);
+  state.closed.add(event.output_index);
 
   return [
     ...argumentCompletion(state, event.output_index, event.item?.arguments),
     ...signatureCompletion(event.output_index, event.item),
     { type: 'block-close', index: event.output_index },
   ];
+}
+
+function synthesizedDoneEvents(
+  state: ResponsesBlockState,
+  index: number,
+  item: ResponsesStreamItem | undefined,
+  pending: ResponsesStreamItem | undefined,
+): HubStreamEvent[] | null {
+  if (item === undefined) return null;
+
+  return pending !== undefined || !state.open.has(index)
+    ? pendingDoneEvents(state, index, item)
+    : null;
 }
 
 export function decodeResponsesBlockEvent(
@@ -200,45 +216,4 @@ export function decodeResponsesBlockEvent(
   if (event.type === 'response.output_item.done') return doneEvent(state, event);
 
   return decodedDelta(state, event);
-}
-
-function streamItemFromOutput(item: ResponsesOutputItem): ResponsesStreamItem {
-  return item;
-}
-
-function terminalItemEvents(
-  state: ResponsesBlockState,
-  item: ResponsesOutputItem,
-  index: number,
-): HubStreamEvent[] {
-  const streamItem = streamItemFromOutput(item);
-
-  if (state.pending.has(index)) return pendingDoneEvents(state, index, streamItem);
-  if (!state.open.has(index)) return [];
-
-  state.open.delete(index);
-
-  return [
-    ...argumentCompletion(state, index, item.type === 'function_call' ? item.arguments : undefined),
-    ...signatureCompletion(index, streamItem),
-    { type: 'block-close', index },
-  ];
-}
-
-function closeRemaining(state: ResponsesBlockState): HubStreamEvent[] {
-  const remaining = [...state.open].toSorted((left, right) => left - right);
-
-  state.open.clear();
-  state.pending.clear();
-
-  return remaining.map((index) => ({ type: 'block-close', index }));
-}
-
-export function hydrateResponsesBlocksAtTerminal(
-  state: ResponsesBlockState,
-  response: ResponsesStreamResponse,
-): HubStreamEvent[] {
-  const hydrated = response.output.flatMap((item, index) => terminalItemEvents(state, item, index));
-
-  return [...hydrated, ...closeRemaining(state)];
 }

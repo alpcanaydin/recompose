@@ -172,7 +172,7 @@ function toolDoneItem(block: OpenBlock): ResponsesStreamItem | undefined {
     id: block.opening.id,
     call_id: block.opening.id,
     name: block.opening.name,
-    arguments: block.arguments,
+    arguments: toolArguments(block),
   };
 }
 
@@ -182,7 +182,7 @@ function completedOutput(block: OpenBlock): ResponsesOutputItem {
       type: 'function_call',
       call_id: block.opening.id,
       name: block.opening.name,
-      arguments: block.arguments,
+      arguments: toolArguments(block),
     };
   }
 
@@ -200,6 +200,10 @@ function completedOutput(block: OpenBlock): ResponsesOutputItem {
     role: 'assistant',
     content: [{ type: 'output_text', text: block.content }],
   };
+}
+
+function toolArguments(block: OpenBlock): string {
+  return block.arguments === '' ? '{}' : block.arguments;
 }
 
 function closeBlock(state: EncodeState, sourceIndex: number): ResponsesStreamEvent {

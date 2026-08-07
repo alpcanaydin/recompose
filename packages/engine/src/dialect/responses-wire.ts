@@ -132,6 +132,7 @@ export type ResponsesIncompleteReason = 'max_output_tokens' | 'content_filter';
 
 export type ResponsesResponse = {
   id: string;
+  model?: string;
   status: ResponsesStatus;
   output: readonly ResponsesOutputItem[];
   incomplete_details?: { reason: string };
@@ -140,6 +141,7 @@ export type ResponsesResponse = {
 
 export type ResponsesStreamResponse = {
   id: string;
+  model?: string;
   status: ResponsesStatus | 'in_progress';
   output: readonly ResponsesOutputItem[];
   incomplete_details?: { reason: string };
@@ -161,6 +163,8 @@ export type ResponsesStreamItem = {
   name?: string;
   arguments?: string;
   encrypted_content?: string;
+  content?: readonly ResponsesOutputTextPart[] | null;
+  summary?: readonly ResponsesReasoningSummaryPart[];
 };
 
 export type ResponsesKnownStreamEvent =

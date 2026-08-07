@@ -157,7 +157,7 @@ describe('decodeStream: the whole tool-call stream maps event for event', () => 
     const events = await decode(aResponsesToolCallStream());
 
     expect(events).toEqual([
-      { type: 'message-begin' },
+      { type: 'message-begin', id: 'resp_3' },
       {
         type: 'block-open',
         index: 0,

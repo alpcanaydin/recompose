@@ -126,7 +126,14 @@ function decodeMessageEvent(event: MessageEvent, state: DecodeState): HubStreamE
     case 'message_start':
       state.usage = hubUsageFrom(event.message.usage);
 
-      return [{ type: 'message-begin', usage: state.usage }];
+      return [
+        {
+          type: 'message-begin',
+          usage: state.usage,
+          id: event.message.id,
+          ...(event.message.model === undefined ? {} : { model: event.message.model }),
+        },
+      ];
     case 'message_delta':
       state.stopReason = hubStopFrom(event.delta.stop_reason);
       state.usage = { ...state.usage, ...hubUsageFrom(event.usage) };

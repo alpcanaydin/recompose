@@ -176,13 +176,21 @@ function applyFinish(state: DecodeState, finishReason: ChatChunkChoice['finish_r
   state.stopReason = hubStopFrom(finishReason);
 }
 
-function ensureBegun(state: DecodeState, events: HubStreamEvent[]): void {
+function ensureBegun(
+  state: DecodeState,
+  events: HubStreamEvent[],
+  chunk: ChatCompletionChunk,
+): void {
   if (state.begun) {
     return;
   }
 
   state.begun = true;
-  events.push({ type: 'message-begin' });
+  events.push({
+    type: 'message-begin',
+    ...(chunk.id === undefined ? {} : { id: chunk.id }),
+    ...(chunk.model === undefined ? {} : { model: chunk.model }),
+  });
 }
 
 function applyChoice(state: DecodeState, choice: ChatChunkChoice, events: HubStreamEvent[]): void {
@@ -196,7 +204,7 @@ function decodeChunk(
   chunk: ChatCompletionChunk,
   events: HubStreamEvent[],
 ): void {
-  ensureBegun(state, events);
+  ensureBegun(state, events, chunk);
 
   const choice = chunk.choices[0];
 

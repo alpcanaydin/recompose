@@ -12,6 +12,7 @@ import type {
   InteractionsRequest,
   InteractionsStep,
   InteractionsToolChoice,
+  InteractionsTool,
   InteractionsTurn,
 } from './interactions-wire';
 
@@ -25,6 +26,10 @@ function isJsonObject(value: unknown): value is HubJsonObject {
 
 function callInput(value: HubJsonObject | string): HubJsonObject {
   return typeof value === 'string' ? parseToolArguments(value) : value;
+}
+
+function normalizedName(value: unknown): string {
+  return String(value);
 }
 
 function resultText(value: unknown): string {
@@ -71,7 +76,7 @@ function functionCallMessage(
       {
         type: 'tool_use',
         id: step.call_id ?? step.id ?? step.name,
-        name: step.name,
+        name: normalizedName(step.name),
         input: callInput(step.arguments),
         ...(step.signature === undefined ? {} : { signature: step.signature }),
       },
@@ -88,6 +93,7 @@ function functionResultMessage(
       {
         type: 'tool_result',
         toolUseId: step.call_id,
+        ...(step.name === undefined ? {} : { name: normalizedName(step.name) }),
         content: [{ type: 'text', text: resultText(step.result) }],
       },
     ],
@@ -143,7 +149,7 @@ function toolOf(tool: InteractionsFunctionTool): HubTool {
   const required = requiredProperties(tool);
 
   return {
-    name: tool.name,
+    name: normalizedName(tool.name),
     ...(tool.description === undefined ? {} : { description: tool.description }),
     inputSchema: {
       type: 'object',
@@ -154,9 +160,38 @@ function toolOf(tool: InteractionsFunctionTool): HubTool {
 }
 
 function toolChoiceOf(choice: InteractionsToolChoice): HubToolChoice {
-  if (typeof choice === 'object') return { type: 'tool', name: choice.name };
+  if (typeof choice === 'object') {
+    return {
+      type: 'tool',
+      name: normalizedName('function' in choice ? choice.function.name : choice.name),
+    };
+  }
 
   return { type: choice };
+}
+
+function functionTools(tools: readonly InteractionsTool[]): InteractionsFunctionTool[] {
+  return tools.flatMap((tool) => {
+    if ('type' in tool) return [tool];
+
+    const declarations = tool.functionDeclarations ?? tool.function_declarations ?? [];
+
+    return declarations.map((declaration) => ({ type: 'function', ...declaration }));
+  });
+}
+
+function uniqueTools(tools: readonly InteractionsFunctionTool[]): InteractionsFunctionTool[] {
+  const names = new Set<string>();
+
+  return tools.filter((tool) => {
+    const name = normalizedName(tool.name);
+
+    if (names.has(name)) return false;
+
+    names.add(name);
+
+    return true;
+  });
 }
 
 function samplingOf(request: InteractionsRequest): HubSampling | undefined {
@@ -197,11 +232,13 @@ function optionalSystem(request: InteractionsRequest): Pick<HubRequest, 'system'
 }
 
 function optionalTools(request: InteractionsRequest): Pick<HubRequest, 'tools'> | object {
-  return request.tools === undefined ? {} : { tools: request.tools.map(toolOf) };
+  return request.tools === undefined
+    ? {}
+    : { tools: uniqueTools(functionTools(request.tools)).map(toolOf) };
 }
 
 function optionalChoice(request: InteractionsRequest): Pick<HubRequest, 'toolChoice'> | object {
-  const choice = request.generation_config?.tool_choice;
+  const choice = request.generation_config?.tool_choice ?? request.tool_choice;
 
   return choice === undefined ? {} : { toolChoice: toolChoiceOf(choice) };
 }

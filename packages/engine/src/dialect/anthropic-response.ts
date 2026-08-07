@@ -17,6 +17,8 @@ export function decodeResponse(response: AnthropicResponse): Translated<HubRespo
 
   return {
     value: {
+      id: response.id,
+      ...(response.model === undefined ? {} : { model: response.model }),
       content: response.content.map((block) => hubBlockFrom(block, fates)),
       stopReason: hubStopFrom(response.stop_reason),
       usage: hubUsageFrom(response.usage),
@@ -28,9 +30,10 @@ export function decodeResponse(response: AnthropicResponse): Translated<HubRespo
 export function encodeResponse(hub: HubResponse): Translated<AnthropicResponse> {
   return {
     value: {
-      id: translatedMessageId,
+      id: hub.id ?? translatedMessageId,
       type: 'message',
       role: 'assistant',
+      ...(hub.model === undefined ? {} : { model: hub.model }),
       content: hub.content.map(wireBlockFrom),
       stop_reason: wireStopFrom(hub.stopReason),
       stop_sequence: null,

@@ -48,25 +48,58 @@ export function hubUsageFromInteractions(usage: InteractionsUsage | undefined): 
 
   const result: HubUsage = {};
 
-  applyUsage(result, 'inputTokens', usage.total_input_tokens);
-  applyUsage(result, 'outputTokens', usage.total_output_tokens);
-  applyUsage(result, 'cacheReadTokens', usage.cached_tokens);
-  applyUsage(result, 'reasoningTokens', usage.reasoning_tokens);
+  applyUsage(result, 'inputTokens', inputUsage(usage));
+  applyUsage(result, 'outputTokens', outputUsage(usage));
+  applyUsage(result, 'cacheReadTokens', cacheUsage(usage));
+  applyUsage(result, 'reasoningTokens', reasoningUsage(usage));
 
   return result;
+}
+
+function inputUsage(usage: InteractionsUsage): number | undefined {
+  return usage.total_input_tokens ?? usage.input_tokens ?? usage.prompt_tokens;
+}
+
+function outputUsage(usage: InteractionsUsage): number | undefined {
+  return usage.total_output_tokens ?? usage.output_tokens ?? usage.completion_tokens;
+}
+
+function cacheUsage(usage: InteractionsUsage): number | undefined {
+  return usage.total_cached_tokens ?? usage.cached_tokens;
+}
+
+function reasoningUsage(usage: InteractionsUsage): number | undefined {
+  return usage.total_thought_tokens ?? usage.reasoning_tokens;
 }
 
 function applyUsage(result: HubUsage, field: keyof HubUsage, value: number | undefined): void {
   if (value !== undefined) result[field] = value;
 }
 
-function interactionsUsage(usage: HubUsage): InteractionsUsage {
-  return {
-    ...(usage.inputTokens === undefined ? {} : { total_input_tokens: usage.inputTokens }),
-    ...(usage.outputTokens === undefined ? {} : { total_output_tokens: usage.outputTokens }),
-    ...(usage.cacheReadTokens === undefined ? {} : { cached_tokens: usage.cacheReadTokens }),
-    ...(usage.reasoningTokens === undefined ? {} : { reasoning_tokens: usage.reasoningTokens }),
-  };
+export function interactionsUsage(usage: HubUsage): InteractionsUsage {
+  const result: InteractionsUsage = {};
+
+  applyInteractionUsage(result, 'total_input_tokens', usage.inputTokens);
+  applyInteractionUsage(result, 'total_output_tokens', usage.outputTokens);
+  applyInteractionUsage(result, 'cached_tokens', usage.cacheReadTokens);
+  applyInteractionUsage(result, 'reasoning_tokens', usage.reasoningTokens);
+  applyInteractionUsage(result, 'total_tokens', totalTokens(usage));
+
+  return result;
+}
+
+function applyInteractionUsage(
+  result: InteractionsUsage,
+  field: keyof InteractionsUsage,
+  value: number | undefined,
+): void {
+  if (value !== undefined) result[field] = value;
+}
+
+function totalTokens(usage: HubUsage): number | undefined {
+  return usage.inputTokens === undefined && usage.outputTokens === undefined
+    ? undefined
+    : (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0);
 }
 
 function thoughtStep(block: Extract<HubContentBlock, { type: 'thinking' }>): InteractionsStep {
@@ -118,7 +151,8 @@ export function encodeResponse(response: HubResponse): Translated<InteractionsRe
 
   return {
     value: {
-      id: 'interaction_translated',
+      id: response.id ?? 'interaction_translated',
+      ...(response.model === undefined ? {} : { model: response.model }),
       status: responseStatus(response.stopReason),
       steps,
       usage: interactionsUsage(response.usage),
@@ -144,6 +178,8 @@ export function decodeResponse(response: InteractionsResponse): Translated<HubRe
 
   return {
     value: {
+      id: response.id,
+      ...(response.model === undefined ? {} : { model: response.model }),
       content,
       stopReason: stopReasonOf(response),
       usage: hubUsageFromInteractions(response.usage),

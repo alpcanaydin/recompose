@@ -12,6 +12,7 @@ import type {
 import { geminiReplaySignature } from '../provider/gemini-signature';
 import { geminiMediaPart } from './gemini-media';
 import { geminiOptionsInto } from './gemini-request-options';
+import { mapGeminiToolNames } from './gemini-tool-names';
 
 function resultPart(block: Extract<HubContentBlock, { type: 'tool_result' }>): GeminiPart {
   let text = '';
@@ -22,7 +23,7 @@ function resultPart(block: Extract<HubContentBlock, { type: 'tool_result' }>): G
 
   return {
     functionResponse: {
-      name: block.toolUseId,
+      name: block.name ?? block.toolUseId,
       id: block.toolUseId,
       response: block.isError === true ? { error: text } : { output: text },
     },
@@ -153,16 +154,17 @@ function toolsOf(hub: HubRequest): Pick<GeminiRequest, 'tools'> {
 }
 
 export function encodeRequest(hub: HubRequest): Translated<GeminiRequest> {
-  const config = generationConfig(hub.sampling);
+  const mapped = mapGeminiToolNames(hub);
+  const config = generationConfig(mapped.sampling);
   const value: GeminiRequest = {
-    contents: hub.messages.map(contentFrom),
-    ...systemOf(hub),
-    ...toolsOf(hub),
-    ...toolConfig(hub.toolChoice),
+    contents: mapped.messages.map(contentFrom),
+    ...systemOf(mapped),
+    ...toolsOf(mapped),
+    ...toolConfig(mapped.toolChoice),
     ...(config === undefined ? {} : { generationConfig: config }),
   };
 
-  geminiOptionsInto(value, hub);
+  geminiOptionsInto(value, mapped);
 
   return { value, fates: [] };
 }

@@ -57,6 +57,7 @@ export type HubToolResultContent = HubTextBlock | HubImageBlock;
 export type HubToolResultBlock = {
   type: 'tool_result';
   toolUseId: string;
+  name?: string;
   content: readonly HubToolResultContent[];
   isError?: boolean;
 };
@@ -133,6 +134,7 @@ export type HubRequest = {
   reasoning?: HubReasoning;
   responseModalities?: readonly string[];
   responseFormat?: unknown;
+  geminiGenerationConfig?: HubJsonObject;
   sampling?: HubSampling;
 };
 
@@ -154,6 +156,8 @@ export type HubUsage = {
 };
 
 export type HubResponse = {
+  id?: string;
+  model?: string;
   content: readonly HubContentBlock[];
   stopReason: HubStopReason;
   usage: HubUsage;
@@ -176,7 +180,7 @@ export type HubStreamErrorPayload = {
 };
 
 export type HubStreamEvent =
-  | { type: 'message-begin'; usage?: HubUsage }
+  | { type: 'message-begin'; usage?: HubUsage; id?: string; model?: string }
   | { type: 'block-open'; index: number; opening: HubBlockOpening }
   | { type: 'block-delta'; index: number; delta: HubBlockDelta }
   | { type: 'block-close'; index: number }

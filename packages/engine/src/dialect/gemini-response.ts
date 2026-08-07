@@ -152,6 +152,8 @@ export function decodeResponse(
 
   return {
     value: {
+      ...(response.responseId === undefined ? {} : { id: response.responseId }),
+      ...(response.modelVersion === undefined ? {} : { model: response.modelVersion }),
       content,
       stopReason: geminiStopReason(finishOf(response)),
       usage: geminiUsage(response.usageMetadata ?? {}),

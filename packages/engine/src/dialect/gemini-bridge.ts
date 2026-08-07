@@ -15,6 +15,11 @@ import { encodeRequest as encodeGemini } from './gemini-request';
 import { decodeResponse as decodeGemini } from './gemini-response';
 import { decodeStream as decodeGeminiStream } from './gemini-stream';
 import {
+  restoreGeminiResponseNames,
+  restoreGeminiStreamName,
+  reverseGeminiToolNames,
+} from './gemini-tool-names';
+import {
   decodeRequest as decodeInteractions,
   encodeResponse as encodeInteractions,
   encodeStream as encodeInteractionsStream,
@@ -59,6 +64,7 @@ const streamEncoders: StreamEncoders = {
 export function translateRequestToGemini<From extends ProxyDialect>(
   from: From,
   body: RequestOf[From],
+  noteNames?: (names: Readonly<Record<string, string>>) => void,
 ): TranslateResult<GeminiRequest, TranslationRefusal> {
   const decode: (value: RequestOf[From]) => TranslateResult<HubRequest, TranslationRefusal> =
     requestDecoders[from];
@@ -68,6 +74,8 @@ export function translateRequestToGemini<From extends ProxyDialect>(
     return decoded;
   }
 
+  noteNames?.(reverseGeminiToolNames(decoded.value));
+
   const encoded = encodeGemini(decoded.value);
 
   return { value: encoded.value, fates: [...decoded.fates, ...encoded.fates] };
@@ -76,11 +84,12 @@ export function translateRequestToGemini<From extends ProxyDialect>(
 export function translateResponseFromGemini<To extends ProxyDialect>(
   to: To,
   body: GeminiResponse,
+  names: Readonly<Record<string, string>> = {},
 ): TranslateResult<ResponseOf[To], TranslationRefusal> {
   const decoded = decodeGemini(body, to === 'anthropic');
   const encode: (value: HubResponse) => TranslateResult<ResponseOf[To], TranslationRefusal> =
     responseEncoders[to];
-  const encoded = encode(decoded.value);
+  const encoded = encode(restoreGeminiResponseNames(decoded.value, names));
 
   if ('refusal' in encoded) {
     return encoded;
@@ -96,9 +105,17 @@ export function isGeminiResponse(value: Record<string, unknown>): value is Gemin
 export function translateStreamFromGemini<To extends ProxyDialect>(
   to: To,
   source: AsyncIterable<GeminiResponse>,
+  names: Readonly<Record<string, string>> = {},
 ): StreamOf[To] {
   const encode: (events: ReturnType<typeof decodeGeminiStream>) => StreamOf[To] =
     streamEncoders[to];
 
-  return encode(decodeGeminiStream(source, to === 'anthropic'));
+  return encode(restoredStream(decodeGeminiStream(source, to === 'anthropic'), names));
+}
+
+async function* restoredStream(
+  source: AsyncIterable<HubStreamEvent>,
+  names: Readonly<Record<string, string>>,
+): AsyncIterable<HubStreamEvent> {
+  for await (const event of source) yield restoreGeminiStreamName(event, names);
 }

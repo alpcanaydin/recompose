@@ -137,3 +137,79 @@ describe('Gemini provider output limits', () => {
     });
   });
 });
+
+describe('Gemini provider tool-name restoration', () => {
+  test('restores a colliding long tool name in the client response', async () => {
+    const first = 'mcp__plugin_cloudflare_cloudflare-builds__workers_builds_get_build';
+    const second = 'mcp__plugin_cloudflare_cloudflare-builds__workers_builds_get_build_logs';
+    let sent: Record<string, unknown> = {};
+    const fetchLike: typeof fetch = async (_input, init) => {
+      sent = bodyOf(init);
+      const mapped = toolNameAt(sent, 1);
+
+      return Promise.resolve(
+        Response.json({
+          candidates: [
+            {
+              content: {
+                role: 'model',
+                parts: [{ functionCall: { id: 'call_1', name: mapped, args: {} } }],
+              },
+              finishReason: 'STOP',
+            },
+          ],
+        }),
+      );
+    };
+    const app = createGatewayApp(
+      aGatewayHolding(aVirtualModel()),
+      async () => Promise.resolve(grant),
+      fetchLike,
+    );
+    const answer = await app.request('http://127.0.0.1:8397/v1/chat/completions', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'fast',
+        messages: [{ role: 'user', content: 'run it' }],
+        tools: [tool(first), tool(second)],
+        tool_choice: { type: 'function', function: { name: second } },
+      }),
+    });
+
+    expect(toolNameAt(sent, 0)).not.toBe(toolNameAt(sent, 1));
+    expect(toolNameAt(sent, 0).length).toBeLessThanOrEqual(64);
+    expect(toolNameAt(sent, 1).length).toBeLessThanOrEqual(64);
+    await expect(answer.json()).resolves.toHaveProperty(
+      'choices.0.message.tool_calls.0.function.name',
+      second,
+    );
+  });
+});
+
+function tool(name: string) {
+  return { type: 'function', function: { name, parameters: { type: 'object' } } };
+}
+
+function toolNameAt(body: Record<string, unknown>, index: number): string {
+  const declaration: unknown = declarationsIn(body)[index];
+
+  if (!isJsonObject(declaration) || typeof declaration['name'] !== 'string') {
+    throw new Error('Gemini declaration name is missing');
+  }
+
+  return declaration['name'];
+}
+
+function declarationsIn(body: Record<string, unknown>): unknown[] {
+  const tools = body['tools'];
+
+  if (!Array.isArray(tools)) throw new Error('Gemini tools are missing');
+
+  const group: unknown = tools[0];
+
+  if (!isJsonObject(group) || !Array.isArray(group['functionDeclarations'])) {
+    throw new Error('Gemini declarations are missing');
+  }
+
+  return group['functionDeclarations'];
+}

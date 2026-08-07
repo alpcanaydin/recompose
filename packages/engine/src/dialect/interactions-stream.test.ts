@@ -25,7 +25,7 @@ describe('decodeStream: Interactions text lifecycle', () => {
     ]);
 
     expect(events).toEqual([
-      { type: 'message-begin' },
+      { type: 'message-begin', id: 'interaction_1', model: 'gemini-3.1-flash-lite' },
       { type: 'block-open', index: 0, opening: { kind: 'text' } },
       { type: 'block-delta', index: 0, delta: { kind: 'text', text: '北京今天晴' } },
       { type: 'block-close', index: 0 },
@@ -43,6 +43,28 @@ describe('decodeStream: Interactions function-call lifecycle', () => {
     const events = await decode(toolLifecycle());
 
     expect(events).toEqual(expectedToolLifecycle());
+  });
+
+  it('should emit non-empty arguments carried on step.start', async () => {
+    const events = await decode([
+      {
+        event_type: 'step.start',
+        index: 0,
+        step: {
+          type: 'function_call',
+          id: 'call_1',
+          name: 'lookup',
+          arguments: { q: 'x' },
+        },
+      },
+      { event_type: 'step.stop', index: 0 },
+    ]);
+
+    expect(events).toContainEqual({
+      type: 'block-delta',
+      index: 0,
+      delta: { kind: 'json-args', partialJson: '{"q":"x"}' },
+    });
   });
 });
 
@@ -97,6 +119,39 @@ describe('decodeStream: Interactions alternate terminals', () => {
       stopReason: 'end',
       usage: { inputTokens: 2, outputTokens: 6 },
     });
+  });
+});
+
+describe('decodeStream: Interactions done and requires-action terminals', () => {
+  it('should complete once when the provider sends only done', async () => {
+    const events = await decode([
+      { event_type: 'interaction.created', interaction: { id: 'interaction_1' } },
+      { event_type: 'done' },
+      { event_type: 'done' },
+    ]);
+
+    expect(events.at(-1)).toEqual({ type: 'message-end', stopReason: 'end', usage: {} });
+    expect(events.filter((event) => event.type === 'message-end')).toHaveLength(1);
+  });
+
+  it('should terminate a requires-action event as tool use', async () => {
+    const events = await decode([
+      {
+        event_type: 'interaction.requires_action',
+        interaction: {
+          id: 'interaction_1',
+          usage: { total_input_tokens: 2, total_output_tokens: 1 },
+        },
+      },
+    ]);
+
+    expect(events).toEqual([
+      {
+        type: 'message-end',
+        stopReason: 'tool_use',
+        usage: { inputTokens: 2, outputTokens: 1 },
+      },
+    ]);
   });
 
   it('should expose a failed interaction as a terminal stream error', async () => {
@@ -171,7 +226,7 @@ function toolLifecycle(): InteractionsStreamEvent[] {
 
 function expectedToolLifecycle() {
   return [
-    { type: 'message-begin' },
+    { type: 'message-begin', id: 'interaction_1' },
     {
       type: 'block-open',
       index: 0,

@@ -14,11 +14,11 @@ import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
 import { beforeGatewayPlugins } from './gateway-plugin-before';
 import { answerThroughPlugins } from './gateway-plugin-response';
+import { dialectFor } from './gateway-provider-dialect';
 import { gatewayRequestCrossing } from './gateway-request-crossing';
 import { ingressPayload, InvalidJsonBodyError, refusalResponse, streamAsk } from './gateway-wire';
 import { pluginGatewayTarget, reachPluginExecutor } from './plugin-gateway';
 import { reachCredentialed } from './provider/credentialed-reach';
-import { credentialedDialect } from './provider/credentialed-target';
 import { emptyConversation, missingCredential, missingTarget } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
@@ -201,24 +201,6 @@ function hasMalformedSubscription(grant: SpendGrant): boolean {
   );
 }
 
-function subscriptionDialect(provider: string): ProviderDialect {
-  if (provider === 'anthropic') return 'anthropic';
-  if (provider === 'antigravity') return 'gemini';
-
-  return 'responses';
-}
-
-function dialectFor(grant: SpendGrant, sourceDialect: ProxyDialect): ProviderDialect {
-  if (grant.verdict !== 'resolved') return 'chat-completions';
-  if (grant.spend.custody === 'open') return 'chat-completions';
-
-  if (grant.spend.custody === 'credentialed') {
-    return credentialedDialect(grant.spend.provider, sourceDialect);
-  }
-
-  return subscriptionDialect(grant.spend.provider);
-}
-
 async function reachedUpstream(
   crossing: Crossing,
   grant: Extract<SpendGrant, { verdict: 'resolved' }>,
@@ -268,7 +250,9 @@ function crossedRequest(
   payload: RequestOf[ProxyDialect],
 ) {
   return upstreamDialect === 'gemini'
-    ? translateRequestToGemini(crossing.dialect, payload)
+    ? translateRequestToGemini(crossing.dialect, payload, (names) => {
+        crossing.geminiToolNames = names;
+      })
     : translateRequest(crossing.dialect, upstreamDialect, payload);
 }
 
@@ -286,7 +270,7 @@ function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): 
   const crossed = crossedRequest(crossing, upstreamDialect, payload);
 
   if ('outcome' in crossed) {
-    return { body: { ...crossing.raw, model: crossing.providerModel } };
+    return { body: passthroughBody(crossing) };
   }
 
   if ('refusal' in crossed) {
@@ -296,4 +280,14 @@ function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): 
   return {
     body: { ...crossed.value, model: crossing.providerModel, ...streamAsk(crossing.raw) },
   };
+}
+
+function passthroughBody(crossing: Crossing): JsonObject {
+  if (crossing.dialect !== 'interactions' || typeof crossing.raw['agent'] !== 'string') {
+    return { ...crossing.raw, model: crossing.providerModel };
+  }
+
+  const { agent: _agent, model: _model, ...body } = crossing.raw;
+
+  return { ...body, agent: crossing.providerModel };
 }

@@ -1,6 +1,8 @@
 import type { GeminiRequest } from './gemini-wire';
 import type { HubRequest } from './hub';
 
+import { geminiAdvancedConfigInto } from './gemini-generation-config';
+
 type GenerationConfig = NonNullable<GeminiRequest['generationConfig']>;
 
 function generationConfig(value: GeminiRequest): GenerationConfig {
@@ -84,6 +86,7 @@ function serviceInto(value: GeminiRequest, hub: HubRequest): void {
 }
 
 export function geminiOptionsInto(value: GeminiRequest, hub: HubRequest): void {
+  geminiAdvancedConfigInto(value, hub);
   reasoningInto(value, hub);
   modalitiesInto(value, hub);
   formatInto(value, hub);

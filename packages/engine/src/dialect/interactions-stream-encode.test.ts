@@ -39,10 +39,32 @@ describe('encodeStream: Hub text lifecycle to Interactions', () => {
         interaction: {
           id: 'interaction_translated',
           status: 'completed',
-          usage: { total_input_tokens: 2, total_output_tokens: 3 },
+          usage: { total_input_tokens: 2, total_output_tokens: 3, total_tokens: 5 },
         },
       },
+      { event_type: 'done' },
     ]);
+  });
+});
+
+describe('encodeStream: Hub message identity to Interactions', () => {
+  it('should preserve message identity through created and completed events', async () => {
+    const encoded = await encode([
+      { type: 'message-begin', id: 'interaction_7', model: 'gemini-3.6-flash' },
+      { type: 'message-end', stopReason: 'end', usage: {} },
+    ]);
+
+    expect(encoded[0]).toHaveProperty('interaction', {
+      id: 'interaction_7',
+      model: 'gemini-3.6-flash',
+      status: 'created',
+    });
+    expect(encoded.at(-2)).toHaveProperty('interaction', {
+      id: 'interaction_7',
+      model: 'gemini-3.6-flash',
+      status: 'completed',
+      usage: {},
+    });
   });
 });
 
@@ -77,7 +99,7 @@ describe('encodeStream: Hub tool and thought deltas to Interactions', () => {
       index: 0,
       delta: { type: 'arguments_delta', arguments: '{"q":"x"}' },
     });
-    expect(encoded.at(-1)).toHaveProperty('interaction.status', 'requires_action');
+    expect(encoded.at(-2)).toHaveProperty('interaction.status', 'requires_action');
   });
 });
 

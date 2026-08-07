@@ -81,6 +81,38 @@ describe('native Gemini Interactions serving', () => {
     expect(answer.status).toBe(200);
     expect(upstream.sent).toHaveLength(1);
   });
+});
+
+describe('native Gemini Interactions agent serving', () => {
+  it('should route an agent alias to the target provider agent without adding model', async () => {
+    const upstream = fetchAnsweringWith(interactionAnswer);
+    const answer = await appFor(upstream.fetchLike).request(
+      'http://127.0.0.1:8397/v1beta/interactions',
+      {
+        method: 'POST',
+        body: JSON.stringify({ agent: 'fast', input: 'hello' }),
+      },
+    );
+
+    expect(answer.status).toBe(200);
+    expect(bodySentIn(upstream.sent)).toEqual({ agent: 'gemini-3.6-flash', input: 'hello' });
+    expect(bodySentIn(upstream.sent)).not.toHaveProperty('model');
+  });
+
+  it('should forward Api-Revision without allowing auth override', async () => {
+    const upstream = fetchAnsweringWith(interactionAnswer);
+
+    await appFor(upstream.fetchLike).request('http://127.0.0.1:8397/v1beta/interactions', {
+      method: 'POST',
+      headers: { 'Api-Revision': '2026-07-01', 'x-goog-api-key': 'client-key' },
+      body: JSON.stringify({ model: 'fast', input: 'hello' }),
+    });
+
+    const headers = headersSentIn(upstream.sent);
+
+    expect(headers.get('api-revision')).toBe('2026-07-01');
+    expect(headers.get('x-goog-api-key')).toBe('google-key');
+  });
 
   it.each([
     { model: 'fast', agent: 'agents/test-agent', input: 'hi' },

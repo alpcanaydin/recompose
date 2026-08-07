@@ -35,7 +35,22 @@ export function decodeResponse(response: ChatCompletionsResponse): Translated<Hu
   const content = choice ? hubContentFromMessage(choice.message) : [];
   const stopReason = choice ? hubStopFrom(choice.finish_reason) : 'end';
 
-  return { value: { content, stopReason, usage: hubUsageFromChat(response.usage) }, fates };
+  return {
+    value: {
+      ...hubIdentity(response),
+      content,
+      stopReason,
+      usage: hubUsageFromChat(response.usage),
+    },
+    fates,
+  };
+}
+
+function hubIdentity(response: ChatCompletionsResponse): Pick<HubResponse, 'id' | 'model'> {
+  return {
+    ...(response.id === undefined ? {} : { id: response.id }),
+    ...(response.model === undefined ? {} : { model: response.model }),
+  };
 }
 
 export function encodeResponse(
@@ -60,9 +75,17 @@ export function encodeResponse(
     ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
   };
   const response: ChatCompletionsResponse = {
+    ...chatIdentity(hub),
     choices: [{ index: 0, message, finish_reason: finish.finish }],
     usage: chatUsageFromHub(hub.usage),
   };
 
   return { value: response, fates };
+}
+
+function chatIdentity(hub: HubResponse): Pick<ChatCompletionsResponse, 'id' | 'model'> {
+  return {
+    ...(hub.id === undefined ? {} : { id: hub.id }),
+    ...(hub.model === undefined ? {} : { model: hub.model }),
+  };
 }

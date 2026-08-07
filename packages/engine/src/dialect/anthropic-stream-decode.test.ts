@@ -11,7 +11,7 @@ describe('decodeStream reads the named wire events into hub events', () => {
     const events = await collect(decodeStream(streamOf(anAnthropicWireTextStream())));
 
     expect(events).toEqual([
-      { type: 'message-begin', usage: { inputTokens: 12, outputTokens: 8 } },
+      { type: 'message-begin', id: 'msg_01', usage: { inputTokens: 12, outputTokens: 8 } },
       { type: 'block-open', index: 0, opening: { kind: 'text' } },
       { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'Hel' } },
       { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'lo' } },
@@ -256,6 +256,6 @@ describe('a beginning that names no usage stays empty', () => {
 
     const events = await collect(decodeStream(streamOf(wire)));
 
-    expect(events).toEqual([{ type: 'message-begin', usage: {} }]);
+    expect(events).toEqual([{ type: 'message-begin', id: 'msg_01', usage: {} }]);
   });
 });

@@ -118,7 +118,12 @@ function partsIn(response: GeminiResponse): GeminiPart[] {
 
 function* beginning(began: boolean, response: GeminiResponse): Iterable<HubStreamEvent> {
   if (!began) {
-    yield { type: 'message-begin', usage: geminiUsage(response.usageMetadata ?? {}) };
+    yield {
+      type: 'message-begin',
+      usage: geminiUsage(response.usageMetadata ?? {}),
+      ...(response.responseId === undefined ? {} : { id: response.responseId }),
+      ...(response.modelVersion === undefined ? {} : { model: response.modelVersion }),
+    };
   }
 }
 

@@ -5,28 +5,17 @@ import type {
   InteractionsStreamDelta,
 } from './interactions-wire';
 
-function interaction(status: string, usage?: HubUsage) {
+import { interactionsUsage } from './interactions-response';
+
+type EncodeState = { id: string; model?: string };
+
+function interaction(state: EncodeState, status: string, usage?: HubUsage) {
   return {
-    id: 'interaction_translated',
+    id: state.id,
+    ...(state.model === undefined ? {} : { model: state.model }),
     status,
-    ...(usage === undefined ? {} : { usage: interactionUsage(usage) }),
+    ...(usage === undefined ? {} : { usage: interactionsUsage(usage) }),
   };
-}
-
-function interactionUsage(usage: HubUsage) {
-  const result: {
-    total_input_tokens?: number;
-    total_output_tokens?: number;
-    cached_tokens?: number;
-    reasoning_tokens?: number;
-  } = {};
-
-  if (usage.inputTokens !== undefined) result.total_input_tokens = usage.inputTokens;
-  if (usage.outputTokens !== undefined) result.total_output_tokens = usage.outputTokens;
-  if (usage.cacheReadTokens !== undefined) result.cached_tokens = usage.cacheReadTokens;
-  if (usage.reasoningTokens !== undefined) result.reasoning_tokens = usage.reasoningTokens;
-
-  return result;
 }
 
 function stepOf(opening: HubBlockOpening): InteractionsStep {
@@ -85,13 +74,14 @@ function blockEvent(event: HubStreamEvent): InteractionsKnownStreamEvent[] {
   return [];
 }
 
-function terminalEvent(event: HubStreamEvent): InteractionsKnownStreamEvent[] {
+function terminalEvent(state: EncodeState, event: HubStreamEvent): InteractionsKnownStreamEvent[] {
   if (event.type === 'message-end') {
     return [
       {
         event_type: 'interaction.completed',
-        interaction: interaction(terminalStatus(event), event.usage),
+        interaction: interaction(state, terminalStatus(event), event.usage),
       },
+      { event_type: 'done' },
     ];
   }
 
@@ -100,29 +90,40 @@ function terminalEvent(event: HubStreamEvent): InteractionsKnownStreamEvent[] {
   return [
     {
       event_type: 'interaction.failed',
-      interaction: { ...interaction('failed'), error: event.error },
+      interaction: { ...interaction(state, 'failed'), error: event.error },
     },
   ];
 }
 
-function encodeEvent(event: HubStreamEvent): InteractionsKnownStreamEvent[] {
-  if (event.type === 'message-begin') {
-    return [
-      { event_type: 'interaction.created', interaction: interaction('created') },
-      { event_type: 'interaction.status_update', interaction: interaction('in_progress') },
-    ];
-  }
+function encodeEvent(state: EncodeState, event: HubStreamEvent): InteractionsKnownStreamEvent[] {
+  if (event.type === 'message-begin') return beginEvents(state, event);
 
   return event.type === 'message-end' || event.type === 'stream-error'
-    ? terminalEvent(event)
+    ? terminalEvent(state, event)
     : blockEvent(event);
+}
+
+function beginEvents(
+  state: EncodeState,
+  event: Extract<HubStreamEvent, { type: 'message-begin' }>,
+): InteractionsKnownStreamEvent[] {
+  state.id = event.id ?? state.id;
+  if (event.model === undefined) delete state.model;
+  else state.model = event.model;
+
+  return [
+    { event_type: 'interaction.created', interaction: interaction(state, 'created') },
+    { event_type: 'interaction.status_update', interaction: interaction(state, 'in_progress') },
+  ];
 }
 
 export async function* encodeStream(
   source: AsyncIterable<HubStreamEvent>,
 ): AsyncIterable<InteractionsKnownStreamEvent> {
+  const state: EncodeState = { id: 'interaction_translated' };
+
   for await (const event of source) {
-    yield* encodeEvent(event);
+    yield* encodeEvent(state, event);
 
     if (event.type === 'message-end' || event.type === 'stream-error') return;
   }

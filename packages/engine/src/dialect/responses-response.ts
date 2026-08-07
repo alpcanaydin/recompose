@@ -57,6 +57,8 @@ export function decodeResponse(
 
   return {
     value: {
+      id: response.id,
+      ...(response.model === undefined ? {} : { model: response.model }),
       content: outcomes.flatMap((entry) => entry.blocks),
       stopReason: outcome.stopReason,
       usage: toHubUsage(response.usage),
@@ -118,7 +120,7 @@ export function encodeResponse(
   const fates: Fate[] = [...encoded.fates, ...(outcome.lossy === true ? [lossyStopFate()] : [])];
 
   const value: ResponsesResponse = {
-    id: translatedResponseId,
+    ...responsesIdentity(response),
     status: outcome.status,
     output: encoded.output,
     ...(outcome.incompleteReason === undefined
@@ -128,4 +130,11 @@ export function encodeResponse(
   };
 
   return { value, fates };
+}
+
+function responsesIdentity(response: HubResponse): Pick<ResponsesResponse, 'id' | 'model'> {
+  return {
+    id: response.id ?? translatedResponseId,
+    ...(response.model === undefined ? {} : { model: response.model }),
+  };
 }

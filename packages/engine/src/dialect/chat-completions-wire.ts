@@ -142,6 +142,8 @@ type ChatResponseChoice = {
 };
 
 export type ChatCompletionsResponse = {
+  id?: string;
+  model?: string;
   choices: readonly ChatResponseChoice[];
   usage?: ChatUsage;
 };
@@ -165,6 +167,8 @@ export type ChatChunkChoice = {
 };
 
 export type ChatCompletionChunk = {
+  id?: string;
+  model?: string;
   choices: readonly ChatChunkChoice[];
   usage?: ChatUsage | null;
 };

@@ -51,7 +51,7 @@ const expectedContents = [
     parts: [
       {
         functionResponse: {
-          name: 'call_1',
+          name: 'weather',
           id: 'call_1',
           response: { output: 'sunny' },
         },

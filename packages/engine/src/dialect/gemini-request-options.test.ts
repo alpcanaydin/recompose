@@ -28,6 +28,24 @@ describe('Interactions generation options crossing to Gemini', () => {
     });
   });
 
+  it('should accept top-level tool-choice and reasoning aliases', () => {
+    const translated = translateRequestToGemini('interactions', {
+      input: 'hi',
+      tools: [{ type: 'function', name: 'lookup' }],
+      tool_choice: { type: 'function', function: { name: 'lookup' } },
+      reasoning: { effort: 'medium', summary: 'auto' },
+    });
+
+    expect(translated).toHaveProperty(
+      'value.toolConfig.functionCallingConfig.allowedFunctionNames.0',
+      'lookup',
+    );
+    expect(translated).toHaveProperty('value.generationConfig.thinkingConfig', {
+      thinkingLevel: 'medium',
+      includeThoughts: true,
+    });
+  });
+
   it('should disable Gemini thought summaries when Interactions asks for none', () => {
     const translated = translateRequestToGemini('interactions', {
       input: 'hi',

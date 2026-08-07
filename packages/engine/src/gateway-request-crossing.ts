@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 
 import type { Crossing, ProxyDialect } from './gateway-wire';
 
+import { requestHeaderMap, requestQueryMap } from './gateway-request-metadata';
 import { requestSessions, requestsResponsesLite } from './gateway-session';
 import { readJsonBody, refusalResponse, virtualNameOf } from './gateway-wire';
 import { missingTarget, unknownModel } from './refusals';
@@ -17,7 +18,7 @@ export async function gatewayRequestCrossing(
   gateway: EngineGateway,
 ): Promise<CrossingLookup> {
   const raw = await readJsonBody(c);
-  const name = virtualNameOf(raw);
+  const name = virtualNameOf(raw, dialect);
   const virtualModel = gateway.virtualModels.find((candidate) => candidate.id === name);
 
   if (virtualModel === undefined) {
@@ -39,6 +40,8 @@ export async function gatewayRequestCrossing(
       ...requestSessions(c, raw),
       responsesLite: requestsResponsesLite(c),
       anthropicBeta: c.req.header('anthropic-beta'),
+      requestHeaders: requestHeaderMap(c),
+      requestQuery: requestQueryMap(c),
     },
   };
 }

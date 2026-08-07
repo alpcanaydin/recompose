@@ -1,14 +1,10 @@
-import type { AnthropicResponse } from './dialect/anthropic-wire';
-import type { ChatCompletionsResponse } from './dialect/chat-completions-wire';
-import type { InteractionsResponse } from './dialect/interactions-wire';
 import type { ResponsesResponse } from './dialect/responses-wire';
 import type { Crossing, JsonObject, ProviderDialect } from './gateway-wire';
 import type { AnthropicRefusal } from './refusals';
 
 import { answeredBy } from './dialect/anthropic-attribution';
-import { translateResponse } from './dialect/dispatcher';
-import { isGeminiResponse, translateResponseFromGemini } from './dialect/gemini-bridge';
-import { isResponsesAnswer, terminalResponseIn } from './dialect/responses-answer-shape';
+import { terminalResponseIn } from './dialect/responses-answer-shape';
+import { isAnthropicAnswer, translatedResponse } from './gateway-response-translation';
 import { translatedStreamBody } from './gateway-stream-answers';
 import {
   isJsonObject,
@@ -128,15 +124,6 @@ function needsCompletedResponses(upstreamDialect: ProviderDialect, crossing: Cro
   return upstreamDialect === 'responses' && !wantsStream(crossing.raw);
 }
 
-function isChatAnswer(value: JsonObject): value is JsonObject & ChatCompletionsResponse {
-  const choices = value['choices'];
-
-  return (
-    Array.isArray(choices) &&
-    choices.every((choice) => isJsonObject(choice) && isJsonObject(choice['message']))
-  );
-}
-
 function textAnswer(
   text: string,
   upstream: Response,
@@ -146,26 +133,6 @@ function textAnswer(
     status: upstream.status,
     headers: upstreamHeaders(upstream, attribution),
   });
-}
-
-function chatAnswerOf(parsed: unknown): (JsonObject & ChatCompletionsResponse) | null {
-  return isJsonObject(parsed) && isChatAnswer(parsed) ? parsed : null;
-}
-
-function isAnthropicAnswer(value: JsonObject): value is JsonObject & AnthropicResponse {
-  return hasAnthropicEnvelope(value) && hasAnthropicPayload(value);
-}
-
-function hasAnthropicEnvelope(value: JsonObject): boolean {
-  return (
-    typeof value['id'] === 'string' && value['type'] === 'message' && value['role'] === 'assistant'
-  );
-}
-
-function hasAnthropicPayload(value: JsonObject): boolean {
-  const stopReason = value['stop_reason'];
-
-  return Array.isArray(value['content']) && (typeof stopReason === 'string' || stopReason === null);
 }
 
 async function translatedAnswer(
@@ -184,47 +151,6 @@ async function translatedAnswer(
   return translatedJsonAnswer(crossing, upstreamDialect, answer, text, upstream, attribution);
 }
 
-function translatedResponse(from: ProviderDialect, to: Crossing['dialect'], answer: JsonObject) {
-  if (from === 'gemini') {
-    return isGeminiResponse(answer) ? translateResponseFromGemini(to, answer) : null;
-  }
-
-  if (from === 'chat-completions') {
-    return translatedChatResponse(to, answer);
-  }
-
-  return translatedProviderResponse(from, to, answer);
-}
-
-function translatedChatResponse(to: Crossing['dialect'], answer: JsonObject) {
-  const chat = chatAnswerOf(answer);
-
-  return chat === null ? null : translateResponse('chat-completions', to, chat);
-}
-
-function translatedProviderResponse(
-  from: 'anthropic' | 'interactions' | 'responses',
-  to: Crossing['dialect'],
-  answer: JsonObject,
-) {
-  if (from === 'anthropic') return translatedAnthropicResponse(to, answer);
-  if (from === 'interactions') return translatedInteractionsResponse(to, answer);
-
-  return isResponsesAnswer(answer) ? translateResponse('responses', to, answer) : null;
-}
-
-function translatedAnthropicResponse(to: Crossing['dialect'], answer: JsonObject) {
-  return isAnthropicAnswer(answer) ? translateResponse('anthropic', to, answer) : null;
-}
-
-function translatedInteractionsResponse(to: Crossing['dialect'], answer: JsonObject) {
-  return isInteractionsAnswer(answer) ? translateResponse('interactions', to, answer) : null;
-}
-
-function isInteractionsAnswer(value: JsonObject): value is JsonObject & InteractionsResponse {
-  return typeof value['id'] === 'string' && Array.isArray(value['steps']);
-}
-
 function translatedJsonAnswer(
   crossing: Crossing,
   upstreamDialect: ProviderDialect,
@@ -233,7 +159,7 @@ function translatedJsonAnswer(
   upstream: Response,
   attribution: Record<string, string>,
 ): Response {
-  const crossed = translatedResponse(upstreamDialect, crossing.dialect, answer);
+  const crossed = translatedResponse(upstreamDialect, crossing, answer);
 
   if (crossed === null || 'outcome' in crossed) {
     return textAnswer(text, upstream, attribution);

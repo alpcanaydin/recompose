@@ -159,6 +159,21 @@ function xaiHeaders(credential: string, crossing: Crossing): Record<string, stri
   };
 }
 
+function firstRequestHeader(crossing: Crossing, name: string): string | undefined {
+  const values = crossing.requestHeaders?.[name.toLowerCase()];
+
+  return values?.find((value) => value.trim() !== '');
+}
+
+function geminiInteractionsHeaders(credential: string, crossing: Crossing): Record<string, string> {
+  const revision = firstRequestHeader(crossing, 'api-revision');
+
+  return {
+    'x-goog-api-key': credential,
+    ...(revision === undefined ? {} : { 'api-revision': revision }),
+  };
+}
+
 function vertexCredentialHeaders(credential: string): Record<string, string> {
   const parsed = parseVertexCredential(credential);
 
@@ -168,7 +183,7 @@ function vertexCredentialHeaders(credential: string): Record<string, string> {
 const HEADER_BUILDERS = new Map<string, HeaderBuilder>([
   ['anthropic', (credential) => ({ 'x-api-key': credential, 'anthropic-version': '2023-06-01' })],
   ['gemini', (credential) => ({ 'x-goog-api-key': credential })],
-  ['gemini-interactions', (credential) => ({ 'x-goog-api-key': credential })],
+  ['gemini-interactions', geminiInteractionsHeaders],
   ['vertex', vertexCredentialHeaders],
   ['kimi', kimiHeaders],
   ['xai', xaiHeaders],

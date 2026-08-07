@@ -104,6 +104,7 @@ describe('decodeResponse reads a wire message into the hub answer', () => {
     );
 
     expect(value).toStrictEqual({
+      id: 'msg_01',
       content: [{ type: 'text', text: 'Sunny, 21C.' }],
       stopReason: 'end',
       usage: { inputTokens: 12, outputTokens: 8, cacheReadTokens: 3, cacheWriteTokens: 5 },

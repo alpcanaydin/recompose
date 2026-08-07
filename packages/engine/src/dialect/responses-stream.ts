@@ -9,10 +9,10 @@ import { codexEventError, codexEventErrorCode } from '../provider/codex-event-er
 import { stopReasonFromResponse, toHubUsage } from './responses-shared';
 import {
   decodeResponsesBlockEvent,
-  hydrateResponsesBlocksAtTerminal,
   newResponsesBlockState,
   type ResponsesBlockState,
 } from './responses-stream-blocks';
+import { hydrateResponsesBlocksAtTerminal } from './responses-stream-completion';
 
 const knownStreamTypes = new Set<string>([
   'response.created',
@@ -60,7 +60,13 @@ function decodeKnownEvent(
   blocks: ResponsesBlockState,
 ): HubStreamEvent[] {
   if (event.type === 'response.created') {
-    return [{ type: 'message-begin' }];
+    return [
+      {
+        type: 'message-begin',
+        id: event.response.id,
+        ...(event.response.model === undefined ? {} : { model: event.response.model }),
+      },
+    ];
   }
 
   if (isTerminalResponseEvent(event)) {
