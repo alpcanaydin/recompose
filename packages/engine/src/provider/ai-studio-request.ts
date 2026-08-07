@@ -1,34 +1,13 @@
-import type { SpendGrant } from '@recompose/contracts';
-
 import { proxyFetchBoundMs } from '@recompose/contracts';
 
-import type { Crossing, JsonObject } from '../gateway-wire';
-import type { AIStudioRelay } from './ai-studio-relay';
-
-import { credentialedRequestBody, credentialedRequestUrl } from './credentialed-target';
-
-type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
+import type { AIStudioRelay, RelayRequest } from './ai-studio-relay';
 
 export async function reachAIStudio(
-  crossing: Crossing,
-  grant: ResolvedGrant,
-  body: JsonObject,
+  channelId: string | undefined,
+  request: RelayRequest,
   relay?: AIStudioRelay,
 ): Promise<Response | null> {
-  if (grant.spend.custody !== 'credentialed' || relay === undefined) return null;
+  if (channelId === undefined || relay === undefined) return null;
 
-  const channelId = grant.spend.accountId;
-
-  if (channelId === undefined) return null;
-
-  return relay.request(
-    channelId,
-    {
-      method: 'POST',
-      url: credentialedRequestUrl(grant, crossing),
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(credentialedRequestBody(grant, crossing, body)),
-    },
-    AbortSignal.timeout(proxyFetchBoundMs),
-  );
+  return relay.request(channelId, request, AbortSignal.timeout(proxyFetchBoundMs));
 }

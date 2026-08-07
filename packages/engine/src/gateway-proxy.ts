@@ -1,8 +1,6 @@
 import type { EngineGateway, SpendGrant } from '@recompose/contracts';
 import type { Context } from 'hono';
 
-import { proxyFetchBoundMs } from '@recompose/contracts';
-
 import type { RequestOf } from './dialect/dispatcher';
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
 import type { AIStudioRelay } from './provider/ai-studio-relay';
@@ -21,17 +19,8 @@ import {
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
-import { reachAIStudio } from './provider/ai-studio-request';
-import {
-  credentialedDialect,
-  credentialedRequestBody,
-  credentialedRequestHeaders,
-  credentialedRequestUrl,
-} from './provider/credentialed-target';
-import { observeKimiReplay } from './provider/kimi-replay-runtime';
-import { observeXAIReplay } from './provider/xai-replay-runtime';
-import { withXaiRetryAfter } from './provider/xai-response';
-import { restoreXAIToolResponse } from './provider/xai-tool-response';
+import { reachCredentialed } from './provider/credentialed-reach';
+import { credentialedDialect } from './provider/credentialed-target';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
@@ -197,7 +186,7 @@ async function reachedUpstream(
       );
     }
 
-    return await reachedCredentialed(crossing, grant, body, fetchLike, aiStudio);
+    return await reachCredentialed(crossing, grant, body, fetchLike, aiStudio);
   } catch (failure) {
     if (failure instanceof InvalidJsonBodyError) {
       throw failure;
@@ -207,47 +196,6 @@ async function reachedUpstream(
 
     return null;
   }
-}
-
-async function reachedCredentialed(
-  crossing: Crossing,
-  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
-  body: JsonObject,
-  fetchLike: typeof fetch,
-  aiStudio?: AIStudioRelay,
-): Promise<Response> {
-  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'aistudio') {
-    const answer = await reachAIStudio(crossing, grant, body, aiStudio);
-
-    if (answer === null) throw new Error('wsrelay: AI Studio channel is unavailable');
-
-    return answer;
-  }
-
-  const answer = await fetchLike(credentialedRequestUrl(grant, crossing), {
-    method: 'POST',
-    headers: credentialedRequestHeaders(grant.spend, crossing),
-    body: JSON.stringify(credentialedRequestBody(grant, crossing, body)),
-    signal: AbortSignal.timeout(proxyFetchBoundMs),
-  });
-
-  return observedCredentialedAnswer(grant, crossing, answer);
-}
-
-async function observedCredentialedAnswer(
-  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
-  crossing: Crossing,
-  answer: Response,
-): Promise<Response> {
-  if (grant.spend.custody !== 'credentialed') return answer;
-  if (grant.spend.provider === 'kimi') return observeKimiReplay(crossing, answer);
-
-  if (grant.spend.provider !== 'xai') return answer;
-
-  const decorated = await withXaiRetryAfter(answer);
-  const observed = observeXAIReplay(crossing, decorated);
-
-  return restoreXAIToolResponse(observed, crossing.xaiNamespaceTools ?? {});
 }
 
 type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };
