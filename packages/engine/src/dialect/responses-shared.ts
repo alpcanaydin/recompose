@@ -72,12 +72,16 @@ export function toHubContentBlocks(
   return content.map(toHubContentBlock);
 }
 
-export function toolUseBlockOf(item: ResponsesFunctionCallItem): HubToolUseBlock {
+export function toolUseBlockOf(
+  item: ResponsesFunctionCallItem,
+  signature?: string,
+): HubToolUseBlock {
   return {
     type: 'tool_use',
     id: sanitizeToolId(item.call_id),
     name: item.name,
     input: parseToolArguments(item.arguments),
+    ...(signature === undefined ? {} : { signature }),
   };
 }
 

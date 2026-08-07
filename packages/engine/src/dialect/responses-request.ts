@@ -29,6 +29,7 @@ import {
 } from '../refusals';
 import { mergeAdjacentSameRole } from './hub-build';
 import { responsesRequestDrops } from './responses-drops';
+import { foldResponsesInputWithGeminiCarriers } from './responses-gemini-carrier';
 import { foldReasoning } from './responses-reasoning-decode';
 import { toHubContentBlocks, toolResultBlockOf, toolUseBlockOf } from './responses-shared';
 import { firstToolIdCollision } from './tool-id';
@@ -212,17 +213,9 @@ function firstOutputViolation(input: readonly ResponsesInputItem[]): string | un
 function foldInput(request: ResponsesRequest): FoldedItems {
   const answeredCalls = answeredCallsOf(request.input);
 
-  const messages: HubMessage[] = [];
-  const fates: Fate[] = [];
-
-  for (const item of request.input) {
-    const outcome = foldInputItem(item, answeredCalls);
-
-    messages.push(...outcome.messages);
-    fates.push(...outcome.fates);
-  }
-
-  return { messages, fates };
+  return foldResponsesInputWithGeminiCarriers(request.input, answeredCalls, (item) =>
+    foldInputItem(item, answeredCalls),
+  );
 }
 
 function assembleHubRequest(

@@ -8,9 +8,9 @@ import type {
 } from './responses-wire';
 
 import { unmappableStopReason } from '../refusals';
+import { responsesItemsForGeminiToolUse } from './responses-gemini-carrier';
 import { reasoningOutcome } from './responses-reasoning-decode';
 import {
-  functionCallItemOf,
   statusFromStopReason,
   stopReasonFromResponse,
   thinkingDropFate,
@@ -88,7 +88,7 @@ function encodeOutput(content: readonly HubContentBlock[]): EncodedOutput {
       texts.push({ type: 'output_text', text: block.text });
     } else if (block.type === 'tool_use') {
       flush();
-      output.push(functionCallItemOf(block));
+      output.push(...responsesItemsForGeminiToolUse(block));
     } else if (block.type === 'thinking') {
       fates.push(thinkingDropFate());
     } else {

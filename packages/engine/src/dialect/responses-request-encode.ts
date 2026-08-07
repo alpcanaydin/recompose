@@ -24,8 +24,8 @@ import type {
   ResponsesToolParameters,
 } from './responses-wire';
 
+import { responsesItemsForGeminiToolUse } from './responses-gemini-carrier';
 import {
-  functionCallItemOf,
   isCodexReasoningSignature,
   redactedThinkingDropFate,
   thinkingDropFate,
@@ -126,15 +126,15 @@ function functionCallOutputItemOf(
   return { type: 'function_call_output', call_id: block.toolUseId, output };
 }
 
-function itemOfToolBlock(
+function itemsOfToolBlock(
   block: HubToolUseBlock | HubToolResultBlock,
   fates: Fate[],
-): ResponsesInputItem {
+): ResponsesInputItem[] {
   switch (block.type) {
     case 'tool_use':
-      return functionCallItemOf(block);
+      return responsesItemsForGeminiToolUse(block);
     case 'tool_result':
-      return functionCallOutputItemOf(block, fates);
+      return [functionCallOutputItemOf(block, fates)];
 
     default: {
       const unhandled: never = block;
@@ -203,7 +203,7 @@ function encodeBlockInto(block: HubMessage['content'][number], context: EncodeCo
   }
 
   flushParts(context);
-  context.items.push(itemOfToolBlock(block, context.fates));
+  context.items.push(...itemsOfToolBlock(block, context.fates));
 }
 
 function encodeMessage(message: HubMessage): FoldedInput {
