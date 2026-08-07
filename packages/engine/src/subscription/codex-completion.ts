@@ -8,6 +8,7 @@ const TERMINAL_EVENT_TYPES = new Set([
   'response.completed',
   'response.incomplete',
   'response.failed',
+  'error',
 ]);
 
 function outputIndex(event: JsonObject): number | null {
@@ -68,15 +69,57 @@ function hydratedTerminalEvent(
   return { ...event, response: hydrateCodexResponse(event['response'], indexed) };
 }
 
-async function* hydratedEvents(
+type CompletionLifecycle = { terminal: boolean };
+
+async function* hydratedSource(
   body: ReadableStream<Uint8Array>,
+  lifecycle: CompletionLifecycle,
 ): AsyncIterable<JsonObject & { type: string }> {
   const indexed = new Map<number, JsonObject>();
 
   for await (const event of jsonEventsFrom(body)) {
     collectDoneItem(event, indexed);
     yield hydratedTerminalEvent(event, indexed);
+
+    if (TERMINAL_EVENT_TYPES.has(event.type)) {
+      lifecycle.terminal = true;
+
+      return;
+    }
   }
+}
+
+function incompleteEvent(): JsonObject & { type: string } {
+  return {
+    type: 'error',
+    code: 'upstream_stream_incomplete',
+    message:
+      'stream error: stream disconnected before completion: stream closed before response.completed',
+  };
+}
+
+function failureEvent(failure: unknown): JsonObject & { type: string } {
+  return {
+    type: 'error',
+    code: 'upstream_stream_error',
+    message: failure instanceof Error ? failure.message : 'Codex upstream stream failed',
+  };
+}
+
+async function* hydratedEvents(
+  body: ReadableStream<Uint8Array>,
+): AsyncIterable<JsonObject & { type: string }> {
+  const lifecycle: CompletionLifecycle = { terminal: false };
+
+  try {
+    yield* hydratedSource(body, lifecycle);
+  } catch (failure) {
+    yield failureEvent(failure);
+
+    return;
+  }
+
+  if (!lifecycle.terminal) yield incompleteEvent();
 }
 
 export function hydrateCodexCompletionStream(response: Response): Response {

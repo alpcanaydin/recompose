@@ -125,8 +125,11 @@ function isTerminal(event: HubStreamEvent): boolean {
   return event.type === 'stream-error' || event.type === 'message-end';
 }
 
-export async function* decodeStream(
+type DecodeLifecycle = { terminal: boolean };
+
+async function* decodedSource(
   source: AsyncIterable<ResponsesStreamEvent>,
+  lifecycle: DecodeLifecycle,
 ): AsyncIterable<HubStreamEvent> {
   const blocks = newResponsesBlockState();
 
@@ -142,7 +145,46 @@ export async function* decodeStream(
     }
 
     if (hubEvents.some(isTerminal)) {
+      lifecycle.terminal = true;
+
       return;
     }
   }
+}
+
+function sourceFailure(failure: unknown): HubStreamEvent {
+  return {
+    type: 'stream-error',
+    error: {
+      type: 'upstream_stream_error',
+      message: failure instanceof Error ? failure.message : 'Codex upstream stream failed',
+    },
+  };
+}
+
+function incompleteStream(): HubStreamEvent {
+  return {
+    type: 'stream-error',
+    error: {
+      type: 'upstream_stream_incomplete',
+      message:
+        'stream error: stream disconnected before completion: stream closed before response.completed',
+    },
+  };
+}
+
+export async function* decodeStream(
+  source: AsyncIterable<ResponsesStreamEvent>,
+): AsyncIterable<HubStreamEvent> {
+  const lifecycle: DecodeLifecycle = { terminal: false };
+
+  try {
+    yield* decodedSource(source, lifecycle);
+  } catch (failure) {
+    yield sourceFailure(failure);
+
+    return;
+  }
+
+  if (!lifecycle.terminal) yield incompleteStream();
 }

@@ -70,6 +70,29 @@ describe('hydrating streaming Codex completions', () => {
 
     expect(events.at(-1)).toHaveProperty('response.output.0.content.0.text', 'ok');
   });
+
+  it('should end a missing-terminal stream with an explicit error event', async () => {
+    const { app } = codexSubscriptionApp(() =>
+      codexSse([
+        { type: 'response.created', response: { id: 'resp_1', status: 'in_progress', output: [] } },
+      ]),
+    );
+
+    const answer = await responsesRequest(app, true);
+
+    if (answer.body === null) throw new Error('Codex stream body is missing');
+
+    const events = [];
+
+    for await (const event of jsonEventsFrom(answer.body)) events.push(event);
+
+    expect(events.at(-1)).toEqual({
+      type: 'error',
+      code: 'upstream_stream_incomplete',
+      message:
+        'stream error: stream disconnected before completion: stream closed before response.completed',
+    });
+  });
 });
 
 // Helpers
