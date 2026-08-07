@@ -16,6 +16,10 @@ export type GatewayStorageHandlers = Pick<
   'gateways:list' | 'gateways:save' | 'gateways:update'
 >;
 
+function noteGatewayWrite(ctx: StorageIpcContext, gateway: GatewayConfig): void {
+  ctx.noteGatewayWrite?.(gateway);
+}
+
 async function listGateways(ctx: StorageIpcContext, paths: StoragePaths) {
   try {
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
@@ -106,6 +110,7 @@ async function saveGateway(
     const serving = await engineGatewayOf(ctx.userDataPath, ctx.onCorrupt, config);
 
     await saveGatewayConfig(paths.gatewaysDir, config);
+    noteGatewayWrite(ctx, config);
     ctx.startGateway(serving);
 
     return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
@@ -163,6 +168,7 @@ async function updateGateway(
     const serving = await engineGatewayOf(ctx.userDataPath, ctx.onCorrupt, rewritten);
 
     await saveGatewayConfig(paths.gatewaysDir, rewritten);
+    noteGatewayWrite(ctx, rewritten);
 
     if (ctx.isServing(rewritten.slug)) {
       ctx.restartGateway(serving);

@@ -10,6 +10,7 @@ import type { IpcHandlers } from './ipc/dispatch';
 import type { KeyCheckIpcContext } from './ipc/key-check-ipc';
 import type { StorageIpcContext } from './ipc/storage-context';
 import type { SettingsEffects } from './settings/apply-settings';
+import type { GatewayConfigWatcher } from './storage/gateway-config-watcher';
 import type { CredentialCustody } from './subscriptions/credential-custody';
 
 import { registerAppLifecycle } from './app-lifecycle';
@@ -37,6 +38,7 @@ import {
 } from './settings/apply-settings';
 import { storedBootState } from './storage/boot-state';
 import { listGatewayConfigs } from './storage/gateway-store';
+import { startGatewayWatcher } from './storage/gateway-watcher-wiring';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
 import { subscriptionCredentialStore } from './subscriptions/subscription-credential-store';
 import { subscriptionHomes } from './subscriptions/subscription-homes';
@@ -66,6 +68,7 @@ app.setName('Recompose');
 app.setAboutPanelOptions({ applicationName: 'Recompose' });
 
 let engineHost: EngineHost | null = null;
+let gatewayWatcher: GatewayConfigWatcher | null = null;
 
 const gatewayLifecycle = createGatewayLifecycleRequests({
   host: () => engineHost,
@@ -142,6 +145,9 @@ function storageContext(
     },
     startGateway: startStoredGateway(engineHost),
     restartGateway: serveRewrittenGateway(engineHost),
+    noteGatewayWrite: (gateway) => {
+      gatewayWatcher?.noteWrite(gateway);
+    },
     isServing: (slug) => engineHost.states()[slug]?.status === 'running',
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(reach.userDataPath, process.platform),
@@ -256,6 +262,12 @@ async function startRecompose(): Promise<void> {
   engineHost.onStatesChanged(repaintTray);
   repaintTray(engineHost.states());
 
+  gatewayWatcher = await startGatewayWatcher({
+    userDataPath: app.getPath('userData'),
+    lifecycle: gatewayLifecycle,
+    onCorrupt: onStorageCorrupt,
+  });
+
   registerIpcHandlers(assembleIpcHandlers(engineHost, custody));
 
   electronApp.setAppUserModelId('sh.recompose.app');
@@ -279,10 +291,10 @@ async function startRecompose(): Promise<void> {
 
 registerAppLifecycle({
   start: startRecompose,
-  activate: () => {
-    createMainWindow(HOME_ROUTE);
-  },
+  activate: showMainWindow,
   dispose: () => {
+    gatewayWatcher?.close();
+    gatewayWatcher = null;
     engineHost?.dispose();
   },
 });
