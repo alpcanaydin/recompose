@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 
 import { proxyFetchBoundMs } from '@recompose/contracts';
 
+import type { RequestOf } from './dialect/dispatcher';
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
 import type { TranslationRefusal } from './refusals';
 import type { SubscriptionRuntime } from './subscription/reach';
@@ -216,17 +217,34 @@ function responsesLite(c: Context): boolean {
 
 type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };
 
+function rawResponsesBody(crossing: Crossing, upstreamDialect: ProviderDialect): JsonObject | null {
+  return crossing.dialect === 'responses' && upstreamDialect === 'responses'
+    ? { ...crossing.raw, model: crossing.providerModel, ...streamAsk(crossing.raw) }
+    : null;
+}
+
+function crossedRequest(
+  crossing: Crossing,
+  upstreamDialect: ProviderDialect,
+  payload: RequestOf[ProxyDialect],
+) {
+  return upstreamDialect === 'gemini'
+    ? translateRequestToGemini(crossing.dialect, payload)
+    : translateRequest(crossing.dialect, upstreamDialect, payload);
+}
+
 function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): OutboundBody {
+  const raw = rawResponsesBody(crossing, upstreamDialect);
+
+  if (raw !== null) return { body: raw };
+
   const payload = ingressPayload(crossing.dialect, crossing.raw);
 
   if (payload === null) {
     return { refusal: emptyConversation() };
   }
 
-  const crossed =
-    upstreamDialect === 'gemini'
-      ? translateRequestToGemini(crossing.dialect, payload)
-      : translateRequest(crossing.dialect, upstreamDialect, payload);
+  const crossed = crossedRequest(crossing, upstreamDialect, payload);
 
   if ('outcome' in crossed) {
     return { body: { ...crossing.raw, model: crossing.providerModel } };

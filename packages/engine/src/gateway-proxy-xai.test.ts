@@ -116,3 +116,43 @@ test('preserves xAI free-usage retry metadata downstream', async () => {
     error: 'free usage exhausted',
   });
 });
+
+test('sanitizes xAI custom calls and encrypted items before upstream', async () => {
+  const sent: RequestInit[] = [];
+  const fetchLike: typeof fetch = async (_input, init) => {
+    if (init !== undefined) sent.push(init);
+
+    return Promise.resolve(completedResponse());
+  };
+  const input = [
+    { type: 'custom_tool_call', name: 'missing_id', input: 'bad' },
+    {
+      type: 'custom_tool_call',
+      call_id: 'call_1',
+      name: 'apply_patch',
+      input: 'patch text',
+    },
+    { type: 'custom_tool_call_output', call_id: 'call_1', output: { ok: true } },
+    { type: 'compaction', encrypted_content: 'foreign-replay' },
+    {
+      type: 'reasoning',
+      summary: [{ type: 'summary_text', text: 'kept' }],
+      encrypted_content: 'bad',
+    },
+    { role: 'user', content: 'continue' },
+  ];
+
+  await xaiApp(fetchLike).request('http://127.0.0.1:8397/v1/responses', {
+    method: 'POST',
+    body: JSON.stringify({ model: 'fast', input }),
+  });
+
+  expect(bodyOf(sent[0])).toMatchObject({
+    input: [
+      { type: 'function_call', call_id: 'call_1', arguments: '{"input":"patch text"}' },
+      { type: 'function_call_output', call_id: 'call_1', output: '{"ok":true}' },
+      { type: 'reasoning', summary: [{ type: 'summary_text', text: 'kept' }] },
+      { role: 'user', content: 'continue' },
+    ],
+  });
+});

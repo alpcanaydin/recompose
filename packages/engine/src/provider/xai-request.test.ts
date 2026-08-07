@@ -48,7 +48,7 @@ test('xaiProviderBody forces streaming and carries the execution session', () =>
     sessionId: 'conv-xai-1',
   };
 
-  expect(xaiProviderBody({ input: 'hello' }, crossing)).toEqual({
+  expect(xaiProviderBody({ input: 'hello', stop: ['done'] }, crossing)).toEqual({
     model: 'grok-4.3',
     input: 'hello',
     stream: true,

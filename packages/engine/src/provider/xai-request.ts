@@ -1,6 +1,7 @@
 import type { Crossing, JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { normalizeXAIInput } from './xai-input';
 
 function additionalTools(input: unknown): boolean {
   if (!Array.isArray(input)) return false;
@@ -34,10 +35,12 @@ export function normalizeXAIToolChoice(body: JsonObject): JsonObject {
 }
 
 export function xaiProviderBody(body: JsonObject, crossing: Crossing): JsonObject {
-  const normalized = normalizeXAIToolChoice(body);
+  const withInput = normalizeXAIInput(body);
+  const normalized = normalizeXAIToolChoice(withInput);
+  const { stop: _stop, ...withoutStop } = normalized;
 
   return {
-    ...normalized,
+    ...withoutStop,
     model: crossing.providerModel,
     stream: true,
     ...(crossing.sessionId === undefined ? {} : { prompt_cache_key: crossing.sessionId }),
