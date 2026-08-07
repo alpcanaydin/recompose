@@ -1,12 +1,6 @@
 import type { ChatToolCall } from './chat-completions-wire';
 import type { Fate } from './fates';
-import type {
-  HubContentBlock,
-  HubImageBlock,
-  HubTextBlock,
-  HubToolResultBlock,
-  HubToolUseBlock,
-} from './hub';
+import type { HubContentBlock, HubToolUseBlock } from './hub';
 
 import { geminiReplaySignature } from '../provider/gemini-signature';
 import { parseToolArguments } from './hub-build';
@@ -65,19 +59,16 @@ function droppedRedactedThinking(fates: Fate[]): void {
   });
 }
 
-type DroppedChatBlock = Extract<
-  HubContentBlock,
-  { type: 'thinking' | 'redacted_thinking' | 'document' }
->;
+type DroppedChatBlock = Extract<HubContentBlock, { type: 'thinking' | 'redacted_thinking' }>;
 
 export function isDroppedChatBlock(block: HubContentBlock): block is DroppedChatBlock {
-  return ['thinking', 'redacted_thinking', 'document'].includes(block.type);
+  return ['thinking', 'redacted_thinking'].includes(block.type);
 }
 
 export function dropChatBlock(
   block: DroppedChatBlock,
   fates: Fate[],
-  documentCostBearing: boolean,
+  _documentCostBearing: boolean,
 ): void {
   if (block.type === 'thinking') {
     droppedThinking(fates);
@@ -85,52 +76,39 @@ export function dropChatBlock(
     return;
   }
 
-  if (block.type === 'redacted_thinking') {
-    droppedRedactedThinking(fates);
+  droppedRedactedThinking(fates);
+}
+
+function routeAssistantContentBlock(
+  block: Exclude<HubContentBlock, { type: 'thinking' | 'redacted_thinking' }>,
+  texts: string[],
+  toolCalls: ChatToolCall[],
+  fates: Fate[],
+): void {
+  if (block.type === 'text') {
+    texts.push(block.text);
+
+    return;
+  }
+
+  if (block.type === 'tool_use') {
+    toolCalls.push(chatCallFromHubToolUse(block));
+
+    return;
+  }
+
+  if (block.type === 'tool_result') {
+    fates.push({ field: 'tool_result', disposition: 'mapped', to: 'absent' });
 
     return;
   }
 
   fates.push({
-    field: 'document',
+    field: block.type,
     disposition: 'mapped',
     to: 'absent',
-    ...(documentCostBearing ? { costBearing: true } : {}),
+    ...(block.type === 'image' ? {} : { costBearing: true }),
   });
-}
-
-function routeAssistantContentBlock(
-  block: HubTextBlock | HubImageBlock | HubToolUseBlock | HubToolResultBlock,
-  texts: string[],
-  toolCalls: ChatToolCall[],
-  fates: Fate[],
-): void {
-  switch (block.type) {
-    case 'text':
-      texts.push(block.text);
-
-      return;
-    case 'tool_use':
-      toolCalls.push(chatCallFromHubToolUse(block));
-
-      return;
-    case 'image':
-      fates.push({ field: 'image', disposition: 'mapped', to: 'absent' });
-
-      return;
-    case 'tool_result':
-      fates.push({ field: 'tool_result', disposition: 'mapped', to: 'absent' });
-
-      return;
-
-    default: {
-      const unknownBlock: never = block;
-
-      throw new Error(
-        `an assistant block has no Chat Completions form: ${JSON.stringify(unknownBlock)}`,
-      );
-    }
-  }
 }
 
 function routeAssistantBlock(

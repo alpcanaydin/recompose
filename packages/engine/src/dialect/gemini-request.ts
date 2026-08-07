@@ -10,13 +10,8 @@ import type {
 } from './hub';
 
 import { geminiReplaySignature } from '../provider/gemini-signature';
+import { geminiMediaPart } from './gemini-media';
 import { geminiOptionsInto } from './gemini-request-options';
-
-function imagePart(block: Extract<HubContentBlock, { type: 'image' }>): GeminiPart {
-  return block.source.type === 'base64'
-    ? { inlineData: { mimeType: block.source.mediaType, data: block.source.data } }
-    : { fileData: { fileUri: block.source.url } };
-}
 
 function resultPart(block: Extract<HubContentBlock, { type: 'tool_result' }>): GeminiPart {
   let text = '';
@@ -52,16 +47,6 @@ function textPart(block: HubContentBlock): GeminiPart | null {
     : null;
 }
 
-function mediaPart(block: HubContentBlock): GeminiPart | null {
-  if (block.type === 'image') {
-    return imagePart(block);
-  }
-
-  return block.type === 'document'
-    ? { inlineData: { mimeType: block.source.mediaType, data: block.source.data } }
-    : null;
-}
-
 function actionPart(block: HubContentBlock): GeminiPart | null {
   if (block.type === 'tool_use') {
     return {
@@ -74,7 +59,7 @@ function actionPart(block: HubContentBlock): GeminiPart | null {
 }
 
 function partFrom(block: HubContentBlock): GeminiPart {
-  return textPart(block) ?? mediaPart(block) ?? actionPart(block) ?? { text: '' };
+  return textPart(block) ?? geminiMediaPart(block) ?? actionPart(block) ?? { text: '' };
 }
 
 function contentFrom(message: HubMessage): GeminiContent {

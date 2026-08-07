@@ -35,12 +35,19 @@ type ResponsesInputTextPart = { type: 'input_text'; text: string };
 export type ResponsesOutputTextPart = { type: 'output_text'; text: string };
 type ResponsesInputImagePart = { type: 'input_image'; image_url: string };
 type ResponsesInputFilePart = { type: 'input_file'; file_data: string; filename: string };
+type ResponsesOutputFilePart = { type: 'output_file'; file_data: string; filename: string };
+type ResponsesInputAudioPart = {
+  type: 'input_audio';
+  input_audio: { data: string; format: string };
+};
 
 export type ResponsesContentPart =
   | ResponsesInputTextPart
   | ResponsesOutputTextPart
   | ResponsesInputImagePart
-  | ResponsesInputFilePart;
+  | ResponsesInputFilePart
+  | ResponsesOutputFilePart
+  | ResponsesInputAudioPart;
 
 export type ResponsesMessageItem = {
   type: 'message';

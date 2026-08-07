@@ -1,8 +1,8 @@
 import type { Fate, Translated } from './fates';
 import type {
-  HubImageBlock,
-  HubImageSource,
+  HubAudioBlock,
   HubDocumentBlock,
+  HubImageBlock,
   HubMessage,
   HubRequest,
   HubSampling,
@@ -12,6 +12,7 @@ import type {
   HubToolChoice,
   HubToolResultBlock,
   HubToolUseBlock,
+  HubVideoBlock,
   HubWebSearchTool,
 } from './hub';
 import type {
@@ -25,6 +26,7 @@ import type {
 } from './responses-wire';
 
 import { responsesItemsForGeminiToolUse } from './responses-gemini-carrier';
+import { responsesPartFromHubBlock } from './responses-media-encode';
 import { responsesOptionsInto } from './responses-request-options';
 import {
   isCodexReasoningSignature,
@@ -80,31 +82,6 @@ function basicResponsesToolChoice(
 
 function toResponsesToolChoice(choice: HubToolChoice): ResponsesToolChoice {
   return choice.type === 'web_search' ? { type: 'web_search' } : basicResponsesToolChoice(choice);
-}
-
-function imageUrlOf(source: HubImageSource): string {
-  return source.type === 'url' ? source.url : `data:${source.mediaType};base64,${source.data}`;
-}
-
-function partOfBlock(
-  role: 'user' | 'assistant',
-  block: HubTextBlock | HubImageBlock | HubDocumentBlock,
-): ResponsesContentPart {
-  if (block.type === 'document') {
-    return {
-      type: 'input_file',
-      file_data: `data:${block.source.mediaType};base64,${block.source.data}`,
-      filename: block.filename,
-    };
-  }
-
-  if (block.type === 'image') {
-    return { type: 'input_image', image_url: imageUrlOf(block.source) };
-  }
-
-  return role === 'assistant'
-    ? { type: 'output_text', text: block.text }
-    : { type: 'input_text', text: block.text };
 }
 
 function functionCallOutputItemOf(
@@ -180,13 +157,13 @@ function encodeThinkingInto(block: HubThinkingBlock, context: EncodeContext): vo
 
 function isVisibleBlock(
   block: HubMessage['content'][number],
-): block is HubTextBlock | HubImageBlock | HubDocumentBlock {
-  return ['text', 'image', 'document'].includes(block.type);
+): block is HubTextBlock | HubImageBlock | HubDocumentBlock | HubAudioBlock | HubVideoBlock {
+  return ['text', 'image', 'document', 'audio', 'video'].includes(block.type);
 }
 
 function encodeBlockInto(block: HubMessage['content'][number], context: EncodeContext): void {
   if (isVisibleBlock(block)) {
-    context.parts.push(partOfBlock(context.role, block));
+    context.parts.push(responsesPartFromHubBlock(context.role, block));
 
     return;
   }

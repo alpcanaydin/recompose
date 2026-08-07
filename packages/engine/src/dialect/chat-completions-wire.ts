@@ -11,7 +11,27 @@ type ChatImagePart = {
   cache_control?: ChatCacheControl;
 };
 
-export type ChatContentPart = ChatTextPart | ChatImagePart;
+type ChatAudioPart = {
+  type: 'input_audio';
+  input_audio: { data: string; format: string };
+};
+
+type ChatVideoPart = {
+  type: 'video_url';
+  video_url: { url: string };
+};
+
+type ChatFilePart = {
+  type: 'file';
+  file: { filename: string; file_data: string };
+};
+
+export type ChatContentPart =
+  | ChatTextPart
+  | ChatImagePart
+  | ChatAudioPart
+  | ChatVideoPart
+  | ChatFilePart;
 
 export type ChatToolCall = {
   id: string;

@@ -24,6 +24,8 @@ import type {
   HubToolUseBlock,
 } from './hub';
 
+import { anthropicMediaBlock, isHubAudioVideo } from './anthropic-media';
+
 function hubSourceFrom(source: AnthropicImageSource): HubImageSource {
   if (source.type === 'url') {
     return { type: 'url', url: source.url };
@@ -236,6 +238,8 @@ function wireContentBlockFrom(
 }
 
 export function wireBlockFrom(block: HubContentBlock): AnthropicContentBlock {
+  if (isHubAudioVideo(block)) return anthropicMediaBlock(block);
+
   if (block.type === 'document') {
     return {
       type: 'document',
@@ -248,17 +252,19 @@ export function wireBlockFrom(block: HubContentBlock): AnthropicContentBlock {
     };
   }
 
-  if (block.type === 'thinking') {
-    return {
-      type: 'thinking',
-      thinking: block.text,
-      ...(block.signature === undefined ? {} : { signature: block.signature }),
-    };
-  }
-
-  if (block.type === 'redacted_thinking') {
-    return { type: 'redacted_thinking', data: block.data };
-  }
+  if (block.type === 'thinking' || block.type === 'redacted_thinking') return wireThinking(block);
 
   return wireContentBlockFrom(block);
+}
+
+function wireThinking(
+  block: Extract<HubContentBlock, { type: 'thinking' | 'redacted_thinking' }>,
+): AnthropicContentBlock {
+  return block.type === 'thinking'
+    ? {
+        type: 'thinking',
+        thinking: block.text,
+        ...(block.signature === undefined ? {} : { signature: block.signature }),
+      }
+    : { type: 'redacted_thinking', data: block.data };
 }

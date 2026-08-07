@@ -17,20 +17,23 @@ import type {
   InteractionsToolChoice,
 } from './interactions-wire';
 
-import { interactionsImagePart, interactionsToolCall } from './interactions-content';
+import {
+  interactionsImagePart,
+  interactionsPartFromHubMedia,
+  interactionsToolCall,
+} from './interactions-content';
 import { interactionsOptionsInto } from './interactions-request-options';
 
 function contentPart(block: HubContentBlock): InteractionsContentPart | null {
   if (block.type === 'text') return { type: 'text', text: block.text };
-  if (block.type === 'image') return interactionsImagePart(block.source);
-  if (block.type !== 'document') return null;
 
-  return {
-    type: 'file',
-    data: block.source.data,
-    mime_type: block.source.mediaType,
-    name: block.filename,
-  };
+  return isHubMedia(block) ? interactionsPartFromHubMedia(block) : null;
+}
+
+function isHubMedia(
+  block: HubContentBlock,
+): block is Extract<HubContentBlock, { type: 'image' | 'audio' | 'video' | 'document' }> {
+  return ['image', 'audio', 'video', 'document'].includes(block.type);
 }
 
 function resultValue(block: HubToolResultBlock): unknown {

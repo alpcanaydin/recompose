@@ -9,7 +9,11 @@ function toolResultContentFrom(part: ChatContentPart): HubToolResultContent {
     return { type: 'text', text: part.text };
   }
 
-  return { type: 'image', source: imageSourceFromUrl(part.image_url.url) };
+  if (part.type === 'image_url') {
+    return { type: 'image', source: imageSourceFromUrl(part.image_url.url) };
+  }
+
+  return { type: 'text', text: JSON.stringify(part) };
 }
 
 function toolResultContent(

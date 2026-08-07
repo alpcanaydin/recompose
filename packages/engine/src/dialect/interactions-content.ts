@@ -74,8 +74,26 @@ function documentBlock(
   return [];
 }
 
+function namedMediaBlock(
+  part: Extract<InteractionsContentPart, { type: 'audio' | 'video' }>,
+): HubContentBlock[] {
+  return [
+    {
+      type: part.type,
+      source: { type: 'base64', mediaType: part.mime_type, data: part.data },
+    },
+  ];
+}
+
+function isNamedMedia(
+  part: InteractionsContentPart,
+): part is Extract<InteractionsContentPart, { type: 'audio' | 'video' }> {
+  return part.type === 'audio' || part.type === 'video';
+}
+
 function contentPartBlock(part: InteractionsContentPart): HubContentBlock[] {
   if ('text' in part) return [{ type: 'text', text: part.text }];
+  if (isNamedMedia(part)) return namedMediaBlock(part);
   if (part.type !== 'image') return documentBlock(part);
 
   const url = mediaUrl(part);
@@ -95,6 +113,25 @@ export function interactionsImagePart(source: HubImageSource): InteractionsConte
   return source.type === 'url'
     ? { type: 'image', uri: source.url }
     : { type: 'image', data: source.data, mime_type: source.mediaType };
+}
+
+export function interactionsPartFromHubMedia(
+  block: Extract<HubContentBlock, { type: 'image' | 'audio' | 'video' | 'document' }>,
+): InteractionsContentPart | null {
+  if (block.type === 'image') return interactionsImagePart(block.source);
+
+  if (block.type === 'document') {
+    return {
+      type: 'file',
+      data: block.source.data,
+      mime_type: block.source.mediaType,
+      name: block.filename,
+    };
+  }
+
+  return block.source.type === 'base64'
+    ? { type: block.type, data: block.source.data, mime_type: block.source.mediaType }
+    : null;
 }
 
 export function interactionsToolCall(block: HubToolUseBlock): InteractionsStep {

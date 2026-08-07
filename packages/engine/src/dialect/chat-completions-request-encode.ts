@@ -12,13 +12,12 @@ import type {
   HubImageBlock,
   HubMessage,
   HubRequest,
-  HubTextBlock,
   HubToolResultBlock,
-  HubToolUseBlock,
 } from './hub';
 
 import { dropChatBlock, foldAssistantBlocks, isDroppedChatBlock } from './chat-completions-blocks';
 import { chatCacheControlFrom } from './chat-completions-cache';
+import { chatPartFromHubMedia, isHubChatMedia } from './chat-completions-media';
 import { systemMessageFrom } from './chat-completions-request-fields';
 import {
   chatSamplingInto,
@@ -65,7 +64,26 @@ function chatToolMessageFrom(block: HubToolResultBlock, fates: Fate[]): ChatTool
 }
 
 function routeUserContentBlock(
-  block: HubTextBlock | HubImageBlock | HubToolUseBlock | HubToolResultBlock,
+  block: Exclude<HubContentBlock, { type: 'thinking' | 'redacted_thinking' }>,
+  parts: ChatContentPart[],
+  fates: Fate[],
+): void {
+  if (isHubChatMedia(block)) {
+    const part = chatPartFromHubMedia(block);
+
+    if (part !== null) parts.push(part);
+
+    return;
+  }
+
+  routeBasicUserBlock(block, parts, fates);
+}
+
+function routeBasicUserBlock(
+  block: Exclude<
+    HubContentBlock,
+    { type: 'thinking' | 'redacted_thinking' | 'audio' | 'video' | 'document' }
+  >,
   parts: ChatContentPart[],
   fates: Fate[],
 ): void {
@@ -108,7 +126,7 @@ function routeUserBlock(block: HubContentBlock, parts: ChatContentPart[], fates:
 }
 
 function userContent(parts: readonly ChatContentPart[]): string | readonly ChatContentPart[] {
-  if (parts.some((part) => part.type === 'image_url')) {
+  if (parts.some((part) => part.type !== 'text')) {
     return parts;
   }
 
@@ -123,9 +141,15 @@ function collapsedCacheControl(
     return {};
   }
 
-  const control = parts.find((part) => part.cache_control !== undefined)?.cache_control;
+  const control = parts.find(hasCacheControl)?.cache_control;
 
   return control === undefined ? {} : { cache_control: control };
+}
+
+function hasCacheControl(
+  part: ChatContentPart,
+): part is Extract<ChatContentPart, { type: 'text' | 'image_url' }> {
+  return part.type === 'text' || part.type === 'image_url';
 }
 
 function chatUserFromHub(message: HubMessage, fates: Fate[]): ChatMessage[] {

@@ -28,6 +28,16 @@ export type HubImageBlock = {
   source: HubImageSource;
 };
 
+export type HubAudioBlock = {
+  type: 'audio';
+  source: HubImageSource;
+};
+
+export type HubVideoBlock = {
+  type: 'video';
+  source: HubImageSource;
+};
+
 export type HubDocumentBlock = {
   type: 'document';
   source: { type: 'base64'; mediaType: string; data: string };
@@ -56,6 +66,8 @@ export type HubContentBlock =
   | HubThinkingBlock
   | HubRedactedThinkingBlock
   | HubImageBlock
+  | HubAudioBlock
+  | HubVideoBlock
   | HubDocumentBlock
   | HubToolUseBlock
   | HubToolResultBlock;
