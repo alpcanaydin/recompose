@@ -37,6 +37,7 @@ type ObservabilityOptions = {
   now?: (() => number) | undefined;
   maxRecords?: number | undefined;
 };
+type ObservationListener = (record: ProviderObservation) => void;
 
 const emptyUsage = (): ProviderUsage => ({
   inputTokens: 0,
@@ -160,6 +161,7 @@ function clonedRequest(request: ProviderRequestLog): ProviderRequestLog {
 
 export class ProviderObservability {
   private readonly records: ProviderObservation[] = [];
+  private readonly listeners = new Set<ObservationListener>();
   private readonly options: ObservabilityOptions;
 
   public constructor(options: ObservabilityOptions = {}) {
@@ -189,11 +191,21 @@ export class ProviderObservability {
     this.records.splice(0);
   }
 
+  public subscribe(listener: ObservationListener): () => void {
+    this.listeners.add(listener);
+
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
   public publish(record: ProviderObservation): void {
     this.records.push(record);
     const excess = this.records.length - (this.options.maxRecords ?? 10_000);
 
     if (excess > 0) this.records.splice(0, excess);
+
+    for (const listener of this.listeners) listener(record);
   }
 
   public now(): number {

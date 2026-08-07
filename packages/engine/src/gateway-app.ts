@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 
 import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { ProxyDialect } from './gateway-wire';
+import type { ProviderLogStore } from './provider/provider-log-store';
 
 import { proxyTokenCountRequest } from './gateway-count-tokens';
 import { modelListing } from './gateway-discovery';
@@ -13,8 +14,13 @@ import { proxyVideoRequest } from './gateway-videos';
 import { registerGatewayWebSockets } from './gateway-websocket';
 import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
+import { registerManagementLogs } from './management-logs';
 import { registerManagementUsage } from './management-usage';
 import { type AIStudioRelay, aiStudioRelayRuntime } from './provider/ai-studio-relay';
+import {
+  configuredProviderLogStore,
+  persistProviderObservations,
+} from './provider/provider-log-runtime';
 import { invalidJson, unservedPath } from './refusals';
 
 export type { SpendGrantFor } from './gateway-proxy';
@@ -48,6 +54,14 @@ const VIDEO_ROUTES = [
 
 function chosenAIStudioRelay(relay?: AIStudioRelay): AIStudioRelay {
   return relay ?? aiStudioRelayRuntime();
+}
+
+function preparedLogStore(store?: ProviderLogStore): ProviderLogStore | null {
+  const selected = store ?? configuredProviderLogStore();
+
+  if (selected !== null) persistProviderObservations(selected);
+
+  return selected;
 }
 
 function dialectForPath(path: string): ProxyDialect {
@@ -89,10 +103,12 @@ export function createGatewayApp(
   fetchLike: typeof fetch = globalThis.fetch,
   subscriptions?: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
+  providerLogs?: ProviderLogStore,
 ): Hono {
   const app = new Hono();
   const subscriptionServing = subscriptions ?? subscriptionRuntime();
   const relay = chosenAIStudioRelay(aiStudio);
+  const logStore = preparedLogStore(providerLogs);
 
   app.use(guardLoopback(gateway.port));
 
@@ -107,6 +123,7 @@ export function createGatewayApp(
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
   registerManagementUsage(app);
+  registerManagementLogs(app, logStore);
   registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike, relay);
 
   for (const path of COUNT_TOKENS_PATHS) {

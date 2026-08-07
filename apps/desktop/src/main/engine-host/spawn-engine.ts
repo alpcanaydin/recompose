@@ -3,8 +3,22 @@ import { utilityProcess } from 'electron';
 
 import type { EngineChild } from './engine-host';
 
-export function spawnEngineChild(): EngineChild {
-  const engine = utilityProcess.fork(engineChildPath, [], { stdio: 'pipe' });
+function childEnvironment(logDirectory: string | undefined): Record<string, string> {
+  const inherited = Object.entries(process.env).filter(
+    (entry): entry is [string, string] => entry[1] !== undefined,
+  );
+
+  return {
+    ...Object.fromEntries(inherited),
+    ...(logDirectory === undefined ? {} : { RECOMPOSE_LOG_DIR: logDirectory }),
+  };
+}
+
+export function spawnEngineChild(logDirectory?: string): EngineChild {
+  const engine = utilityProcess.fork(engineChildPath, [], {
+    stdio: 'pipe',
+    env: childEnvironment(logDirectory),
+  });
 
   engine.on('error', (type, location, report) => {
     console.error(`The engine hit a ${type} at ${location}.`, report);
