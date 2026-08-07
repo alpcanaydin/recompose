@@ -27,6 +27,7 @@ import {
   credentialedRequestUrl,
 } from './provider/credentialed-target';
 import { observeKimiReplay } from './provider/kimi-replay-runtime';
+import { observeXAIReplay } from './provider/xai-replay-runtime';
 import { withXaiRetryAfter } from './provider/xai-response';
 import { restoreXAIToolResponse } from './provider/xai-tool-response';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
@@ -212,8 +213,9 @@ async function observedCredentialedAnswer(
   if (grant.spend.provider !== 'xai') return answer;
 
   const decorated = await withXaiRetryAfter(answer);
+  const observed = observeXAIReplay(crossing, decorated);
 
-  return restoreXAIToolResponse(decorated, crossing.xaiNamespaceTools ?? {});
+  return restoreXAIToolResponse(observed, crossing.xaiNamespaceTools ?? {});
 }
 
 function responsesLite(c: Context): boolean {

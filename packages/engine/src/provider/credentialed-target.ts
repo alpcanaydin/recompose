@@ -5,6 +5,7 @@ import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from '../gat
 import { cappedGeminiOutput } from './gemini-model-limits';
 import { prepareKimiReplay } from './kimi-replay-runtime';
 import { kimiProviderBody } from './kimi-request';
+import { prepareXAIReplay } from './xai-replay-runtime';
 import { xaiProviderBody } from './xai-request';
 import { collectXAINamespaceTools } from './xai-tools';
 
@@ -38,7 +39,7 @@ export function credentialedRequestBody(
   if (grant.spend.provider === 'xai') {
     crossing.xaiNamespaceTools = collectXAINamespaceTools(body);
 
-    return xaiProviderBody(body, crossing);
+    return xaiProviderBody(prepareXAIReplay(crossing, body), crossing);
   }
 
   if (grant.spend.provider !== 'kimi') return body;

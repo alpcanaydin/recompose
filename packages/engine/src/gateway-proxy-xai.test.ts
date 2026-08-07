@@ -1,8 +1,9 @@
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
 import { aGatewayHolding, aVirtualModel } from './gateway-app.testkit';
 import { isJsonObject, parsedJson } from './gateway-wire';
+import { clearXAIReplayCache } from './provider/xai-replay-runtime';
 
 const grant = {
   verdict: 'resolved',
@@ -45,6 +46,39 @@ function completedResponse(): Response {
   });
 }
 
+function replayResponse(added: string, done: string): Response {
+  const events = [
+    {
+      type: 'response.output_item.added',
+      output_index: 0,
+      item: { id: 'rs_added', type: 'reasoning', summary: [], encrypted_content: added },
+    },
+    {
+      type: 'response.output_item.done',
+      output_index: 0,
+      item: { id: 'rs_done', type: 'reasoning', summary: [], encrypted_content: done },
+    },
+    {
+      type: 'response.output_item.done',
+      output_index: 1,
+      item: {
+        id: 'msg_1',
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'first answer' }],
+      },
+    },
+    {
+      type: 'response.completed',
+      response: { id: 'resp_replay', status: 'completed', model: 'grok-4.3', output: [] },
+    },
+  ];
+
+  return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(''), {
+    headers: { 'content-type': 'text/event-stream' },
+  });
+}
+
 function xaiApp(fetchLike: typeof fetch) {
   const model = aVirtualModel({ target: { standing: 'bound', providerModel: 'grok-4.3' } });
 
@@ -80,6 +114,10 @@ const namespaceInput = [
   },
   { role: 'user', content: 'search' },
 ];
+
+beforeEach(() => {
+  clearXAIReplayCache();
+});
 
 test('serves xAI through its official Responses endpoint', async () => {
   const sent: Array<{ url: string; init: RequestInit | undefined }> = [];
@@ -210,4 +248,35 @@ test('flattens xAI namespace tools and restores completed function calls', async
   expect(await answer.json()).toMatchObject({
     output: [{ type: 'function_call', name: 'web_search_exa', namespace: 'mcp__exa' }],
   });
+});
+
+test('replays final xAI reasoning and assistant state into the next session turn', async () => {
+  const added = Buffer.alloc(256, 1).toString('base64').replace(/=+$/u, '');
+  const done = Buffer.alloc(256, 2).toString('base64').replace(/=+$/u, '');
+  const sent: RequestInit[] = [];
+  const responses = [replayResponse(added, done), completedResponse()];
+  const fetchLike: typeof fetch = async (_input, init) => {
+    if (init !== undefined) sent.push(init);
+
+    return Promise.resolve(responses.shift() ?? completedResponse());
+  };
+  const app = xaiApp(fetchLike);
+  const first = { model: 'fast', input: [{ type: 'message', role: 'user', content: 'first' }] };
+  const second = { model: 'fast', input: [{ type: 'message', role: 'user', content: 'second' }] };
+
+  await app.request('http://127.0.0.1:8397/v1/responses', {
+    method: 'POST',
+    headers: { 'x-session-id': 'xai-replay-session' },
+    body: JSON.stringify(first),
+  });
+  await app.request('http://127.0.0.1:8397/v1/responses', {
+    method: 'POST',
+    headers: { 'x-session-id': 'xai-replay-session' },
+    body: JSON.stringify(second),
+  });
+
+  expect(bodyOf(sent[1])).toHaveProperty('input.0.encrypted_content', done);
+  expect(bodyOf(sent[1])).not.toHaveProperty('input.0.encrypted_content', added);
+  expect(bodyOf(sent[1])).toHaveProperty('input.1.content.0.text', 'first answer');
+  expect(bodyOf(sent[1])).toHaveProperty('input.2.content', 'second');
 });
