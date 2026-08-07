@@ -125,16 +125,14 @@ describe('the dispatcher composes the stream legs through the hub', () => {
 });
 
 describe('a refusing leg surfaces the refusal to the caller', () => {
-  it('surfaces the decode refusal when the source carries a server-state field', () => {
+  it('carries a Responses server-state handle into Interactions', () => {
     const result = translateRequest(
       'responses',
-      'chat-completions',
+      'interactions',
       aResponsesRequest({ previous_response_id: 'resp_prev' }),
     );
 
-    expect(result).toEqual({
-      refusal: { reason: 'unsupported-field', field: 'previous_response_id' },
-    });
+    expect(result).toHaveProperty('value.previous_interaction_id', 'resp_prev');
   });
 
   it('surfaces the encode refusal when the hub stop reason has no target counterpart', () => {

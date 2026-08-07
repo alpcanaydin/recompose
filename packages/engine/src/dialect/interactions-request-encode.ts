@@ -18,6 +18,7 @@ import type {
 } from './interactions-wire';
 
 import { interactionsImagePart, interactionsToolCall } from './interactions-content';
+import { interactionsOptionsInto } from './interactions-request-options';
 
 function contentPart(block: HubContentBlock): InteractionsContentPart | null {
   if (block.type === 'text') return { type: 'text', text: block.text };
@@ -178,13 +179,14 @@ export function encodeRequest(request: HubRequest): Translated<InteractionsReque
   const system = systemInstruction(request);
   const config = generationConfig(request);
 
-  return {
-    value: {
-      input: inputOf(request.messages),
-      ...(system === undefined ? {} : { system_instruction: system }),
-      ...(request.tools === undefined ? {} : { tools: request.tools.map(toolOf) }),
-      ...(config === undefined ? {} : { generation_config: config }),
-    },
-    fates: [],
+  const value: InteractionsRequest = {
+    input: inputOf(request.messages),
+    ...(system === undefined ? {} : { system_instruction: system }),
+    ...(request.tools === undefined ? {} : { tools: request.tools.map(toolOf) }),
+    ...(config === undefined ? {} : { generation_config: config }),
   };
+
+  interactionsOptionsInto(value, request);
+
+  return { value, fates: [] };
 }

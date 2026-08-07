@@ -21,16 +21,12 @@ import type {
   ResponsesToolParameters,
 } from './responses-wire';
 
-import {
-  emptyConversation,
-  toolIdCollision,
-  unrepairableToolCall,
-  unsupportedField,
-} from '../refusals';
+import { emptyConversation, toolIdCollision, unrepairableToolCall } from '../refusals';
 import { mergeAdjacentSameRole } from './hub-build';
 import { responsesRequestDrops } from './responses-drops';
 import { foldResponsesInputWithGeminiCarriers } from './responses-gemini-carrier';
 import { foldReasoning } from './responses-reasoning-decode';
+import { hubOptionsFromResponses } from './responses-request-options';
 import { toHubContentBlocks, toolResultBlockOf, toolUseBlockOf } from './responses-shared';
 import { firstToolIdCollision } from './tool-id';
 
@@ -155,6 +151,12 @@ const topLevelDestinations: readonly [keyof ResponsesRequest, string][] = [
   ['temperature', 'sampling.temperature'],
   ['top_p', 'sampling.topP'],
   ['max_output_tokens', 'sampling.maxOutputTokens'],
+  ['previous_response_id', 'previousResponseId'],
+  ['reasoning', 'reasoning'],
+  ['modalities', 'responseModalities'],
+  ['response_format', 'responseFormat'],
+  ['service_tier', 'serviceTier'],
+  ['parallel_tool_calls', 'parallelToolCalls'],
 ];
 
 function topLevelFates(request: ResponsesRequest): Fate[] {
@@ -222,7 +224,7 @@ function assembleHubRequest(
   request: ResponsesRequest,
   messages: readonly HubMessage[],
 ): HubRequest {
-  const value: HubRequest = { messages };
+  const value: HubRequest = { messages, ...hubOptionsFromResponses(request) };
 
   if (request.instructions !== undefined) {
     value.system = [{ text: request.instructions }];
@@ -260,10 +262,6 @@ function toolIdsOf(input: readonly ResponsesInputItem[]): string[] {
 export function decodeRequest(
   request: ResponsesRequest,
 ): TranslateResult<HubRequest, TranslationRefusal> {
-  if (request.previous_response_id !== undefined) {
-    return { refusal: unsupportedField('previous_response_id') };
-  }
-
   const collision = firstToolIdCollision(toolIdsOf(request.input));
 
   if (collision !== undefined) {

@@ -87,6 +87,10 @@ export type ResponsesRequest = {
   top_p?: number;
   max_output_tokens?: number;
   previous_response_id?: string;
+  reasoning?: { effort?: string; summary?: string };
+  modalities?: readonly string[];
+  response_format?: unknown;
+  text?: { format?: unknown };
   store?: boolean;
   metadata?: HubJsonObject;
   service_tier?: string;

@@ -113,13 +113,18 @@ describe('decodeRequest: the vendor drop table traces every ignored field', () =
 
     expect(fateFor(fates, 'store')).toEqual({ field: 'store', ...absent });
     expect(fateFor(fates, 'metadata')).toEqual({ field: 'metadata', ...absent });
-    expect(fateFor(fates, 'service_tier')).toEqual({ field: 'service_tier', ...absent });
+    expect(fateFor(fates, 'service_tier')).toEqual({
+      field: 'service_tier',
+      disposition: 'mapped',
+      to: 'serviceTier',
+    });
     expect(fateFor(fates, 'top_logprobs')).toEqual({ field: 'top_logprobs', ...absent });
     expect(fateFor(fates, 'truncation')).toEqual({ field: 'truncation', ...absent });
     expect(fateFor(fates, 'user')).toEqual({ field: 'user', ...absent });
     expect(fateFor(fates, 'parallel_tool_calls')).toEqual({
       field: 'parallel_tool_calls',
-      ...absent,
+      disposition: 'mapped',
+      to: 'parallelToolCalls',
     });
     expect(fateFor(fates, 'prompt_cache_key')).toEqual({
       field: 'prompt_cache_key',
@@ -194,16 +199,6 @@ describe('decodeRequest: the tool schema normalizes for a strict target', () => 
     const { value } = expectTranslation(decodeRequest(aResponsesRequest({ tools: [bareTool] })));
 
     expect(value.tools?.[0]?.inputSchema).toEqual({ type: 'object', properties: {} });
-  });
-});
-
-describe('decodeRequest: the server-state handle has no honest hub slot', () => {
-  it('refuses typed when the request leans on a prior-response handle, naming the field', () => {
-    const refusal = expectRefusal(
-      decodeRequest(aResponsesRequest({ previous_response_id: 'resp_prior' })),
-    );
-
-    expect(refusal).toEqual({ reason: 'unsupported-field', field: 'previous_response_id' });
   });
 });
 

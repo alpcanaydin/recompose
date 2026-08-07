@@ -103,6 +103,12 @@ export type HubSampling = {
   stop?: readonly string[];
 };
 
+export type HubReasoning = {
+  effort?: string;
+  summary?: string;
+  budgetTokens?: number;
+};
+
 export type HubRequest = {
   system?: readonly HubSystemText[];
   messages: readonly HubMessage[];
@@ -110,7 +116,11 @@ export type HubRequest = {
   serverTools?: readonly HubWebSearchTool[];
   toolChoice?: HubToolChoice;
   parallelToolCalls?: boolean;
-  serviceTier?: 'priority';
+  serviceTier?: string;
+  previousResponseId?: string;
+  reasoning?: HubReasoning;
+  responseModalities?: readonly string[];
+  responseFormat?: unknown;
   sampling?: HubSampling;
 };
 

@@ -17,6 +17,7 @@ import type {
 
 import { mergeAdjacentSameRole, parseToolArguments } from './hub-build';
 import { hubBlocksFromInteractionsContent, interactionsText } from './interactions-content';
+import { hubOptionsFromInteractions } from './interactions-request-options';
 
 function isJsonObject(value: unknown): value is HubJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -215,6 +216,7 @@ export function decodeRequest(request: InteractionsRequest): Translated<HubReque
   return {
     value: {
       messages: inputMessages(request.input),
+      ...hubOptionsFromInteractions(request),
       ...optionalSystem(request),
       ...optionalTools(request),
       ...optionalChoice(request),

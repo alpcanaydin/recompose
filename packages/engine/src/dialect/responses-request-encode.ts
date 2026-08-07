@@ -25,6 +25,7 @@ import type {
 } from './responses-wire';
 
 import { responsesItemsForGeminiToolUse } from './responses-gemini-carrier';
+import { responsesOptionsInto } from './responses-request-options';
 import {
   isCodexReasoningSignature,
   redactedThinkingDropFate,
@@ -262,7 +263,7 @@ export function encodeRequest(request: HubRequest): Translated<ResponsesRequest>
     value.tool_choice = toResponsesToolChoice(request.toolChoice);
   }
 
-  subscriptionFieldsInto(value, request);
+  responsesOptionsInto(value, request);
 
   return { value, fates: folded.fates };
 }
@@ -274,15 +275,5 @@ function toolsInto(value: ResponsesRequest, request: HubRequest): void {
 
   if (request.serverTools !== undefined) {
     value.tools = [...(value.tools ?? []), ...request.serverTools.map(toResponsesWebSearchTool)];
-  }
-}
-
-function subscriptionFieldsInto(value: ResponsesRequest, request: HubRequest): void {
-  if (request.parallelToolCalls !== undefined) {
-    value.parallel_tool_calls = request.parallelToolCalls;
-  }
-
-  if (request.serviceTier !== undefined) {
-    value.service_tier = request.serviceTier;
   }
 }
