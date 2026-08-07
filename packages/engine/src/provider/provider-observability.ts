@@ -258,6 +258,20 @@ export class ProviderObservationSpan {
     return new Response(observed, response);
   }
 
+  public complete(
+    status: number,
+    headers: Headers,
+    body: Uint8Array,
+    ttftMs = this.owner.now() - this.startedAt,
+  ): void {
+    this.finish(
+      status,
+      headers,
+      ttftMs,
+      providerUsageFrom(this.request.dialect, new TextDecoder().decode(body)),
+    );
+  }
+
   private finish(status: number, headers: Headers, ttftMs: number, usage: ProviderUsage): void {
     this.owner.publish({
       ...this.request,

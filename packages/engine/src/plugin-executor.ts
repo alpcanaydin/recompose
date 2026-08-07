@@ -29,6 +29,22 @@ export type PluginExecutorResponse = {
 
 type PluginExecutorChunk = { payload: Uint8Array; error?: string | undefined };
 export type PluginExecutorStream = { headers: Headers; chunks: PluginExecutorChunk[] };
+export type PluginExecutorHTTPRequest = {
+  authId: string;
+  authProvider: string;
+  method: string;
+  url: string;
+  headers: Record<string, string[]>;
+  body: Uint8Array;
+  storageJSON: Uint8Array;
+  metadata: Record<string, unknown>;
+  attributes: Record<string, string>;
+};
+export type PluginExecutorHTTPResponse = {
+  statusCode: number;
+  headers: Headers;
+  body: Uint8Array;
+};
 
 function bytes(value: unknown): Uint8Array {
   if (typeof value === 'string') return Buffer.from(value, 'base64');
@@ -112,6 +128,22 @@ function identifierResponse(value: unknown): string {
   return identifier.trim().toLowerCase();
 }
 
+function httpResponse(value: unknown): PluginExecutorHTTPResponse {
+  if (!isJsonObject(value)) throw new Error('plugin HTTP response is not an object');
+
+  const status = field(value, 'status_code', 'StatusCode');
+
+  if (typeof status !== 'number' || !Number.isInteger(status)) {
+    throw new Error('plugin HTTP response status is invalid');
+  }
+
+  return {
+    statusCode: status,
+    headers: headers(field(value, 'headers', 'Headers')),
+    body: bytes(field(value, 'body', 'Body')),
+  };
+}
+
 function executorWire(request: PluginExecutorRequest) {
   return {
     AuthID: request.authId,
@@ -129,6 +161,20 @@ function executorWire(request: PluginExecutorRequest) {
     StorageJSON: Buffer.from(request.storageJSON).toString('base64'),
     AuthMetadata: structuredClone(request.authMetadata),
     AuthAttributes: structuredClone(request.authAttributes),
+  };
+}
+
+function httpWire(request: PluginExecutorHTTPRequest) {
+  return {
+    AuthID: request.authId,
+    AuthProvider: request.authProvider,
+    Method: request.method,
+    URL: request.url,
+    Headers: structuredClone(request.headers),
+    Body: Buffer.from(request.body).toString('base64'),
+    StorageJSON: Buffer.from(request.storageJSON).toString('base64'),
+    Metadata: structuredClone(request.metadata),
+    Attributes: structuredClone(request.attributes),
   };
 }
 
@@ -203,6 +249,21 @@ export class PluginExecutorAdapter {
       pluginMethods.executorCountTokens,
       executorWire(request),
       executorResponse,
+      signal,
+    );
+
+    return response;
+  }
+
+  public async httpRequest(
+    request: PluginExecutorHTTPRequest,
+    signal?: AbortSignal,
+  ): Promise<PluginExecutorHTTPResponse> {
+    const response = await this.host.call(
+      this.pluginId,
+      pluginMethods.executorHTTPRequest,
+      httpWire(request),
+      httpResponse,
       signal,
     );
 

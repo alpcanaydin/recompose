@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PluginClient } from './plugin-abi';
-import type { PluginExecutorRequest } from './plugin-executor';
+import type { PluginExecutorHTTPRequest, PluginExecutorRequest } from './plugin-executor';
 
 import { isJsonObject } from './gateway-wire';
 import { pluginMethods } from './plugin-abi';
@@ -74,6 +74,30 @@ describe('PluginExecutorAdapter execution', () => {
   });
 });
 
+describe('PluginExecutorAdapter raw HTTP', () => {
+  it('should map executor.http_request and clone its response', async () => {
+    const fixture = await executorFixture();
+
+    const response = await fixture.adapter.httpRequest(httpRequest());
+    const sent = fixture.requests.get(pluginMethods.executorHTTPRequest);
+
+    expect(sent).toMatchObject({
+      AuthID: 'auth-1',
+      AuthProvider: 'plugin-provider',
+      Method: 'PATCH',
+      URL: 'https://example.test/v1/raw?x=1',
+      Headers: { 'x-raw': ['yes'] },
+      Body: 'cmF3LWJvZHk=',
+      StorageJSON: 'eyJ0b2tlbiI6InN0b3JlZCJ9',
+      Metadata: { old: 'value' },
+      Attributes: { region: 'us' },
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.headers.get('x-http')).toBe('1');
+    expect(new TextDecoder().decode(response.body)).toBe('http-response');
+  });
+});
+
 // Helpers
 
 async function executorFixture() {
@@ -97,46 +121,72 @@ async function executorFixture() {
 }
 
 function responseFor(method: string): Uint8Array {
-  if (method === pluginMethods.register) {
-    return encoded({
-      ok: true,
-      result: {
-        schema_version: 2,
-        metadata: { name: 'executor' },
-        capabilities: {
-          executor: true,
-          executor_model_scope: 'static',
-          executor_input_formats: ['chat-completions'],
-          executor_output_formats: ['responses'],
-        },
+  if (method === pluginMethods.register) return registrationAnswer();
+
+  return executorAnswer(method);
+}
+
+function executorAnswer(method: string): Uint8Array {
+  if (method === 'executor.identifier') return identifierAnswer();
+  if (method === pluginMethods.executorStream) return streamAnswer();
+  if (method === pluginMethods.executorCountTokens) return countAnswer();
+  if (method === pluginMethods.executorHTTPRequest) return httpAnswer();
+
+  return executeAnswer();
+}
+
+function registrationAnswer(): Uint8Array {
+  return encoded({
+    ok: true,
+    result: {
+      schema_version: 2,
+      metadata: { name: 'executor' },
+      capabilities: {
+        executor: true,
+        executor_model_scope: 'static',
+        executor_input_formats: ['chat-completions'],
+        executor_output_formats: ['responses'],
       },
-    });
-  }
+    },
+  });
+}
 
-  if (method === 'executor.identifier') {
-    return encoded({ ok: true, result: { identifier: 'Plugin-Provider' } });
-  }
+function identifierAnswer(): Uint8Array {
+  return encoded({ ok: true, result: { identifier: 'Plugin-Provider' } });
+}
 
-  if (method === pluginMethods.executorStream) {
-    return encoded({
-      ok: true,
-      result: {
-        headers: { 'content-type': ['text/event-stream'] },
-        chunks: [
-          { Payload: Buffer.from('data: one\n\n').toString('base64') },
-          { Error: 'stream failed' },
-        ],
-      },
-    });
-  }
+function streamAnswer(): Uint8Array {
+  return encoded({
+    ok: true,
+    result: {
+      headers: { 'content-type': ['text/event-stream'] },
+      chunks: [
+        { Payload: Buffer.from('data: one\n\n').toString('base64') },
+        { Error: 'stream failed' },
+      ],
+    },
+  });
+}
 
-  if (method === pluginMethods.executorCountTokens) {
-    return encoded({
-      ok: true,
-      result: { Payload: Buffer.from('{"total_tokens":3}').toString('base64') },
-    });
-  }
+function countAnswer(): Uint8Array {
+  return encoded({
+    ok: true,
+    result: { Payload: Buffer.from('{"total_tokens":3}').toString('base64') },
+  });
+}
 
+function httpAnswer(): Uint8Array {
+  return encoded({
+    ok: true,
+    result: {
+      StatusCode: 202,
+      Headers: { 'x-http': ['1'] },
+      Body: Buffer.from('http-response').toString('base64'),
+    },
+  });
+}
+
+function executeAnswer(): Uint8Array {
   return encoded({
     ok: true,
     result: {
@@ -164,6 +214,20 @@ function executorRequest(): PluginExecutorRequest {
     storageJSON: new TextEncoder().encode('{"token":"stored"}'),
     authMetadata: { token: 'metadata' },
     authAttributes: { region: 'us' },
+  };
+}
+
+function httpRequest(): PluginExecutorHTTPRequest {
+  return {
+    authId: 'auth-1',
+    authProvider: 'plugin-provider',
+    method: 'PATCH',
+    url: 'https://example.test/v1/raw?x=1',
+    headers: { 'x-raw': ['yes'] },
+    body: new TextEncoder().encode('raw-body'),
+    storageJSON: new TextEncoder().encode('{"token":"stored"}'),
+    metadata: { old: 'value' },
+    attributes: { region: 'us' },
   };
 }
 

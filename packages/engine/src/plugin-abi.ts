@@ -11,8 +11,10 @@ export const pluginMethods = {
   executorExecute: 'executor.execute',
   executorStream: 'executor.execute_stream',
   executorCountTokens: 'executor.count_tokens',
+  executorHTTPRequest: 'executor.http_request',
   schedulerPick: 'scheduler.pick',
   modelRoute: 'model.route',
+  hostHTTPDo: 'host.http.do',
 } as const;
 
 export type PluginRPCErrorShape = {

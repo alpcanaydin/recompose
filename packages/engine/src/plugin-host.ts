@@ -1,7 +1,12 @@
-import type { PluginClient, PluginRPCErrorShape } from './plugin-abi';
+import type { PluginClient } from './plugin-abi';
 
 import { isJsonObject } from './gateway-wire';
 import { callPlugin, lifecycleRequest, pluginMethods, pluginSchemaVersion } from './plugin-abi';
+import {
+  pluginHostCallback,
+  type PluginHostHTTPTransport,
+  subprocessHostHTTP,
+} from './plugin-host-http';
 import { loadNativePlugin } from './plugin-native-loader';
 import {
   type ModelRouteDecision,
@@ -103,18 +108,17 @@ function registration(value: unknown): PluginRegistration {
   };
 }
 
-function hostError(code: string, message: string): Uint8Array {
-  const error: PluginRPCErrorShape = { code, message, retryable: false, httpStatus: 0 };
-
-  return new TextEncoder().encode(JSON.stringify({ ok: false, error }));
-}
-
 export class PluginHost {
   private readonly plugins = new Map<string, PluginRecord>();
   private readonly loader: PluginLoader;
+  private readonly hostHTTP: PluginHostHTTPTransport;
 
-  public constructor(loader: PluginLoader = loadNativePlugin) {
+  public constructor(
+    loader: PluginLoader = loadNativePlugin,
+    hostHTTP: PluginHostHTTPTransport = subprocessHostHTTP,
+  ) {
     this.loader = loader;
+    this.hostHTTP = hostHTTP;
   }
 
   public async load(
@@ -128,7 +132,7 @@ export class PluginHost {
     if (existing !== undefined) return this.reconfigure(existing, config, priority);
 
     const client = this.loader(path, {
-      call: (method) => hostError('unknown_host_method', `host method ${method} is unavailable`),
+      call: (method, request) => pluginHostCallback(id, method, request, this.hostHTTP),
     });
 
     try {
