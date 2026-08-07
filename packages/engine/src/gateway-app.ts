@@ -109,7 +109,7 @@ export function createGatewayApp(
 
   for (const path of COUNT_TOKENS_PATHS) {
     app.post(path, async (c) =>
-      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing, fetchLike),
+      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing, fetchLike, relay),
     );
   }
 
@@ -118,7 +118,7 @@ export function createGatewayApp(
 
   for (const [path, dialect] of MODEL_ROUTES) {
     app.all(path, async (c) =>
-      proxyModelRequest(c, dialect, gateway, spendGrantFor, fetchLike, subscriptionServing),
+      proxyModelRequest(c, dialect, gateway, spendGrantFor, fetchLike, subscriptionServing, relay),
     );
   }
 

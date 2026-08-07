@@ -25,6 +25,10 @@ function subscription(provider: SubscriptionAccount['provider']): SubscriptionAc
 }
 
 describe('the origin a target account is spent against', () => {
+  test('an AI Studio channel targets the Gemini API endpoint', () => {
+    expect(providerOriginOf(keyRow('aistudio'))).toBe('https://generativelanguage.googleapis.com');
+  });
+
   test('a local runtime is spent against the address its account was stored with', () => {
     expect(providerOriginOf(ollama)).toBe('http://127.0.0.1:11434');
   });

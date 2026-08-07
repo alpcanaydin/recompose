@@ -20,6 +20,7 @@ type GrantedSpend = ResolvedGrant['spend'];
 type BodyBuilder = (crossing: Crossing, body: JsonObject) => JsonObject;
 type HeaderBuilder = (credential: string, crossing: Crossing) => Record<string, string>;
 const CREDENTIALED_DIALECTS = new Map<string, ProviderDialect>([
+  ['aistudio', 'gemini'],
   ['anthropic', 'anthropic'],
   ['gemini', 'gemini'],
   ['vertex', 'gemini'],
@@ -50,7 +51,22 @@ function xaiBody(crossing: Crossing, body: JsonObject): JsonObject {
   return xaiProviderBody(prepareXAIReplay(crossing, body), crossing);
 }
 
+function aiStudioBody(crossing: Crossing, body: JsonObject): JsonObject {
+  const generation = body['generationConfig'];
+  const cleaned =
+    typeof generation === 'object' && generation !== null && !Array.isArray(generation)
+      ? Object.fromEntries(
+          Object.entries(generation).filter(
+            ([key]) => !['maxOutputTokens', 'responseMimeType', 'responseJsonSchema'].includes(key),
+          ),
+        )
+      : generation;
+
+  return vertexProviderBody({ ...body, generationConfig: cleaned }, crossing);
+}
+
 const BODY_BUILDERS = new Map<string, BodyBuilder>([
+  ['aistudio', aiStudioBody],
   ['gemini', (crossing, body) => cappedGeminiOutput(body, crossing.providerModel)],
   ['xai', xaiBody],
   ['vertex', (crossing, body) => vertexProviderBody(body, crossing)],
@@ -74,6 +90,10 @@ function geminiUrl(origin: string, crossing: Crossing): string {
   return `${origin}/v1beta/models/${encodeURIComponent(crossing.providerModel)}:${action}`;
 }
 
+function usesGeminiUrl(provider: string): boolean {
+  return provider === 'gemini' || provider === 'aistudio';
+}
+
 function providerPath(provider: string, crossing: Crossing): string {
   if (provider === 'anthropic') return '/v1/messages';
   if (provider === 'xai') return '/responses';
@@ -87,7 +107,9 @@ export function credentialedRequestUrl(grant: ResolvedGrant, crossing: Crossing)
 
   if (grant.spend.custody !== 'credentialed') return `${origin}${providerPath('', crossing)}`;
 
-  if (grant.spend.provider === 'gemini') return geminiUrl(origin, crossing);
+  if (usesGeminiUrl(grant.spend.provider)) {
+    return geminiUrl(origin, crossing);
+  }
 
   const vertex =
     grant.spend.provider === 'vertex' ? vertexUrl(origin, grant.spend.credential, crossing) : null;

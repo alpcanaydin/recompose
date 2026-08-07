@@ -5,13 +5,14 @@ import { proxyFetchBoundMs } from '@recompose/contracts';
 
 import type { RequestOf } from './dialect/dispatcher';
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
+import type { AIStudioRelay } from './provider/ai-studio-relay';
 import type { TranslationRefusal } from './refusals';
 import type { SubscriptionRuntime } from './subscription/reach';
 
 import { translateRequest } from './dialect/dispatcher';
 import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
-import { requestSessions } from './gateway-session';
+import { requestSessions, requestsResponsesLite } from './gateway-session';
 import {
   ingressPayload,
   InvalidJsonBodyError,
@@ -20,6 +21,7 @@ import {
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
+import { reachAIStudio } from './provider/ai-studio-request';
 import {
   credentialedDialect,
   credentialedRequestBody,
@@ -46,6 +48,7 @@ export async function proxyModelRequest(
   spendGrantFor: SpendGrantFor,
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime = subscriptionRuntime(),
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
   const raw = await readJsonBody(c);
   const name = virtualNameOf(raw);
@@ -66,7 +69,7 @@ export async function proxyModelRequest(
     virtualModel: virtualModel.id,
     providerModel: virtualModel.target.providerModel,
     ...requestSessions(c, raw),
-    responsesLite: responsesLite(c),
+    responsesLite: requestsResponsesLite(c),
     anthropicBeta: c.req.header('anthropic-beta'),
   };
 
@@ -75,6 +78,7 @@ export async function proxyModelRequest(
     await spendGrantFor(gateway.slug, virtualModel.id),
     fetchLike,
     subscriptions,
+    aiStudio,
   );
 }
 
@@ -83,6 +87,7 @@ async function forwardGranted(
   grant: SpendGrant,
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
   const denied = deniedGrantAnswer(crossing, grant);
 
@@ -94,7 +99,7 @@ async function forwardGranted(
     return denied;
   }
 
-  return forwardResolved(crossing, grant, fetchLike, subscriptions);
+  return forwardResolved(crossing, grant, fetchLike, subscriptions, aiStudio);
 }
 
 async function forwardResolved(
@@ -102,6 +107,7 @@ async function forwardResolved(
   grant: Extract<SpendGrant, { verdict: 'resolved' }>,
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
   const upstreamDialect = dialectFor(grant, crossing.dialect);
   const outbound = outboundBodyFor(crossing, upstreamDialect);
@@ -110,7 +116,14 @@ async function forwardResolved(
     return refusalResponse(crossing.dialect, outbound.refusal);
   }
 
-  const upstream = await reachedUpstream(crossing, grant, outbound.body, fetchLike, subscriptions);
+  const upstream = await reachedUpstream(
+    crossing,
+    grant,
+    outbound.body,
+    fetchLike,
+    subscriptions,
+    aiStudio,
+  );
 
   if (upstream === null) {
     return unreachableTargetAnswer(crossing);
@@ -169,6 +182,7 @@ async function reachedUpstream(
   body: JsonObject,
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response | null> {
   try {
     if (grant.spend.custody === 'subscription') {
@@ -183,14 +197,7 @@ async function reachedUpstream(
       );
     }
 
-    const answer = await fetchLike(credentialedRequestUrl(grant, crossing), {
-      method: 'POST',
-      headers: credentialedRequestHeaders(grant.spend, crossing),
-      body: JSON.stringify(credentialedRequestBody(grant, crossing, body)),
-      signal: AbortSignal.timeout(proxyFetchBoundMs),
-    });
-
-    return await observedCredentialedAnswer(grant, crossing, answer);
+    return await reachedCredentialed(crossing, grant, body, fetchLike, aiStudio);
   } catch (failure) {
     if (failure instanceof InvalidJsonBodyError) {
       throw failure;
@@ -200,6 +207,31 @@ async function reachedUpstream(
 
     return null;
   }
+}
+
+async function reachedCredentialed(
+  crossing: Crossing,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  body: JsonObject,
+  fetchLike: typeof fetch,
+  aiStudio?: AIStudioRelay,
+): Promise<Response> {
+  if (grant.spend.custody === 'credentialed' && grant.spend.provider === 'aistudio') {
+    const answer = await reachAIStudio(crossing, grant, body, aiStudio);
+
+    if (answer === null) throw new Error('wsrelay: AI Studio channel is unavailable');
+
+    return answer;
+  }
+
+  const answer = await fetchLike(credentialedRequestUrl(grant, crossing), {
+    method: 'POST',
+    headers: credentialedRequestHeaders(grant.spend, crossing),
+    body: JSON.stringify(credentialedRequestBody(grant, crossing, body)),
+    signal: AbortSignal.timeout(proxyFetchBoundMs),
+  });
+
+  return observedCredentialedAnswer(grant, crossing, answer);
 }
 
 async function observedCredentialedAnswer(
@@ -216,10 +248,6 @@ async function observedCredentialedAnswer(
   const observed = observeXAIReplay(crossing, decorated);
 
   return restoreXAIToolResponse(observed, crossing.xaiNamespaceTools ?? {});
-}
-
-function responsesLite(c: Context): boolean {
-  return c.req.header('x-openai-internal-codex-responses-lite')?.trim().toLowerCase() === 'true';
 }
 
 type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };

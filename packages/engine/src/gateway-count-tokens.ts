@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 
 import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { JsonObject } from './gateway-wire';
+import type { AIStudioRelay } from './provider/ai-studio-relay';
 
 import { translateRequest } from './dialect/dispatcher';
 import { requestSessionId } from './gateway-session';
@@ -75,8 +76,17 @@ async function resolvedCount(
   providerModel: string,
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
-  const native = await nativeProviderCount(c, raw, grant, providerModel, subscriptions, fetchLike);
+  const native = await nativeProviderCount(
+    c,
+    raw,
+    grant,
+    providerModel,
+    subscriptions,
+    fetchLike,
+    aiStudio,
+  );
 
   if (native !== null) {
     return native;
@@ -117,6 +127,7 @@ async function countWithGrant(
   spendGrantFor: SpendGrantFor,
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
   const grant = await spendGrantFor(gateway.slug, model);
   const denied = deniedCount(gateway, model, grant);
@@ -131,7 +142,17 @@ async function countWithGrant(
 
   const providerModel = virtual.target.standing === 'bound' ? virtual.target.providerModel : model;
 
-  return safeResolvedCount(c, gateway, raw, model, grant, providerModel, subscriptions, fetchLike);
+  return safeResolvedCount(
+    c,
+    gateway,
+    raw,
+    model,
+    grant,
+    providerModel,
+    subscriptions,
+    fetchLike,
+    aiStudio,
+  );
 }
 
 async function safeResolvedCount(
@@ -143,9 +164,10 @@ async function safeResolvedCount(
   providerModel: string,
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
   try {
-    return await resolvedCount(c, raw, grant, providerModel, subscriptions, fetchLike);
+    return await resolvedCount(c, raw, grant, providerModel, subscriptions, fetchLike, aiStudio);
   } catch (failure) {
     console.error(`recompose could not count tokens for virtual model "${model}"`, failure);
 
@@ -159,6 +181,7 @@ export async function proxyTokenCountRequest(
   spendGrantFor: SpendGrantFor,
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch = globalThis.fetch,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> {
   const raw = await readJsonBody(c);
   const model = typeof raw['model'] === 'string' ? raw['model'] : '';
@@ -177,5 +200,6 @@ export async function proxyTokenCountRequest(
     spendGrantFor,
     subscriptions,
     fetchLike,
+    aiStudio,
   );
 }

@@ -146,6 +146,7 @@ const grantedSpendSchema = z.discriminatedUnion('custody', [
     custody: z.literal('credentialed'),
     provider: nonBlankString,
     credential: nonBlankString,
+    accountId: nonBlankString.optional(),
   }),
   z.strictObject(subscriptionCustodyShape),
   z.strictObject({ custody: z.literal('open') }),

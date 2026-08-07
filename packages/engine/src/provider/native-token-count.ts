@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 
 import type { SubscriptionRuntime } from '../gateway-proxy';
 import type { Crossing, JsonObject } from '../gateway-wire';
+import type { AIStudioRelay } from './ai-studio-relay';
 
 import { translateRequestToGemini } from '../dialect/gemini-bridge';
 import { requestSessions } from '../gateway-session';
@@ -25,9 +26,10 @@ export async function nativeProviderCount(
   providerModel: string,
   subscriptions: SubscriptionRuntime,
   fetchLike: typeof fetch,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response | null> {
   if (grant.spend.custody === 'credentialed') {
-    return credentialedCount(raw, grant, providerModel, fetchLike);
+    return credentialedCount(raw, grant, providerModel, fetchLike, aiStudio);
   }
 
   return grant.spend.custody === 'subscription' && grant.spend.provider === 'antigravity'
@@ -40,6 +42,7 @@ function credentialedCount(
   grant: ResolvedGrant,
   providerModel: string,
   fetchLike: typeof fetch,
+  aiStudio?: AIStudioRelay,
 ): Promise<Response> | null {
   if (grant.spend.custody !== 'credentialed') return null;
 
@@ -47,9 +50,37 @@ function credentialedCount(
     return geminiCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
   }
 
-  return grant.spend.provider === 'vertex'
-    ? vertexCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike)
+  if (grant.spend.provider === 'vertex') {
+    return vertexCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
+  }
+
+  return grant.spend.provider === 'aistudio'
+    ? aiStudioCount(raw, grant, providerModel, aiStudio)
     : null;
+}
+
+async function aiStudioCount(
+  raw: JsonObject,
+  grant: ResolvedGrant,
+  providerModel: string,
+  relay?: AIStudioRelay,
+): Promise<Response> {
+  const translated = geminiCountPayload(raw);
+  const channelId = grant.spend.custody === 'credentialed' ? grant.spend.accountId : undefined;
+
+  if (translated === null || channelId === undefined || relay === undefined) {
+    return refusalResponse('anthropic', emptyConversation());
+  }
+
+  const origin = grant.providerOrigin.replace(/\/+$/u, '');
+  const answer = await relay.request(channelId, {
+    method: 'POST',
+    url: `${origin}/v1beta/models/${encodeURIComponent(providerModel)}:countTokens`,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(vertexCountBody(translated)),
+  });
+
+  return geminiCountAnswer(answer, await answer.json());
 }
 
 async function antigravityCount(

@@ -1,6 +1,7 @@
 import type { Account } from '@recompose/contracts';
 
 const servingOrigins = new Map<string, string>([
+  ['aistudio', 'https://generativelanguage.googleapis.com'],
   ['anthropic', 'https://api.anthropic.com'],
   ['openai', 'https://api.openai.com'],
   ['gemini', 'https://generativelanguage.googleapis.com'],

@@ -86,3 +86,7 @@ export function requestSessions(
     ...(replayScopeId === undefined ? {} : { replayScopeId }),
   };
 }
+
+export function requestsResponsesLite(c: Context): boolean {
+  return c.req.header('x-openai-internal-codex-responses-lite')?.trim().toLowerCase() === 'true';
+}

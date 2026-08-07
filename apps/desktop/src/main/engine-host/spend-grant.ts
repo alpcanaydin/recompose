@@ -30,14 +30,19 @@ type GrantedSpend = Extract<SpendGrant, { verdict: 'resolved' }>['spend'];
  * spend says only whether one is in hand. Which header a vendor reads is the model-list look's
  * business, and folding it away here keeps the serving wire as narrow as it always was.
  */
-function spendFrom(custody: LookCustody): GrantedSpend {
+function spendFrom(custody: LookCustody, accountId: string): GrantedSpend {
   if (custody.custody === 'open') {
     return { custody: 'open' };
   }
 
   return custody.custody === 'subscription'
     ? custody
-    : { custody: 'credentialed', provider: custody.provider, credential: custody.credential };
+    : {
+        custody: 'credentialed',
+        provider: custody.provider,
+        credential: custody.credential,
+        accountId,
+      };
 }
 
 /**
@@ -66,7 +71,7 @@ export async function resolveSpendGrant(
     ? {
         verdict: 'resolved',
         providerOrigin: resolved.providerOrigin,
-        spend: spendFrom(resolved.custody),
+        spend: spendFrom(resolved.custody, target.accountId),
       }
     : resolved;
 }

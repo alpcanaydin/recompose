@@ -29,7 +29,12 @@ describe('what a spend request draws for a credentialed target', () => {
     ).resolves.toStrictEqual({
       verdict: 'resolved',
       providerOrigin: 'https://api.anthropic.com',
-      spend: { custody: 'credentialed', provider: 'anthropic', credential: secret },
+      spend: {
+        custody: 'credentialed',
+        provider: 'anthropic',
+        credential: secret,
+        accountId: 'acc-key',
+      },
     });
   });
 
@@ -41,7 +46,12 @@ describe('what a spend request draws for a credentialed target', () => {
     ).resolves.toStrictEqual({
       verdict: 'resolved',
       providerOrigin: 'https://openrouter.ai/api',
-      spend: { custody: 'credentialed', provider: 'openrouter', credential: secret },
+      spend: {
+        custody: 'credentialed',
+        provider: 'openrouter',
+        credential: secret,
+        accountId: 'acc-many',
+      },
     });
   });
 
