@@ -95,6 +95,16 @@ export function codexCredential(): string {
   });
 }
 
+export function antigravityCredential(): string {
+  return JSON.stringify({
+    type: 'antigravity',
+    access_token: 'google-access',
+    refresh_token: 'google-refresh',
+    expired: '2027-01-15T08:00:00.000Z',
+    project_id: 'cloud-project',
+  });
+}
+
 export function claudeAnswer(content: readonly unknown[] = []): Response {
   return Response.json({
     id: 'msg_1',

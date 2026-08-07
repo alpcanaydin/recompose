@@ -237,6 +237,7 @@ async function reachedUpstream(
         crossing.dialect,
         crossing.replayScopeId,
         crossing.responsesLite,
+        { crossing, plugins },
       );
     }
 

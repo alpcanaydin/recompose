@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PluginClient } from './plugin-abi';
-
 import { createGatewayApp } from './gateway-app';
 import {
   aCredentialedGrant,
@@ -12,12 +10,12 @@ import {
   headersSentIn,
   neverFetches,
 } from './gateway-app.testkit';
-import { pluginMethods } from './plugin-abi';
+import { requestInterceptorHost } from './gateway-plugin-interceptor.testkit';
 import { PluginHost } from './plugin-host';
 
 describe('gateway after-auth plugin rewriting', () => {
   it('should rewrite provider-ready headers and body', async () => {
-    const plugin = await afterAuthHost(() => ({
+    const plugin = await requestInterceptorHost(() => ({
       Headers: { 'x-after-plugin': ['yes'] },
       Body: Buffer.from(
         JSON.stringify({
@@ -41,7 +39,7 @@ describe('gateway after-auth plugin rewriting', () => {
 
 describe('gateway after-auth plugin termination', () => {
   it('should terminate after grant resolution but before fetch', async () => {
-    const plugin = await afterAuthHost(() => ({
+    const plugin = await requestInterceptorHost(() => ({
       Terminate: true,
       StatusCode: 409,
       ResponseHeaders: { 'content-type': ['application/json'] },
@@ -95,36 +93,6 @@ async function ask(app: ReturnType<typeof createGatewayApp>): Promise<Response> 
   });
 }
 
-async function afterAuthHost(answer: () => Record<string, unknown>): Promise<PluginHost> {
-  const client: PluginClient = {
-    call: async (method) => {
-      await Promise.resolve();
-
-      if (method === pluginMethods.register) return registrationAnswer();
-      if (method === pluginMethods.requestInterceptBefore) return encoded({ ok: true, result: {} });
-
-      return encoded({ ok: true, result: answer() });
-    },
-    shutdown: () => undefined,
-  };
-  const host = new PluginHost(() => client);
-
-  await host.load('after-auth', '/after-auth');
-
-  return host;
-}
-
-function registrationAnswer(): Uint8Array {
-  return encoded({
-    ok: true,
-    result: {
-      schema_version: 2,
-      metadata: { name: 'after auth' },
-      capabilities: { request_interceptor: true },
-    },
-  });
-}
-
 function chatAnswer(): Response {
   return Response.json({
     id: 'chatcmpl_1',
@@ -137,8 +105,4 @@ function chatAnswer(): Response {
       },
     ],
   });
-}
-
-function encoded(value: unknown): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify(value));
 }

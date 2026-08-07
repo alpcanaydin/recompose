@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { JsonObject, ProxyDialect } from '../gateway-wire';
 import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
+import type { SubscriptionAttempt, SubscriptionPluginContext } from './intercepted-send';
 import type { ClaudeProfile } from './provider-transport';
 import type { RefreshFetch } from './refresh';
 
@@ -16,8 +17,7 @@ import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
 import { CodexReasoningReplay } from './codex-replay';
 import { codexProviderRequest } from './codex-request';
-import { parseSubscriptionCredential, withClaudeCredentialIdentity } from './credentials';
-import { sendObservedSubscription } from './observed-send';
+import { sendInterceptedSubscription } from './intercepted-send';
 import {
   fetchClaudeProfile,
   sendSubscriptionRequest,
@@ -29,6 +29,7 @@ import {
   shouldRefreshUnauthorized,
 } from './reach-credential';
 import { observeSubscriptionAnswer, subscriptionDiagnosticsKey } from './reach-observation';
+import { readyClaudeIdentity } from './ready-claude-identity';
 
 export type SubscriptionRuntime = {
   send: (provider: SubscriptionProviderId, request: ProviderRequest) => Promise<Response>;
@@ -161,6 +162,7 @@ export async function reachSubscription(
   sourceDialect: ProxyDialect = 'responses',
   replayScopeId?: string,
   responsesLite?: boolean,
+  pluginContext?: SubscriptionPluginContext,
 ): Promise<Response> {
   const scope = subscriptionScope(sessionId, sourceDialect, replayScopeId, responsesLite);
   const spend = subscriptionSpendOf(grant);
@@ -175,19 +177,29 @@ export async function reachSubscription(
 
   const ready = await readySubscriptionCredential(spend, runtime);
   const identified = await readyClaudeIdentity(spend, ready, runtime);
-  const answer = await sendObservedSubscription(
+  const attempt = await sendInterceptedSubscription(
     spend.provider,
     spend.accountId,
     body,
     providerRequestFor(grant, body, identified.credential, runtime, scope),
     runtime.send,
+    pluginContext,
   );
 
-  const finalAnswer = shouldRefreshUnauthorized(answer, identified.credential)
-    ? await retryWithRefreshedCredential(grant, spend, body, identified.blob, runtime, scope)
-    : answer;
+  const finalAttempt = await completedAttempt(
+    attempt,
+    grant,
+    spend,
+    body,
+    identified,
+    runtime,
+    scope,
+    pluginContext,
+  );
 
-  return observeSubscriptionAnswer(grant, body, finalAnswer, runtime, scope);
+  return finalAttempt.terminated
+    ? finalAttempt.answer
+    : observeSubscriptionAnswer(grant, body, finalAttempt.answer, runtime, scope);
 }
 
 function subscriptionScope(
@@ -220,60 +232,29 @@ function codexReplayKey(body: JsonObject, sessionId: string): string {
 
 type ReadyCredential = { blob: string; credential: ParsedSubscriptionCredential };
 
-async function readyClaudeIdentity(
+async function completedAttempt(
+  attempt: SubscriptionAttempt,
+  grant: ResolvedGrant,
   spend: SubscriptionSpend,
+  body: JsonObject,
   ready: ReadyCredential,
   runtime: SubscriptionRuntime,
-): Promise<ReadyCredential> {
-  if (spend.provider !== 'anthropic') {
-    return ready;
+  scope: SubscriptionScope,
+  pluginContext?: SubscriptionPluginContext,
+): Promise<SubscriptionAttempt> {
+  if (attempt.terminated || !shouldRefreshUnauthorized(attempt.answer, ready.credential)) {
+    return attempt;
   }
 
-  if (claudeIdentityOf(ready.credential) !== undefined) {
-    return ready;
-  }
-
-  const identity = await resolvedClaudeIdentity(ready.credential, runtime);
-
-  const blob = withClaudeCredentialIdentity(ready.blob, identity.accountUuid, identity.deviceId);
-
-  await runtime.persist(spend.provider, spend.accountId, blob);
-
-  const credential = parseSubscriptionCredential(spend.provider, blob);
-
-  if (credential === null) {
-    throw new Error('the identified subscription credential could not be read');
-  }
-
-  return { blob, credential };
-}
-
-async function resolvedClaudeIdentity(
-  credential: ParsedSubscriptionCredential,
-  runtime: SubscriptionRuntime,
-) {
-  return {
-    accountUuid: await accountUuidFor(credential, runtime),
-    deviceId: deviceIdFor(credential, runtime),
-  };
-}
-
-async function accountUuidFor(
-  credential: ParsedSubscriptionCredential,
-  runtime: SubscriptionRuntime,
-): Promise<string> {
-  if (credential.accountUuid !== undefined) {
-    return credential.accountUuid;
-  }
-
-  return (await runtime.fetchClaudeProfile(credential.accessToken)).account.uuid;
-}
-
-function deviceIdFor(
-  credential: ParsedSubscriptionCredential,
-  runtime: SubscriptionRuntime,
-): string {
-  return credential.deviceIds?.[0] ?? runtime.newClaudeDeviceId();
+  return retryWithRefreshedCredential(
+    grant,
+    spend,
+    body,
+    ready.blob,
+    runtime,
+    scope,
+    pluginContext,
+  );
 }
 
 async function retryWithRefreshedCredential(
@@ -283,14 +264,16 @@ async function retryWithRefreshedCredential(
   blob: string,
   runtime: SubscriptionRuntime,
   scope: SubscriptionScope,
-): Promise<Response> {
+  pluginContext?: SubscriptionPluginContext,
+): Promise<SubscriptionAttempt> {
   const retried = await refreshedAndPersisted(spend, blob, runtime);
 
-  return sendObservedSubscription(
+  return sendInterceptedSubscription(
     spend.provider,
     spend.accountId,
     body,
     providerRequestFor(grant, body, retried.credential, runtime, scope),
     runtime.send,
+    pluginContext,
   );
 }

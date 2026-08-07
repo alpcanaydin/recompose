@@ -3,19 +3,12 @@ import { describe, expect, test } from 'vitest';
 import { createGatewayApp } from './gateway-app';
 import { aGatewayHolding, granting, neverFetches } from './gateway-app.testkit';
 import {
+  antigravityCredential,
   chatRequest,
   runtimeAnswering,
   subscriptionGrant,
   subscriptionModel,
 } from './gateway-proxy-subscription.testkit';
-
-const credential = JSON.stringify({
-  type: 'antigravity',
-  access_token: 'google-access',
-  refresh_token: 'google-refresh',
-  expired: '2027-01-15T08:00:00.000Z',
-  project_id: 'cloud-project',
-});
 
 describe('serving an Antigravity subscription target', () => {
   test('Chat Completions crosses through the Antigravity envelope and Gemini answer', async () => {
@@ -27,7 +20,7 @@ describe('serving an Antigravity subscription target', () => {
         usageMetadata: { promptTokenCount: 3, candidatesTokenCount: 2 },
       }),
     );
-    const grants = granting(subscriptionGrant('antigravity', credential));
+    const grants = granting(subscriptionGrant('antigravity', antigravityCredential()));
     const app = createGatewayApp(
       aGatewayHolding(subscriptionModel),
       grants.grantFor,
