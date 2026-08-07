@@ -6,6 +6,7 @@ export type ParsedSubscriptionCredential = {
   accessToken: string;
   refreshToken?: string;
   accountId?: string;
+  planType?: string;
   accountUuid?: string;
   deviceIds?: string[];
   expiresAt?: number;
@@ -41,21 +42,42 @@ function firstNonBlank(...values: unknown[]): string | undefined {
   return values.map(nonBlank).find((value) => value !== undefined);
 }
 
-function jwtExpiry(token: string): number | undefined {
+function jwtClaims(token: string): JsonObject | null {
   const encoded = token.split('.')[1];
 
-  if (encoded === undefined) {
-    return undefined;
-  }
+  if (encoded === undefined) return null;
 
   try {
-    const claims = objectOf(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
-    const expiry = finiteNumber(claims?.['exp']);
-
-    return expiry === undefined ? undefined : expiry * 1000;
+    return objectOf(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
   } catch {
-    return undefined;
+    return null;
   }
+}
+
+function jwtExpiry(token: string): number | undefined {
+  const expiry = finiteNumber(jwtClaims(token)?.['exp']);
+
+  return expiry === undefined ? undefined : expiry * 1000;
+}
+
+function codexPlanType(token: string): string | undefined {
+  const auth = objectOf(jwtClaims(token)?.['https://api.openai.com/auth']);
+
+  return nonBlank(auth?.['chatgpt_plan_type']);
+}
+
+function codexCredentialFields(accessToken: string, tokens: JsonObject) {
+  const refreshToken = nonBlank(tokens['refresh_token']);
+  const accountId = nonBlank(tokens['account_id']);
+  const expiresAt = jwtExpiry(accessToken);
+  const planType = codexPlanType(accessToken);
+
+  return {
+    ...(refreshToken === undefined ? {} : { refreshToken }),
+    ...(accountId === undefined ? {} : { accountId }),
+    ...(planType === undefined ? {} : { planType }),
+    ...(expiresAt === undefined ? {} : { expiresAt }),
+  };
 }
 
 function finiteNumber(value: unknown): number | undefined {
@@ -119,15 +141,9 @@ function codexCredential(tokens: JsonObject): ParsedSubscriptionCredential | nul
     return null;
   }
 
-  const refreshToken = nonBlank(tokens['refresh_token']);
-  const accountId = nonBlank(tokens['account_id']);
-  const expiresAt = jwtExpiry(accessToken);
-
   return {
     accessToken,
-    ...(refreshToken === undefined ? {} : { refreshToken }),
-    ...(accountId === undefined ? {} : { accountId }),
-    ...(expiresAt === undefined ? {} : { expiresAt }),
+    ...codexCredentialFields(accessToken, tokens),
   };
 }
 

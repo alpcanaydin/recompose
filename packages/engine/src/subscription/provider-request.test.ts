@@ -8,6 +8,8 @@ const ids = {
   requestId: '22222222-2222-4222-8222-222222222222',
 };
 
+const imageTool = { type: 'image_generation', output_format: 'png' };
+
 const codexHeaders: [string, string][] = [
   ['Content-Type', 'application/json'],
   ['Authorization', 'Bearer codex-access'],
@@ -66,6 +68,8 @@ describe('the request sent as Codex TUI 0.146.0', () => {
       stream: true,
       prompt_cache_key: ids.sessionId,
       include: ['reasoning.encrypted_content'],
+      tools: [imageTool],
+      parallel_tool_calls: true,
     });
     expect(request.headers).toEqual(codexHeaders);
   });
@@ -114,6 +118,8 @@ describe('normalizing a request for Codex compatibility', () => {
       include: ['reasoning.encrypted_content'],
       instructions: '',
       input: [{ type: 'message', role: 'developer', content: 'hello' }],
+      tools: [imageTool],
+      parallel_tool_calls: true,
     });
   });
 });
@@ -154,7 +160,7 @@ describe('normalizing optional Codex request fields', () => {
           content: [{ type: 'input_text', text: 'find current model news' }],
         },
       ],
-      tools: [{ type: 'web_search' }],
+      tools: [{ type: 'web_search' }, imageTool],
       tool_choice: {
         type: 'allowed_tools',
         tools: [{ type: 'web_search' }, { type: 'web_search' }],
@@ -201,8 +207,8 @@ describe('sanitizing Codex Responses input identity', () => {
 
 describe('normalizing Codex parallel tool calls', () => {
   test.each([
-    [{}, undefined],
-    [{ tools: [], parallel_tool_calls: false }, undefined],
+    [{}, true],
+    [{ tools: [], parallel_tool_calls: false }, false],
     [{ tools: [{ type: 'function', name: 'lookup' }], parallel_tool_calls: true }, true],
   ])('matches tool availability for %j', (fields, expected) => {
     const request = codexProviderRequest(
@@ -275,7 +281,7 @@ describe('bounding Codex tool identities', () => {
     );
 
     expect(JSON.parse(request.body)).toMatchObject({
-      tools: [{ name: 'mcp__search' }],
+      tools: [{ name: 'mcp__search' }, imageTool],
       tool_choice: { name: 'mcp__search' },
       input: [{ name: 'mcp__search' }],
     });

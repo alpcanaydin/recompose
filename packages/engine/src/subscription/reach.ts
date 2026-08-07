@@ -72,6 +72,7 @@ type SubscriptionScope = {
   sessionId: string;
   sourceDialect: ProxyDialect;
   replayScopeId: string;
+  responsesLite: boolean;
 };
 
 function providerRequestFor(
@@ -121,7 +122,13 @@ function providerRequestFor(
 
   const replayed = replayedCodexBody(body, runtime, scope.replayScopeId, scope.sourceDialect);
 
-  return codexProviderRequest(grant.providerOrigin, replayed, credential, runtime.randomUUID());
+  return codexProviderRequest(
+    grant.providerOrigin,
+    replayed,
+    credential,
+    runtime.randomUUID(),
+    scope.responsesLite,
+  );
 }
 
 function replayedCodexBody(
@@ -158,8 +165,9 @@ export async function reachSubscription(
   sessionId = runtime.randomUUID(),
   sourceDialect: ProxyDialect = 'responses',
   replayScopeId?: string,
+  responsesLite?: boolean,
 ): Promise<Response> {
-  const scope = subscriptionScope(sessionId, sourceDialect, replayScopeId);
+  const scope = subscriptionScope(sessionId, sourceDialect, replayScopeId, responsesLite);
   const spend = subscriptionSpendOf(grant);
   const preflight = antigravityPairingPreflight(
     spend,
@@ -188,8 +196,14 @@ function subscriptionScope(
   sessionId: string,
   sourceDialect: ProxyDialect,
   replayScopeId: string | undefined,
+  responsesLite: boolean | undefined,
 ): SubscriptionScope {
-  return { sessionId, sourceDialect, replayScopeId: replayScopeId ?? sessionId };
+  return {
+    sessionId,
+    sourceDialect,
+    replayScopeId: replayScopeId ?? sessionId,
+    responsesLite: responsesLite === true,
+  };
 }
 
 function subscriptionSpendOf(grant: ResolvedGrant): SubscriptionSpend {

@@ -28,6 +28,7 @@ export type Crossing = {
   providerModel: string;
   sessionId?: string | undefined;
   replayScopeId?: string | undefined;
+  responsesLite?: boolean | undefined;
 };
 
 export function isJsonObject(value: unknown): value is JsonObject {

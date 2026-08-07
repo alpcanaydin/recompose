@@ -67,7 +67,10 @@ describe('reading and writing Claude credential identity', () => {
 
 describe('reading Codex and malformed credential bundles', () => {
   test('Codex credentials expose the account id and access-token JWT expiry', () => {
-    const accessToken = jwtWith({ exp: 1_800_000_000 });
+    const accessToken = jwtWith({
+      exp: 1_800_000_000,
+      'https://api.openai.com/auth': { chatgpt_plan_type: 'plus' },
+    });
     const parsed = parseSubscriptionCredential(
       'openai',
       JSON.stringify({
@@ -83,6 +86,7 @@ describe('reading Codex and malformed credential bundles', () => {
       accessToken,
       refreshToken: 'codex-refresh',
       accountId: 'acct-work',
+      planType: 'plus',
       expiresAt: 1_800_000_000_000,
     });
   });

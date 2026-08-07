@@ -55,6 +55,7 @@ export async function proxyModelRequest(
     virtualModel: virtualModel.id,
     providerModel: virtualModel.target.providerModel,
     ...requestSessions(c, raw),
+    ...(responsesLite(c) ? { responsesLite: true } : {}),
   };
 
   return forwardGranted(
@@ -162,6 +163,7 @@ async function reachedUpstream(
         crossing.sessionId,
         crossing.dialect,
         crossing.replayScopeId,
+        crossing.responsesLite,
       );
     }
 
@@ -180,6 +182,10 @@ async function reachedUpstream(
 
     return null;
   }
+}
+
+function responsesLite(c: Context): boolean {
+  return c.req.header('x-openai-internal-codex-responses-lite')?.trim().toLowerCase() === 'true';
 }
 
 type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };

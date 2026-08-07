@@ -7,6 +7,7 @@ import {
   dropsCodexEncryptedReasoning,
   normalizedCodexItemId,
 } from './codex-identities';
+import { codexResponsesLite, injectCodexImageTool } from './codex-image-tools';
 
 type JsonObject = Record<string, unknown>;
 
@@ -183,7 +184,11 @@ function renamedToolChoice(value: unknown, names: Map<string, string>): unknown 
   return isJsonObject(entry) ? { ...entry, tools: renamedEntries(entry['tools'], names) } : entry;
 }
 
-function normalizedBody(rawBody: JsonObject): JsonObject {
+function normalizedBody(
+  rawBody: JsonObject,
+  planType: string | undefined,
+  forcedResponsesLite: boolean,
+): JsonObject {
   const body: JsonObject = { ...rawBody };
 
   for (const field of REMOVED_FIELDS) {
@@ -201,26 +206,22 @@ function normalizedBody(rawBody: JsonObject): JsonObject {
   body['tool_choice'] = renamedToolChoice(body['tool_choice'], names);
   body['stream'] = true;
   body['store'] = false;
-  normalizeParallelToolCalls(body);
+  injectCodexImageTool(body, planType, forcedResponsesLite);
+  normalizeParallelToolCalls(body, forcedResponsesLite);
   body['include'] = ['reasoning.encrypted_content'];
   body['instructions'] ??= '';
 
   return body;
 }
 
-function isResponsesLite(body: JsonObject): boolean {
-  const metadata = body['client_metadata'];
-
-  return (
-    isJsonObject(metadata) &&
-    metadata['ws_request_header_x_openai_internal_codex_responses_lite'] === 'true'
-  );
+function isResponsesLite(body: JsonObject, forced: boolean): boolean {
+  return forced || codexResponsesLite(body);
 }
 
-function normalizeParallelToolCalls(body: JsonObject): void {
+function normalizeParallelToolCalls(body: JsonObject, forcedResponsesLite: boolean): void {
   const tools = body['tools'];
 
-  if (isResponsesLite(body)) {
+  if (isResponsesLite(body, forcedResponsesLite)) {
     body['parallel_tool_calls'] = false;
   } else if (!Array.isArray(tools) || tools.length === 0) {
     delete body['parallel_tool_calls'];
@@ -234,8 +235,9 @@ export function codexProviderRequest(
   rawBody: JsonObject,
   credential: ParsedSubscriptionCredential,
   sessionId: string,
+  responsesLite = false,
 ): ProviderRequest {
-  const body = normalizedBody(rawBody);
+  const body = normalizedBody(rawBody, credential.planType, responsesLite);
 
   body['prompt_cache_key'] = sessionId;
 
