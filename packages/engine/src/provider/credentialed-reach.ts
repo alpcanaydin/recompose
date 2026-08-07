@@ -3,8 +3,10 @@ import type { SpendGrant } from '@recompose/contracts';
 import { proxyFetchBoundMs } from '@recompose/contracts';
 
 import type { Crossing, JsonObject } from '../gateway-wire';
+import type { PluginHost } from '../plugin-host';
 import type { AIStudioRelay, RelayRequest } from './ai-studio-relay';
 
+import { afterAuthPlugins, flattenedHeaders, headerMap } from '../plugin-after-auth';
 import { reachAIStudio } from './ai-studio-request';
 import {
   credentialedDialect,
@@ -72,14 +74,45 @@ async function providerAnswer(
   return restoreXAIToolResponse(observed, crossing.xaiNamespaceTools ?? {});
 }
 
+async function interceptedRequest(
+  crossing: Crossing,
+  grant: ResolvedGrant,
+  prepared: RelayRequest,
+  plugins?: PluginHost,
+): Promise<RelayRequest | Response> {
+  const dialect =
+    grant.spend.custody === 'credentialed'
+      ? credentialedDialect(grant.spend.provider, crossing.dialect)
+      : 'chat-completions';
+  const intercepted = await afterAuthPlugins(
+    crossing,
+    dialect,
+    headerMap(prepared.headers),
+    new TextEncoder().encode(prepared.body),
+    plugins,
+  );
+
+  return 'response' in intercepted
+    ? intercepted.response
+    : {
+        ...prepared,
+        headers: flattenedHeaders(intercepted.headers),
+        body: new TextDecoder().decode(intercepted.body),
+      };
+}
+
 export async function reachCredentialed(
   crossing: Crossing,
   grant: ResolvedGrant,
   body: JsonObject,
   fetchLike: typeof fetch,
   aiStudio?: AIStudioRelay,
+  plugins?: PluginHost,
 ): Promise<Response> {
-  const request = requestFor(grant, crossing, body);
+  const prepared = requestFor(grant, crossing, body);
+  const request = await interceptedRequest(crossing, grant, prepared, plugins);
+
+  if (request instanceof Response) return request;
   const spend = grant.spend;
   const span = providerObservability().start({
     provider: spend.custody === 'credentialed' ? spend.provider : 'open',

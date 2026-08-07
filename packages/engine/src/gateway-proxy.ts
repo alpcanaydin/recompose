@@ -14,7 +14,7 @@ import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { answerFrom, unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
 import { beforeGatewayPlugins } from './gateway-plugin-before';
 import { gatewayRequestCrossing } from './gateway-request-crossing';
-import { ingressPayload, InvalidJsonBodyError, refusalResponse, wantsStream } from './gateway-wire';
+import { ingressPayload, InvalidJsonBodyError, refusalResponse, streamAsk } from './gateway-wire';
 import { pluginGatewayTarget, reachPluginExecutor } from './plugin-gateway';
 import { reachCredentialed } from './provider/credentialed-reach';
 import { credentialedDialect } from './provider/credentialed-target';
@@ -54,7 +54,15 @@ export async function proxyModelRequest(
       ? await pluginGatewayTarget(c, effectiveCrossing, grant, plugins)
       : null;
 
-  return forwardGranted(effectiveCrossing, grant, fetchLike, subscriptions, aiStudio, pluginTarget);
+  return forwardGranted(
+    effectiveCrossing,
+    grant,
+    fetchLike,
+    subscriptions,
+    aiStudio,
+    pluginTarget,
+    plugins,
+  );
 }
 
 async function forwardGranted(
@@ -64,6 +72,7 @@ async function forwardGranted(
   subscriptions: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
   pluginTarget?: PluginGatewayTarget | null,
+  plugins?: PluginHost,
 ): Promise<Response> {
   const denied = deniedGrantAnswer(crossing, grant);
 
@@ -75,7 +84,15 @@ async function forwardGranted(
     return denied;
   }
 
-  return forwardResolved(crossing, grant, fetchLike, subscriptions, aiStudio, pluginTarget);
+  return forwardResolved(
+    crossing,
+    grant,
+    fetchLike,
+    subscriptions,
+    aiStudio,
+    pluginTarget,
+    plugins,
+  );
 }
 
 async function forwardResolved(
@@ -85,9 +102,10 @@ async function forwardResolved(
   subscriptions: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
   pluginTarget?: PluginGatewayTarget | null,
+  plugins?: PluginHost,
 ): Promise<Response> {
   if (pluginTarget?.kind === 'executor') {
-    return forwardPluginExecutor(crossing, grant, pluginTarget);
+    return forwardPluginExecutor(crossing, grant, pluginTarget, plugins);
   }
 
   return forwardProviderResolved(
@@ -96,6 +114,7 @@ async function forwardResolved(
     fetchLike,
     subscriptions,
     aiStudio,
+    plugins,
   );
 }
 
@@ -114,6 +133,7 @@ async function forwardProviderResolved(
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
+  plugins?: PluginHost,
 ): Promise<Response> {
   const upstreamDialect = dialectFor(grant, effectiveCrossing.dialect);
   const outbound = outboundBodyFor(effectiveCrossing, upstreamDialect);
@@ -129,6 +149,7 @@ async function forwardProviderResolved(
     fetchLike,
     subscriptions,
     aiStudio,
+    plugins,
   );
 
   if (upstream === null) {
@@ -142,12 +163,13 @@ async function forwardPluginExecutor(
   crossing: Crossing,
   grant: Extract<SpendGrant, { verdict: 'resolved' }>,
   target: Extract<PluginGatewayTarget, { kind: 'executor' }>,
+  plugins?: PluginHost,
 ): Promise<Response> {
   const outbound = outboundBodyFor(crossing, target.inputDialect);
 
   if ('refusal' in outbound) return refusalResponse(crossing.dialect, outbound.refusal);
 
-  const upstream = await reachPluginExecutor(target, crossing, grant, outbound.body);
+  const upstream = await reachPluginExecutor(target, crossing, grant, outbound.body, plugins);
 
   return answerFrom(crossing, upstream, target.outputDialect);
 }
@@ -203,6 +225,7 @@ async function reachedUpstream(
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
+  plugins?: PluginHost,
 ): Promise<Response | null> {
   try {
     if (grant.spend.custody === 'subscription') {
@@ -217,7 +240,7 @@ async function reachedUpstream(
       );
     }
 
-    return await reachCredentialed(crossing, grant, body, fetchLike, aiStudio);
+    return await reachCredentialed(crossing, grant, body, fetchLike, aiStudio, plugins);
   } catch (failure) {
     if (failure instanceof InvalidJsonBodyError) {
       throw failure;
@@ -271,8 +294,4 @@ function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): 
   return {
     body: { ...crossed.value, model: crossing.providerModel, ...streamAsk(crossing.raw) },
   };
-}
-
-function streamAsk(raw: JsonObject): { stream?: boolean } {
-  return wantsStream(raw) ? { stream: true } : {};
 }

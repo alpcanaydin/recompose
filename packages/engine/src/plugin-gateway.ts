@@ -5,6 +5,7 @@ import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gate
 import type { PluginHost } from './plugin-host';
 
 import { requestHeaderMap, requestQueryMap } from './gateway-request-metadata';
+import { afterAuthPlugins } from './plugin-after-auth';
 import { pluginAccountId, pluginCredential } from './plugin-auth';
 import { PluginExecutorAdapter, pluginExecutorForProvider } from './plugin-executor';
 
@@ -169,16 +170,35 @@ function directResponse(payload: Uint8Array, incoming: Headers): Response {
   return new Response(payload, { headers });
 }
 
-export async function reachPluginExecutor(
+async function preparedExecutorRequest(
+  target: Extract<PluginGatewayTarget, { kind: 'executor' }>,
+  crossing: Crossing,
+  request: Parameters<PluginExecutorAdapter['execute']>[0],
+  plugins?: PluginHost,
+): Promise<Parameters<PluginExecutorAdapter['execute']>[0] | Response> {
+  const intercepted = await afterAuthPlugins(
+    crossing,
+    target.inputDialect,
+    request.headers,
+    request.payload,
+    plugins,
+    target.adapter.id(),
+  );
+
+  return 'response' in intercepted
+    ? intercepted.response
+    : { ...request, headers: intercepted.headers, payload: intercepted.body };
+}
+
+function executorRequest(
   target: Extract<PluginGatewayTarget, { kind: 'executor' }>,
   crossing: Crossing,
   grant: ResolvedGrant,
   body: JsonObject,
-): Promise<Response> {
-  const provider = providerOf(grant) ?? '';
-  const request = {
+): Parameters<PluginExecutorAdapter['execute']>[0] {
+  return {
     authId: pluginAccountId(grant),
-    authProvider: provider,
+    authProvider: providerOf(grant) ?? '',
     model: crossing.providerModel,
     format: target.outputDialect,
     stream: crossing.raw['stream'] === true,
@@ -193,14 +213,27 @@ export async function reachPluginExecutor(
     authMetadata: {},
     authAttributes: {},
   };
+}
 
-  if (request.stream) {
-    const response = await target.adapter.executeStream(request);
+export async function reachPluginExecutor(
+  target: Extract<PluginGatewayTarget, { kind: 'executor' }>,
+  crossing: Crossing,
+  grant: ResolvedGrant,
+  body: JsonObject,
+  plugins?: PluginHost,
+): Promise<Response> {
+  const request = executorRequest(target, crossing, grant, body);
+  const prepared = await preparedExecutorRequest(target, crossing, request, plugins);
+
+  if (prepared instanceof Response) return prepared;
+
+  if (prepared.stream) {
+    const response = await target.adapter.executeStream(prepared);
 
     return streamResponse(response.chunks, response.headers);
   }
 
-  const response = await target.adapter.execute(request);
+  const response = await target.adapter.execute(prepared);
 
   return directResponse(response.payload, response.headers);
 }

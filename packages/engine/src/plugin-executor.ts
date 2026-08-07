@@ -177,6 +177,10 @@ export class PluginExecutorAdapter {
     };
   }
 
+  public id(): string {
+    return this.pluginId;
+  }
+
   public async identifier(signal?: AbortSignal): Promise<string> {
     return this.host.call(this.pluginId, 'executor.identifier', {}, identifierResponse, signal);
   }

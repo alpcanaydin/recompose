@@ -9,66 +9,65 @@ import {
   aVirtualModel,
   bodySentIn,
   fetchAnsweringWith,
+  headersSentIn,
   neverFetches,
 } from './gateway-app.testkit';
-import { isJsonObject } from './gateway-wire';
 import { pluginMethods } from './plugin-abi';
 import { PluginHost } from './plugin-host';
 
-describe('gateway before-auth plugin rewriting', () => {
-  it('should send the plugin-rewritten request upstream', async () => {
-    const plugin = await interceptorHost(() => ({
+describe('gateway after-auth plugin rewriting', () => {
+  it('should rewrite provider-ready headers and body', async () => {
+    const plugin = await afterAuthHost(() => ({
+      Headers: { 'x-after-plugin': ['yes'] },
       Body: Buffer.from(
         JSON.stringify({
-          model: 'fast',
-          messages: [{ role: 'user', content: 'rewritten' }],
+          model: 'gpt-5-mini',
+          messages: [{ role: 'user', content: 'after-auth' }],
         }),
       ).toString('base64'),
     }));
     const upstream = fetchAnsweringWith(chatAnswer);
-    const app = gateway(plugin.host, upstream.fetchLike);
+    const app = gateway(plugin, upstream.fetchLike);
 
     const answer = await ask(app);
 
+    expect(headersSentIn(upstream.sent).get('x-after-plugin')).toBe('yes');
     expect(bodySentIn(upstream.sent)).toMatchObject({
-      messages: [{ role: 'user', content: 'rewritten' }],
+      messages: [{ role: 'user', content: 'after-auth' }],
     });
-    expect(plugin.methods).toContain(pluginMethods.requestInterceptBefore);
-    expect(plugin.methods).toContain(pluginMethods.requestInterceptAfter);
     expect(answer.status).toBe(200);
   });
 });
 
-describe('gateway before-auth plugin termination', () => {
-  it('should return the plugin response without resolving a grant or fetching', async () => {
-    const plugin = await interceptorHost(() => ({
+describe('gateway after-auth plugin termination', () => {
+  it('should terminate after grant resolution but before fetch', async () => {
+    const plugin = await afterAuthHost(() => ({
       Terminate: true,
-      StatusCode: 451,
-      ResponseHeaders: { 'content-type': ['application/json'], 'x-plugin': ['blocked'] },
-      ResponseBody: Buffer.from('{"error":"blocked"}').toString('base64'),
+      StatusCode: 409,
+      ResponseHeaders: { 'content-type': ['application/json'] },
+      ResponseBody: Buffer.from('{"error":"after-auth blocked"}').toString('base64'),
     }));
-    const asked: string[] = [];
+    let grants = 0;
     const app = createGatewayApp(
       aGatewayHolding(aVirtualModel()),
-      async (_slug, model) => {
+      async () => {
         await Promise.resolve();
-        asked.push(model);
+        grants += 1;
 
-        return aCredentialedGrant();
+        return aCredentialedGrant('https://api.openai.com', 'openai');
       },
       neverFetches,
       undefined,
       undefined,
       undefined,
-      plugin.host,
+      plugin,
     );
 
     const answer = await ask(app);
 
-    expect(answer.status).toBe(451);
-    expect(answer.headers.get('x-plugin')).toBe('blocked');
-    await expect(answer.json()).resolves.toEqual({ error: 'blocked' });
-    expect(asked).toEqual([]);
+    expect(grants).toBe(1);
+    expect(answer.status).toBe(409);
+    await expect(answer.json()).resolves.toEqual({ error: 'after-auth blocked' });
   });
 });
 
@@ -96,18 +95,13 @@ async function ask(app: ReturnType<typeof createGatewayApp>): Promise<Response> 
   });
 }
 
-async function interceptorHost(answer: () => Record<string, unknown>) {
-  const methods: string[] = [];
+async function afterAuthHost(answer: () => Record<string, unknown>): Promise<PluginHost> {
   const client: PluginClient = {
-    call: async (method, request) => {
+    call: async (method) => {
       await Promise.resolve();
-      methods.push(method);
 
       if (method === pluginMethods.register) return registrationAnswer();
-
-      const parsed: unknown = JSON.parse(new TextDecoder().decode(request));
-
-      if (!isJsonObject(parsed)) throw new Error('plugin request is not an object');
+      if (method === pluginMethods.requestInterceptBefore) return encoded({ ok: true, result: {} });
 
       return encoded({ ok: true, result: answer() });
     },
@@ -115,9 +109,9 @@ async function interceptorHost(answer: () => Record<string, unknown>) {
   };
   const host = new PluginHost(() => client);
 
-  await host.load('interceptor', '/interceptor');
+  await host.load('after-auth', '/after-auth');
 
-  return { host, methods };
+  return host;
 }
 
 function registrationAnswer(): Uint8Array {
@@ -125,7 +119,7 @@ function registrationAnswer(): Uint8Array {
     ok: true,
     result: {
       schema_version: 2,
-      metadata: { name: 'interceptor' },
+      metadata: { name: 'after auth' },
       capabilities: { request_interceptor: true },
     },
   });

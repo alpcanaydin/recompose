@@ -74,6 +74,10 @@ export function wantsStream(body: JsonObject): boolean {
   return body['stream'] === true;
 }
 
+export function streamAsk(raw: JsonObject): { stream?: boolean } {
+  return wantsStream(raw) ? { stream: true } : {};
+}
+
 const wireBlockKinds = new Set([
   'text',
   'thinking',
