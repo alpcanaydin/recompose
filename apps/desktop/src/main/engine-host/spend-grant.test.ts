@@ -158,13 +158,22 @@ describe('what a spend request draws when no target stands', () => {
     ).resolves.toStrictEqual({ verdict: 'missing-target' });
   });
 
-  test('a key under a provider recompose serves nothing for answers a missing target', async () => {
+  test('an unknown valid provider resolves as a plugin executor target', async () => {
     const stranger = { ...keyRow, provider: 'cerebras' };
     const userDataPath = await storageHolding([pointingAt(stranger.id)], [stranger]);
 
     await expect(
       resolveSpendGrant(contextFor(userDataPath), 'personal', 'fast'),
-    ).resolves.toStrictEqual({ verdict: 'missing-target' });
+    ).resolves.toStrictEqual({
+      verdict: 'resolved',
+      providerOrigin: 'plugin://cerebras',
+      spend: {
+        custody: 'credentialed',
+        provider: 'cerebras',
+        credential: secret,
+        accountId: 'acc-key',
+      },
+    });
   });
 
   test('a registry that cannot be read carries out rather than reading as a refusal', async () => {

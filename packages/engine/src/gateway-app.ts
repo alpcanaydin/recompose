@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 
 import type { SpendGrantFor, SubscriptionRuntime } from './gateway-proxy';
 import type { ProxyDialect } from './gateway-wire';
+import type { PluginHost } from './plugin-host';
 import type { ProviderLogStore } from './provider/provider-log-store';
 
 import { proxyTokenCountRequest } from './gateway-count-tokens';
@@ -97,6 +98,47 @@ function registerVideoRoutes(
   }
 }
 
+function registerCountRoutes(
+  app: Hono,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+  relay: AIStudioRelay,
+  plugins?: PluginHost,
+): void {
+  for (const path of COUNT_TOKENS_PATHS) {
+    app.post(path, async (c) =>
+      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptions, fetchLike, relay, plugins),
+    );
+  }
+}
+
+function registerModelRoutes(
+  app: Hono,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+  relay: AIStudioRelay,
+  plugins?: PluginHost,
+): void {
+  for (const [path, dialect] of MODEL_ROUTES) {
+    app.all(path, async (c) =>
+      proxyModelRequest(
+        c,
+        dialect,
+        gateway,
+        spendGrantFor,
+        fetchLike,
+        subscriptions,
+        relay,
+        plugins,
+      ),
+    );
+  }
+}
+
 export function createGatewayApp(
   gateway: EngineGateway,
   spendGrantFor: SpendGrantFor,
@@ -104,6 +146,7 @@ export function createGatewayApp(
   subscriptions?: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
   providerLogs?: ProviderLogStore,
+  plugins?: PluginHost,
 ): Hono {
   const app = new Hono();
   const subscriptionServing = subscriptions ?? subscriptionRuntime();
@@ -126,20 +169,12 @@ export function createGatewayApp(
   registerManagementLogs(app, logStore);
   registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike, relay);
 
-  for (const path of COUNT_TOKENS_PATHS) {
-    app.post(path, async (c) =>
-      proxyTokenCountRequest(c, gateway, spendGrantFor, subscriptionServing, fetchLike, relay),
-    );
-  }
+  registerCountRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike, relay, plugins);
 
   registerImageRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike);
   registerVideoRoutes(app, gateway, spendGrantFor, fetchLike);
 
-  for (const [path, dialect] of MODEL_ROUTES) {
-    app.all(path, async (c) =>
-      proxyModelRequest(c, dialect, gateway, spendGrantFor, fetchLike, subscriptionServing, relay),
-    );
-  }
+  registerModelRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike, relay, plugins);
 
   app.notFound((c) => c.json(unservedPath(gateway.displayName, c.req.path), 404));
 

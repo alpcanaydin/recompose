@@ -254,7 +254,7 @@ async function startRecompose(): Promise<void> {
 
   engineHost = createEngineHost({
     knownSlugs: boot.slugs,
-    spawnChild: () => spawnEngineChild(join(app.getPath('userData'), 'logs')),
+    spawnChild: () => spawnEngineChild(app.getPath('userData')),
     grantFor,
     storeSubscriptionCredential: subscriptionCredentials.write,
   });

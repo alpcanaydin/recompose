@@ -31,6 +31,10 @@ async function listModelsOf(ctx: ProviderModelsIpcContext, accountId: string) {
       return { ok: true as const, value: nothingListed };
     }
 
+    if (resolved.providerOrigin.startsWith('plugin://')) {
+      return { ok: true as const, value: nothingListed };
+    }
+
     return {
       ok: true as const,
       value: await ctx.listModels(resolved.providerOrigin, resolved.custody),

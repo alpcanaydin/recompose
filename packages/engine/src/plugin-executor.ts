@@ -209,3 +209,24 @@ export class PluginExecutorAdapter {
     return response;
   }
 }
+
+export async function pluginExecutorForProvider(
+  host: PluginRoutingHost,
+  provider: string,
+): Promise<PluginExecutorAdapter | null> {
+  const expected = provider.trim().toLowerCase();
+
+  for (const record of host.routingRecords()) {
+    if (!record.executor) continue;
+
+    const adapter = new PluginExecutorAdapter(host, record.id);
+
+    try {
+      if ((await adapter.identifier()) === expected) return adapter;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}

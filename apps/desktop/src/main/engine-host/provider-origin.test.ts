@@ -81,8 +81,8 @@ describe('the origin a target account is spent against', () => {
     );
   });
 
-  test('a key under a provider recompose serves nothing for is spent against nothing', () => {
-    expect(providerOriginOf(keyRow('cerebras'))).toBeUndefined();
+  test('an unknown valid provider is reserved for a plugin executor without a network origin', () => {
+    expect(providerOriginOf(keyRow('cerebras'))).toBe('plugin://cerebras');
   });
 });
 
@@ -115,10 +115,10 @@ describe('an origin the environment names in place of the vendor endpoint', () =
     expect(providerOriginOf(keyRow('openai'))).toBe('https://api.openai.com');
   });
 
-  test('a provider recompose serves nothing for stays spent against nothing', () => {
+  test('a plugin provider is not redirected through the vendor stand-in', () => {
     vi.stubEnv(SERVING_ORIGIN, 'http://127.0.0.1:41999');
 
-    expect(providerOriginOf(keyRow('cerebras'))).toBeUndefined();
+    expect(providerOriginOf(keyRow('cerebras'))).toBe('plugin://cerebras');
   });
 
   test('a local runtime is still spent against the address its account was stored with', () => {
@@ -129,19 +129,19 @@ describe('an origin the environment names in place of the vendor endpoint', () =
 });
 
 describe('a provider named after something every object carries', () => {
-  test('a key stored under the provider "constructor" is spent against nothing', () => {
-    expect(providerOriginOf(keyRow('constructor'))).toBeUndefined();
+  test('a key stored under the provider "constructor" keeps its literal plugin identity', () => {
+    expect(providerOriginOf(keyRow('constructor'))).toBe('plugin://constructor');
   });
 
-  test('a key stored under the provider "toString" is spent against nothing', () => {
-    expect(providerOriginOf(keyRow('toString'))).toBeUndefined();
+  test('a key stored under the provider "toString" keeps its literal plugin identity', () => {
+    expect(providerOriginOf(keyRow('toString'))).toBe('plugin://toString');
   });
 
-  test('a key stored under the provider "valueOf" is spent against nothing', () => {
-    expect(providerOriginOf(keyRow('valueOf'))).toBeUndefined();
+  test('a key stored under the provider "valueOf" keeps its literal plugin identity', () => {
+    expect(providerOriginOf(keyRow('valueOf'))).toBe('plugin://valueOf');
   });
 
-  test('a key stored under the provider "__proto__" is spent against nothing', () => {
+  test('a provider beginning outside the plugin id alphabet is rejected', () => {
     expect(providerOriginOf(keyRow('__proto__'))).toBeUndefined();
   });
 });

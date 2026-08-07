@@ -13,6 +13,7 @@ import {
 import type { SpendGrantFor } from './gateway-app';
 import type { SubscriptionRuntime } from './gateway-proxy';
 import type { ParentPort } from './parent-port';
+import type { PluginHost } from './plugin-host';
 
 import { createEngineRuntime, type EngineRuntime, type OpenListeners } from './engine-runtime';
 import { subscriptionRuntime } from './gateway-proxy';
@@ -234,13 +235,20 @@ export function attachEngineChild(
   openListeners: OpenListeners,
   fetchLike: typeof fetch = globalThis.fetch,
   subscriptionOverrides?: Omit<SubscriptionRuntime, 'persist'>,
+  plugins?: PluginHost,
 ): void {
   const spendLane = openSpendLane(parentPort);
   const credentialLane = openCredentialUpdateLane(parentPort);
   const subscriptions = subscriptionOverrides
     ? { ...subscriptionOverrides, persist: credentialLane.persist }
     : subscriptionRuntime(credentialLane.persist);
-  const runtime = createEngineRuntime(openListeners, spendLane.grantFor, fetchLike, subscriptions);
+  const runtime = createEngineRuntime(
+    openListeners,
+    spendLane.grantFor,
+    fetchLike,
+    subscriptions,
+    plugins,
+  );
 
   parentPort.on('message', (messageEvent) => {
     if (spendLane.settle(messageEvent.data) || credentialLane.settle(messageEvent.data)) {

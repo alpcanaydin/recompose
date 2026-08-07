@@ -76,5 +76,7 @@ function subscriptionOriginOf(account: Account): string | undefined {
 function keyedOriginOf(provider: string): string | undefined {
   const served = servingOrigins.get(provider);
 
-  return served === undefined ? undefined : (standInOrigin() ?? served);
+  if (served !== undefined) return standInOrigin() ?? served;
+
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(provider) ? `plugin://${provider}` : undefined;
 }

@@ -30,6 +30,8 @@ export type Crossing = {
   replayScopeId?: string | undefined;
   responsesLite?: boolean | undefined;
   anthropicBeta?: string | undefined;
+  requestHeaders?: Record<string, string[]> | undefined;
+  requestQuery?: Record<string, string[]> | undefined;
   xaiNamespaceTools?: Record<string, { namespace: string; name: string }> | undefined;
 };
 

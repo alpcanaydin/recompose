@@ -3,6 +3,7 @@ import type { EngineGateway, GatewayEngineState } from '@recompose/contracts';
 import type { SpendGrantFor } from './gateway-app';
 import type { GatewayListeners, openGatewayListeners } from './gateway-listener';
 import type { SubscriptionRuntime } from './gateway-proxy';
+import type { PluginHost } from './plugin-host';
 
 import { createGatewayApp } from './gateway-app';
 
@@ -48,13 +49,22 @@ export function createEngineRuntime(
   spendGrantFor: SpendGrantFor,
   fetchLike: typeof fetch = globalThis.fetch,
   subscriptions?: SubscriptionRuntime,
+  plugins?: PluginHost,
 ): EngineRuntime {
   const serving = new Map<string, GatewayListeners>();
   const inTurn = oneTurnPerGateway();
 
   async function openFor(gateway: EngineGateway): Promise<GatewayEngineState> {
     const outcome = await openListeners(
-      createGatewayApp(gateway, spendGrantFor, fetchLike, subscriptions),
+      createGatewayApp(
+        gateway,
+        spendGrantFor,
+        fetchLike,
+        subscriptions,
+        undefined,
+        undefined,
+        plugins,
+      ),
       gateway.port,
     );
 

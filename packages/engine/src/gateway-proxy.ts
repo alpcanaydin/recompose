@@ -3,6 +3,8 @@ import type { Context } from 'hono';
 
 import type { RequestOf } from './dialect/dispatcher';
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
+import type { PluginGatewayTarget } from './plugin-gateway';
+import type { PluginHost } from './plugin-host';
 import type { AIStudioRelay } from './provider/ai-studio-relay';
 import type { TranslationRefusal } from './refusals';
 import type { SubscriptionRuntime } from './subscription/reach';
@@ -19,6 +21,7 @@ import {
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
+import { pluginGatewayTarget, reachPluginExecutor } from './plugin-gateway';
 import { reachCredentialed } from './provider/credentialed-reach';
 import { credentialedDialect } from './provider/credentialed-target';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
@@ -38,6 +41,7 @@ export async function proxyModelRequest(
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime = subscriptionRuntime(),
   aiStudio?: AIStudioRelay,
+  plugins?: PluginHost,
 ): Promise<Response> {
   const raw = await readJsonBody(c);
   const name = virtualNameOf(raw);
@@ -62,13 +66,11 @@ export async function proxyModelRequest(
     anthropicBeta: c.req.header('anthropic-beta'),
   };
 
-  return forwardGranted(
-    crossing,
-    await spendGrantFor(gateway.slug, virtualModel.id),
-    fetchLike,
-    subscriptions,
-    aiStudio,
-  );
+  const grant = await spendGrantFor(gateway.slug, virtualModel.id);
+  const pluginTarget =
+    grant.verdict === 'resolved' ? await pluginGatewayTarget(c, crossing, grant, plugins) : null;
+
+  return forwardGranted(crossing, grant, fetchLike, subscriptions, aiStudio, pluginTarget);
 }
 
 async function forwardGranted(
@@ -77,6 +79,7 @@ async function forwardGranted(
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
+  pluginTarget?: PluginGatewayTarget | null,
 ): Promise<Response> {
   const denied = deniedGrantAnswer(crossing, grant);
 
@@ -88,7 +91,7 @@ async function forwardGranted(
     return denied;
   }
 
-  return forwardResolved(crossing, grant, fetchLike, subscriptions, aiStudio);
+  return forwardResolved(crossing, grant, fetchLike, subscriptions, aiStudio, pluginTarget);
 }
 
 async function forwardResolved(
@@ -97,16 +100,46 @@ async function forwardResolved(
   fetchLike: typeof fetch,
   subscriptions: SubscriptionRuntime,
   aiStudio?: AIStudioRelay,
+  pluginTarget?: PluginGatewayTarget | null,
 ): Promise<Response> {
-  const upstreamDialect = dialectFor(grant, crossing.dialect);
-  const outbound = outboundBodyFor(crossing, upstreamDialect);
+  if (pluginTarget?.kind === 'executor') {
+    return forwardPluginExecutor(crossing, grant, pluginTarget);
+  }
+
+  return forwardProviderResolved(
+    effectiveProviderCrossing(crossing, pluginTarget),
+    grant,
+    fetchLike,
+    subscriptions,
+    aiStudio,
+  );
+}
+
+function effectiveProviderCrossing(
+  crossing: Crossing,
+  target: PluginGatewayTarget | null | undefined,
+): Crossing {
+  return target?.kind === 'provider' && target.providerModel !== undefined
+    ? { ...crossing, providerModel: target.providerModel }
+    : crossing;
+}
+
+async function forwardProviderResolved(
+  effectiveCrossing: Crossing,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  fetchLike: typeof fetch,
+  subscriptions: SubscriptionRuntime,
+  aiStudio?: AIStudioRelay,
+): Promise<Response> {
+  const upstreamDialect = dialectFor(grant, effectiveCrossing.dialect);
+  const outbound = outboundBodyFor(effectiveCrossing, upstreamDialect);
 
   if ('refusal' in outbound) {
-    return refusalResponse(crossing.dialect, outbound.refusal);
+    return refusalResponse(effectiveCrossing.dialect, outbound.refusal);
   }
 
   const upstream = await reachedUpstream(
-    crossing,
+    effectiveCrossing,
     grant,
     outbound.body,
     fetchLike,
@@ -115,10 +148,24 @@ async function forwardResolved(
   );
 
   if (upstream === null) {
-    return unreachableTargetAnswer(crossing);
+    return unreachableTargetAnswer(effectiveCrossing);
   }
 
-  return answerFrom(crossing, upstream, upstreamDialect);
+  return answerFrom(effectiveCrossing, upstream, upstreamDialect);
+}
+
+async function forwardPluginExecutor(
+  crossing: Crossing,
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  target: Extract<PluginGatewayTarget, { kind: 'executor' }>,
+): Promise<Response> {
+  const outbound = outboundBodyFor(crossing, target.inputDialect);
+
+  if ('refusal' in outbound) return refusalResponse(crossing.dialect, outbound.refusal);
+
+  const upstream = await reachPluginExecutor(target, crossing, grant, outbound.body);
+
+  return answerFrom(crossing, upstream, target.outputDialect);
 }
 
 function deniedGrantAnswer(crossing: Crossing, grant: SpendGrant): Response | null {
