@@ -15,9 +15,12 @@ import type {
   InteractionsTurn,
 } from './interactions-wire';
 
-import { isJsonObject } from '../gateway-wire';
 import { mergeAdjacentSameRole, parseToolArguments } from './hub-build';
 import { hubBlocksFromInteractionsContent, interactionsText } from './interactions-content';
+
+function isJsonObject(value: unknown): value is HubJsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function callInput(value: HubJsonObject | string): HubJsonObject {
   return typeof value === 'string' ? parseToolArguments(value) : value;

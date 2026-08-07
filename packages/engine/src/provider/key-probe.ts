@@ -6,6 +6,7 @@ export const firstPartyProbeOrigins: Readonly<Record<KeyProviderId, string>> = {
   anthropic: 'https://api.anthropic.com',
   openai: 'https://api.openai.com',
   gemini: 'https://generativelanguage.googleapis.com',
+  'gemini-interactions': 'https://generativelanguage.googleapis.com',
 };
 
 const modelsPath = '/v1/models';
@@ -26,6 +27,7 @@ export function authHeadersFor(provider: KeyProviderId, key: string): Record<str
     case 'openai':
       return { Authorization: `Bearer ${key}` };
     case 'gemini':
+    case 'gemini-interactions':
       return { 'x-goog-api-key': key };
 
     default: {
@@ -37,7 +39,9 @@ export function authHeadersFor(provider: KeyProviderId, key: string): Record<str
 }
 
 function modelsPathFor(provider: KeyProviderId): string {
-  return provider === 'gemini' ? '/v1beta/models' : modelsPath;
+  return provider === 'gemini' || provider === 'gemini-interactions'
+    ? '/v1beta/models'
+    : modelsPath;
 }
 
 function verdictFor(status: number): KeyCheckVerdict {

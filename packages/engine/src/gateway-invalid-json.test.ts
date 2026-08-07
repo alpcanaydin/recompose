@@ -29,6 +29,7 @@ describe('invalid JSON request scope', () => {
   test.each([
     ['/v1/messages', 'type'],
     ['/v1/chat/completions', 'error'],
+    ['/v1/interactions', 'error'],
     ['/v1/responses', 'error'],
   ])('%s rejects malformed JSON in its native envelope', async (path, envelope) => {
     const { app } = claudeApp();

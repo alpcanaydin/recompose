@@ -7,6 +7,11 @@ import type {
 } from './chat-completions-wire';
 import type { TranslateResult } from './fates';
 import type { HubRequest, HubResponse, HubStreamEvent } from './hub';
+import type {
+  InteractionsRequest,
+  InteractionsResponse,
+  InteractionsStreamEvent,
+} from './interactions-wire';
 import type { ResponsesRequest, ResponsesResponse, ResponsesStreamEvent } from './responses-wire';
 
 import {
@@ -26,6 +31,14 @@ import {
   encodeStream as chatEncodeStream,
 } from './chat-completions-codec';
 import {
+  decodeRequest as interactionsDecodeRequest,
+  decodeResponse as interactionsDecodeResponse,
+  decodeStream as interactionsDecodeStream,
+  encodeRequest as interactionsEncodeRequest,
+  encodeResponse as interactionsEncodeResponse,
+  encodeStream as interactionsEncodeStream,
+} from './interactions-codec';
+import {
   decodeRequest as responsesDecodeRequest,
   decodeResponse as responsesDecodeResponse,
   decodeStream as responsesDecodeStream,
@@ -39,18 +52,21 @@ export type { Dialect } from '../refusals';
 export type RequestOf = {
   anthropic: AnthropicRequest;
   'chat-completions': ChatCompletionsRequest;
+  interactions: InteractionsRequest;
   responses: ResponsesRequest;
 };
 
 export type ResponseOf = {
   anthropic: AnthropicResponse;
   'chat-completions': ChatCompletionsResponse;
+  interactions: InteractionsResponse;
   responses: ResponsesResponse;
 };
 
 export type StreamOf = {
   anthropic: AsyncIterable<AnthropicStreamEvent>;
   'chat-completions': AsyncIterable<ChatStreamFrame>;
+  interactions: AsyncIterable<InteractionsStreamEvent>;
   responses: AsyncIterable<ResponsesStreamEvent>;
 };
 
@@ -93,36 +109,42 @@ type StreamEncoders = {
 const requestDecoders: RequestDecoders = {
   anthropic: anthropicDecodeRequest,
   'chat-completions': chatDecodeRequest,
+  interactions: interactionsDecodeRequest,
   responses: responsesDecodeRequest,
 };
 
 const requestEncoders: RequestEncoders = {
   anthropic: anthropicEncodeRequest,
   'chat-completions': chatEncodeRequest,
+  interactions: interactionsEncodeRequest,
   responses: responsesEncodeRequest,
 };
 
 const responseDecoders: ResponseDecoders = {
   anthropic: anthropicDecodeResponse,
   'chat-completions': chatDecodeResponse,
+  interactions: interactionsDecodeResponse,
   responses: responsesDecodeResponse,
 };
 
 const responseEncoders: ResponseEncoders = {
   anthropic: anthropicEncodeResponse,
   'chat-completions': chatEncodeResponse,
+  interactions: interactionsEncodeResponse,
   responses: responsesEncodeResponse,
 };
 
 const streamDecoders: StreamDecoders = {
   anthropic: anthropicDecodeStream,
   'chat-completions': chatDecodeStream,
+  interactions: interactionsDecodeStream,
   responses: responsesDecodeStream,
 };
 
 const streamEncoders: StreamEncoders = {
   anthropic: anthropicEncodeStream,
   'chat-completions': chatEncodeStream,
+  interactions: interactionsEncodeStream,
   responses: responsesEncodeStream,
 };
 

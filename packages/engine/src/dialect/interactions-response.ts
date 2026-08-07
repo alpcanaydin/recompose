@@ -41,7 +41,7 @@ function stepBlock(step: InteractionsStep): HubContentBlock | HubContentBlock[] 
   return null;
 }
 
-function usageOf(usage: InteractionsUsage | undefined): HubUsage {
+export function hubUsageFromInteractions(usage: InteractionsUsage | undefined): HubUsage {
   if (usage === undefined) return {};
 
   const result: HubUsage = {};
@@ -132,7 +132,11 @@ export function decodeResponse(response: InteractionsResponse): Translated<HubRe
   });
 
   return {
-    value: { content, stopReason: stopReasonOf(response), usage: usageOf(response.usage) },
+    value: {
+      content,
+      stopReason: stopReasonOf(response),
+      usage: hubUsageFromInteractions(response.usage),
+    },
     fates: [],
   };
 }

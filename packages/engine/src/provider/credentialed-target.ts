@@ -23,6 +23,7 @@ const CREDENTIALED_DIALECTS = new Map<string, ProviderDialect>([
   ['aistudio', 'gemini'],
   ['anthropic', 'anthropic'],
   ['gemini', 'gemini'],
+  ['gemini-interactions', 'interactions'],
   ['vertex', 'gemini'],
   ['xai', 'responses'],
 ]);
@@ -94,6 +95,10 @@ function usesGeminiUrl(provider: string): boolean {
   return provider === 'gemini' || provider === 'aistudio';
 }
 
+function interactionsUrl(origin: string): string {
+  return `${origin}/v1beta/interactions`;
+}
+
 function providerPath(provider: string, crossing: Crossing): string {
   if (provider === 'anthropic') return '/v1/messages';
   if (provider === 'xai') return '/responses';
@@ -107,14 +112,23 @@ export function credentialedRequestUrl(grant: ResolvedGrant, crossing: Crossing)
 
   if (grant.spend.custody !== 'credentialed') return `${origin}${providerPath('', crossing)}`;
 
-  if (usesGeminiUrl(grant.spend.provider)) {
+  return credentialedProviderUrl(grant.spend, crossing, origin);
+}
+
+function credentialedProviderUrl(
+  spend: Extract<GrantedSpend, { custody: 'credentialed' }>,
+  crossing: Crossing,
+  origin: string,
+): string {
+  if (spend.provider === 'gemini-interactions') return interactionsUrl(origin);
+
+  if (usesGeminiUrl(spend.provider)) {
     return geminiUrl(origin, crossing);
   }
 
-  const vertex =
-    grant.spend.provider === 'vertex' ? vertexUrl(origin, grant.spend.credential, crossing) : null;
+  const vertex = spend.provider === 'vertex' ? vertexUrl(origin, spend.credential, crossing) : null;
 
-  return vertex ?? `${origin}${providerPath(grant.spend.provider, crossing)}`;
+  return vertex ?? `${origin}${providerPath(spend.provider, crossing)}`;
 }
 
 function kimiBetas(client: string | undefined): string {
@@ -154,6 +168,7 @@ function vertexCredentialHeaders(credential: string): Record<string, string> {
 const HEADER_BUILDERS = new Map<string, HeaderBuilder>([
   ['anthropic', (credential) => ({ 'x-api-key': credential, 'anthropic-version': '2023-06-01' })],
   ['gemini', (credential) => ({ 'x-goog-api-key': credential })],
+  ['gemini-interactions', (credential) => ({ 'x-goog-api-key': credential })],
   ['vertex', vertexCredentialHeaders],
   ['kimi', kimiHeaders],
   ['xai', xaiHeaders],

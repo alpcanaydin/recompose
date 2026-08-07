@@ -1,5 +1,6 @@
 import type { AnthropicResponse } from './dialect/anthropic-wire';
 import type { ChatCompletionsResponse } from './dialect/chat-completions-wire';
+import type { InteractionsResponse } from './dialect/interactions-wire';
 import type { ResponsesResponse } from './dialect/responses-wire';
 import type { Crossing, JsonObject, ProviderDialect } from './gateway-wire';
 import type { AnthropicRefusal } from './refusals';
@@ -202,15 +203,26 @@ function translatedChatResponse(to: Crossing['dialect'], answer: JsonObject) {
 }
 
 function translatedProviderResponse(
-  from: 'anthropic' | 'responses',
+  from: 'anthropic' | 'interactions' | 'responses',
   to: Crossing['dialect'],
   answer: JsonObject,
 ) {
-  if (from === 'anthropic') {
-    return isAnthropicAnswer(answer) ? translateResponse('anthropic', to, answer) : null;
-  }
+  if (from === 'anthropic') return translatedAnthropicResponse(to, answer);
+  if (from === 'interactions') return translatedInteractionsResponse(to, answer);
 
   return isResponsesAnswer(answer) ? translateResponse('responses', to, answer) : null;
+}
+
+function translatedAnthropicResponse(to: Crossing['dialect'], answer: JsonObject) {
+  return isAnthropicAnswer(answer) ? translateResponse('anthropic', to, answer) : null;
+}
+
+function translatedInteractionsResponse(to: Crossing['dialect'], answer: JsonObject) {
+  return isInteractionsAnswer(answer) ? translateResponse('interactions', to, answer) : null;
+}
+
+function isInteractionsAnswer(value: JsonObject): value is JsonObject & InteractionsResponse {
+  return typeof value['id'] === 'string' && Array.isArray(value['steps']);
 }
 
 function translatedJsonAnswer(

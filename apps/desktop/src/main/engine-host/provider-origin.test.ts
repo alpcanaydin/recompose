@@ -86,6 +86,14 @@ describe('the origin a target account is spent against', () => {
   });
 });
 
+describe('the native Gemini Interactions origin', () => {
+  test('a Gemini Interactions key uses the Generative Language endpoint', () => {
+    expect(providerOriginOf(keyRow('gemini-interactions'))).toBe(
+      'https://generativelanguage.googleapis.com',
+    );
+  });
+});
+
 describe('an origin the environment names in place of the vendor endpoint', () => {
   afterEach(() => {
     vi.unstubAllEnvs();

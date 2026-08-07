@@ -14,6 +14,11 @@ import { encodeResponse as encodeChat } from './chat-completions-response';
 import { encodeRequest as encodeGemini } from './gemini-request';
 import { decodeResponse as decodeGemini } from './gemini-response';
 import { decodeStream as decodeGeminiStream } from './gemini-stream';
+import {
+  decodeRequest as decodeInteractions,
+  encodeResponse as encodeInteractions,
+  encodeStream as encodeInteractionsStream,
+} from './interactions-codec';
 import { encodeStream as encodeResponsesStream } from './responses-codec';
 import { decodeRequest as decodeResponses } from './responses-request';
 import { encodeResponse as encodeResponses } from './responses-response';
@@ -33,18 +38,21 @@ type StreamEncoders = {
 const requestDecoders: RequestDecoders = {
   anthropic: decodeAnthropic,
   'chat-completions': decodeChat,
+  interactions: decodeInteractions,
   responses: decodeResponses,
 };
 
 const responseEncoders: ResponseEncoders = {
   anthropic: encodeAnthropic,
   'chat-completions': encodeChat,
+  interactions: encodeInteractions,
   responses: encodeResponses,
 };
 
 const streamEncoders: StreamEncoders = {
   anthropic: encodeAnthropicStream,
   'chat-completions': encodeChatStream,
+  interactions: encodeInteractionsStream,
   responses: encodeResponsesStream,
 };
 

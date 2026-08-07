@@ -33,6 +33,8 @@ const pluginFormats = new Map<string, ProviderDialect>([
   ['claude', 'anthropic'],
   ['anthropic', 'anthropic'],
   ['gemini', 'gemini'],
+  ['interactions', 'interactions'],
+  ['gemini-interactions', 'interactions'],
 ]);
 
 function pluginDialectFor(value: string): ProviderDialect | null {

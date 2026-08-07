@@ -143,6 +143,16 @@ export async function* jsonObjectsFrom(
   }
 }
 
+export async function* interactionEventsFrom(
+  body: ReadableStream<Uint8Array>,
+): AsyncIterable<JsonObject & { event_type: string }> {
+  for await (const value of jsonObjectsFrom(body)) {
+    const eventType = value['event_type'];
+
+    if (typeof eventType === 'string') yield { ...value, event_type: eventType };
+  }
+}
+
 function jsonEventOf(payload: string): JsonObject & { type: string } {
   const parsed = parsedJson(payload);
 
@@ -224,6 +234,32 @@ export function namedSseBodyFrom(
       } catch (failure) {
         controller.error(failure);
       }
+    },
+    async cancel() {
+      await iterator.return?.(undefined);
+    },
+  });
+}
+
+export function interactionSseBodyFrom(
+  events: AsyncIterable<{ event_type: string }>,
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const iterator = events[Symbol.asyncIterator]();
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const step = await iterator.next();
+
+      if (step.done === true) {
+        controller.close();
+
+        return;
+      }
+
+      controller.enqueue(
+        encoder.encode(`event: ${step.value.event_type}\ndata: ${JSON.stringify(step.value)}\n\n`),
+      );
     },
     async cancel() {
       await iterator.return?.(undefined);

@@ -109,7 +109,8 @@ async function answerOrSilence(
 }
 
 function modelsPathFor(custody: LookCustody): string {
-  return custody.custody === 'provider-key' && custody.provider === 'gemini'
+  return custody.custody === 'provider-key' &&
+    (custody.provider === 'gemini' || custody.provider === 'gemini-interactions')
     ? '/v1beta/models'
     : modelsPath;
 }

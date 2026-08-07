@@ -122,4 +122,27 @@ export type InteractionsResponse = {
   status?: string;
   steps: readonly InteractionsStep[];
   usage?: InteractionsUsage;
+  error?: { type: string; message: string };
 };
+
+export type InteractionsStreamDelta =
+  | { type: 'text'; text: string }
+  | { type: 'thought_summary'; content: InteractionsTextPart }
+  | { type: 'thought_signature'; signature: string }
+  | { type: 'arguments_delta'; arguments: string };
+
+export type InteractionsKnownStreamEvent =
+  | { event_type: 'interaction.created'; interaction: Partial<InteractionsResponse> }
+  | { event_type: 'interaction.status_update'; interaction: Partial<InteractionsResponse> }
+  | { event_type: 'step.start'; index: number; step: InteractionsStep }
+  | { event_type: 'step.delta'; index: number; delta: InteractionsStreamDelta }
+  | { event_type: 'step.stop'; index: number; status?: string }
+  | { event_type: 'interaction.requires_action'; interaction: Partial<InteractionsResponse> }
+  | { event_type: 'interaction.completed'; interaction: Partial<InteractionsResponse> }
+  | { event_type: 'interaction.failed'; interaction: Partial<InteractionsResponse> }
+  | { event_type: 'finish'; metadata?: { total_usage?: InteractionsUsage } }
+  | { event_type: 'done' };
+
+type InteractionsUnknownStreamEvent = { event_type: string };
+
+export type InteractionsStreamEvent = InteractionsKnownStreamEvent | InteractionsUnknownStreamEvent;

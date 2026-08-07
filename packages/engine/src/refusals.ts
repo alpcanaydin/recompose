@@ -1,4 +1,4 @@
-export type Dialect = 'anthropic' | 'chat-completions' | 'responses';
+export type Dialect = 'anthropic' | 'chat-completions' | 'interactions' | 'responses';
 
 export type AnthropicRefusal = {
   type: 'error';
@@ -278,6 +278,7 @@ function bodyInDialect(dialect: Dialect, facts: RefusalFacts): RenderedRefusal['
     case 'chat-completions':
       return chatCompletionsBody(facts);
     case 'responses':
+    case 'interactions':
       return responsesBody(facts);
     default:
       throw new Error(`unhandled dialect: ${String(dialect)}`);

@@ -1,4 +1,4 @@
-import { modelListBoundMs } from '@recompose/contracts';
+import { modelListBoundMs, type LookCustody } from '@recompose/contracts';
 import { describe, expect, test, vi } from 'vitest';
 
 import { listProviderModels } from './model-list';
@@ -9,6 +9,11 @@ const credential = 'sk-ant-api03-long-secret-7f2c';
 const credentialed = { custody: 'bearer', provider: 'openrouter', credential } as const;
 const anthropicKey = { custody: 'provider-key', provider: 'anthropic', credential } as const;
 const geminiKey = { custody: 'provider-key', provider: 'gemini', credential } as const;
+const interactionsKey: LookCustody = {
+  custody: 'provider-key',
+  provider: 'gemini-interactions',
+  credential,
+};
 const open = { custody: 'open' } as const;
 
 const twoModels = JSON.stringify({
@@ -145,6 +150,21 @@ describe('the request the look sends', () => {
 
     expect(headersOf(onlyRequestOf(sent)).has('Authorization')).toBe(false);
     expect(headersOf(onlyRequestOf(sent)).has('x-api-key')).toBe(false);
+  });
+});
+
+describe('the Gemini Interactions model look', () => {
+  test('reads the native v1beta catalog with a Google key', async () => {
+    const { sent, fetchLike } = fetchAnswering(200, JSON.stringify({ models: [] }));
+
+    await listProviderModels(
+      fetchLike,
+      'https://generativelanguage.googleapis.com',
+      interactionsKey,
+    );
+
+    expect(onlyRequestOf(sent).url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
+    expect(headersOf(onlyRequestOf(sent)).get('x-goog-api-key')).toBe(credential);
   });
 });
 

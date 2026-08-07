@@ -8,7 +8,7 @@ import type { TranslationRefusal } from './refusals';
 import { duplicateJsonKey } from './json-duplicates';
 import { renderRefusal } from './refusals';
 
-export type ProxyDialect = 'anthropic' | 'chat-completions' | 'responses';
+export type ProxyDialect = 'anthropic' | 'chat-completions' | 'interactions' | 'responses';
 export type ProviderDialect = ProxyDialect | 'gemini';
 
 export type JsonObject = Record<string, unknown>;
@@ -200,6 +200,10 @@ export function ingressPayload(
   body: JsonObject,
 ): RequestOf['chat-completions'] | null;
 export function ingressPayload(
+  dialect: 'interactions',
+  body: JsonObject,
+): RequestOf['interactions'] | null;
+export function ingressPayload(
   dialect: 'responses',
   body: JsonObject,
 ): RequestOf['responses'] | null;
@@ -220,6 +224,10 @@ export function ingressPayload(
     return responsesPayload(body);
   }
 
+  if (dialect === 'interactions') {
+    return interactionsPayload(body);
+  }
+
   return chatPayload(body);
 }
 
@@ -229,6 +237,16 @@ function anthropicPayload(body: JsonObject): RequestOf['anthropic'] | null {
 
 function responsesPayload(body: JsonObject): RequestOf['responses'] | null {
   return speaksResponses(body) ? body : null;
+}
+
+function interactionsPayload(body: JsonObject): RequestOf['interactions'] | null {
+  return speaksInteractions(body) ? body : null;
+}
+
+function speaksInteractions(body: JsonObject): body is JsonObject & RequestOf['interactions'] {
+  const input = body['input'];
+
+  return typeof input === 'string' || Array.isArray(input) || isJsonObject(input);
 }
 
 function chatPayload(body: JsonObject): RequestOf['chat-completions'] | null {

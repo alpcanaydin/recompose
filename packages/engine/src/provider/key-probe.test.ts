@@ -114,6 +114,20 @@ describe('the request the probe sends', () => {
   });
 });
 
+describe('the Gemini Interactions probe', () => {
+  test('shares the native catalog and key header', async () => {
+    const { sent, fetchLike } = fetchAnswering(200);
+
+    await probeKey(fetchLike, 'gemini-interactions', aKey);
+
+    const request = onlyRequestOf(sent);
+    const headers = new Headers(request.init.headers);
+
+    expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
+    expect(headers.get('x-goog-api-key')).toBe(aKey);
+  });
+});
+
 describe('the folding from vendor status to verdict', () => {
   const foldingTable: [number, KeyCheckVerdict][] = [
     [200, 'authenticates'],

@@ -33,6 +33,8 @@ const MODEL_ROUTES: readonly (readonly [string, ProxyDialect])[] = [
   ['/chat/completions', 'chat-completions'],
   ['/v1/responses', 'responses'],
   ['/responses', 'responses'],
+  ['/v1/interactions', 'interactions'],
+  ['/interactions', 'interactions'],
 ];
 
 const COUNT_TOKENS_PATHS = ['/v1/messages/count_tokens', '/messages/count_tokens'];
@@ -66,6 +68,10 @@ function preparedLogStore(store?: ProviderLogStore): ProviderLogStore | null {
 }
 
 function dialectForPath(path: string): ProxyDialect {
+  if (path.endsWith('/interactions')) {
+    return 'interactions';
+  }
+
   if (path.endsWith('/responses')) {
     return 'responses';
   }
