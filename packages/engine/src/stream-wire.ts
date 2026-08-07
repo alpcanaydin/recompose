@@ -230,3 +230,30 @@ export function namedSseBodyFrom(
     },
   });
 }
+
+export function transformingSseLines(
+  body: ReadableStream<Uint8Array>,
+  transformLine: (line: string) => string,
+): ReadableStream<Uint8Array> {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffered = '';
+
+  return body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        buffered += decoder.decode(chunk, { stream: true });
+        const lines = buffered.split('\n');
+
+        buffered = lines.pop() ?? '';
+
+        for (const line of lines) controller.enqueue(encoder.encode(`${transformLine(line)}\n`));
+      },
+      flush(controller) {
+        buffered += decoder.decode();
+
+        if (buffered !== '') controller.enqueue(encoder.encode(transformLine(buffered)));
+      },
+    }),
+  );
+}

@@ -2,6 +2,7 @@ import type { Crossing, JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
 import { normalizeXAIInput } from './xai-input';
+import { normalizeXAITools } from './xai-tools';
 
 function additionalTools(input: unknown): boolean {
   if (!Array.isArray(input)) return false;
@@ -36,7 +37,8 @@ export function normalizeXAIToolChoice(body: JsonObject): JsonObject {
 
 export function xaiProviderBody(body: JsonObject, crossing: Crossing): JsonObject {
   const withInput = normalizeXAIInput(body);
-  const normalized = normalizeXAIToolChoice(withInput);
+  const withTools = normalizeXAITools(withInput);
+  const normalized = normalizeXAIToolChoice(withTools);
   const { stop: _stop, ...withoutStop } = normalized;
 
   return {

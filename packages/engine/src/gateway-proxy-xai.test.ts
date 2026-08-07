@@ -67,6 +67,20 @@ function requestBody() {
   };
 }
 
+const namespaceInput = [
+  {
+    type: 'additional_tools',
+    tools: [
+      {
+        type: 'namespace',
+        name: 'mcp__exa',
+        tools: [{ type: 'function', name: 'web_search_exa', parameters: { type: 'object' } }],
+      },
+    ],
+  },
+  { role: 'user', content: 'search' },
+];
+
 test('serves xAI through its official Responses endpoint', async () => {
   const sent: Array<{ url: string; init: RequestInit | undefined }> = [];
   const fetchLike: typeof fetch = async (input, init) => {
@@ -154,5 +168,46 @@ test('sanitizes xAI custom calls and encrypted items before upstream', async () 
       { type: 'reasoning', summary: [{ type: 'summary_text', text: 'kept' }] },
       { role: 'user', content: 'continue' },
     ],
+  });
+});
+
+test('flattens xAI namespace tools and restores completed function calls', async () => {
+  const sent: RequestInit[] = [];
+  const completed = {
+    type: 'response.completed',
+    response: {
+      id: 'resp_ns',
+      status: 'completed',
+      model: 'grok-4.3',
+      output: [
+        {
+          type: 'function_call',
+          name: 'mcp__exa__web_search_exa',
+          call_id: 'call_1',
+          arguments: '{}',
+        },
+      ],
+    },
+  };
+  const fetchLike: typeof fetch = async (_input, init) => {
+    if (init !== undefined) sent.push(init);
+
+    return Promise.resolve(
+      new Response(`data: ${JSON.stringify(completed)}\n\n`, {
+        headers: { 'content-type': 'text/event-stream' },
+      }),
+    );
+  };
+  const answer = await xaiApp(fetchLike).request('http://127.0.0.1:8397/v1/responses', {
+    method: 'POST',
+    body: JSON.stringify({ model: 'fast', input: namespaceInput }),
+  });
+
+  expect(bodyOf(sent[0])).toMatchObject({
+    input: [{ role: 'user', content: 'search' }],
+    tools: [{ type: 'function', name: 'mcp__exa__web_search_exa' }],
+  });
+  expect(await answer.json()).toMatchObject({
+    output: [{ type: 'function_call', name: 'web_search_exa', namespace: 'mcp__exa' }],
   });
 });

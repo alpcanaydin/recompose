@@ -6,6 +6,7 @@ import { cappedGeminiOutput } from './gemini-model-limits';
 import { prepareKimiReplay } from './kimi-replay-runtime';
 import { kimiProviderBody } from './kimi-request';
 import { xaiProviderBody } from './xai-request';
+import { collectXAINamespaceTools } from './xai-tools';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
 type GrantedSpend = ResolvedGrant['spend'];
@@ -34,7 +35,12 @@ export function credentialedRequestBody(
     return cappedGeminiOutput(body, crossing.providerModel);
   }
 
-  if (grant.spend.provider === 'xai') return xaiProviderBody(body, crossing);
+  if (grant.spend.provider === 'xai') {
+    crossing.xaiNamespaceTools = collectXAINamespaceTools(body);
+
+    return xaiProviderBody(body, crossing);
+  }
+
   if (grant.spend.provider !== 'kimi') return body;
 
   return kimiProviderBody(

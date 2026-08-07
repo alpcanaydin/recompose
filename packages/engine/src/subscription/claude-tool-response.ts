@@ -2,6 +2,7 @@ import type { JsonObject } from '../gateway-wire';
 import type { ClaudeToolMap } from './claude-tools';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
+import { transformingSseLines } from '../stream-wire';
 
 function isToolReference(block: JsonObject): boolean {
   return block['type'] === 'tool_use' || block['type'] === 'tool_reference';
@@ -91,31 +92,7 @@ function restoredSseBody(
   body: ReadableStream<Uint8Array>,
   reverse: ClaudeToolMap,
 ): ReadableStream<Uint8Array> {
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffered = '';
-
-  return body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        buffered += decoder.decode(chunk, { stream: true });
-        const lines = buffered.split('\n');
-
-        buffered = lines.pop() ?? '';
-
-        for (const line of lines) {
-          controller.enqueue(encoder.encode(`${restoreClaudeToolSseLine(line, reverse)}\n`));
-        }
-      },
-      flush(controller) {
-        buffered += decoder.decode();
-
-        if (buffered !== '') {
-          controller.enqueue(encoder.encode(restoreClaudeToolSseLine(buffered, reverse)));
-        }
-      },
-    }),
-  );
+  return transformingSseLines(body, (line) => restoreClaudeToolSseLine(line, reverse));
 }
 
 function transformedHeaders(response: Response): Headers {
