@@ -11,11 +11,15 @@ import { createGatewayApp } from './gateway-app';
 import { aGatewayHolding, aVirtualModel } from './gateway-app.testkit';
 import { openGatewayListeners } from './gateway-listener';
 import { reserveFreePort } from './gateway-listener.testkit';
+import {
+  rejectFreeUsageHandshake,
+  respondUpstream,
+  type UpstreamMode,
+} from './gateway-websocket-upstream.testkit';
 import { parsedJson } from './gateway-wire';
 import { xaiWebSocketText } from './provider/xai-websocket-wire';
 
 type Deferred<T> = { promise: Promise<T>; resolve: (value: T) => void };
-export type UpstreamMode = 'success' | 'bare-error' | 'message-too-big' | 'handshake-429';
 type UpstreamStats = { connections: number; messages: unknown[]; compactBodies: unknown[] };
 
 function deferred<T>(): Deferred<T> {
@@ -55,34 +59,6 @@ async function closeServer(server: Server, websocket: WebSocketServer): Promise<
   });
 }
 
-function rejectFreeUsageHandshake(socket: import('node:stream').Duplex): void {
-  const body = JSON.stringify({
-    code: 'subscription:free-usage-exhausted',
-    error: { code: 'subscription:free-usage-exhausted', message: 'free usage exhausted' },
-  });
-
-  socket.end(
-    `HTTP/1.1 429 Too Many Requests\r\nContent-Type: application/json\r\nContent-Length: ${String(Buffer.byteLength(body))}\r\n\r\n${body}`,
-  );
-}
-
-function respondUpstream(client: WebSocket, mode: UpstreamMode): void {
-  if (mode === 'bare-error') {
-    client.send(
-      JSON.stringify({
-        error: {
-          message: 'Request validation error: {"code":"400","error":"unsupported arguments"}',
-          type: 'api_error',
-        },
-      }),
-    );
-  } else if (mode === 'message-too-big') {
-    client.close(1009, 'message too big');
-  } else {
-    client.send(JSON.stringify({ type: 'response.completed', response: { id: 'resp_1' } }));
-  }
-}
-
 function attachUpstream(
   websocket: WebSocketServer,
   mode: UpstreamMode,
@@ -97,7 +73,7 @@ function attachUpstream(
 
       stats.messages.push(message);
       received.resolve(message);
-      respondUpstream(client, mode);
+      respondUpstream(client, mode, message);
     });
     client.once('close', () => {
       disconnected.resolve();
@@ -225,21 +201,37 @@ export const xaiWebSocketPayload = {
 };
 
 export async function gatewayConversation(port: number, payloads: unknown[]): Promise<unknown[]> {
+  return gatewayScript(
+    port,
+    payloads.map((payload) => ({ payload, answers: 1 })),
+  );
+}
+
+export async function gatewayScript(
+  port: number,
+  steps: Array<{ payload: unknown; answers: number }>,
+): Promise<unknown[]> {
   const client = new WebSocket(`ws://127.0.0.1:${String(port)}/v1/responses`);
   const completed = deferred<unknown[]>();
   const answers: unknown[] = [];
-  let next = 0;
+  let stepIndex = 0;
+  let stepAnswers = 0;
 
   const sendNext = (): void => {
-    client.send(JSON.stringify(payloads[next]));
-    next += 1;
+    client.send(JSON.stringify(steps[stepIndex]?.payload));
+    stepAnswers = 0;
   };
 
   client.once('open', sendNext);
   client.on('message', (data) => {
     answers.push(parsedJson(xaiWebSocketText(data)));
+    stepAnswers += 1;
 
-    if (next < payloads.length) sendNext();
+    if (stepAnswers < (steps[stepIndex]?.answers ?? 0)) return;
+
+    stepIndex += 1;
+
+    if (stepIndex < steps.length) sendNext();
     else {
       completed.resolve(answers);
       client.close();

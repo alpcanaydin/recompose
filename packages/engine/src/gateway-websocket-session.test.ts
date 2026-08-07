@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 import {
   gatewayConversation,
   gatewayFixture,
+  gatewayScript,
   upstreamFixture,
   xaiWebSocketPayload,
 } from './gateway-websocket.testkit';
@@ -78,6 +79,65 @@ test('routes xAI compaction through HTTP and replays compacted state on append',
   expect(upstream.stats.messages[1]).not.toHaveProperty('previous_response_id');
   expect(upstream.stats.messages[1]).toHaveProperty('input.0.type', 'compaction');
   expect(upstream.stats.messages[1]).toHaveProperty('input.1.id', 'msg-2');
+
+  await gateway.listeners.close();
+  await upstream.close();
+});
+
+test('preserves compacted xAI context through a generate-false warmup', async () => {
+  const upstream = await upstreamFixture();
+  const gateway = await gatewayFixture(upstream);
+  const trigger = {
+    ...xaiWebSocketPayload,
+    previous_response_id: 'resp_1',
+    input: [{ type: 'compaction_trigger' }],
+  };
+  const warmup = {
+    ...xaiWebSocketPayload,
+    previous_response_id: undefined,
+    generate: false,
+    input: [{ type: 'message', id: 'warm-1', role: 'user', content: 'warm up' }],
+  };
+
+  await expect(
+    gatewayScript(gateway.port, [
+      { payload: xaiWebSocketPayload, answers: 1 },
+      { payload: trigger, answers: 1 },
+      { payload: warmup, answers: 2 },
+      { payload: trigger, answers: 1 },
+    ]),
+  ).resolves.toHaveLength(5);
+  expect(upstream.stats.compactBodies).toHaveLength(2);
+  expect(upstream.stats.compactBodies[1]).toHaveProperty('input.0.type', 'compaction');
+  expect(upstream.stats.compactBodies[1]).toHaveProperty('input.1.id', 'warm-1');
+
+  await gateway.listeners.close();
+  await upstream.close();
+});
+
+test('clears pending compacted replay on an empty xAI full reset', async () => {
+  const upstream = await upstreamFixture();
+  const gateway = await gatewayFixture(upstream);
+  const trigger = {
+    ...xaiWebSocketPayload,
+    previous_response_id: 'resp_1',
+    input: [{ type: 'compaction_trigger' }],
+  };
+  const reset = { ...xaiWebSocketPayload, previous_response_id: undefined, input: [] };
+  const append = {
+    ...xaiWebSocketPayload,
+    type: 'response.append',
+    previous_response_id: undefined,
+    input: [{ type: 'message', id: 'msg-after-reset', role: 'user', content: 'next' }],
+  };
+
+  await expect(
+    gatewayConversation(gateway.port, [xaiWebSocketPayload, trigger, reset, append]),
+  ).resolves.toHaveLength(4);
+  expect(upstream.stats.messages).toHaveLength(3);
+  expect(upstream.stats.messages[2]).toHaveProperty('input', [
+    { type: 'message', id: 'msg-after-reset', role: 'user', content: 'next' },
+  ]);
 
   await gateway.listeners.close();
   await upstream.close();
