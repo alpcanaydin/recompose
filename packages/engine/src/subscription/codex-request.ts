@@ -240,10 +240,11 @@ export function codexProviderRequest(
   credential: ParsedSubscriptionCredential,
   sessionId: string,
   responsesLite = false,
+  promptCacheKey = sessionId,
 ): ProviderRequest {
   const body = normalizedBody(rawBody, credential.planType, responsesLite);
 
-  body['prompt_cache_key'] = sessionId;
+  body['prompt_cache_key'] = promptCacheKey;
 
   const headers: [string, string][] = [
     ['Content-Type', 'application/json'],

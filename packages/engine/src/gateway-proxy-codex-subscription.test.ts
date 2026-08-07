@@ -97,6 +97,37 @@ describe('preserving Codex subscription request controls', () => {
       parallel_tool_calls: false,
     });
   });
+
+  test('Claude root and subagent requests receive separate stable prompt cache keys', async () => {
+    const { app, provider } = codexApp(() => sseFor([completed]));
+    const body = JSON.stringify({
+      model: 'fast',
+      max_tokens: 64,
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+
+    for (const agent of ['main', 'agent-a', 'main']) {
+      await app.request('http://127.0.0.1:8397/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-claude-code-session-id': 'session-agents',
+          'x-claude-code-agent-id': agent,
+        },
+        body,
+      });
+    }
+
+    const keys = provider.sent.map((sent) => {
+      const request: unknown = JSON.parse(sent.request.body);
+
+      return typeof request === 'object' && request !== null && 'prompt_cache_key' in request
+        ? request.prompt_cache_key
+        : undefined;
+    });
+
+    expect(keys[0]).toBe(keys[2]);
+    expect(keys[1]).not.toBe(keys[0]);
+  });
 });
 
 describe('carrying Claude documents to a Codex subscription', () => {

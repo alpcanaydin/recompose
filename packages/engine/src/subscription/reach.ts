@@ -19,6 +19,7 @@ import { newClaudeDeviceId } from './claude-identity';
 import { claudeProviderRequest } from './claude-request';
 import { hydrateCodexCompletionStream } from './codex-completion';
 import { normalizeCodexError } from './codex-errors';
+import { codexPromptCacheKey } from './codex-prompt-cache';
 import { CodexReasoningReplay } from './codex-replay';
 import { codexProviderRequest } from './codex-request';
 import { sendInterceptedSubscription } from './intercepted-send';
@@ -170,6 +171,7 @@ function providerRequestFor(
     credential,
     runtime.randomUUID(),
     scope.responsesLite,
+    codexPromptCacheKey(body, scope.replayScopeId, scope.sessionId),
   );
 }
 
