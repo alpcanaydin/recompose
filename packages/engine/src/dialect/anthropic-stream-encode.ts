@@ -8,6 +8,7 @@ import type { HubBlockDelta, HubBlockOpening, HubStreamEvent, HubUsage } from '.
 import { translatedMessageId } from './anthropic-response';
 import { wireStopFrom } from './anthropic-stops';
 import { wireUsageFrom } from './anthropic-usage';
+import { serializeHubBlocks } from './hub-stream-serialize';
 
 type EncodeState = { beginUsage: HubUsage };
 
@@ -149,7 +150,7 @@ export async function* encodeStream(
 ): AsyncIterable<AnthropicStreamEvent> {
   const state: EncodeState = { beginUsage: {} };
 
-  for await (const event of source) {
+  for await (const event of serializeHubBlocks(source)) {
     const events: AnthropicStreamEvent[] = [];
     const done = encodeEvent(state, event, events);
 
