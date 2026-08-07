@@ -15,6 +15,9 @@ import {
 
 type PluginCapabilities = {
   executor: boolean;
+  executorModelScope: 'static' | 'oauth' | 'both';
+  executorInputFormats: string[];
+  executorOutputFormats: string[];
   scheduler: boolean;
   modelRouter: boolean;
   requestLifecycle: boolean;
@@ -42,6 +45,16 @@ type PluginLoader = (
 
 function booleanAt(value: Record<string, unknown>, key: string): boolean {
   return value[key] === true;
+}
+
+function stringArrayAt(value: Record<string, unknown>, key: string): string[] {
+  const list = value[key];
+
+  return Array.isArray(list) ? list.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function executorScope(value: unknown): 'static' | 'oauth' | 'both' {
+  return value === 'static' || value === 'oauth' || value === 'both' ? value : 'both';
 }
 
 function registrationSchemaVersion(value: Record<string, unknown>): number {
@@ -79,6 +92,9 @@ function registration(value: unknown): PluginRegistration {
     metadata: structuredClone(metadata),
     capabilities: {
       executor: booleanAt(capabilities, 'executor'),
+      executorModelScope: executorScope(capabilities['executor_model_scope']),
+      executorInputFormats: stringArrayAt(capabilities, 'executor_input_formats'),
+      executorOutputFormats: stringArrayAt(capabilities, 'executor_output_formats'),
       scheduler: booleanAt(capabilities, 'scheduler'),
       modelRouter: booleanAt(capabilities, 'model_router'),
       requestLifecycle: booleanAt(capabilities, 'request_lifecycle_plugin'),

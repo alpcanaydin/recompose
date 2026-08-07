@@ -6,6 +6,9 @@ export type PluginRoutingRecord = {
   priority: number;
   metadata: Record<string, unknown>;
   executor: boolean;
+  executorModelScope: 'static' | 'oauth' | 'both';
+  executorInputFormats: string[];
+  executorOutputFormats: string[];
   scheduler: boolean;
   modelRouter: boolean;
 };
