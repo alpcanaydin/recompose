@@ -25,7 +25,7 @@ type ObservationScope = {
   replayScopeId: string;
 };
 
-function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
+export function subscriptionDiagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
   return grant.spend.custody === 'subscription'
     ? `${grant.spend.accountId}\0${sessionId}`
     : sessionId;
@@ -47,7 +47,7 @@ async function observeClaudeAnswer(
     return answer;
   }
 
-  const key = diagnosticsKey(grant, sessionId);
+  const key = subscriptionDiagnosticsKey(grant, sessionId);
 
   return observeClaudeDiagnostics(answer, (messageId) => {
     runtime.diagnostics.commit(key, messageId);

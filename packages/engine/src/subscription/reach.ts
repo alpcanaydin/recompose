@@ -17,6 +17,7 @@ import { claudeProviderRequest } from './claude-request';
 import { CodexReasoningReplay } from './codex-replay';
 import { codexProviderRequest } from './codex-request';
 import { parseSubscriptionCredential, withClaudeCredentialIdentity } from './credentials';
+import { sendObservedSubscription } from './observed-send';
 import {
   fetchClaudeProfile,
   sendSubscriptionRequest,
@@ -27,7 +28,7 @@ import {
   refreshedAndPersisted,
   shouldRefreshUnauthorized,
 } from './reach-credential';
-import { observeSubscriptionAnswer } from './reach-observation';
+import { observeSubscriptionAnswer, subscriptionDiagnosticsKey } from './reach-observation';
 
 export type SubscriptionRuntime = {
   send: (provider: SubscriptionProviderId, request: ProviderRequest) => Promise<Response>;
@@ -93,7 +94,7 @@ function providerRequestFor(
       grant.providerOrigin,
       injectClaudeDiagnostics(
         body,
-        runtime.diagnostics.previous(diagnosticsKey(grant, scope.sessionId)),
+        runtime.diagnostics.previous(subscriptionDiagnosticsKey(grant, scope.sessionId)),
       ),
       credential.accessToken,
       { sessionId: scope.sessionId, requestId: runtime.randomUUID() },
@@ -152,12 +153,6 @@ function claudeIdentityOf(credential: ParsedSubscriptionCredential) {
     : { accountUuid: credential.accountUuid, deviceId };
 }
 
-function diagnosticsKey(grant: ResolvedGrant, sessionId: string): string {
-  return grant.spend.custody === 'subscription'
-    ? `${grant.spend.accountId}\0${sessionId}`
-    : sessionId;
-}
-
 export async function reachSubscription(
   grant: ResolvedGrant,
   body: JsonObject,
@@ -180,9 +175,12 @@ export async function reachSubscription(
 
   const ready = await readySubscriptionCredential(spend, runtime);
   const identified = await readyClaudeIdentity(spend, ready, runtime);
-  const answer = await runtime.send(
+  const answer = await sendObservedSubscription(
     spend.provider,
+    spend.accountId,
+    body,
     providerRequestFor(grant, body, identified.credential, runtime, scope),
+    runtime.send,
   );
 
   const finalAnswer = shouldRefreshUnauthorized(answer, identified.credential)
@@ -288,8 +286,11 @@ async function retryWithRefreshedCredential(
 ): Promise<Response> {
   const retried = await refreshedAndPersisted(spend, blob, runtime);
 
-  return runtime.send(
+  return sendObservedSubscription(
     spend.provider,
+    spend.accountId,
+    body,
     providerRequestFor(grant, body, retried.credential, runtime, scope),
+    runtime.send,
   );
 }

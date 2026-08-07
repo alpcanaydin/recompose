@@ -13,6 +13,7 @@ import { proxyVideoRequest } from './gateway-videos';
 import { registerGatewayWebSockets } from './gateway-websocket';
 import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { guardLoopback } from './loopback-guard';
+import { registerManagementUsage } from './management-usage';
 import { type AIStudioRelay, aiStudioRelayRuntime } from './provider/ai-studio-relay';
 import { invalidJson, unservedPath } from './refusals';
 
@@ -105,6 +106,7 @@ export function createGatewayApp(
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
+  registerManagementUsage(app);
   registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike, relay);
 
   for (const path of COUNT_TOKENS_PATHS) {
