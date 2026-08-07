@@ -19,6 +19,7 @@ import {
   virtualNameOf,
   wantsStream,
 } from './gateway-wire';
+import { cappedGeminiOutput } from './provider/gemini-model-limits';
 import { emptyConversation, missingCredential, missingTarget, unknownModel } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
@@ -170,7 +171,7 @@ async function reachedUpstream(
     return await fetchLike(credentialedUrl(grant, crossing), {
       method: 'POST',
       headers: spendHeaders(grant.spend),
-      body: JSON.stringify(body),
+      body: JSON.stringify(credentialedBody(grant, crossing, body)),
       signal: AbortSignal.timeout(proxyFetchBoundMs),
     });
   } catch (failure) {
@@ -182,6 +183,16 @@ async function reachedUpstream(
 
     return null;
   }
+}
+
+function credentialedBody(
+  grant: Extract<SpendGrant, { verdict: 'resolved' }>,
+  crossing: Crossing,
+  body: JsonObject,
+): JsonObject {
+  return grant.spend.custody === 'credentialed' && grant.spend.provider === 'gemini'
+    ? cappedGeminiOutput(body, crossing.providerModel)
+    : body;
 }
 
 function responsesLite(c: Context): boolean {

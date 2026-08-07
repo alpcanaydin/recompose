@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
 import { aCredentialedGrant, aGatewayHolding, aVirtualModel } from './gateway-app.testkit';
+import { isJsonObject, parsedJson } from './gateway-wire';
 
 const grant = aCredentialedGrant('https://generativelanguage.googleapis.com', 'gemini');
 
@@ -9,6 +10,12 @@ function urlOf(input: Parameters<typeof fetch>[0]): string {
   if (typeof input === 'string') return input;
 
   return input instanceof URL ? input.href : input.url;
+}
+
+function bodyOf(init: RequestInit | undefined): Record<string, unknown> {
+  const body = typeof init?.body === 'string' ? parsedJson(init.body) : undefined;
+
+  return isJsonObject(body) ? body : {};
 }
 
 function geminiResponse(): Response {
@@ -94,5 +101,39 @@ describe('Gemini provider serving', () => {
       'https://generativelanguage.googleapis.com/v1beta/models/gpt-5-mini:countTokens',
     ]);
     expect(await answer.json()).toEqual({ input_tokens: 17 });
+  });
+});
+
+describe('Gemini provider output limits', () => {
+  test('caps maxOutputTokens before reaching a known Gemini model', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const fetchLike: typeof fetch = async (_input, init) => {
+      sent.push(bodyOf(init));
+
+      return Promise.resolve(geminiResponse());
+    };
+    const model = aVirtualModel({
+      target: { standing: 'bound', providerModel: 'gemini-3.1-pro-preview' },
+    });
+    const app = createGatewayApp(
+      aGatewayHolding(model),
+      async () => Promise.resolve(grant),
+      fetchLike,
+    );
+
+    await app.request('http://127.0.0.1:8397/v1/chat/completions', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'fast',
+        messages: [{ role: 'user', content: 'hello' }],
+        max_tokens: 500_000,
+        temperature: 0.2,
+      }),
+    });
+
+    expect(sent[0]).toHaveProperty('generationConfig', {
+      maxOutputTokens: 65_536,
+      temperature: 0.2,
+    });
   });
 });
