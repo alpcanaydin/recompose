@@ -170,6 +170,19 @@ test('the arrow that would grow a shut panel brings it back instead', async () =
   expect(settled.restores).toBe(1);
 });
 
+test('a shut leading panel comes back on the arrow that grows it, which points the other way', async () => {
+  const { screen, settled } = await renderSeparator('leading', 320, true);
+
+  screen.getByRole('separator', theSeparator).element().focus();
+  await userEvent.keyboard('{ArrowLeft}');
+
+  expect(settled.restores).toBe(1);
+
+  await userEvent.keyboard('{ArrowRight}');
+
+  expect(settled.restores).toBe(1);
+});
+
 test('the panel a person is dragging keeps its settled width to itself until the drag ends', async () => {
   const { screen, settled } = await renderSeparator('trailing');
   const handle = screen.getByRole('separator', theSeparator).element();
@@ -232,4 +245,41 @@ test('Enter shuts the panel, so a keyboard reaches the collapse a drag makes', a
   await userEvent.keyboard('{Enter}');
 
   expect(settled.collapses).toBe(1);
+});
+
+test('a key the separator has no answer for leaves the panel exactly as it stands', async () => {
+  const { screen, settled } = await renderSeparator('trailing');
+
+  screen.getByRole('separator', theSeparator).element().focus();
+  await userEvent.keyboard('{Escape}');
+
+  expect(settled.widths).toEqual([]);
+  expect(settled.collapses).toBe(0);
+  expect(settled.kept).toBe(0);
+});
+
+test('a second pointer moving never sizes the panel the first one is dragging', async () => {
+  const { screen, settled } = await renderSeparator('trailing');
+  const handle = screen.getByRole('separator', theSeparator).element();
+
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 1, clientX: 500, bubbles: true }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 2, clientX: 700 }));
+
+  expect(settled.widths).toEqual([]);
+});
+
+test('a second pointer lifting never ends the drag the first one is making', async () => {
+  const { screen, settled } = await renderSeparator('trailing');
+  const handle = screen.getByRole('separator', theSeparator).element();
+
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 1, clientX: 500, bubbles: true }),
+  );
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2, clientX: 700 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 540 }));
+
+  expect(settled.kept).toBe(0);
+  expect(settled.widths).toEqual([360]);
 });

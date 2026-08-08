@@ -54,3 +54,11 @@ test('a stored runtime offers the server it is and the address it answers at', (
 test('a registry holding nothing offers no group for anyone to search', () => {
   expect(targetGroups([])).toEqual([]);
 });
+
+test('a key held under a vendor recompose draws no mark for offers the name alone', () => {
+  const unmarked: StoredAccounts = [
+    { id: 'k2', provider: 'in-house', kind: 'api-key', label: 'House key', credentialRef: 'c3' },
+  ];
+
+  expect(targetGroups(unmarked)[0]?.options).toEqual([{ id: 'k2', name: 'House key' }]);
+});

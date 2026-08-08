@@ -37,6 +37,7 @@ const creative: VirtualModel = {
 async function renderDrawer(
   virtualModels: readonly VirtualModel[] = [fast, creative],
   parameters: BridgeParameters = {},
+  leaving = false,
 ) {
   const gateway = gatewaySeed({
     slug: 'my-gateway',
@@ -63,6 +64,7 @@ async function renderDrawer(
       <GatewayDrawer
         drafting={drafting}
         gateway={gateway}
+        leaving={leaving}
         onKeepDrafting={(values) => {
           setDrafting((held) => draftKept(held, values));
         }}
@@ -151,6 +153,13 @@ test('asking for a virtual model swaps the drawer to the flow that defines one',
 
   await expect.element(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
   await expect.element(screen.getByText('Endpoint', { exact: true })).not.toBeInTheDocument();
+});
+
+test('a drawer on its way off screen still reads the gateway it spoke for', async () => {
+  const screen = await renderDrawer([fast], {}, true);
+
+  await expect.element(screen.getByRole('heading', { name: 'My Gateway' })).toBeVisible();
+  await expect.element(screen.getByText('Fast', { exact: true })).toBeVisible();
 });
 
 test('stepping back from the flow hands the drawer back to what serves', async () => {

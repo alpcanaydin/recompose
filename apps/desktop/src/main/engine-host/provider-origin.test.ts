@@ -123,6 +123,12 @@ describe('an origin the environment names in place of the vendor endpoint', () =
     expect(providerOriginOf(keyRow('openai'))).toBe('https://api.openai.com');
   });
 
+  test('a loopback origin stands in for the vendor a subscription is spent against', () => {
+    vi.stubEnv(SERVING_ORIGIN, 'http://127.0.0.1:41999');
+
+    expect(providerOriginOf(subscription('anthropic'))).toBe('http://127.0.0.1:41999');
+  });
+
   test('a plugin provider is not redirected through the vendor stand-in', () => {
     vi.stubEnv(SERVING_ORIGIN, 'http://127.0.0.1:41999');
 
