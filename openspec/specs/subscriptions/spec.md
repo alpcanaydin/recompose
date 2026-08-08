@@ -2,25 +2,24 @@
 
 ## Purpose
 
-The behavioral contract of a subscription account in recompose. It covers what connecting one does, what it never does, how the app lists one, what a row reports, and how a person adds another. A subscription is an account a person already pays a plan for, signed in through the provider's own tool. This contract states plainly that a gateway can't route to it.
+The behavioral contract of a subscription account in recompose. It covers what connecting one does, what it never does, how the app lists one, what a row reports, and how a person adds another. A subscription is an account a person already pays a plan for, signed in through the provider's own tool. A gateway serves one through a virtual model, and that serving contract lives in the virtual-models spec.
 
 ## Requirements
 
-### Requirement: A subscription is a managed account, never a gateway target
+### Requirement: A subscription is a managed account that stands as a gateway target
 
-Connecting a subscription MUST record the account and MUST NOT make it reachable by a virtual model. The app MUST NOT hold a subscription credential for its own outbound use, and MUST NOT offer a provider sign-in as a way to feed a gateway. The surface MUST state what a subscription is good for before a person connects one, rather than letting the first request teach the limit.
+Connecting a subscription MUST record the account as a managed account. A connected subscription MUST stand among the targets a virtual model can bind, like every other stored account kind. Its credential MUST stay in the app's custody on the way to a target's provider. It resolves per request and rides neither a command line, an environment variable, nor a disk file.
 
 #### Scenario: a person reads what a subscription account serves
 
 - When the subscriptions surface lists a connected account
 - Then the row names the plan product the account signs into
-- And no part of the surface offers the account as a gateway target
 
-#### Scenario: a gateway never lists a subscription among its targets
+#### Scenario: a gateway offers a subscription among its targets
 
 - Given a connected subscription account
 - When a person composes a virtual model
-- Then the subscription account appears nowhere among the targets offered
+- Then the subscription account stands among the targets offered
 
 ### Requirement: The provider's own tool performs the sign-in
 
