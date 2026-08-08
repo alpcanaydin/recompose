@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import type { Account } from './accounts';
-
 import { migrateDocument, type Migration } from './migration';
 import { nonBlankString } from './non-blank';
 
@@ -99,15 +97,11 @@ export const targetSchema = z.strictObject({
 
 export type Target = z.infer<typeof targetSchema>;
 
-function virtualModelSchemaAgainstAccounts() {
-  return z.strictObject({
-    id: modelAliasSchema,
-    displayName: nonBlankString,
-    target: targetSchema,
-  });
-}
-
-export const virtualModelSchema = virtualModelSchemaAgainstAccounts();
+export const virtualModelSchema = z.strictObject({
+  id: modelAliasSchema,
+  displayName: nonBlankString,
+  target: targetSchema,
+});
 
 export type VirtualModel = z.infer<typeof virtualModelSchema>;
 
@@ -118,18 +112,14 @@ const layoutSchema = z.strictObject({
     .optional(),
 });
 
-export function gatewayConfigSchemaAgainstAccounts(_accounts: readonly Account[]) {
-  return z.strictObject({
-    schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
-    slug: gatewaySlugSchema,
-    displayName: z.string().trim().min(1),
-    port: gatewayPortSchema,
-    virtualModels: z.array(virtualModelSchemaAgainstAccounts()),
-    layout: layoutSchema,
-  });
-}
-
-export const gatewayConfigSchema = gatewayConfigSchemaAgainstAccounts([]);
+export const gatewayConfigSchema = z.strictObject({
+  schemaVersion: z.literal(GATEWAY_CONFIG_VERSION),
+  slug: gatewaySlugSchema,
+  displayName: z.string().trim().min(1),
+  port: gatewayPortSchema,
+  virtualModels: z.array(virtualModelSchema),
+  layout: layoutSchema,
+});
 
 export type GatewayConfig = z.infer<typeof gatewayConfigSchema>;
 

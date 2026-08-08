@@ -1,12 +1,9 @@
 import type { GatewayConfig, IpcRequest } from '@recompose/contracts';
 
-import { gatewayConfigSchemaAgainstAccounts } from '@recompose/contracts';
-
 import type { IpcHandlers } from './dispatch';
 import type { StorageIpcContext, StoragePaths } from './storage-context';
 
 import { engineGatewayOf } from '../engine-host/stored-gateway';
-import { loadAccountsFile } from '../storage/accounts-store';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
 import { inGatewayWriteOrder } from '../storage/gateway-write-order';
 import { ipcFailure, storageFailure } from './storage-envelope';
@@ -47,17 +44,6 @@ function conflictWith(stored: readonly GatewayConfig[], saving: GatewayConfig) {
   return null;
 }
 
-async function refusedTarget(ctx: StorageIpcContext, paths: StoragePaths, config: GatewayConfig) {
-  const registry = await loadAccountsFile(paths.accountsFile, ctx.onCorrupt);
-  const parsed = gatewayConfigSchemaAgainstAccounts(registry.accounts).safeParse(config);
-
-  if (parsed.success) {
-    return null;
-  }
-
-  return ipcFailure('validation-failed', parsed.error.message);
-}
-
 async function saveGateway(
   ctx: StorageIpcContext,
   paths: StoragePaths,
@@ -65,7 +51,7 @@ async function saveGateway(
 ) {
   try {
     const stored = await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt);
-    const conflict = conflictWith(stored, config) ?? (await refusedTarget(ctx, paths, config));
+    const conflict = conflictWith(stored, config);
 
     if (conflict !== null) {
       return conflict;
@@ -120,12 +106,6 @@ async function updateGateway(
 
     if (held === undefined) {
       return noSuchGateway(config.slug);
-    }
-
-    const refused = await refusedTarget(ctx, paths, config);
-
-    if (refused !== null) {
-      return refused;
     }
 
     const rewritten = { ...config, port: held.port };

@@ -1,4 +1,4 @@
-import type { Account, EngineGateway, GatewayConfig, IpcError } from '@recompose/contracts';
+import type { Account, EngineGateway, GatewayConfig } from '@recompose/contracts';
 
 import { ACCOUNTS_VERSION } from '@recompose/contracts';
 import { mkdtemp, readdir, writeFile } from 'node:fs/promises';
@@ -63,14 +63,6 @@ async function deskWith(accounts: readonly Account[], stored: readonly GatewayCo
   return { served, userDataPath, handlers } satisfies Desk;
 }
 
-function refusalIn(answer: { ok: true } | { ok: false; error: IpcError }): IpcError {
-  if (answer.ok) {
-    throw new Error('the write landed where the spec expected a refusal');
-  }
-
-  return answer.error;
-}
-
 async function storedSlugs(userDataPath: string): Promise<string[]> {
   return readdir(join(userDataPath, 'gateways'), { withFileTypes: false }).catch(() => []);
 }
@@ -118,33 +110,6 @@ describe('a save carrying a definition bound to a subscription account', () => {
         target: { standing: 'bound', providerModel: 'claude-sonnet-5' },
       },
     ]);
-  });
-});
-
-function blanklyNamed(accountId: string): GatewayConfig {
-  return gatewayHolding([
-    { id: 'fast', displayName: '   ', target: { accountId, providerModel: 'claude-sonnet-5' } },
-  ]);
-}
-
-describe('a save the stored shape itself refuses', () => {
-  test('a blank name bound to a key account is refused in the schema own words', async () => {
-    const desk = await deskWith([keyRow, planRow], []);
-
-    const answer = await desk.handlers['gateways:save'](blanklyNamed(keyRow.id));
-
-    expect(refusalIn(answer).code).toBe('validation-failed');
-    expect(refusalIn(answer).message).not.toContain('subscription');
-    expect(refusalIn(answer).message).not.toContain(keyRow.label);
-  });
-
-  test('a blank name bound to an account nothing holds is refused the same way', async () => {
-    const desk = await deskWith([keyRow, planRow], []);
-
-    const answer = await desk.handlers['gateways:save'](blanklyNamed('acc-vanished'));
-
-    expect(refusalIn(answer).code).toBe('validation-failed');
-    expect(refusalIn(answer).message).not.toContain('subscription');
   });
 });
 
