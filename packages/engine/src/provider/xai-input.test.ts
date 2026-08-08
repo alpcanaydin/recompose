@@ -147,3 +147,96 @@ describe('xAI encrypted reasoning', () => {
     expect(body['input']).toEqual([{ role: 'user', content: 'hi' }]);
   });
 });
+
+describe('xAI reasoning hygiene', () => {
+  test('keeps compaction items carrying sound encrypted content', () => {
+    const valid = validEncryptedContent(3);
+    const body = normalizeXAIInput({ input: [{ type: 'compaction', encrypted_content: valid }] });
+
+    expect(body).toHaveProperty('input.0', { type: 'compaction', encrypted_content: valid });
+  });
+
+  test('removes the null content field a reasoning item arrives with', () => {
+    const valid = validEncryptedContent(5);
+    const body = normalizeXAIInput({
+      input: [{ type: 'reasoning', content: null, encrypted_content: valid }],
+    });
+
+    expect(body).toHaveProperty('input.0', { type: 'reasoning', encrypted_content: valid });
+  });
+
+  test('merges reasoning that arrived without a summary list', () => {
+    const body = normalizeXAIInput({
+      input: [
+        { type: 'reasoning' },
+        { type: 'reasoning', summary: [{ type: 'summary_text', text: 'second' }] },
+      ],
+    });
+
+    expect(body['input']).toEqual([
+      { type: 'reasoning', summary: [{ type: 'summary_text', text: 'second' }] },
+    ]);
+  });
+});
+
+describe('xAI input entries the gateway leaves alone', () => {
+  test('entries that are not objects travel through untouched', () => {
+    expect(normalizeXAIInput({ input: ['raw entry', 7] })['input']).toEqual(['raw entry', 7]);
+  });
+
+  test('a body without an input list is left as it stands', () => {
+    expect(normalizeXAIInput({ model: 'grok-5' })).toEqual({ model: 'grok-5' });
+  });
+
+  test('an agent message whose content is not a list keeps that content', () => {
+    const body = normalizeXAIInput({ input: [{ type: 'agent_message', content: 'plain brief' }] });
+
+    expect(body['input']).toEqual([{ type: 'message', role: 'user', content: 'plain brief' }]);
+  });
+
+  test('an encrypted part carrying no text becomes empty input text', () => {
+    const body = normalizeXAIInput({
+      input: [{ type: 'agent_message', content: [{ type: 'encrypted_content' }] }],
+    });
+
+    expect(body).toHaveProperty('input.0.content', [{ type: 'input_text', text: '' }]);
+  });
+});
+
+describe('xAI custom tool arguments', () => {
+  test('a call arriving without arguments sends an empty object', () => {
+    const body = normalizeXAIInput({
+      input: [{ type: 'custom_tool_call', call_id: 'c1', name: 'apply_patch' }],
+    });
+
+    expect(body).toHaveProperty('input.0.arguments', '{}');
+  });
+
+  test('arguments that do not describe an object are wrapped under an input key', () => {
+    const body = normalizeXAIInput({
+      input: [
+        { type: 'custom_tool_call', call_id: 'c1', name: 'a', input: '123' },
+        { type: 'custom_tool_call', call_id: 'c2', name: 'b', input: 7 },
+        { type: 'custom_tool_call', call_id: 'c3', name: 'c', input: { q: 1 } },
+      ],
+    });
+
+    expect(body).toHaveProperty('input.0.arguments', '{"input":"123"}');
+    expect(body).toHaveProperty('input.1.arguments', '{"input":7}');
+    expect(body).toHaveProperty('input.2.arguments', '{"q":1}');
+  });
+
+  test('a call without a usable tool name is dropped', () => {
+    const body = normalizeXAIInput({
+      input: [{ type: 'custom_tool_call', call_id: 'c1', name: '   ' }],
+    });
+
+    expect(body['input']).toEqual([]);
+  });
+
+  test('an output arriving without a result sends empty text', () => {
+    const body = normalizeXAIInput({ input: [{ type: 'custom_tool_call_output', call_id: 'c1' }] });
+
+    expect(body).toHaveProperty('input.0.output', '');
+  });
+});

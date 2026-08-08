@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import {
   KimiThinkingReplay,
   kimiThinkingReplayModelFamily,
+  replayableKimiThinkingContent,
   restoreKimiThinkingContent,
 } from './kimi-thinking-replay';
 
@@ -85,5 +86,71 @@ describe('KimiThinkingReplay', () => {
 
     expect(replay.inject('kimi-k3-256k', root, compacted).applied).toBe(true);
     expect(replay.inject('kimi-k3-256k', subagent, compacted).applied).toBe(false);
+  });
+
+  test('refuses a commit without a scope or without replayable content', () => {
+    const replay = new KimiThinkingReplay();
+
+    expect(replay.commit('k3', '   ', cached)).toBe(false);
+    expect(replay.commit('k3', 'scope', 'not a list')).toBe(false);
+    expect(replay.commit('k3', 'scope', [{ type: 'text', text: 'plain' }])).toBe(false);
+  });
+
+  test('replaces an entry only while the snapshot still describes it', () => {
+    const replay = new KimiThinkingReplay();
+    const snapshot = replay.snapshot('k3', 'scope');
+
+    expect(replay.replaceIfUnchanged('k3', 'scope', snapshot, 'not a list')).toBe(false);
+    expect(replay.replaceIfUnchanged('k3', 'scope', snapshot, [{ type: 'text', text: 'x' }])).toBe(
+      false,
+    );
+    expect(replay.replaceIfUnchanged('k3', 'scope', snapshot, cached)).toBe(true);
+    expect(replay.inject('k3', 'scope', compacted).applied).toBe(true);
+    expect(replay.replaceIfUnchanged('k3', 'scope', snapshot, cached)).toBe(false);
+  });
+});
+
+describe('replayableKimiThinkingContent', () => {
+  test('content that is not a list of parts cannot be replayed', () => {
+    expect(replayableKimiThinkingContent('reasoning text')).toBe(false);
+    expect(replayableKimiThinkingContent([{ type: 'thinking' }, 'raw part'])).toBe(false);
+  });
+
+  test('signed thinking without a named tool call cannot be replayed', () => {
+    expect(replayableKimiThinkingContent([{ type: 'thinking', signature: '   ' }])).toBe(false);
+    expect(
+      replayableKimiThinkingContent([
+        { type: 'thinking', signature: 'sig' },
+        { type: 'tool_use', id: '   ' },
+      ]),
+    ).toBe(false);
+  });
+});
+
+describe('restore refusals', () => {
+  test('a body without a message list is left as it stands', () => {
+    expect(restoreKimiThinkingContent({ messages: 'none' }, cached).applied).toBe(false);
+    expect(restoreKimiThinkingContent({ messages: [] }, 'not a list').applied).toBe(false);
+  });
+
+  test('cached content without a tool call cannot be restored', () => {
+    const thinkingOnly = [
+      { type: 'thinking', thinking: 'full reasoning', signature: 'kimi-signature' },
+      { type: 'text', text: 'I will inspect the file.' },
+    ];
+
+    expect(restoreKimiThinkingContent(compacted, thinkingOnly).applied).toBe(false);
+  });
+
+  test('turns that are not assistant block content are passed over', () => {
+    const body = {
+      messages: [
+        'raw turn',
+        { role: 'user', content: 'inspect' },
+        { role: 'assistant', content: 'plain answer' },
+      ],
+    };
+
+    expect(restoreKimiThinkingContent(body, cached).applied).toBe(false);
   });
 });
