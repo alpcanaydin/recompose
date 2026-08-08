@@ -10,22 +10,20 @@ export { toolChoiceFrom, toolsFrom } from './chat-completions-request-tools';
 export const injectedMaxOutputTokensDefault = 4096;
 
 function recordTokenSource(request: ChatCompletionsRequest, fates: Fate[]): void {
-  if (request.max_completion_tokens !== undefined) {
-    fates.push({
-      field: 'max_completion_tokens',
-      disposition: 'mapped',
-      to: 'sampling.maxOutputTokens',
-    });
-
-    if (request.max_tokens !== undefined) {
-      fates.push({ field: 'max_tokens', disposition: 'mapped', to: 'absent' });
-    }
+  if (request.max_completion_tokens === undefined) {
+    fates.push({ field: 'max_tokens', disposition: 'mapped', to: 'sampling.maxOutputTokens' });
 
     return;
   }
 
+  fates.push({
+    field: 'max_completion_tokens',
+    disposition: 'mapped',
+    to: 'sampling.maxOutputTokens',
+  });
+
   if (request.max_tokens !== undefined) {
-    fates.push({ field: 'max_tokens', disposition: 'mapped', to: 'sampling.maxOutputTokens' });
+    fates.push({ field: 'max_tokens', disposition: 'mapped', to: 'absent' });
   }
 }
 

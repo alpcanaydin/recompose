@@ -133,6 +133,40 @@ describe('encodeStream: Hub thought deltas to Interactions', () => {
   });
 });
 
+describe('encodeStream: Hub events Interactions carries no shape for', () => {
+  it('should drop a citation delta and a standalone media block from the step lane', async () => {
+    const encoded = await encode([
+      { type: 'block-open', index: 0, opening: { kind: 'text' } },
+      {
+        type: 'block-delta',
+        index: 0,
+        delta: { kind: 'annotation', annotation: { url: 'https://example.test' } },
+      },
+      {
+        type: 'media',
+        block: { type: 'image', source: { type: 'url', url: 'https://example.test/cat.png' } },
+      },
+      { type: 'block-close', index: 0 },
+    ]);
+
+    expect(encoded).toEqual([
+      { event_type: 'step.start', index: 0, step: { type: 'model_output', content: [] } },
+      { event_type: 'step.stop', index: 0, status: 'done' },
+    ]);
+  });
+});
+
+describe('encodeStream: Hub refusal to Interactions', () => {
+  it('should report a refused answer as a failed interaction', async () => {
+    const encoded = await encode([
+      { type: 'message-begin' },
+      { type: 'message-end', stopReason: 'refusal', usage: {} },
+    ]);
+
+    expect(encoded.at(-2)).toHaveProperty('interaction.status', 'failed');
+  });
+});
+
 // Helpers
 
 async function encode(events: readonly HubStreamEvent[]) {

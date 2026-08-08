@@ -80,7 +80,9 @@ function blockEvent(event: HubStreamEvent): InteractionsKnownStreamEvent[] {
   return [];
 }
 
-function terminalEvent(state: EncodeState, event: HubStreamEvent): InteractionsKnownStreamEvent[] {
+type TerminalEvent = Extract<HubStreamEvent, { type: 'message-end' | 'stream-error' }>;
+
+function terminalEvent(state: EncodeState, event: TerminalEvent): InteractionsKnownStreamEvent[] {
   if (event.type === 'message-end') {
     return [
       {
@@ -90,8 +92,6 @@ function terminalEvent(state: EncodeState, event: HubStreamEvent): InteractionsK
       { event_type: 'done' },
     ];
   }
-
-  if (event.type !== 'stream-error') return [];
 
   return [
     {

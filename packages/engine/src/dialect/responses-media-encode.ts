@@ -42,7 +42,9 @@ function audioPart(role: 'user' | 'assistant', block: HubAudioBlock): ResponsesC
 function responsesAudioFormat(mediaType: string): string {
   if (mediaType === 'audio/mpeg') return 'mp3';
 
-  return mediaType.split('/').at(-1) ?? mediaType;
+  const separator = mediaType.lastIndexOf('/');
+
+  return separator === -1 ? mediaType : mediaType.slice(separator + 1);
 }
 
 export function responsesPartFromHubBlock(

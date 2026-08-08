@@ -253,11 +253,13 @@ function canonicalItem(
   bindings: BindingState,
 ): ResponsesInputItem[] {
   const binding = bindings.targets.get(index);
-  const carrier = carrierOf(item);
   const prefix = binding === undefined ? [] : [canonicalCarrier(binding)];
 
+  if (item.type !== 'reasoning') return [...prefix, boundTargetItem(item, binding)];
+
+  const carrier = reasoningCarrier(item);
+
   if (carrier === null) return [...prefix, boundTargetItem(item, binding)];
-  if (item.type !== 'reasoning') return prefix;
 
   return canonicalReasoning(item, carrier, bindings.carriers.has(index));
 }

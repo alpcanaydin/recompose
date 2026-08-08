@@ -7,10 +7,12 @@ import {
   translateResponseFromGemini,
   translateStreamFromGemini,
 } from './gemini-bridge';
-import { geminiToolNameMap } from './gemini-tool-names';
+import { geminiToolNameMap, mapGeminiToolNames } from './gemini-tool-names';
 
 const first = 'mcp__plugin_cloudflare_cloudflare-builds__workers_builds_get_build';
 const second = 'mcp__plugin_cloudflare_cloudflare-builds__workers_builds_get_build_logs';
+const forbiddenBrace = 'get{weather';
+const forbiddenTilde = 'get~weather';
 
 describe('Gemini function-name mapping', () => {
   it('should disambiguate colliding long names independently from declaration order', () => {
@@ -108,6 +110,35 @@ describe('Gemini function-name restoration', () => {
         arguments: {},
       },
     });
+  });
+});
+
+describe('Gemini function-name sanitising', () => {
+  it('should name a tool that declares no name at all with a bare underscore', () => {
+    const mapped = mapGeminiToolNames({
+      messages: [],
+      tools: [{ name: '', inputSchema: { type: 'object', properties: {} } }],
+    });
+
+    expect(mapped.tools?.[0]?.name).toBe('_');
+  });
+
+  it('should open a name with an underscore when the tool name opens with a digit', () => {
+    expect(geminiToolNameMap(['2fast']).get('2fast')).toBe('_2fast');
+  });
+});
+
+describe('Gemini function-name disambiguation avoids a name a sibling already holds', () => {
+  it('should move a colliding tool aside from a name another tool declared verbatim', () => {
+    const taken = geminiToolNameMap([forbiddenBrace, forbiddenTilde]).get(forbiddenTilde);
+
+    if (taken === undefined) throw new Error('the disambiguated tool name is missing');
+
+    const mapped = geminiToolNameMap([taken, forbiddenBrace, forbiddenTilde]);
+
+    expect(mapped.get(taken)).toBe(taken);
+    expect(mapped.get(forbiddenTilde)).not.toBe(taken);
+    expect(new Set(mapped.values()).size).toBe(3);
   });
 });
 

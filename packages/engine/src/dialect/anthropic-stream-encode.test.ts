@@ -157,3 +157,24 @@ describe('encodeStream carries the usage and the stream ends', () => {
     expect(events.at(-1)).toEqual({ type: 'message_stop' });
   });
 });
+
+describe('encodeStream drops the blocks the wire has no event for', () => {
+  it('writes no wire event for a standalone media block', async () => {
+    const hub: readonly HubStreamEvent[] = [
+      { type: 'message-begin' },
+      {
+        type: 'media',
+        block: { type: 'image', source: { type: 'url', url: 'https://example.test/cat.png' } },
+      },
+      { type: 'message-end', stopReason: 'end', usage: {} },
+    ];
+
+    const events = await collect(encodeStream(streamOf(hub)));
+
+    expect(events.map((event) => event.type)).toEqual([
+      'message_start',
+      'message_delta',
+      'message_stop',
+    ]);
+  });
+});

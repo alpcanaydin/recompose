@@ -27,6 +27,36 @@ describe('Interactions advanced Gemini generation config', () => {
     });
   });
 
+  it('should camelize the fields nested inside a list value', () => {
+    const translated = translateRequestToGemini('interactions', {
+      model: 'gemini-3.5-flash',
+      input: 'hi',
+      generation_config: { speech_config: [{ voice_name: 'aoede' }] },
+    });
+
+    expect(translated).toHaveProperty('value.generationConfig.speechConfig', [
+      { voiceName: 'aoede' },
+    ]);
+  });
+});
+
+describe('Gemini generation config a request states as a non-object', () => {
+  it('should leave the provider configuration untouched', () => {
+    const request = ingressPayload('chat-completions', {
+      model: 'gemini-3.5-flash',
+      messages: [{ role: 'user', content: 'hi' }],
+      generationConfig: ['not-a-configuration'],
+    });
+
+    if (request === null) throw new Error('the Chat Completions request failed validation');
+
+    const translated = translateRequestToGemini('chat-completions', request);
+
+    expect(translated).not.toHaveProperty('value.generationConfig.0');
+  });
+});
+
+describe('Interactions opaque Gemini generation config', () => {
   it('should preserve an opaque large identity value without numeric coercion', () => {
     const parsed = parsePreciseJson(
       '{"model":"gemini-3.5-flash","input":"hi","generation_config":{"large_identity":9223372036854775807}}',

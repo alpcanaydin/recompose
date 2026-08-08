@@ -33,34 +33,35 @@ function disambiguated(base: string, original: string, used: ReadonlySet<string>
 
 export function geminiToolNameMap(names: readonly string[]): ReadonlyMap<string, string> {
   const unique = [...new Set(names.filter((name) => name !== ''))].toSorted();
-  const counts = baseCounts(unique);
 
-  return mappedNames(unique, counts);
+  return mappedNames(unique, sharedBases(unique));
 }
 
-function baseCounts(names: readonly string[]): ReadonlyMap<string, number> {
-  const counts = new Map<string, number>();
+function sharedBases(names: readonly string[]): ReadonlySet<string> {
+  const seen = new Set<string>();
+  const shared = new Set<string>();
 
   for (const name of names) {
     const base = sanitizeFunctionName(name);
 
-    counts.set(base, (counts.get(base) ?? 0) + 1);
+    if (seen.has(base)) shared.add(base);
+
+    seen.add(base);
   }
 
-  return counts;
+  return shared;
 }
 
 function mappedNames(
   names: readonly string[],
-  counts: ReadonlyMap<string, number>,
+  shared: ReadonlySet<string>,
 ): ReadonlyMap<string, string> {
   const used = new Set<string>();
   const mapped = new Map<string, string>();
 
   for (const name of names) {
     const base = sanitizeFunctionName(name);
-    const selected =
-      (counts.get(base) ?? 0) > 1 || used.has(base) ? disambiguated(base, name, used) : base;
+    const selected = shared.has(base) || used.has(base) ? disambiguated(base, name, used) : base;
 
     mapped.set(name, selected);
     used.add(selected);
