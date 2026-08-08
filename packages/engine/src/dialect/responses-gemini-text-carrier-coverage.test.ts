@@ -118,7 +118,9 @@ describe('a Gemini carrier with nothing it can sign', () => {
 
     expect(folded).toBeNull();
   });
+});
 
+describe('a Gemini carrier that finds a text block to sign', () => {
   it('should refuse a text block that another carrier already signed', () => {
     const folded = foldNextGeminiTextCarrier(
       carrierItem({ signature, direction: 'next', target: 'text' }),
