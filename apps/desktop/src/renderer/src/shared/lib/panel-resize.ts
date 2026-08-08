@@ -52,8 +52,8 @@ export function draggedPanel(asked: number, bounds: PanelBounds): PanelStanding 
  * from returning it, so shutting and restoring cost the same travel and the border a person grabs on
  * a shut panel is the one that reopens it.
  */
-export function restoredPanel(travelled: number, bounds: PanelBounds): boolean {
-  return travelled >= bounds.collapseBelow;
+export function restoredPanel(traveled: number, bounds: PanelBounds): boolean {
+  return traveled >= bounds.collapseBelow;
 }
 
 /** The width one arrow key away, which never leaves the bounds. */

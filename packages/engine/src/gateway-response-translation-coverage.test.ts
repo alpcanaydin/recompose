@@ -14,7 +14,7 @@ function crossingTo(dialect: Crossing['dialect']): Crossing {
   };
 }
 
-describe('recognising a Claude answer on the wire', () => {
+describe('recognizing a Claude answer on the wire', () => {
   test('an answer that never stopped is still a Claude answer', () => {
     expect(
       isAnthropicAnswer({

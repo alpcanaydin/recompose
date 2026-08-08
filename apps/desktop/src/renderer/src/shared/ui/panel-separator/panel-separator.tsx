@@ -160,7 +160,7 @@ function watchTheDrag(watching: Watching): () => void {
  * the way back to a panel that has gone rather than a strip that does nothing. It carries the
  * window-splitter semantics whole, so arrow keys size it, Home and End reach the bounds, and Enter
  * shuts it and brings it back, because a border only a pointer can reach is out of reach for anyone
- * without one. Shutting or restoring ends the drag, since a pointer travelling on has nothing left
+ * without one. Shutting or restoring ends the drag, since a pointer traveling on has nothing left
  * to say about a panel that already answered.
  */
 export function PanelSeparator({

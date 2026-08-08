@@ -193,13 +193,13 @@ describe('Interactions media and text content', () => {
 });
 
 describe('Hub media recognition', () => {
-  it('should recognise media blocks and reject text blocks', () => {
-    const recognised = [
+  it('should recognize media blocks and reject text blocks', () => {
+    const recognized = [
       isHubInteractionsMedia({ type: 'image', source: { type: 'url', url: 'https://a.test/b' } }),
       isHubInteractionsMedia({ type: 'text', text: 'plain' }),
     ];
 
-    expect(recognised).toEqual([true, false]);
+    expect(recognized).toEqual([true, false]);
   });
 });
 

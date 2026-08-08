@@ -169,7 +169,7 @@ describe('AIStudioRelay stream assembly', () => {
     await expect(reading).resolves.toBe('');
   });
 
-  it('should ignore an unrecognised lifecycle frame for a live request', async () => {
+  it('should ignore an unrecognized lifecycle frame for a live request', async () => {
     const relay = relayWithIds();
 
     relay.attach(socketStub(), 'aistudio-build');

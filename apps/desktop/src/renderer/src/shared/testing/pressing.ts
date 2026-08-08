@@ -5,9 +5,9 @@ type Canvas = {
 /**
  * Reaches a control the way a keyboard does and presses keys on it, answering the control.
  *
- * @summary A story asserting a keyboard behaviour has to put focus where a person's would be first,
+ * @summary A story asserting a keyboard behavior has to put focus where a person's would be first,
  * so the sequence is one step rather than three that a story can get wrong in a different order than
- * its neighbour.
+ * its neighbor.
  */
 export async function pressedByKeyboard(
   canvas: Canvas,

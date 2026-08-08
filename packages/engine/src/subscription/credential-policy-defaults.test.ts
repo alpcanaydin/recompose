@@ -122,7 +122,7 @@ describe('a stated credential policy field overrides its default', () => {
     expect(resolved.concurrency[key]).toBe(13);
   });
 
-  test('a field left unstated keeps its default while its neighbour is overridden', () => {
+  test('a field left unstated keeps its default while its neighbor is overridden', () => {
     const resolved = resolveCredentialPolicyDefaults({ inFlight: { staleAfterMs: 1 } });
 
     expect(resolved.inFlight.staleAfterMs).toBe(1);

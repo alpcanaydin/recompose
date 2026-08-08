@@ -8,7 +8,7 @@ import {
 const signature = 'EjQKMgEMOdbHO0Gd+c9Mxk4ELwPGbpCEcp2mFfYYLix2UVtBH3fL8GECc4+JITVnHF4qZDsA';
 const media = { inlineData: { mimeType: 'image/png', data: 'iVBOR' } };
 
-describe('placing a signature that no neighbouring part can hold', () => {
+describe('placing a signature that no neighboring part can hold', () => {
   test('a media part cannot hold a pending signature, so a carrier keeps it', () => {
     const parts = normalizeGeminiResponsesTextParts([{ thoughtSignature: signature }, media]);
 

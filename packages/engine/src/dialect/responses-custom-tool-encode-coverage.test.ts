@@ -16,7 +16,7 @@ describe('customResponsesCall writes the input a custom tool call carries', () =
     });
   });
 
-  it('serialises a structured input as json', () => {
+  it('serializes a structured input as json', () => {
     const call = customResponsesCall(toolUse({ query: 'SELECT 1', limit: 10 }));
 
     expect(call).toHaveProperty('input', '{"query":"SELECT 1","limit":10}');

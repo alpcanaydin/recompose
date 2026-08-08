@@ -67,7 +67,7 @@ function caisSignatureWith(extra: readonly number[]): string {
 }
 
 describe('classic Claude signature structure', () => {
-  test('a signature carrying a complete fixed-width trailer stays recognised', () => {
+  test('a signature carrying a complete fixed-width trailer stays recognized', () => {
     const sixtyFourBit = classicSignatureWith([...tagged(4, 1), ...filler(8)]);
     const thirtyTwoBit = classicSignatureWith([...tagged(4, 5), ...filler(4)]);
 
@@ -114,14 +114,14 @@ describe('classic Claude signature structure', () => {
 });
 
 describe('CAIS Claude signature structure', () => {
-  test('a well-formed CAIS channel is recognised', () => {
+  test('a well-formed CAIS channel is recognized', () => {
     const signature = caisSignatureWith([]);
 
     expect(signature.startsWith('C')).toBe(true);
     expect(strictCaisClaudeSignature(signature)).toBe(signature);
   });
 
-  test('a CAIS channel carrying a canonical context identifier is recognised', () => {
+  test('a CAIS channel carrying a canonical context identifier is recognized', () => {
     const signature = caisSignatureWith(textField(11, '1b4e28ba-2fa1-11d2-883f-0016d3cca427'));
 
     expect(strictCaisClaudeSignature(signature)).toBe(signature);

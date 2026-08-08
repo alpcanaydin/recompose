@@ -81,7 +81,7 @@ describe('Refusing a Codex alpha search the gateway cannot serve', () => {
     await expect(answer.json()).resolves.toEqual({ error: 'Codex target unavailable' });
   });
 
-  it('should report no Codex authorisation when the grant is refused', async () => {
+  it('should report no Codex authorization when the grant is refused', async () => {
     const refused: SpendGrant = { verdict: 'missing-credential' };
     const answer = await askSearch(fixed(refused), capture().fetchLike, '{"query":"GPT"}');
 

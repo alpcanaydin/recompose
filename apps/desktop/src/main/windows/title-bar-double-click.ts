@@ -11,9 +11,9 @@ export type TitleBarDoubleClickAction = 'zoom' | 'minimize' | 'none';
  * What the person's macOS "double-click title bar to" preference asks a title-bar double-click to do.
  *
  * @summary macOS reports this as the AppleActionOnDoubleClick default. A hidden title bar under a
- * custom drag region is given none of this behaviour for free, so the app reads the same preference
+ * custom drag region is given none of this behavior for free, so the app reads the same preference
  * and honours it rather than inventing one. Anything other than the two named actions is a request
- * for nothing, which is what a person who turned the behaviour off has asked for.
+ * for nothing, which is what a person who turned the behavior off has asked for.
  */
 export function titleBarDoubleClickAction(preference: string | null): TitleBarDoubleClickAction {
   if (preference === 'Maximize') {

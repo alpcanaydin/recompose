@@ -120,7 +120,7 @@ describe('Preparing a xAI socket target', () => {
     expect(result).toHaveProperty('key', 'https://api.x.ai\0xai-key\0grok-4.3');
   });
 
-  it('should authorise the upstream connection with the granted key', async () => {
+  it('should authorize the upstream connection with the granted key', async () => {
     const result = await prepared({ model: 'fast' });
 
     expect(result).toHaveProperty('headers.authorization', 'Bearer xai-key');

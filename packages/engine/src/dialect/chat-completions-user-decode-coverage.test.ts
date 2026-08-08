@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ingressPayload } from '../gateway-wire';
 import { decodeRequest } from './chat-completions-request';
 
-describe('decodeRequest reads a user turn whose parts it does not recognise', () => {
+describe('decodeRequest reads a user turn whose parts it does not recognize', () => {
   it('drops a part of an unknown kind and keeps the text beside it', () => {
     const request = ingressPayload('chat-completions', {
       model: 'gpt-5',

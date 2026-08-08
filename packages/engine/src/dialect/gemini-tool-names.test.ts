@@ -113,7 +113,7 @@ describe('Gemini function-name restoration', () => {
   });
 });
 
-describe('Gemini function-name sanitising', () => {
+describe('Gemini function-name sanitizing', () => {
   it('should name a tool that declares no name at all with a bare underscore', () => {
     const mapped = mapGeminiToolNames({
       messages: [],

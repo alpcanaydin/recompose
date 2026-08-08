@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 describe.skipIf(process.platform === 'win32')('native plugin handshake', () => {
-  it('should refuse a plugin whose initialiser reports a failure', async () => {
+  it('should refuse a plugin whose initializer reports a failure', async () => {
     const library = await compiledPlugin(['-DINIT_RESULT=7']);
 
     expect(() => loadNativePlugin(library, echoBridge())).toThrow(

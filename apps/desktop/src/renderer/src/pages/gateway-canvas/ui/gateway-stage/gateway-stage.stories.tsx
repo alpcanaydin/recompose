@@ -106,7 +106,7 @@ export const Hovered = meta.story({
 /**
  * The stage squeezed to the narrowest the window allows, where the node keeps the leading edge.
  *
- * @summary An empty field invites recentring the one thing on it, and that would move the node
+ * @summary An empty field invites recentering the one thing on it, and that would move the node
  * every time a second one arrived. It stays where the field will fill from, so the reading measures
  * the node against the field's own leading edge rather than against the room around it.
  */

@@ -126,7 +126,7 @@ describe('Rejecting a malformed plugin archive', () => {
     );
   });
 
-  it('should reject an archive whose central directory entry is unrecognisable', () => {
+  it('should reject an archive whose central directory entry is unrecognizable', () => {
     const archive = zip({ 'sample-provider.dylib': 'library-data' }).slice();
 
     viewOf(archive).setUint32(firstCentralOffset(archive), 0x01020304, true);

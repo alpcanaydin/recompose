@@ -8,8 +8,8 @@ function normalized(text: string): string | null {
   return output === null ? null : new TextDecoder().decode(output);
 }
 
-describe('Claude signing input normalisation', () => {
-  test('a body that is not JSON cannot be normalised', () => {
+describe('Claude signing input normalization', () => {
+  test('a body that is not JSON cannot be normalized', () => {
     expect(normalized('not json at all')).toBeNull();
     expect(normalized('{"unterminated": ')).toBeNull();
   });
@@ -50,7 +50,7 @@ describe('Claude signing input normalisation', () => {
     expect(normalized('{"model":null,"stream":true}')).toBe('{"model":null,"stream":true}');
   });
 
-  test('a body wrapped in whitespace is normalised all the same', () => {
+  test('a body wrapped in whitespace is normalized all the same', () => {
     expect(normalized('  {"model":"claude-opus-5"}  ')).toBe('  {"model":""}  ');
   });
 

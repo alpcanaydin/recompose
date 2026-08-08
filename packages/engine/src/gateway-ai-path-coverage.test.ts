@@ -16,7 +16,7 @@ const SERVED = [
 
 const UNSERVED = ['/', '/health', '/v2/chat/completions', '/v1betax/models', '/backend-api/other'];
 
-describe('recognising the AI API surface', () => {
+describe('recognizing the AI API surface', () => {
   test('every public model path is served', () => {
     expect(SERVED.filter(isAIAPIPath)).toStrictEqual(SERVED);
   });

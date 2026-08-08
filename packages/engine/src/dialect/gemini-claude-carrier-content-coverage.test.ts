@@ -101,7 +101,7 @@ describe('an empty signed text block becomes a detached carrier', () => {
   });
 });
 
-describe('aiming a detached carrier at its neighbours', () => {
+describe('aiming a detached carrier at its neighbors', () => {
   test('a carrier following a thinking block points back at its text', () => {
     const blocks = carriedBlocks(
       { type: 'thinking', text: 'weighing it up' },
@@ -115,7 +115,7 @@ describe('aiming a detached carrier at its neighbours', () => {
     });
   });
 
-  test('neighbours that carry no semantics are stepped over when aiming the carrier', () => {
+  test('neighbors that carry no semantics are stepped over when aiming the carrier', () => {
     const blocks = carriedBlocks(
       { type: 'redacted_thinking', data: 'opaque' },
       { type: 'text', text: '', signature: NATIVE_SIGNATURE },
@@ -166,7 +166,7 @@ describe('a block that holds no signature at all', () => {
     expect(carriedBlocks(image)).toStrictEqual([image]);
   });
 
-  test('a tool result stays put even beside signed neighbours', () => {
+  test('a tool result stays put even beside signed neighbors', () => {
     const result: HubContentBlock = {
       type: 'tool_result',
       toolUseId: 'call_1',

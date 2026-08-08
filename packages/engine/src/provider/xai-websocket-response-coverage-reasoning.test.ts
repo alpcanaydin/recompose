@@ -109,7 +109,7 @@ describe('Translating a completed xAI reasoning item', () => {
     ]);
   });
 
-  it('should summarise a reasoning part that carried no text as empty', () => {
+  it('should summarize a reasoning part that carried no text as empty', () => {
     const normalized = normalizeXAIReasoningEvent({
       type: 'response.output_item.done',
       item: { type: 'reasoning', content: [{ type: 'reasoning_text' }] },
