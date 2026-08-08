@@ -1,11 +1,7 @@
-import type { Page } from '@playwright/test';
-
 import { expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-
-import type { SubscriptionTools } from '../subscription-tools';
 
 import { Given, Then, When } from '../fixtures';
 import {
@@ -22,34 +18,7 @@ import {
   toolNameFor,
 } from '../provider-screen';
 import { focusedProvider, focusProvider } from '../scenario-memory';
-
-/**
- * What one sign-in may spend before it says so itself.
- *
- * @summary The tool answers in about a second, and the surface waits on it rather than on a
- * keystroke. A scenario arranging a sign-in budgets above this, so the allowance can expire and
- * name what stalled rather than losing the race to a test ceiling that names only the clock.
- */
-export const SIGN_IN_WAIT_MS = 20_000;
-
-async function signInThroughTheTool(page: Page, provider: string): Promise<void> {
-  await openProviderWays(page, provider);
-  await catalog(page)
-    .getByRole('button', { name: `Sign in to ${provider}` })
-    .click();
-  await expect(catalog(page)).toBeHidden({ timeout: SIGN_IN_WAIT_MS });
-}
-
-/** Installs the provider's tool and signs in through it, leaving one connected account behind. */
-export async function connectSubscription(
-  page: Page,
-  tools: SubscriptionTools,
-  provider: string,
-): Promise<void> {
-  await tools.install(toolBinaryFor(provider));
-  await openProviderScreen(page, 'Subscriptions');
-  await signInThroughTheTool(page, provider);
-}
+import { connectSubscription, signInThroughTheTool } from '../subscription-sign-in';
 
 Given(
   'the {string} command-line tool is installed',
@@ -142,7 +111,7 @@ Then('the subscriptions catalog offers no key field', async ({ page }) => {
 });
 
 Then('the screen offers one call to action', async ({ page }) => {
-  const controls = page.getByRole('main').getByRole('button');
+  const controls = page.getByRole('main').getByRole('button', { disabled: false });
 
   await expect(controls).toHaveCount(1);
   await expect(controls).toHaveAccessibleName('Add provider');

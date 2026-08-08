@@ -79,8 +79,10 @@ Then("the Model field offers the account's live model list", async ({ page }) =>
 });
 
 Then('the field accepts no free-text model', async ({ page }) => {
-  await expect(page.getByRole('textbox', { name: 'Model' })).toHaveCount(0);
-  await expect(defineFlow(page).getByRole('textbox')).toHaveCount(1);
+  await expect(defineFlow(page).getByRole('textbox', { name: 'Model', exact: true })).toHaveCount(
+    0,
+  );
+  await expect(defineFlow(page).getByRole('textbox')).toHaveCount(2);
 });
 
 Then('the sheet reads a typed refusal naming the failed look', async ({ page }) => {

@@ -22,7 +22,7 @@ import {
   LOCAL_RUNTIME,
 } from '../stored-target-accounts';
 import { bindingOf, offerVirtualModels, type StoreOutcome } from '../stored-virtual-models';
-import { connectSubscription, SIGN_IN_WAIT_MS } from './subscriptions.steps';
+import { connectSubscription, SIGN_IN_WAIT_MS } from '../subscription-sign-in';
 
 const SUBSCRIPTION_PROVIDER = 'anthropic';
 

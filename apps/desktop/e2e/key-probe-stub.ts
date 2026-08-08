@@ -6,7 +6,9 @@ import { bindToAFreePort } from './loopback-ports';
 
 const MODELS_PATH = '/v1/models';
 
-const TURN_PATH = '/v1/chat/completions';
+const CHAT_TURN_PATH = '/v1/chat/completions';
+
+const MESSAGES_TURN_PATH = '/v1/messages';
 
 const ACCEPTED = 200;
 
@@ -52,7 +54,7 @@ function catalogBody(): string {
   });
 }
 
-function turnAnswerBody(model: string): string {
+function chatTurnAnswerBody(model: string): string {
   return JSON.stringify({
     id: 'chatcmpl-stand-in',
     object: 'chat.completion',
@@ -65,6 +67,19 @@ function turnAnswerBody(model: string): string {
       },
     ],
     usage: { prompt_tokens: 3, completion_tokens: 4, total_tokens: 7 },
+  });
+}
+
+function messagesTurnAnswerBody(model: string): string {
+  return JSON.stringify({
+    id: 'msg_stand-in',
+    type: 'message',
+    role: 'assistant',
+    model,
+    content: [{ type: 'text', text: answerTheProviderGives }],
+    stop_reason: 'end_turn',
+    stop_sequence: null,
+    usage: { input_tokens: 3, output_tokens: 4 },
   });
 }
 
@@ -105,12 +120,13 @@ async function answerTheTurn(
   desk: ProviderDesk,
   request: IncomingMessage,
   response: ServerResponse,
+  bodyFor: (model: string) => string,
 ): Promise<void> {
   const model = modelNamedIn(await bodyOf(request));
 
   desk.asked.push(model);
   response.writeHead(ACCEPTED, { 'content-type': 'application/json' });
-  response.end(turnAnswerBody(model));
+  response.end(bodyFor(model));
 }
 
 async function answerAsked(
@@ -130,8 +146,12 @@ async function answerAsked(
     return;
   }
 
-  if (request.url === TURN_PATH) {
-    return answerTheTurn(desk, request, response);
+  if (request.url === CHAT_TURN_PATH) {
+    return answerTheTurn(desk, request, response, chatTurnAnswerBody);
+  }
+
+  if (request.url === MESSAGES_TURN_PATH) {
+    return answerTheTurn(desk, request, response, messagesTurnAnswerBody);
   }
 
   response.writeHead(NOTHING_THERE).end();
@@ -142,11 +162,12 @@ async function answerAsked(
  *
  * @summary Neither the engine child nor main honors an origin override unless it names a loopback
  * host, so the stub binds `127.0.0.1` and hands that origin over beside the launcher and keychain
- * overrides. One server answers both vendors, because the two differ by the header they send rather
- * than by the path they ask for. It answers the three things a scenario needs offline: the probe
- * that asks whether a key authenticates, the catalog a live model list is read from, and the turn a
- * gateway forwards under a real model name. The look answers whatever the scenario last scripted,
- * and the model each turn asked for is kept so a scenario can prove what left the machine.
+ * overrides. One server answers both vendors, each at the native turn path its own dialect asks
+ * under: OpenAI at chat completions, Anthropic at messages. It answers the three things a scenario
+ * needs offline: the probe that asks whether a key authenticates, the catalog a live model list is
+ * read from, and the turn a gateway forwards under a real model name. The look answers whatever the
+ * scenario last scripted, and the model each turn asked for is kept so a scenario can prove what
+ * left the machine.
  */
 export async function fakeKeyProbe(): Promise<KeyProbeStub> {
   const desk: ProviderDesk = { answer: 'accepts', asked: [] };
