@@ -20,8 +20,8 @@ function schemaOf(request: ChatCompletionsRequest) {
   return decodedValue(request).tools?.[0]?.inputSchema;
 }
 
-describe('decodeRequest normalizes a root schema union to a bare object schema', () => {
-  it('drops a root anyOf and never merges the required a branch declares', () => {
+describe('decodeRequest normalizes a root schema union to an object schema', () => {
+  it('merges root anyOf properties without merging branch required fields', () => {
     const request = aChatRequest({
       tools: [
         aChatTool({
@@ -36,10 +36,13 @@ describe('decodeRequest normalizes a root schema union to a bare object schema',
       ],
     });
 
-    expect(schemaOf(request)).toEqual({ type: 'object', properties: {} });
+    expect(schemaOf(request)).toEqual({
+      type: 'object',
+      properties: { a: { type: 'string' } },
+    });
   });
 
-  it('drops the stray root properties and required that ride alongside a root anyOf', () => {
+  it('keeps root properties but drops required that rides alongside a root anyOf', () => {
     const request = aChatRequest({
       tools: [
         aChatTool({
@@ -56,10 +59,15 @@ describe('decodeRequest normalizes a root schema union to a bare object schema',
       ],
     });
 
-    expect(schemaOf(request)).toEqual({ type: 'object', properties: {} });
+    expect(schemaOf(request)).toEqual({
+      type: 'object',
+      properties: { a: { type: 'string' } },
+    });
   });
+});
 
-  it('normalizes a root oneOf the same way, dropping its stray root properties', () => {
+describe('decodeRequest normalizes a root oneOf schema', () => {
+  it('normalizes a root oneOf the same way while keeping root properties', () => {
     const request = aChatRequest({
       tools: [
         aChatTool({
@@ -72,7 +80,10 @@ describe('decodeRequest normalizes a root schema union to a bare object schema',
       ],
     });
 
-    expect(schemaOf(request)).toEqual({ type: 'object', properties: {} });
+    expect(schemaOf(request)).toEqual({
+      type: 'object',
+      properties: { b: { type: 'number' } },
+    });
   });
 });
 

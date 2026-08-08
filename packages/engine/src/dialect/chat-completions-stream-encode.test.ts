@@ -24,7 +24,7 @@ describe('encodeStream renders text, reasoning drops, and refusals', () => {
     expect(JSON.stringify(frames)).toContain('"content":"hi"');
     expect(frames).toContainEqual({
       type: 'chunk',
-      chunk: { choices: [], usage: { prompt_tokens: 0, completion_tokens: 0 } },
+      chunk: { choices: [], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } },
     });
     expect(frames.at(-1)).toEqual({ type: 'done' });
   });
@@ -123,7 +123,10 @@ const expectedChatToolFrames: readonly ChatStreamFrame[] = [
     },
   },
   { type: 'chunk', chunk: { choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }] } },
-  { type: 'chunk', chunk: { choices: [], usage: { prompt_tokens: 12, completion_tokens: 8 } } },
+  {
+    type: 'chunk',
+    chunk: { choices: [], usage: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20 } },
+  },
   { type: 'done' },
 ];
 

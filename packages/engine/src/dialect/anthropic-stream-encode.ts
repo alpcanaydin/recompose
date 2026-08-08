@@ -1,6 +1,6 @@
 import type {
   AnthropicBlockDelta,
-  AnthropicContentBlock,
+  AnthropicStreamContentBlock,
   AnthropicStreamEvent,
 } from './anthropic-wire';
 import type { HubBlockDelta, HubBlockOpening, HubStreamEvent, HubUsage } from './hub';
@@ -8,9 +8,14 @@ import type { HubBlockDelta, HubBlockOpening, HubStreamEvent, HubUsage } from '.
 import { translatedMessageId } from './anthropic-response';
 import { wireStopFrom } from './anthropic-stops';
 import { wireUsageFrom } from './anthropic-usage';
+import { anthropicWebSearchResults } from './anthropic-web-search-results';
 import { serializeHubBlocks } from './hub-stream-serialize';
 
-type EncodeState = { beginUsage: HubUsage };
+type EncodeState = {
+  beginUsage: HubUsage;
+  id: string | undefined;
+  model: string | undefined;
+};
 
 type MessageEndEvent = Extract<HubStreamEvent, { type: 'message-end' }>;
 type ActiveEvent = Extract<
@@ -18,22 +23,27 @@ type ActiveEvent = Extract<
   { type: 'block-open' | 'block-delta' | 'message-end' | 'stream-error' }
 >;
 
-function messageStartOf(usage: HubUsage): AnthropicStreamEvent {
+function messageStartOf(state: EncodeState): AnthropicStreamEvent {
   return {
     type: 'message_start',
     message: {
-      id: translatedMessageId,
+      id: state.id ?? translatedMessageId,
       type: 'message',
       role: 'assistant',
+      ...(state.model === undefined ? {} : { model: state.model }),
       content: [],
       stop_reason: null,
       stop_sequence: null,
-      usage: wireUsageFrom(usage),
+      usage: wireUsageFrom(state.beginUsage),
     },
   };
 }
 
-function openedBlockOf(opening: HubBlockOpening): AnthropicContentBlock {
+function openedBlockOf(opening: HubBlockOpening): AnthropicStreamContentBlock {
+  const server = serverBlock(opening);
+
+  if (server !== null) return server;
+
   switch (opening.kind) {
     case 'text':
       return { type: 'text', text: '' };
@@ -52,7 +62,40 @@ function openedBlockOf(opening: HubBlockOpening): AnthropicContentBlock {
   }
 }
 
+function serverBlock(opening: HubBlockOpening): AnthropicStreamContentBlock | null {
+  if (opening.kind !== 'tool') return null;
+
+  if (opening.signature === 'server:web-search') {
+    return {
+      type: 'server_tool_use',
+      id: opening.id,
+      name: 'web_search',
+      input: opening.serverInput ?? {},
+    };
+  }
+
+  if (opening.signature === 'server:web-search-result') {
+    return {
+      type: 'web_search_tool_result',
+      tool_use_id: opening.id,
+      content: anthropicWebSearchResults(opening.serverInput),
+    };
+  }
+
+  return null;
+}
+
 function wireDeltaOf(delta: HubBlockDelta): AnthropicBlockDelta {
+  if (delta.kind === 'annotation') {
+    return { type: 'citations_delta', citation: delta.annotation };
+  }
+
+  return standardWireDeltaOf(delta);
+}
+
+function standardWireDeltaOf(
+  delta: Exclude<HubBlockDelta, { kind: 'annotation' }>,
+): AnthropicBlockDelta {
   switch (delta.kind) {
     case 'text':
       return { type: 'text_delta', text: delta.text };
@@ -75,7 +118,10 @@ function endEventsOf(state: EncodeState, event: MessageEndEvent): AnthropicStrea
   return [
     {
       type: 'message_delta',
-      delta: { stop_reason: wireStopFrom(event.stopReason), stop_sequence: null },
+      delta: {
+        stop_reason: wireStopFrom(event.stopReason),
+        stop_sequence: event.stopSequence ?? null,
+      },
       usage: wireUsageFrom({ ...state.beginUsage, ...event.usage }),
     },
     { type: 'message_stop' },
@@ -131,7 +177,9 @@ function encodeEvent(
 ): boolean {
   if (event.type === 'message-begin') {
     state.beginUsage = event.usage ?? {};
-    events.push(messageStartOf(state.beginUsage));
+    state.id = event.id;
+    state.model = event.model;
+    events.push(messageStartOf(state));
 
     return false;
   }
@@ -142,13 +190,15 @@ function encodeEvent(
     return false;
   }
 
+  if (event.type === 'media') return false;
+
   return encodeActiveEvent(state, event, events);
 }
 
 export async function* encodeStream(
   source: AsyncIterable<HubStreamEvent>,
 ): AsyncIterable<AnthropicStreamEvent> {
-  const state: EncodeState = { beginUsage: {} };
+  const state: EncodeState = { beginUsage: {}, id: undefined, model: undefined };
 
   for await (const event of serializeHubBlocks(source)) {
     const events: AnthropicStreamEvent[] = [];

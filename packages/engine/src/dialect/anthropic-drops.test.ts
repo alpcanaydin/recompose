@@ -10,7 +10,6 @@ describe('the Anthropic vendor drop table names what the hub cannot carry', () =
       expect.arrayContaining([
         'top_k',
         'metadata',
-        'thinking',
         'container',
         'inference_geo',
         'output_config',
@@ -28,9 +27,7 @@ describe('the Anthropic vendor drop table names what the hub cannot carry', () =
   it('flags the drops that change the bill as cost-bearing', () => {
     const costBearing = anthropicDrops.filter((drop) => drop.costBearing).map((drop) => drop.field);
 
-    expect(costBearing).toEqual(
-      expect.arrayContaining(['thinking', 'output_config', 'cache_control']),
-    );
+    expect(costBearing).toEqual(expect.arrayContaining(['output_config', 'cache_control']));
   });
 
   it('leaves the pure-metadata drops free of cost, since dropping them changes no bill', () => {

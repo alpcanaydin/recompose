@@ -2,6 +2,7 @@ import type { HubContentBlock, HubDocumentBlock, HubImageSource, HubToolUseBlock
 import type { InteractionsContentPart, InteractionsStep } from './interactions-wire';
 
 import { imageSourceFromUrl } from './hub-build';
+import { normalizeOpenAIFileData } from './openai-file-data';
 
 export function interactionsText(
   value: string | readonly InteractionsContentPart[] | undefined,
@@ -18,21 +19,22 @@ function mediaUrl(part: Extract<InteractionsContentPart, { type: 'image' }>): st
   return `data:${part.mime_type ?? 'image/png'};base64,${part.data}`;
 }
 
-function dataUri(value: string): { mediaType: string; data: string } | null {
-  const matched = /^data:([^;]+);base64,(.*)$/su.exec(value);
-
-  return matched?.[1] === undefined || matched[2] === undefined
-    ? null
-    : { mediaType: matched[1], data: matched[2] };
-}
-
 function namedDocumentBlock(
   part: Extract<InteractionsContentPart, { type: 'document' }>,
 ): HubDocumentBlock[] {
+  const source: HubImageSource | undefined =
+    part.file_uri === undefined
+      ? part.data === undefined
+        ? undefined
+        : { type: 'base64', mediaType: part.mime_type, data: part.data }
+      : { type: 'url', url: part.file_uri };
+
+  if (source === undefined) return [];
+
   return [
     {
       type: 'document',
-      source: { type: 'base64', mediaType: part.mime_type, data: part.data },
+      source,
       filename: part.name ?? 'document',
     },
   ];
@@ -57,12 +59,24 @@ function fileDocumentBlock(
 function fileSource(
   part: Extract<InteractionsContentPart, { type: 'file' }>,
 ): { mediaType: string; data: string } | null {
-  const nested = part.file === undefined ? null : dataUri(part.file.file_data);
+  const nested = nestedFileSource(part);
 
   if (nested !== null) return nested;
   if (part.data === undefined) return null;
 
   return { mediaType: part.mime_type ?? 'application/octet-stream', data: part.data };
+}
+
+function nestedFileSource(
+  part: Extract<InteractionsContentPart, { type: 'file' }>,
+): { mediaType: string; data: string } | null {
+  if (part.file === undefined) return null;
+
+  return normalizeOpenAIFileData(
+    part.file.filename ?? part.name ?? '',
+    part.mime_type,
+    part.file.file_data,
+  );
 }
 
 function documentBlock(
@@ -121,12 +135,14 @@ export function interactionsPartFromHubMedia(
   if (block.type === 'image') return interactionsImagePart(block.source);
 
   if (block.type === 'document') {
-    return {
-      type: 'file',
-      data: block.source.data,
-      mime_type: block.source.mediaType,
-      name: block.filename,
-    };
+    return block.source.type === 'url'
+      ? { type: 'file', uri: block.source.url, name: block.filename }
+      : {
+          type: 'file',
+          data: block.source.data,
+          mime_type: block.source.mediaType,
+          name: block.filename,
+        };
   }
 
   return block.source.type === 'base64'

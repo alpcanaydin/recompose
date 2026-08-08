@@ -1,39 +1,48 @@
 import type { Fate } from './fates';
 import type {
   HubContentBlock,
-  HubImageBlock,
   HubRedactedThinkingBlock,
   HubStopReason,
-  HubTextBlock,
   HubThinkingBlock,
-  HubToolResultBlock,
   HubToolUseBlock,
   HubUsage,
 } from './hub';
 import type {
   ResponsesContentPart,
   ResponsesFunctionCallItem,
-  ResponsesFunctionCallOutputItem,
   ResponsesIncompleteReason,
   ResponsesReasoningItem,
   ResponsesStatus,
   ResponsesUsage,
 } from './responses-wire';
 
-import { imageBlockFromDataUri, parseToolArguments } from './hub-build';
+import { parseToolArguments } from './hub-build';
 import { hubBlockFromResponsesPart } from './responses-media-decode';
-import { sanitizeToolId } from './tool-id';
+import { responsesIdentifier, sanitizeToolId } from './tool-id';
+import { sumDefinedTokens } from './usage-tokens';
 
 export const translatedResponseId = 'resp_translated';
+
+function carriesContent(block: HubContentBlock): boolean {
+  return block.type !== 'text' || block.text !== '';
+}
 
 export function toHubContentBlocks(
   content: string | readonly ResponsesContentPart[],
 ): HubContentBlock[] {
   if (typeof content === 'string') {
-    return [{ type: 'text', text: content }];
+    return content === '' ? [] : [{ type: 'text', text: content }];
   }
 
-  return content.map(hubBlockFromResponsesPart);
+  const blocks: HubContentBlock[] = [];
+
+  for (const part of content) {
+    const block = hubBlockFromResponsesPart(part);
+
+    if (carriesContent(block)) blocks.push(block);
+  }
+
+  return blocks;
 }
 
 export function toolUseBlockOf(
@@ -42,27 +51,16 @@ export function toolUseBlockOf(
 ): HubToolUseBlock {
   return {
     type: 'tool_use',
-    id: sanitizeToolId(item.call_id),
+    id: responsesIdentifier(sanitizeToolId(item.call_id)),
     name: item.name,
     input: parseToolArguments(item.arguments),
     ...(signature === undefined ? {} : { signature }),
   };
 }
 
-function toolResultContentOf(output: string): HubTextBlock | HubImageBlock {
-  return imageBlockFromDataUri(output) ?? { type: 'text', text: output };
-}
-
-export function toolResultBlockOf(item: ResponsesFunctionCallOutputItem): HubToolResultBlock {
-  return {
-    type: 'tool_result',
-    toolUseId: sanitizeToolId(item.call_id),
-    content: [toolResultContentOf(item.output)],
-  };
-}
-
 export const COMPATIBLE_SIGNATURE_PREFIX = 'anthropic:';
 const REDACTED_CONTENT_PREFIX = 'redacted';
+const CLAUDE_REDACTED_CONTENT_PREFIX = 'claude-redacted-thinking:';
 
 export type ReasoningSignature =
   | { kind: 'none' }
@@ -96,9 +94,9 @@ export function classifyReasoningSignature(
     return { kind: 'none' };
   }
 
-  if (encryptedContent.startsWith(REDACTED_CONTENT_PREFIX)) {
-    return { kind: 'redacted', data: encryptedContent };
-  }
+  const redacted = redactedReasoningData(encryptedContent);
+
+  if (redacted !== undefined) return { kind: 'redacted', data: redacted };
 
   if (encryptedContent.startsWith(COMPATIBLE_SIGNATURE_PREFIX)) {
     return {
@@ -114,8 +112,20 @@ export function classifyReasoningSignature(
   return { kind: 'foreign' };
 }
 
+function redactedReasoningData(encryptedContent: string): string | undefined {
+  if (encryptedContent.startsWith(CLAUDE_REDACTED_CONTENT_PREFIX)) {
+    return encryptedContent.slice(CLAUDE_REDACTED_CONTENT_PREFIX.length);
+  }
+
+  return encryptedContent.startsWith(REDACTED_CONTENT_PREFIX) ? encryptedContent : undefined;
+}
+
 function summaryTextOf(item: ResponsesReasoningItem): string {
-  return (item.summary ?? []).map((part) => part.text).join('\n');
+  const summary = (item.summary ?? []).map((part) => part.text.replace(/\n+$/u, '')).join('\n');
+
+  return summary === ''
+    ? (item.content ?? []).map((part) => part.text.replace(/\n+$/u, '')).join('\n')
+    : summary;
 }
 
 export function thinkingBlockOf(item: ResponsesReasoningItem): HubThinkingBlock {
@@ -137,11 +147,15 @@ export function redactedThinkingDropFate(): Fate {
   return { field: 'redacted_thinking', disposition: 'mapped', to: 'absent', costBearing: true };
 }
 
-export function functionCallItemOf(block: HubToolUseBlock): ResponsesFunctionCallItem {
+export function functionCallItemOf(
+  block: HubToolUseBlock,
+  includeItemId = false,
+): ResponsesFunctionCallItem {
   return {
     type: 'function_call',
-    call_id: block.id,
-    name: block.name,
+    ...(includeItemId ? { id: `fc_${block.id}` } : {}),
+    call_id: responsesIdentifier(block.id),
+    name: responsesIdentifier(block.name),
     arguments: JSON.stringify(block.input),
   };
 }
@@ -154,6 +168,10 @@ function cachedTokensOf(usage: ResponsesUsage): number | undefined {
   return usage.input_tokens_details?.cached_tokens;
 }
 
+function cacheWriteTokensOf(usage: ResponsesUsage): number | undefined {
+  return usage.input_tokens_details?.cache_write_tokens;
+}
+
 function reasoningTokensOf(usage: ResponsesUsage): number | undefined {
   return usage.output_tokens_details?.reasoning_tokens;
 }
@@ -161,22 +179,25 @@ function reasoningTokensOf(usage: ResponsesUsage): number | undefined {
 function hubInputTokens(
   usage: ResponsesUsage,
   cached: number | undefined,
+  cacheWrite: number | undefined,
 ): { inputTokens?: number } {
   if (usage.input_tokens === undefined) {
     return {};
   }
 
-  return { inputTokens: Math.max(0, usage.input_tokens - (cached ?? 0)) };
+  return { inputTokens: Math.max(0, usage.input_tokens - (cached ?? 0) - (cacheWrite ?? 0)) };
 }
 
 function hubUsageOf(usage: ResponsesUsage): HubUsage {
   const cached = cachedTokensOf(usage);
+  const cacheWrite = cacheWriteTokensOf(usage);
   const reasoning = reasoningTokensOf(usage);
 
   return {
-    ...hubInputTokens(usage, cached),
+    ...hubInputTokens(usage, cached, cacheWrite),
     ...(usage.output_tokens === undefined ? {} : { outputTokens: usage.output_tokens }),
     ...(cached === undefined ? {} : { cacheReadTokens: cached }),
+    ...(cacheWrite === undefined ? {} : { cacheWriteTokens: cacheWrite }),
     ...(reasoning === undefined ? {} : { reasoningTokens: reasoning }),
   };
 }
@@ -186,17 +207,32 @@ export function toHubUsage(usage: ResponsesUsage | undefined): HubUsage {
 }
 
 function responsesInputTokens(usage: HubUsage): { input_tokens?: number } {
-  if (usage.inputTokens === undefined) {
+  const input =
+    usage.totalInputTokens ??
+    sumDefinedTokens([usage.inputTokens, usage.cacheReadTokens, usage.cacheWriteTokens]);
+
+  if (input === undefined) {
     return {};
   }
 
-  return { input_tokens: usage.inputTokens + (usage.cacheReadTokens ?? 0) };
+  return { input_tokens: input };
+}
+
+function responsesTotalTokens(usage: HubUsage): { total_tokens?: number } {
+  const total = sumDefinedTokens([
+    usage.totalInputTokens ??
+      sumDefinedTokens([usage.inputTokens, usage.cacheReadTokens, usage.cacheWriteTokens]),
+    usage.outputTokens,
+  ]);
+
+  return total === undefined ? {} : { total_tokens: total };
 }
 
 export function toResponsesUsage(usage: HubUsage): ResponsesUsage {
   return {
     ...responsesInputTokens(usage),
     ...(usage.outputTokens === undefined ? {} : { output_tokens: usage.outputTokens }),
+    ...responsesTotalTokens(usage),
     ...(usage.cacheReadTokens === undefined
       ? {}
       : { input_tokens_details: { cached_tokens: usage.cacheReadTokens } }),

@@ -1,11 +1,12 @@
 import type { AnthropicDropField } from './anthropic-drops';
-import type { HubJsonObject } from './hub';
+import type { HubJsonObject, HubToolInput } from './hub';
 
 export type AnthropicCacheControl = { type: 'ephemeral'; ttl?: '5m' | '1h' };
 
 export type AnthropicTextBlock = {
   type: 'text';
   text: string;
+  citations?: readonly HubJsonObject[];
   cache_control?: AnthropicCacheControl;
 };
 
@@ -34,11 +35,12 @@ export type AnthropicToolUseBlock = {
   type: 'tool_use';
   id: string;
   name: string;
-  input: HubJsonObject;
+  input?: HubToolInput;
   cache_control?: AnthropicCacheControl;
+  signature?: string;
 };
 
-export type AnthropicSearchResultPart = {
+type AnthropicSearchResultPart = {
   type: 'search_result';
   title: string;
   source: string;
@@ -53,7 +55,7 @@ export type AnthropicDocumentPart = {
   cache_control?: AnthropicCacheControl;
 };
 
-export type AnthropicToolReferencePart = {
+type AnthropicToolReferencePart = {
   type: 'tool_reference';
   tool_name: string;
   cache_control?: AnthropicCacheControl;
@@ -69,7 +71,7 @@ export type AnthropicToolResultContent =
 export type AnthropicToolResultBlock = {
   type: 'tool_result';
   tool_use_id: string;
-  content?: string | readonly AnthropicToolResultContent[];
+  content?: unknown;
   is_error?: boolean;
   cache_control?: AnthropicCacheControl;
 };
@@ -84,14 +86,17 @@ export type AnthropicContentBlock =
   | AnthropicToolResultBlock;
 
 export type AnthropicMessage = {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string | readonly AnthropicContentBlock[];
 };
 
-export type AnthropicSystem = string | readonly AnthropicTextBlock[];
+type AnthropicSystemMarker = { type: string; cache_control?: AnthropicCacheControl };
+export type AnthropicSystemBlock = AnthropicTextBlock | AnthropicSystemMarker;
+export type AnthropicSystem = string | readonly AnthropicSystemBlock[];
 
 export type AnthropicToolSchema = {
-  type: 'object';
+  readonly [key: string]: unknown;
+  type?: unknown;
   properties?: HubJsonObject;
   required?: readonly string[];
 };
@@ -103,6 +108,7 @@ export type AnthropicTool = {
   type?: string;
   allowed_domains?: readonly string[];
   blocked_domains?: readonly string[];
+  max_uses?: number;
   user_location?: HubJsonObject;
   cache_control?: AnthropicCacheControl;
 };
@@ -125,6 +131,7 @@ type AnthropicRequestCore = {
   stop_sequences?: readonly string[];
   service_tier?: unknown;
   speed?: unknown;
+  thinking?: { type: string; budget_tokens?: number };
 };
 
 export type AnthropicRequest = AnthropicRequestCore & AnthropicIgnoredFields;
@@ -145,6 +152,8 @@ export type AnthropicUsage = {
   output_tokens: number;
   cache_read_input_tokens?: number;
   cache_creation_input_tokens?: number;
+  thinking_tokens?: number;
+  server_tool_use?: { web_search_requests: number };
 };
 
 export type AnthropicResponse = {
@@ -152,7 +161,7 @@ export type AnthropicResponse = {
   type: 'message';
   role: 'assistant';
   model?: string;
-  content: readonly AnthropicContentBlock[];
+  content: readonly AnthropicStreamContentBlock[];
   stop_reason: AnthropicStopReason | null;
   stop_sequence?: string | null;
   usage?: AnthropicUsage;
@@ -162,11 +171,23 @@ export type AnthropicBlockDelta =
   | { type: 'text_delta'; text: string }
   | { type: 'input_json_delta'; partial_json: string }
   | { type: 'thinking_delta'; thinking: string }
-  | { type: 'signature_delta'; signature: string };
+  | { type: 'signature_delta'; signature: string }
+  | { type: 'citations_delta'; citation: HubJsonObject };
+
+type AnthropicServerStreamBlock = {
+  type: 'server_tool_use' | 'web_search_tool_result';
+  [key: string]: unknown;
+};
+
+export type AnthropicStreamContentBlock = AnthropicContentBlock | AnthropicServerStreamBlock;
 
 export type AnthropicKnownStreamEvent =
   | { type: 'message_start'; message: AnthropicResponse }
-  | { type: 'content_block_start'; index: number; content_block: AnthropicContentBlock }
+  | {
+      type: 'content_block_start';
+      index: number;
+      content_block: AnthropicStreamContentBlock;
+    }
   | { type: 'content_block_delta'; index: number; delta: AnthropicBlockDelta }
   | { type: 'content_block_stop'; index: number }
   | {

@@ -24,7 +24,7 @@ import {
 } from './hub.testkit';
 
 describe('encodeRequest folds the hub back into a Chat Completions request', () => {
-  it('drops a thinking block toward Chat Completions with a cost-bearing fate', () => {
+  it('carries unsigned thinking toward Chat Completions with a cost-bearing fate', () => {
     const history: HubMessage = {
       role: 'assistant',
       content: [aHubThinkingBlock(), aHubTextBlock({ text: 'Sunny.' })],
@@ -33,7 +33,10 @@ describe('encodeRequest folds the hub back into a Chat Completions request', () 
 
     const { value, fates } = encodeRequest(hub);
 
-    expect(JSON.stringify(value)).not.toContain('weigh the two routes');
+    expect(value.messages[1]).toHaveProperty(
+      'reasoning_content',
+      'weigh the two routes before answering',
+    );
     expect(fates).toContainEqual(
       expect.objectContaining({
         field: 'thinking',
@@ -166,7 +169,9 @@ describe('encodeRequest renders the tool choice and sampling knobs', () => {
     });
     const { value } = encodeRequest(hub);
 
-    expect(value.tools?.[0]?.function.parameters.required).toEqual(['a']);
+    const tool = value.tools?.find((candidate) => candidate.type === 'function');
+
+    expect(tool?.function.parameters.required).toEqual(['a']);
     expect(value.max_tokens).toBe(100);
     expect(value.temperature).toBe(0.5);
     expect(value.top_p).toBe(0.7);

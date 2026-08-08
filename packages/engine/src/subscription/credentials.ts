@@ -1,6 +1,8 @@
 import type { SubscriptionProviderId } from '@recompose/contracts';
 
 import { isJsonObject } from '../gateway-wire';
+import { claudeCredentialFields } from './claude-credential-fields';
+import { firstNonBlankCredentialValue, nonBlankCredentialValue } from './credential-values';
 
 export type ParsedSubscriptionCredential = {
   accessToken: string;
@@ -11,6 +13,8 @@ export type ParsedSubscriptionCredential = {
   deviceIds?: string[];
   expiresAt?: number;
   projectId?: string;
+  timezone?: string;
+  deviceMigrationNeeded?: boolean;
 };
 
 export type RefreshedTokens = {
@@ -34,14 +38,6 @@ function documentOf(blob: string): JsonObject | null {
   }
 }
 
-function nonBlank(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
-}
-
-function firstNonBlank(...values: unknown[]): string | undefined {
-  return values.map(nonBlank).find((value) => value !== undefined);
-}
-
 function jwtClaims(token: string): JsonObject | null {
   const encoded = token.split('.')[1];
 
@@ -63,12 +59,12 @@ function jwtExpiry(token: string): number | undefined {
 function codexPlanType(token: string): string | undefined {
   const auth = objectOf(jwtClaims(token)?.['https://api.openai.com/auth']);
 
-  return nonBlank(auth?.['chatgpt_plan_type']);
+  return nonBlankCredentialValue(auth?.['chatgpt_plan_type']);
 }
 
 function codexCredentialFields(accessToken: string, tokens: JsonObject) {
-  const refreshToken = nonBlank(tokens['refresh_token']);
-  const accountId = nonBlank(tokens['account_id']);
+  const refreshToken = nonBlankCredentialValue(tokens['refresh_token']);
+  const accountId = nonBlankCredentialValue(tokens['account_id']);
   const expiresAt = jwtExpiry(accessToken);
   const planType = codexPlanType(accessToken);
 
@@ -84,58 +80,29 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
-function validDeviceIds(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-
-  const ids = value.filter(
-    (item): item is string => typeof item === 'string' && /^[a-f\d]{64}$/u.test(item),
-  );
-  const first = ids[0];
-
-  return first === undefined ? undefined : [first];
-}
-
-function claudeIdentityFields(document: JsonObject, tokens: JsonObject) {
-  const accountUuid = firstNonBlank(
-    document['account_uuid'],
-    document['accountUuid'],
-    tokens['account_uuid'],
-    tokens['accountUuid'],
-  );
-  const candidates = [document['claude_device_ids'], tokens['claude_device_ids']];
-  const deviceIds = candidates.map(validDeviceIds).find((value) => value !== undefined);
-
-  return {
-    ...(accountUuid === undefined ? {} : { accountUuid }),
-    ...(deviceIds === undefined ? {} : { deviceIds }),
-  };
-}
-
 function claudeCredential(
   document: JsonObject,
   tokens: JsonObject,
 ): ParsedSubscriptionCredential | null {
-  const accessToken = nonBlank(tokens['accessToken']);
+  const accessToken = nonBlankCredentialValue(tokens['accessToken']);
 
   if (accessToken === undefined) {
     return null;
   }
 
-  const refreshToken = nonBlank(tokens['refreshToken']);
+  const refreshToken = nonBlankCredentialValue(tokens['refreshToken']);
   const expiresAt = finiteNumber(tokens['expiresAt']);
 
   return {
     accessToken,
     ...(refreshToken === undefined ? {} : { refreshToken }),
-    ...claudeIdentityFields(document, tokens),
+    ...claudeCredentialFields(document, tokens),
     ...(expiresAt === undefined ? {} : { expiresAt }),
   };
 }
 
 function codexCredential(tokens: JsonObject): ParsedSubscriptionCredential | null {
-  const accessToken = nonBlank(tokens['access_token']);
+  const accessToken = nonBlankCredentialValue(tokens['access_token']);
 
   if (accessToken === undefined) {
     return null;
@@ -158,14 +125,14 @@ function parsedDate(value: unknown): number | undefined {
 }
 
 function antigravityCredential(document: JsonObject): ParsedSubscriptionCredential | null {
-  const accessToken = nonBlank(document['access_token']);
+  const accessToken = nonBlankCredentialValue(document['access_token']);
 
   if (accessToken === undefined) {
     return null;
   }
 
-  const refreshToken = nonBlank(document['refresh_token']);
-  const projectId = firstNonBlank(document['project_id'], document['projectId']);
+  const refreshToken = nonBlankCredentialValue(document['refresh_token']);
+  const projectId = firstNonBlankCredentialValue(document['project_id'], document['projectId']);
   const expiresAt = parsedDate(document['expired']);
 
   if (projectId === undefined) {

@@ -30,7 +30,11 @@ describe('encodeRequest: the request frame crosses back to Responses', () => {
       type: 'function',
       name: 'get_weather',
       description: 'Look up the weather for a city',
-      parameters: { type: 'object', properties: { city: { type: 'string' } } },
+      parameters: {
+        type: 'object',
+        properties: { city: { type: 'string' } },
+        additionalProperties: false,
+      },
     });
     expect(value.tool_choice).toEqual({ type: 'function', name: 'get_weather' });
     expect(value.input[0]).toEqual({

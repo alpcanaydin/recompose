@@ -8,87 +8,50 @@ import type {
   HubSampling,
   HubTextBlock,
   HubThinkingBlock,
-  HubTool,
-  HubToolChoice,
   HubToolResultBlock,
   HubToolUseBlock,
   HubVideoBlock,
-  HubWebSearchTool,
 } from './hub';
 import type {
   ResponsesContentPart,
   ResponsesFunctionCallOutputItem,
   ResponsesInputItem,
   ResponsesRequest,
-  ResponsesTool,
-  ResponsesToolChoice,
-  ResponsesToolParameters,
 } from './responses-wire';
 
+import { customResponsesCall, customResponsesOutput } from './responses-custom-tool-encode';
 import { responsesItemsForGeminiToolUse } from './responses-gemini-carrier';
 import { responsesPartFromHubBlock } from './responses-media-encode';
 import { responsesOptionsInto } from './responses-request-options';
+import {
+  toResponsesTool,
+  toResponsesToolChoice,
+  toResponsesWebSearchTool,
+} from './responses-request-tools-encode';
 import {
   isCodexReasoningSignature,
   redactedThinkingDropFate,
   thinkingDropFate,
 } from './responses-shared';
+import { responsesIdentifier } from './tool-id';
 
-function toResponsesTool(tool: HubTool): ResponsesTool {
-  const parameters: ResponsesToolParameters = {
-    type: 'object',
-    properties: tool.inputSchema.properties,
-    ...(tool.inputSchema.required === undefined ? {} : { required: tool.inputSchema.required }),
-  };
-
-  return {
-    type: 'function',
-    name: tool.name,
-    ...(tool.description === undefined ? {} : { description: tool.description }),
-    parameters,
-  };
-}
-
-function toResponsesWebSearchTool(tool: HubWebSearchTool): ResponsesTool {
-  return {
-    type: 'web_search',
-    ...(tool.allowedDomains === undefined
-      ? {}
-      : { filters: { allowed_domains: tool.allowedDomains } }),
-    ...(tool.userLocation === undefined ? {} : { user_location: tool.userLocation }),
-  };
-}
-
-function basicResponsesToolChoice(
-  choice: Exclude<HubToolChoice, { type: 'web_search' }>,
-): ResponsesToolChoice {
-  switch (choice.type) {
-    case 'auto':
-      return 'auto';
-    case 'none':
-      return 'none';
-    case 'required':
-      return 'required';
-    case 'tool':
-      return { type: 'function', name: choice.name };
-
-    default: {
-      const unhandled: never = choice;
-
-      throw new Error(`unhandled hub tool choice: ${JSON.stringify(unhandled)}`);
-    }
+function functionOutput(block: HubToolResultBlock): unknown {
+  if (block.structuredResult === undefined) {
+    return block.content.flatMap((part) => (part.type === 'text' ? [part.text] : [])).join('');
   }
-}
 
-function toResponsesToolChoice(choice: HubToolChoice): ResponsesToolChoice {
-  return choice.type === 'web_search' ? { type: 'web_search' } : basicResponsesToolChoice(choice);
+  if (Array.isArray(block.structuredResult)) return block.structuredResult;
+
+  return typeof block.structuredResult === 'string'
+    ? block.structuredResult
+    : JSON.stringify(block.structuredResult);
 }
 
 function functionCallOutputItemOf(
   block: HubToolResultBlock,
   fates: Fate[],
 ): ResponsesFunctionCallOutputItem {
-  if (block.content.some((part) => part.type === 'image')) {
+  if (block.structuredResult === undefined && block.content.some((part) => part.type === 'image')) {
     fates.push({
       field: 'tool_result_image',
       disposition: 'mapped',
@@ -97,11 +60,12 @@ function functionCallOutputItemOf(
     });
   }
 
-  const output = block.content
-    .flatMap((part) => (part.type === 'text' ? [part.text] : []))
-    .join('');
-
-  return { type: 'function_call_output', call_id: block.toolUseId, output };
+  return {
+    type: 'function_call_output',
+    call_id: responsesIdentifier(block.toolUseId),
+    ...(block.name === undefined ? {} : { name: block.name }),
+    output: functionOutput(block),
+  };
 }
 
 function itemsOfToolBlock(
@@ -110,9 +74,13 @@ function itemsOfToolBlock(
 ): ResponsesInputItem[] {
   switch (block.type) {
     case 'tool_use':
-      return responsesItemsForGeminiToolUse(block);
+      return block.family === 'custom'
+        ? [customResponsesCall(block)]
+        : responsesItemsForGeminiToolUse(block);
     case 'tool_result':
-      return [functionCallOutputItemOf(block, fates)];
+      return block.family === 'custom'
+        ? [customResponsesOutput(block, functionOutput(block))]
+        : [functionCallOutputItemOf(block, fates)];
 
     default: {
       const unhandled: never = block;
@@ -126,6 +94,7 @@ type FoldedInput = { items: ResponsesInputItem[]; fates: Fate[] };
 
 type EncodeContext = {
   readonly role: 'user' | 'assistant';
+  readonly sourceModel?: string;
   parts: ResponsesContentPart[];
   readonly items: ResponsesInputItem[];
   readonly fates: Fate[];
@@ -139,7 +108,7 @@ function flushParts(context: EncodeContext): void {
 }
 
 function encodeThinkingInto(block: HubThinkingBlock, context: EncodeContext): void {
-  if (context.role !== 'assistant' || !isCodexReasoningSignature(block.signature)) {
+  if (context.role !== 'assistant' || !carriedReasoning(block.signature, context.sourceModel)) {
     context.fates.push(thinkingDropFate());
 
     return;
@@ -153,6 +122,22 @@ function encodeThinkingInto(block: HubThinkingBlock, context: EncodeContext): vo
     encrypted_content: block.signature,
   });
   context.fates.push({ field: 'thinking.signature', disposition: 'carried' });
+}
+
+function carriedReasoning(
+  signature: string | undefined,
+  sourceModel: string | undefined,
+): signature is string {
+  if (signature === '') return true;
+  if (isCodexReasoningSignature(signature)) return true;
+
+  return sourceModel?.startsWith('grok-') === true && isGrokSignature(signature);
+}
+
+function isGrokSignature(signature: string | undefined): signature is string {
+  return (
+    signature !== undefined && signature.length > 200 && /^[A-Za-z0-9+/]+={0,2}$/u.test(signature)
+  );
 }
 
 function isVisibleBlock(
@@ -184,8 +169,14 @@ function encodeBlockInto(block: HubMessage['content'][number], context: EncodeCo
   context.items.push(...itemsOfToolBlock(block, context.fates));
 }
 
-function encodeMessage(message: HubMessage): FoldedInput {
-  const context: EncodeContext = { role: message.role, parts: [], items: [], fates: [] };
+function encodeMessage(message: HubMessage, sourceModel?: string): FoldedInput {
+  const context: EncodeContext = {
+    role: message.role,
+    ...(sourceModel === undefined ? {} : { sourceModel }),
+    parts: [],
+    items: [],
+    fates: [],
+  };
 
   for (const block of message.content) {
     encodeBlockInto(block, context);
@@ -196,12 +187,12 @@ function encodeMessage(message: HubMessage): FoldedInput {
   return { items: context.items, fates: context.fates };
 }
 
-function encodeMessages(messages: readonly HubMessage[]): FoldedInput {
+function encodeMessages(messages: readonly HubMessage[], sourceModel?: string): FoldedInput {
   const items: ResponsesInputItem[] = [];
   const fates: Fate[] = [];
 
   for (const message of messages) {
-    const folded = encodeMessage(message);
+    const folded = encodeMessage(message, sourceModel);
 
     items.push(...folded.items);
     fates.push(...folded.fates);
@@ -227,11 +218,18 @@ function encodeSampling(
 }
 
 export function encodeRequest(request: HubRequest): Translated<ResponsesRequest> {
-  const folded = encodeMessages(request.messages);
+  const folded = encodeMessages(request.messages, request.sourceModel);
   const value: ResponsesRequest = { input: folded.items, ...encodeSampling(request.sampling) };
 
   if (request.system !== undefined) {
-    value.instructions = request.system.map((entry) => entry.text).join('\n');
+    const content = request.system.map((entry) => ({
+      type: 'input_text' as const,
+      text: entry.text,
+    }));
+
+    if (request.sourceModel === undefined)
+      value.instructions = content.map((part) => part.text).join('\n');
+    else value.input = [{ type: 'message', role: 'developer', content }, ...value.input];
   }
 
   toolsInto(value, request);

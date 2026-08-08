@@ -1,14 +1,17 @@
-import type { TranslationRefusal } from '../refusals';
-import type { ChatFinishReason, ChatStreamError, ChatStreamFrame } from './chat-completions-wire';
-import type { HubBlockOpening, HubStreamEvent, HubUsage } from './hub';
+import type { ChatFinishReason, ChatStreamFrame } from './chat-completions-wire';
+import type { HubBlockDelta, HubBlockOpening, HubStreamEvent, HubUsage } from './hub';
 
 import { chatFinishFrom } from './chat-completions-stops';
-import { chatUsageFromHub, mergedStreamUsage } from './chat-completions-usage';
+import { chatIdentityFrame } from './chat-completions-stream-identity';
+import { streamErrorFromRefusal, usageChunk } from './chat-completions-stream-terminal';
+import { mergedStreamUsage } from './chat-completions-usage';
 
 type EncodeState = {
   toolChatIndex: Map<number, number>;
   toolCounter: number;
   beginUsage: HubUsage;
+  id: string | undefined;
+  model: string | undefined;
 };
 
 type ToolOpening = Extract<HubBlockOpening, { kind: 'tool' }>;
@@ -17,11 +20,17 @@ type BlockDeltaEvent = Extract<HubStreamEvent, { type: 'block-delta' }>;
 type MessageEndEvent = Extract<HubStreamEvent, { type: 'message-end' }>;
 type ActiveEvent = Extract<
   HubStreamEvent,
-  { type: 'block-open' | 'block-delta' | 'message-end' | 'stream-error' }
+  { type: 'block-open' | 'block-delta' | 'media' | 'message-end' | 'stream-error' }
 >;
 
 function initialEncodeState(): EncodeState {
-  return { toolChatIndex: new Map(), toolCounter: 0, beginUsage: {} };
+  return {
+    toolChatIndex: new Map(),
+    toolCounter: 0,
+    beginUsage: {},
+    id: undefined,
+    model: undefined,
+  };
 }
 
 function beginChunk(): ChatStreamFrame {
@@ -112,19 +121,27 @@ function encodeBlockDelta(
   event: BlockDeltaEvent,
   frames: ChatStreamFrame[],
 ): void {
-  const delta = event.delta;
+  if (event.delta.kind === 'annotation') return;
 
+  encodeStandardBlockDelta(state, event.index, event.delta, frames);
+}
+
+function encodeStandardBlockDelta(
+  state: EncodeState,
+  index: number,
+  delta: Exclude<HubBlockDelta, { kind: 'annotation' }>,
+  frames: ChatStreamFrame[],
+): void {
   switch (delta.kind) {
     case 'text':
       frames.push(contentChunk(delta.text));
 
       return;
     case 'json-args':
-      frames.push(argsChunk(state, event.index, delta.partialJson));
+      frames.push(argsChunk(state, index, delta.partialJson));
 
       return;
     case 'thinking':
-      return;
     case 'signature':
       return;
 
@@ -136,19 +153,42 @@ function encodeBlockDelta(
   }
 }
 
-function finishChunk(finish: ChatFinishReason): ChatStreamFrame {
-  return { type: 'chunk', chunk: { choices: [{ index: 0, delta: {}, finish_reason: finish }] } };
-}
-
-function usageChunk(usage: HubUsage): ChatStreamFrame {
-  return { type: 'chunk', chunk: { choices: [], usage: chatUsageFromHub(usage) } };
-}
-
-function streamErrorFromRefusal(refusal: TranslationRefusal): ChatStreamError {
+function finishChunk(finish: ChatFinishReason, native: string | undefined): ChatStreamFrame {
   return {
-    type: 'invalid_request_error',
-    message: `the stop reason has no Chat Completions form: ${refusal.reason}`,
+    type: 'chunk',
+    chunk: {
+      choices: [
+        {
+          index: 0,
+          delta: {},
+          finish_reason: finish,
+          ...(native === undefined ? {} : { native_finish_reason: native }),
+        },
+      ],
+    },
   };
+}
+
+function mediaChunk(event: Extract<HubStreamEvent, { type: 'media' }>): ChatStreamFrame[] {
+  if (event.block.type !== 'image') return [];
+
+  const source = event.block.source;
+  const url = source.type === 'url' ? source.url : `data:${source.mediaType};base64,${source.data}`;
+
+  return [
+    {
+      type: 'chunk',
+      chunk: {
+        choices: [
+          {
+            index: 0,
+            delta: { images: [{ type: 'image_url', image_url: { url } }] },
+            finish_reason: null,
+          },
+        ],
+      },
+    },
+  ];
 }
 
 function encodeMessageEnd(
@@ -164,7 +204,7 @@ function encodeMessageEnd(
     return;
   }
 
-  frames.push(finishChunk(finish.finish));
+  frames.push(finishChunk(finish.finish, event.nativeStopReason));
   frames.push(usageChunk(mergedStreamUsage(state.beginUsage, event.usage)));
   frames.push({ type: 'done' });
 }
@@ -172,6 +212,20 @@ function encodeMessageEnd(
 function encodeActiveEvent(
   state: EncodeState,
   event: ActiveEvent,
+  frames: ChatStreamFrame[],
+): boolean {
+  if (event.type === 'media') {
+    frames.push(...mediaChunk(event));
+
+    return false;
+  }
+
+  return encodeStandardActiveEvent(state, event, frames);
+}
+
+function encodeStandardActiveEvent(
+  state: EncodeState,
+  event: Exclude<ActiveEvent, { type: 'media' }>,
   frames: ChatStreamFrame[],
 ): boolean {
   switch (event.type) {
@@ -207,6 +261,8 @@ function encodeEvent(
 ): boolean {
   if (event.type === 'message-begin') {
     state.beginUsage = event.usage ?? {};
+    state.id = event.id;
+    state.model = event.model;
     frames.push(beginChunk());
 
     return false;
@@ -229,7 +285,7 @@ export async function* encodeStream(
     const done = encodeEvent(state, event, frames);
 
     for (const frame of frames) {
-      yield frame;
+      yield chatIdentityFrame(frame, state.id, state.model);
     }
 
     if (done) {

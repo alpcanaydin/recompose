@@ -24,6 +24,7 @@ import {
   isHubInteractionsMedia,
 } from './interactions-content';
 import { interactionsOptionsInto } from './interactions-request-options';
+import { strictProviderToolSchema } from './tool-schema';
 
 function contentPart(block: HubContentBlock): InteractionsContentPart | null {
   if (block.type === 'text') return { type: 'text', text: block.text };
@@ -32,6 +33,8 @@ function contentPart(block: HubContentBlock): InteractionsContentPart | null {
 }
 
 function resultValue(block: HubToolResultBlock): unknown {
+  if (block.structuredResult !== undefined) return block.structuredResult;
+
   const content = block.content.map((part) =>
     part.type === 'text' ? { type: 'text', text: part.text } : interactionsImagePart(part.source),
   );
@@ -46,7 +49,12 @@ function actionStep(block: HubContentBlock): InteractionsStep | null {
 
   if (block.type !== 'tool_result') return null;
 
-  return { type: 'function_result', call_id: block.toolUseId, result: resultValue(block) };
+  return {
+    type: 'function_result',
+    call_id: block.toolUseId,
+    ...(block.name === undefined ? {} : { name: block.name }),
+    result: resultValue(block),
+  };
 }
 
 function reasoningStep(block: HubContentBlock): InteractionsStep | null {
@@ -63,27 +71,43 @@ function reasoningStep(block: HubContentBlock): InteractionsStep | null {
   return { type: 'thought', content: [], signature: block.data };
 }
 
-function contentStep(role: HubMessage['role'], block: HubContentBlock): InteractionsStep | null {
-  const part = contentPart(block);
+function contentStep(
+  role: HubMessage['role'],
+  content: readonly InteractionsContentPart[],
+): InteractionsStep {
+  return { type: role === 'user' ? 'user_input' : 'model_output', content };
+}
 
-  if (part !== null) {
-    return {
-      type: role === 'user' ? 'user_input' : 'model_output',
-      content: [part],
-    };
+function stepsOfMessage(message: HubMessage): InteractionsStep[] {
+  const steps: InteractionsStep[] = [];
+  let content: InteractionsContentPart[] = [];
+
+  const flush = (): void => {
+    if (content.length > 0) steps.push(contentStep(message.role, content));
+    content = [];
+  };
+
+  for (const block of message.content) {
+    const part = contentPart(block);
+
+    if (part !== null) {
+      content.push(part);
+    } else {
+      flush();
+
+      const step = reasoningStep(block) ?? actionStep(block);
+
+      if (step !== null) steps.push(step);
+    }
   }
 
-  return reasoningStep(block) ?? actionStep(block);
+  flush();
+
+  return steps;
 }
 
 function inputOf(messages: readonly HubMessage[]): InteractionsStep[] {
-  return messages.flatMap((message) =>
-    message.content.flatMap((block) => {
-      const step = contentStep(message.role, block);
-
-      return step === null ? [] : [step];
-    }),
-  );
+  return messages.flatMap(stepsOfMessage);
 }
 
 function toolOf(tool: HubTool): InteractionsFunctionTool {
@@ -96,14 +120,7 @@ function toolOf(tool: HubTool): InteractionsFunctionTool {
 }
 
 function toolParameters(tool: HubTool): HubJsonObject {
-  const parameters = {
-    type: 'object',
-    properties: tool.inputSchema.properties,
-  };
-
-  return tool.inputSchema.required === undefined
-    ? parameters
-    : { ...parameters, required: tool.inputSchema.required };
+  return strictProviderToolSchema(tool.inputSchema);
 }
 
 function toolDescription(tool: HubTool): Pick<InteractionsFunctionTool, 'description'> | object {

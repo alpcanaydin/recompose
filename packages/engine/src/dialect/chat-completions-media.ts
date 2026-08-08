@@ -2,6 +2,7 @@ import type { ChatContentPart } from './chat-completions-wire';
 import type { HubAudioBlock, HubContentBlock, HubDocumentBlock, HubVideoBlock } from './hub';
 
 import { imageSourceFromUrl } from './hub-build';
+import { normalizeOpenAIFileData } from './openai-file-data';
 
 type HubChatMedia = HubAudioBlock | HubVideoBlock | HubDocumentBlock;
 
@@ -22,7 +23,10 @@ function audioPart(block: HubAudioBlock): ChatContentPart | null {
     type: 'input_audio',
     input_audio: {
       data: block.source.data,
-      format: block.source.mediaType.split('/').at(-1) ?? block.source.mediaType,
+      format:
+        block.source.mediaType === 'audio/mpeg'
+          ? 'mp3'
+          : (block.source.mediaType.split('/').at(-1) ?? block.source.mediaType),
     },
   };
 }
@@ -30,6 +34,10 @@ function audioPart(block: HubAudioBlock): ChatContentPart | null {
 export function chatPartFromHubMedia(block: HubChatMedia): ChatContentPart | null {
   if (block.type === 'audio') return audioPart(block);
   if (block.type === 'video') return { type: 'video_url', video_url: { url: mediaData(block) } };
+
+  if (block.source.type === 'url') {
+    return { type: 'file', file: { filename: block.filename, file_data: block.source.url } };
+  }
 
   return {
     type: 'file',
@@ -41,17 +49,27 @@ export function chatPartFromHubMedia(block: HubChatMedia): ChatContentPart | nul
 }
 
 function fileBlock(part: Extract<ChatContentPart, { type: 'file' }>): HubContentBlock[] {
-  const matched = /^data:([^;]+);base64,(.*)$/su.exec(part.file.file_data);
+  const normalized = normalizeOpenAIFileData(part.file.filename, undefined, part.file.file_data);
 
-  return matched?.[1] === undefined || matched[2] === undefined
+  return normalized === null
     ? []
     : [
         {
           type: 'document',
-          source: { type: 'base64', mediaType: matched[1], data: matched[2] },
+          source: { type: 'base64', mediaType: normalized.mediaType, data: normalized.data },
           filename: part.file.filename,
         },
       ];
+}
+
+function documentBlock(part: Extract<ChatContentPart, { type: 'document' }>): HubContentBlock[] {
+  return [
+    {
+      type: 'document',
+      source: { type: 'base64', mediaType: part.mime_type, data: part.data },
+      filename: part.name ?? 'document',
+    },
+  ];
 }
 
 export function hubMediaFromChat(part: ChatContentPart): HubContentBlock[] | null {
@@ -61,7 +79,7 @@ export function hubMediaFromChat(part: ChatContentPart): HubContentBlock[] | nul
         type: 'audio',
         source: {
           type: 'base64',
-          mediaType: `audio/${part.input_audio.format}`,
+          mediaType: audioMediaType(part.input_audio.format),
           data: part.input_audio.data,
         },
       },
@@ -72,7 +90,13 @@ export function hubMediaFromChat(part: ChatContentPart): HubContentBlock[] | nul
     return [{ type: 'video', source: imageSourceFromUrl(part.video_url.url) }];
   }
 
+  if (part.type === 'document') return documentBlock(part);
+
   if (part.type === 'file') return fileBlock(part);
 
   return null;
+}
+
+function audioMediaType(format: string): string {
+  return format === 'mp3' ? 'audio/mpeg' : `audio/${format}`;
 }

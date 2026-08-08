@@ -3,23 +3,27 @@ import type { Context } from 'hono';
 import type { AnthropicMessage } from './dialect/anthropic-wire';
 import type { ChatMessage } from './dialect/chat-completions-wire';
 import type { RequestOf } from './dialect/dispatcher';
+import type { ResponsesToolRef } from './dialect/responses-extended-tools';
 import type { TranslationRefusal } from './refusals';
 
+import { geminiPayload } from './gateway-gemini-ingress';
+import { responsesIngressPayload } from './gateway-responses-ingress';
+import { InvalidJsonBodyError } from './invalid-json-body-error';
 import { duplicateJsonKey } from './json-duplicates';
 import { parsePreciseJson } from './json-precise';
 import { renderRefusal } from './refusals';
 
-export type ProxyDialect = 'anthropic' | 'chat-completions' | 'interactions' | 'responses';
-export type ProviderDialect = ProxyDialect | 'gemini';
+export { InvalidJsonBodyError };
+
+export type ProxyDialect =
+  | 'anthropic'
+  | 'chat-completions'
+  | 'gemini'
+  | 'interactions'
+  | 'responses';
+export type ProviderDialect = ProxyDialect;
 
 export type JsonObject = Record<string, unknown>;
-
-export class InvalidJsonBodyError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = 'InvalidJsonBodyError';
-  }
-}
 
 export type Crossing = {
   dialect: ProxyDialect;
@@ -29,6 +33,7 @@ export type Crossing = {
   providerModel: string;
   sessionId?: string | undefined;
   replayScopeId?: string | undefined;
+  callerFingerprint?: string | undefined;
   responsesLite?: boolean | undefined;
   anthropicBeta?: string | undefined;
   requestHeaders?: Record<string, string[]> | undefined;
@@ -43,7 +48,11 @@ export type Crossing = {
       }
     | undefined;
   xaiNamespaceTools?: Record<string, { namespace: string; name: string }> | undefined;
+  xaiInjectSearch?: boolean | undefined;
+  xaiSearchOwnership?: { clientTools: readonly string[] } | undefined;
   geminiToolNames?: Readonly<Record<string, string>> | undefined;
+  geminiNativeWebSearch?: boolean | undefined;
+  responsesToolRefs?: Readonly<Record<string, ResponsesToolRef>> | undefined;
 };
 
 export function isJsonObject(value: unknown): value is JsonObject {
@@ -165,7 +174,10 @@ function isWireMessage(value: unknown): value is AnthropicMessage {
 
   const role = value['role'];
 
-  return (role === 'user' || role === 'assistant') && isWireContent(value['content']);
+  return (
+    (role === 'user' || role === 'assistant' || role === 'system') &&
+    isWireContent(value['content'])
+  );
 }
 
 function speaksAnthropicWire(body: JsonObject): body is JsonObject & RequestOf['anthropic'] {
@@ -188,15 +200,6 @@ function speaksChatCompletions(
   return Array.isArray(messages) && messages.every(isChatMessage);
 }
 
-function speaksResponses(body: JsonObject): body is JsonObject & RequestOf['responses'] {
-  const input = body['input'];
-
-  return (
-    Array.isArray(input) &&
-    input.every((item) => isJsonObject(item) && typeof item['type'] === 'string')
-  );
-}
-
 export function ingressPayload(
   dialect: 'anthropic',
   body: JsonObject,
@@ -205,6 +208,7 @@ export function ingressPayload(
   dialect: 'chat-completions',
   body: JsonObject,
 ): RequestOf['chat-completions'] | null;
+export function ingressPayload(dialect: 'gemini', body: JsonObject): RequestOf['gemini'] | null;
 export function ingressPayload(
   dialect: 'interactions',
   body: JsonObject,
@@ -234,6 +238,10 @@ export function ingressPayload(
     return interactionsPayload(body);
   }
 
+  if (dialect === 'gemini') {
+    return geminiPayload(body);
+  }
+
   return chatPayload(body);
 }
 
@@ -242,7 +250,7 @@ function anthropicPayload(body: JsonObject): RequestOf['anthropic'] | null {
 }
 
 function responsesPayload(body: JsonObject): RequestOf['responses'] | null {
-  return speaksResponses(body) ? body : null;
+  return responsesIngressPayload(body);
 }
 
 function interactionsPayload(body: JsonObject): RequestOf['interactions'] | null {

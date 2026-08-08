@@ -11,12 +11,12 @@ import type {
 import type {
   ResponsesFunctionCallItem,
   ResponsesFunctionCallOutputItem,
+  ResponsesFunctionTool,
   ResponsesMessageItem,
   ResponsesReasoningItem,
   ResponsesRequest,
   ResponsesResponse,
   ResponsesStreamEvent,
-  ResponsesTool,
 } from './responses-wire';
 
 import { COMPATIBLE_SIGNATURE_PREFIX } from './responses-shared';
@@ -137,7 +137,9 @@ export function aForeignReasoningItem(
   return aResponsesReasoningItem({ encrypted_content: 'gpt-oss-signature-xyz', ...overrides });
 }
 
-export function aResponsesTool(overrides: Partial<ResponsesTool> = {}): ResponsesTool {
+export function aResponsesTool(
+  overrides: Partial<ResponsesFunctionTool> = {},
+): ResponsesFunctionTool {
   return {
     type: 'function',
     name: 'get_weather',

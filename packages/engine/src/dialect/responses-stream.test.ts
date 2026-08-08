@@ -253,7 +253,7 @@ describe('decodeStream: an unknown output item is skipped rather than tearing th
       },
       { type: 'response.output_text.delta', output_index: 0, delta: 'hi' },
       { type: 'response.output_item.done', output_index: 0 },
-      { type: 'response.output_item.added', output_index: 1, item: { type: 'web_search_call' } },
+      { type: 'response.output_item.added', output_index: 1, item: { type: 'file_search_call' } },
       { type: 'response.output_text.delta', output_index: 1, delta: 'ignored' },
       { type: 'response.output_item.done', output_index: 1 },
       { type: 'response.completed', response: { id: 'r', status: 'completed', output: [] } },

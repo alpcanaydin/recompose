@@ -24,10 +24,7 @@ const responseSchemaKeys = [
 ] as const;
 
 function cleanDeclaration(declaration: JsonObject, antigravity: boolean): void {
-  if (isJsonObject(declaration['parametersJsonSchema'])) {
-    declaration['parameters'] = declaration['parametersJsonSchema'];
-    delete declaration['parametersJsonSchema'];
-  }
+  normalizeInputSchemaKey(declaration);
 
   for (const key of schemaKeys) {
     const schema = declaration[key];
@@ -37,6 +34,22 @@ function cleanDeclaration(declaration: JsonObject, antigravity: boolean): void {
         ? cleanNestedAntigravityToolSchema(schema)
         : cleanGeminiToolSchema(schema);
     }
+  }
+
+  normalizeOutputSchemaKey(declaration, antigravity);
+}
+
+function normalizeInputSchemaKey(declaration: JsonObject): void {
+  if (isJsonObject(declaration['parametersJsonSchema'])) {
+    declaration['parameters'] = declaration['parametersJsonSchema'];
+    delete declaration['parametersJsonSchema'];
+  }
+}
+
+function normalizeOutputSchemaKey(declaration: JsonObject, antigravity: boolean): void {
+  if (!antigravity && isJsonObject(declaration['parameters'])) {
+    declaration['parametersJsonSchema'] = declaration['parameters'];
+    delete declaration['parameters'];
   }
 }
 
@@ -68,12 +81,17 @@ function cleanResponseSchemas(request: JsonObject): void {
 
     if (!isJsonObject(config)) continue;
 
-    for (const key of responseSchemaKeys) {
-      if (isJsonObject(config[key])) {
-        config[key] = cleanAntigravityResponseSchema(config[key]);
-      }
-    }
+    normalizeResponseSchema(config);
   }
+}
+
+function normalizeResponseSchema(config: JsonObject): void {
+  const selected = responseSchemaKeys.find((key) => isJsonObject(config[key]));
+  const schema = selected === undefined ? undefined : config[selected];
+
+  for (const key of responseSchemaKeys) delete config[key];
+
+  if (isJsonObject(schema)) config['responseSchema'] = cleanAntigravityResponseSchema(schema);
 }
 
 export function cleanAntigravityRequestSchemas(request: JsonObject, model: string): void {

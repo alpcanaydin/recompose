@@ -1,7 +1,7 @@
 import type {
   AnthropicMessage,
   AnthropicRequest,
-  AnthropicTextBlock,
+  AnthropicSystemBlock,
   AnthropicTool,
   AnthropicToolChoice,
 } from './anthropic-wire';
@@ -17,20 +17,26 @@ import type {
 
 import { wireBlockFrom, wireCacheControlOf } from './anthropic-blocks';
 import { injectedMaxOutputTokensDefault } from './chat-completions-request';
+import { mergeAdjacentSameRole } from './hub-build';
+import { anthropicToolSchema } from './tool-schema';
 
 function wireSystemOf(system: readonly HubSystemText[] | undefined): {
-  system?: readonly AnthropicTextBlock[];
+  system?: readonly AnthropicSystemBlock[];
 } {
   if (system === undefined || system.length === 0) {
     return {};
   }
 
   return {
-    system: system.map((text) => ({
-      type: 'text',
-      text: text.text,
-      ...wireCacheControlOf(text.cacheBreakpoint),
-    })),
+    system: system.map((text) =>
+      text.markerType === undefined
+        ? {
+            type: 'text',
+            text: text.text,
+            ...wireCacheControlOf(text.cacheBreakpoint),
+          }
+        : { type: text.markerType, ...wireCacheControlOf(text.cacheBreakpoint) },
+    ),
   };
 }
 
@@ -38,11 +44,8 @@ function wireToolOf(tool: HubTool): AnthropicTool {
   return {
     name: tool.name,
     ...(tool.description === undefined ? {} : { description: tool.description }),
-    input_schema: {
-      type: 'object',
-      properties: tool.inputSchema.properties,
-      ...(tool.inputSchema.required === undefined ? {} : { required: tool.inputSchema.required }),
-    },
+    input_schema: anthropicToolSchema(tool.inputSchema),
+    ...wireCacheControlOf(tool.cacheBreakpoint),
   };
 }
 
@@ -127,7 +130,7 @@ export function encodeRequest(hub: HubRequest): Translated<AnthropicRequest> {
   const fates: Fate[] = [];
 
   const value: AnthropicRequest = {
-    messages: hub.messages.map(wireMessageOf),
+    messages: mergeAdjacentSameRole(hub.messages).map(wireMessageOf),
     ...wireSystemOf(hub.system),
     ...wireToolsOf(hub.tools),
     ...wireToolChoiceOf(hub.toolChoice),

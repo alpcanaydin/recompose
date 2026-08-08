@@ -30,7 +30,7 @@ describe('Gemini stream decoding', () => {
     }
 
     expect(events).toEqual([
-      { type: 'message-begin', usage: { inputTokens: 3 } },
+      { type: 'message-begin', usage: { inputTokens: 3, totalInputTokens: 3 } },
       { type: 'block-open', index: 0, opening: { kind: 'text' } },
       { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'hel' } },
       { type: 'block-close', index: 0 },
@@ -40,7 +40,7 @@ describe('Gemini stream decoding', () => {
       {
         type: 'message-end',
         stopReason: 'max_output',
-        usage: { inputTokens: 3, outputTokens: 2 },
+        usage: { inputTokens: 3, totalInputTokens: 3, outputTokens: 2 },
       },
     ]);
   });

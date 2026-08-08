@@ -157,17 +157,18 @@ describe('decodeRequest maps a structured tool result into hub blocks', () => {
   });
 });
 
-describe('decodeRequest refuses a conversation with no message to translate', () => {
-  it('refuses a request that carries only a system prompt rather than fabricating a turn', () => {
+describe('decodeRequest repairs a system-only conversation', () => {
+  it('adds an empty user turn while preserving the system prompt', () => {
     const request = aChatRequest({ messages: [aChatSystemMessage({ content: 'Be terse' })] });
 
     const result = decodeRequest(request);
 
-    if (!('refusal' in result)) {
-      throw new Error('expected a refusal, met a translation');
-    }
+    if ('refusal' in result) throw new Error('expected a repaired translation');
 
-    expect(result.refusal).toEqual({ reason: 'empty-conversation' });
+    expect(result.value.system).toEqual([{ text: 'Be terse' }]);
+    expect(result.value.messages).toEqual([
+      { role: 'user', content: [{ type: 'text', text: '' }] },
+    ]);
   });
 });
 

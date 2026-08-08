@@ -23,7 +23,7 @@ describe('Gemini responses crossing through Interactions', () => {
           finishReason: 'STOP',
         },
       ],
-      usageMetadata: { promptTokenCount: 2, candidatesTokenCount: 3, cachedContentTokenCount: 4 },
+      usageMetadata: { promptTokenCount: 2, candidatesTokenCount: 3, cachedContentTokenCount: 1 },
     });
     const encoded = encodeResponse(decoded.value).value;
 
@@ -41,12 +41,16 @@ describe('Gemini responses crossing through Interactions', () => {
         signature: 'sig_1',
       },
     ]);
-    expect(encoded.usage).toEqual({
+    expect(encoded.usage).toMatchObject({
+      input_tokens: 2,
       total_input_tokens: 2,
+      prompt_tokens: 2,
+      output_tokens: 3,
       total_output_tokens: 3,
+      completion_tokens: 3,
       total_tokens: 5,
-      cached_tokens: 4,
-      total_cached_tokens: 4,
+      cached_tokens: 1,
+      total_cached_tokens: 1,
     });
   });
 });
@@ -60,8 +64,15 @@ describe('Interactions cached usage', () => {
     }).value;
 
     expect(encoded.usage).toMatchObject({
+      input_tokens: 8,
+      total_input_tokens: 8,
+      prompt_tokens: 8,
+      output_tokens: 2,
+      total_output_tokens: 2,
+      completion_tokens: 2,
       cached_tokens: 5,
       total_cached_tokens: 5,
+      total_tokens: 10,
     });
   });
 });
@@ -128,7 +139,7 @@ describe('Interactions responses crossing into the hub', () => {
     });
 
     expect(decoded.value.usage).toEqual({
-      inputTokens: 11,
+      inputTokens: 6,
       outputTokens: 13,
       cacheReadTokens: 5,
       reasoningTokens: 7,

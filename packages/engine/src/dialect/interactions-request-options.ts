@@ -2,9 +2,9 @@ import type { HubReasoning, HubRequest } from './hub';
 import type { InteractionsRequest } from './interactions-wire';
 
 import {
-  geminiConfigFromInteractions,
-  geminiConfigIntoInteractions,
-} from './gemini-generation-config';
+  providerConfigFromInteractions,
+  providerConfigIntoInteractions,
+} from './interactions-generation-config';
 
 function reasoningFrom(request: InteractionsRequest): HubReasoning | undefined {
   if (request.generation_config === undefined && request.reasoning === undefined) return undefined;
@@ -77,7 +77,7 @@ export function hubOptionsFromInteractions(request: InteractionsRequest): Partia
     ...modalitiesOption(request),
     ...formatOption(request),
     ...serviceOption(request),
-    ...geminiConfigFromInteractions(request),
+    ...providerConfigFromInteractions(request),
   };
 }
 
@@ -126,5 +126,5 @@ export function interactionsOptionsInto(value: InteractionsRequest, request: Hub
   modalitiesInto(value, request);
   formatInto(value, request);
   serviceInto(value, request);
-  geminiConfigIntoInteractions(value, request);
+  providerConfigIntoInteractions(value, request);
 }

@@ -18,6 +18,8 @@ describe('Interactions function declaration groups', () => {
                 type: 'object',
                 $schema: 'http://json-schema.org/draft-07/schema#',
                 properties: { q: { type: 'string' } },
+                additionalProperties: false,
+                $defs: { mode: { enum: ['fast', 'safe'] } },
               },
             },
             { name: 'read', parameters: { type: 'object' } },
@@ -42,6 +44,8 @@ describe('Interactions function declaration groups', () => {
     );
     expect(translated).not.toHaveProperty('value.tools.0.parameters.$schema');
     expect(translated).toHaveProperty('value.tools.0.parameters.properties.q.type', 'string');
+    expect(translated).toHaveProperty('value.tools.0.parameters.additionalProperties', false);
+    expect(translated).toHaveProperty('value.tools.0.parameters.$defs.mode.enum', ['fast', 'safe']);
   });
 });
 

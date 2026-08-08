@@ -1,4 +1,5 @@
 import type { HubStreamEvent } from './hub';
+import type { ResponsesBlockState } from './responses-stream-state';
 import type {
   ResponsesOutputItem,
   ResponsesStreamItem,
@@ -10,7 +11,6 @@ import {
   blockOpenOf,
   pendingDoneEvents,
   signatureCompletion,
-  type ResponsesBlockState,
 } from './responses-stream-blocks';
 
 function terminalItemEvents(

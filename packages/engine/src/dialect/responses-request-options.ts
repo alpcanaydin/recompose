@@ -29,9 +29,23 @@ function modalitiesOption(
 }
 
 function formatOption(request: ResponsesRequest): Pick<HubRequest, 'responseFormat'> | object {
-  const format = request.response_format ?? request.text?.format;
+  const format = request.response_format ?? chatFormatFromText(request.text?.format);
 
   return format === undefined ? {} : { responseFormat: format };
+}
+
+function chatFormatFromText(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+
+  if (value['type'] !== 'json_schema') return value;
+
+  const { type: _type, ...jsonSchema } = value;
+
+  return { type: 'json_schema', json_schema: jsonSchema };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function serviceOption(request: ResponsesRequest): Pick<HubRequest, 'serviceTier'> | object {

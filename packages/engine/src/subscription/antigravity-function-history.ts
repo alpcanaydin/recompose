@@ -21,9 +21,7 @@ function refOf(part: unknown, key: 'functionCall' | 'functionResponse'): Functio
 function repairedResponse(response: FunctionRef, names: ReadonlyMap<string, string>): FunctionRef {
   if (!needsNameRepair(response)) return response;
 
-  const name = names.get(response.id);
-
-  if (name === undefined) return response;
+  const name = names.get(response.id) ?? fallbackName(response.id);
 
   const rawResponse = response.part['functionResponse'];
   const functionResponse = isJsonObject(rawResponse) ? rawResponse : {};
@@ -33,7 +31,17 @@ function repairedResponse(response: FunctionRef, names: ReadonlyMap<string, stri
 }
 
 function needsNameRepair(response: FunctionRef): boolean {
-  return response.id !== '' && (response.name === '' || response.name === 'unknown');
+  return (
+    response.id !== '' &&
+    (response.name === '' || response.name === 'unknown' || response.name === response.id)
+  );
+}
+
+function fallbackName(id: string): string {
+  const segments = id.split('-');
+  const semantic = segments.length > 2 ? segments.slice(0, -2).join('-') : '';
+
+  return semantic === '' ? id : semantic;
 }
 
 function matchedResponse(call: FunctionRef, responses: FunctionRef[]): FunctionRef | undefined {

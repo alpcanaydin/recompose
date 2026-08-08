@@ -32,7 +32,7 @@ function stepOf(opening: HubBlockOpening): InteractionsStep {
   };
 }
 
-function deltaOf(delta: HubBlockDelta): InteractionsStreamDelta {
+function deltaOf(delta: HubBlockDelta): InteractionsStreamDelta | undefined {
   if (delta.kind === 'text') return { type: 'text', text: delta.text };
 
   if (delta.kind === 'thinking') {
@@ -41,6 +41,10 @@ function deltaOf(delta: HubBlockDelta): InteractionsStreamDelta {
 
   if (delta.kind === 'signature') {
     return { type: 'thought_signature', signature: delta.signature };
+  }
+
+  if (delta.kind === 'annotation') {
+    return undefined;
   }
 
   return { type: 'arguments_delta', arguments: delta.partialJson };
@@ -64,7 +68,9 @@ function blockEvent(event: HubStreamEvent): InteractionsKnownStreamEvent[] {
   }
 
   if (event.type === 'block-delta') {
-    return [{ event_type: 'step.delta', index: event.index, delta: deltaOf(event.delta) }];
+    const delta = deltaOf(event.delta);
+
+    return delta === undefined ? [] : [{ event_type: 'step.delta', index: event.index, delta }];
   }
 
   if (event.type === 'block-close') {

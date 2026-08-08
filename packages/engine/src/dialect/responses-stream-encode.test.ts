@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { HubStreamEvent } from './hub';
+import type { ResponsesFunctionCallItem } from './responses-wire';
 
 import { encodeGeminiResponsesCarrier } from '../provider/gemini-responses-carrier';
 import { aHubStreamOfAToolCall } from './hub.testkit';
@@ -22,7 +23,7 @@ describe('encodeStream: hub events fold back out to Responses events', () => {
       output_index: 0,
       item: {
         type: 'function_call',
-        id: 'toolu_weather',
+        id: 'fc_toolu_weather',
         call_id: 'toolu_weather',
         name: 'get_weather',
       },
@@ -43,48 +44,15 @@ describe('encodeStream: hub events fold back out to Responses events', () => {
 describe('encodeStream: the whole tool-call stream folds event for event', () => {
   it('folds the hub tool-call stream into the Responses event sequence', async () => {
     const events = await encode(aHubStreamOfAToolCall());
-    const completedCall = {
+    const completedCall: ResponsesFunctionCallItem = {
       type: 'function_call',
+      id: 'fc_toolu_weather',
       call_id: 'toolu_weather',
       name: 'get_weather',
       arguments: '{"city":"Paris"}',
     };
 
-    expect(events).toEqual([
-      {
-        type: 'response.created',
-        response: { id: 'resp_translated', status: 'in_progress', output: [] },
-      },
-      {
-        type: 'response.output_item.added',
-        output_index: 0,
-        item: {
-          type: 'function_call',
-          id: 'toolu_weather',
-          call_id: 'toolu_weather',
-          name: 'get_weather',
-        },
-      },
-      {
-        type: 'response.function_call_arguments.delta',
-        output_index: 0,
-        delta: '{"city":"Paris"}',
-      },
-      {
-        type: 'response.output_item.done',
-        output_index: 0,
-        item: { ...completedCall, id: 'toolu_weather' },
-      },
-      {
-        type: 'response.completed',
-        response: {
-          id: 'resp_translated',
-          status: 'completed',
-          output: [completedCall],
-          usage: { input_tokens: 12, output_tokens: 8 },
-        },
-      },
-    ]);
+    expect(events).toEqual(expectedToolStream(completedCall));
   });
 });
 
@@ -127,11 +95,16 @@ describe('encodeStream: Gemini tool signatures cross as Responses carriers', () 
     expect(events).toContainEqual({
       type: 'response.output_item.added',
       output_index: 1,
-      item: { type: 'function_call', id: 'native-call', call_id: 'native-call', name: 'run' },
+      item: { type: 'function_call', id: 'fc_native-call', call_id: 'native-call', name: 'run' },
     });
-    expect(events).toHaveProperty('5.item.arguments', '{}');
-    expect(events).toHaveProperty('6.response.output.0.encrypted_content', encryptedContent);
-    expect(events).toHaveProperty('6.response.output.1.arguments', '{}');
+    expect(events).toContainEqual({
+      type: 'response.function_call_arguments.done',
+      output_index: 1,
+      item_id: 'fc_native-call',
+      arguments: '{}',
+    });
+    expect(events).toHaveProperty('7.response.output.0.encrypted_content', encryptedContent);
+    expect(events).toHaveProperty('7.response.output.1.arguments', '{}');
   });
 });
 
@@ -188,7 +161,7 @@ describe('encodeStream: openings and terminators cross to Responses', () => {
           status: 'incomplete',
           output: [],
           incomplete_details: { reason: 'max_output_tokens' },
-          usage: { output_tokens: 9 },
+          usage: { output_tokens: 9, total_tokens: 9 },
         },
       },
     ]);
@@ -213,6 +186,42 @@ describe('encodeStream: openings and terminators cross to Responses', () => {
       delta: 'ponder',
     });
     expect(events.some((event) => event.type === 'response.output_text.delta')).toBe(false);
+  });
+});
+
+describe('encodeStream: text block terminal payloads', () => {
+  it('closes with full-text, content-part, and output-item events', async () => {
+    const events = await encode([
+      { type: 'block-open', index: 0, opening: { kind: 'text' } },
+      { type: 'block-delta', index: 0, delta: { kind: 'text', text: 'hello' } },
+      { type: 'block-delta', index: 0, delta: { kind: 'text', text: ' world' } },
+      { type: 'block-close', index: 0 },
+    ]);
+
+    expect(events).toContainEqual({
+      type: 'response.output_text.done',
+      output_index: 0,
+      item_id: 'msg_stream_0',
+      content_index: 0,
+      text: 'hello world',
+    });
+    expect(events).toContainEqual({
+      type: 'response.content_part.done',
+      output_index: 0,
+      item_id: 'msg_stream_0',
+      content_index: 0,
+      part: { type: 'output_text', text: 'hello world' },
+    });
+    expect(events).toContainEqual({
+      type: 'response.output_item.done',
+      output_index: 0,
+      item: {
+        type: 'message',
+        id: 'msg_stream_0',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'hello world' }],
+      },
+    });
   });
 });
 
@@ -242,3 +251,47 @@ describe('encodeStream: a failure crosses as an error event', () => {
     expect(events).toEqual([{ type: 'error', code: 'unmappable_stop_reason', message: 'paused' }]);
   });
 });
+
+function expectedToolStream(completedCall: ResponsesFunctionCallItem) {
+  return [
+    {
+      type: 'response.created',
+      response: { id: 'resp_translated', status: 'in_progress', output: [] },
+    },
+    {
+      type: 'response.output_item.added',
+      output_index: 0,
+      item: {
+        type: 'function_call',
+        id: 'fc_toolu_weather',
+        call_id: 'toolu_weather',
+        name: 'get_weather',
+      },
+    },
+    {
+      type: 'response.function_call_arguments.delta',
+      output_index: 0,
+      delta: '{"city":"Paris"}',
+    },
+    {
+      type: 'response.function_call_arguments.done',
+      output_index: 0,
+      item_id: 'fc_toolu_weather',
+      arguments: '{"city":"Paris"}',
+    },
+    {
+      type: 'response.output_item.done',
+      output_index: 0,
+      item: { ...completedCall, id: 'fc_toolu_weather' },
+    },
+    {
+      type: 'response.completed',
+      response: {
+        id: 'resp_translated',
+        status: 'completed',
+        output: [completedCall],
+        usage: { input_tokens: 12, output_tokens: 8, total_tokens: 20 },
+      },
+    },
+  ];
+}

@@ -1,5 +1,7 @@
 import type { JsonObject } from '../gateway-wire';
 
+import { CLAUDE_SONNET_5 } from '../provider/model-metadata';
+
 const completionLimits = new Map<string, number>([
   ['claude-haiku-4-5-20251001', 64_000],
   ['claude-sonnet-4-5-20250929', 64_000],
@@ -8,7 +10,7 @@ const completionLimits = new Map<string, number>([
   ['claude-opus-4-7', 128_000],
   ['claude-opus-4-8', 128_000],
   ['claude-opus-5', 128_000],
-  ['claude-sonnet-5', 128_000],
+  ['claude-sonnet-5', CLAUDE_SONNET_5.maxCompletionTokens ?? 128_000],
   ['claude-fable-5', 128_000],
   ['claude-opus-4-5-20251101', 64_000],
   ['claude-opus-4-1-20250805', 32_000],

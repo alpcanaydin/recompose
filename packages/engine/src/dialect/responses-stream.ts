@@ -7,18 +7,18 @@ import type {
 
 import { codexEventError, codexEventErrorCode } from '../provider/codex-event-error';
 import { stopReasonFromResponse, toHubUsage } from './responses-shared';
-import {
-  decodeResponsesBlockEvent,
-  newResponsesBlockState,
-  type ResponsesBlockState,
-} from './responses-stream-blocks';
+import { decodeKnownResponsesBlockEvent } from './responses-stream-blocks';
 import { hydrateResponsesBlocksAtTerminal } from './responses-stream-completion';
+import { responsesImageEvents } from './responses-stream-images';
+import { newResponsesBlockState, type ResponsesBlockState } from './responses-stream-state';
+import { responsesTerminalDetails } from './responses-stream-terminal';
 
 const knownStreamTypes = new Set<string>([
   'response.created',
   'response.output_item.added',
   'response.output_text.delta',
   'response.reasoning_summary_text.delta',
+  'response.image_generation_call.partial_image',
   'response.function_call_arguments.delta',
   'response.output_item.done',
   'response.completed',
@@ -52,22 +52,27 @@ function messageEndOf(response: ResponsesStreamResponse): HubStreamEvent {
     };
   }
 
-  return { type: 'message-end', stopReason: outcome.stopReason, usage: toHubUsage(response.usage) };
+  return {
+    type: 'message-end',
+    ...responsesTerminalDetails(response, outcome.stopReason),
+    usage: toHubUsage(response.usage),
+  };
 }
 
 function decodeKnownEvent(
   event: ResponsesKnownStreamEvent,
   blocks: ResponsesBlockState,
 ): HubStreamEvent[] {
-  if (event.type === 'response.created') {
-    return [
-      {
-        type: 'message-begin',
-        id: event.response.id,
-        ...(event.response.model === undefined ? {} : { model: event.response.model }),
-      },
-    ];
-  }
+  const images = responsesImageEvents(event, blocks);
+
+  return images ?? decodeStandardEvent(event, blocks);
+}
+
+function decodeStandardEvent(
+  event: ResponsesKnownStreamEvent,
+  blocks: ResponsesBlockState,
+): HubStreamEvent[] {
+  if (event.type === 'response.created') return [createdMessageBegin(event)];
 
   if (isTerminalResponseEvent(event)) {
     return [...hydrateResponsesBlocksAtTerminal(blocks, event.response), ...terminalEvents(event)];
@@ -77,7 +82,43 @@ function decodeKnownEvent(
     return [streamErrorEvent(event)];
   }
 
-  return decodeResponsesBlockEvent(blocks, event);
+  if (isSupplementalDoneEvent(event)) return [];
+
+  return decodeKnownResponsesBlockEvent(blocks, event);
+}
+
+function createdMessageBegin(
+  event: Extract<ResponsesKnownStreamEvent, { type: 'response.created' }>,
+): HubStreamEvent {
+  return {
+    type: 'message-begin',
+    id: event.response.id,
+    ...(event.response.model === undefined ? {} : { model: event.response.model }),
+  };
+}
+
+const supplementalDoneTypes = new Set([
+  'response.function_call_arguments.done',
+  'response.custom_tool_call_input.delta',
+  'response.custom_tool_call_input.done',
+  'response.output_text.done',
+  'response.content_part.done',
+]);
+
+type SupplementalDoneEvent = Extract<
+  ResponsesKnownStreamEvent,
+  {
+    type:
+      | 'response.function_call_arguments.done'
+      | 'response.custom_tool_call_input.delta'
+      | 'response.custom_tool_call_input.done'
+      | 'response.output_text.done'
+      | 'response.content_part.done';
+  }
+>;
+
+function isSupplementalDoneEvent(event: ResponsesKnownStreamEvent): event is SupplementalDoneEvent {
+  return supplementalDoneTypes.has(event.type);
 }
 
 type TerminalResponseEvent = Extract<

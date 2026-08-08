@@ -1,15 +1,35 @@
 import type { GeminiPart, GeminiResponse } from './gemini-wire';
-import type { HubBlockDelta, HubBlockOpening, HubStreamEvent } from './hub';
+import type { HubBlockDelta, HubBlockOpening, HubContentBlock, HubStreamEvent } from './hub';
 
 import { isGeminiBypass, nativeGeminiSignature } from '../provider/gemini-signature';
-import { geminiStopReason, geminiUsage } from './gemini-response';
+import { geminiMediaBlock } from './gemini-media-decode';
+import {
+  geminiCallId,
+  geminiFinishReason,
+  geminiResponseId,
+  geminiResponseModel,
+  geminiResponseUsage,
+  geminiStopReason,
+  geminiUsage,
+} from './gemini-response';
+import { geminiThinkingOpening } from './gemini-thinking-opening';
 import { geminiClaudeToolUseId } from './gemini-tool-provenance';
+import {
+  geminiCitationDeltas,
+  geminiWebSearchDeltas,
+  geminiWebSearchOpening,
+} from './gemini-web-search-stream-parts';
 
 function openingOf(
   part: GeminiPart,
   index: number,
   claudeProvenance: boolean,
+  preserveTextSignatures: boolean,
 ): HubBlockOpening | null {
+  const server = geminiWebSearchOpening(part);
+
+  if (server !== null) return server;
+
   const call = callOpening(part, index, claudeProvenance);
 
   if (call !== null) return call;
@@ -18,7 +38,21 @@ function openingOf(
     return null;
   }
 
-  return { kind: part.thought === true ? 'thinking' : 'text' };
+  return part.thought === true
+    ? geminiThinkingOpening(part)
+    : textOpening(part, preserveTextSignatures);
+}
+
+function textOpening(part: GeminiPart, preserveSignature: boolean): HubBlockOpening {
+  const signature = preserveSignature ? carriedToolSignature(part.thoughtSignature) : undefined;
+
+  return {
+    kind: 'text',
+    ...(signature === undefined ? {} : { signature }),
+    ...(part.responsesSignatureDirection === undefined
+      ? {}
+      : { signatureDirection: part.responsesSignatureDirection }),
+  };
 }
 
 function callOpening(
@@ -30,7 +64,7 @@ function callOpening(
 
   if (call === undefined) return null;
 
-  const nativeId = nativeCallId(call.id, index);
+  const nativeId = geminiCallId(call, index);
   const signature = carriedToolSignature(part.thoughtSignature);
 
   return {
@@ -45,10 +79,6 @@ function carriedToolSignature(value: unknown): string | undefined {
   const signature = nativeGeminiSignature(value);
 
   return signature === null || isGeminiBypass(signature) ? undefined : signature;
-}
-
-function nativeCallId(id: string | undefined, index: number): string {
-  return id ?? `call_${String(index)}`;
 }
 
 function provenanceId(id: string, name: string, args: unknown, enabled: boolean): string {
@@ -81,19 +111,28 @@ function textDeltas(part: GeminiPart): HubBlockDelta[] {
       ? []
       : [{ kind: 'signature', signature: part.thoughtSignature }];
 
-  return [text, ...signature];
+  return [...geminiCitationDeltas(part), text, ...signature];
 }
 
 function deltasOf(part: GeminiPart): HubBlockDelta[] {
-  return callDeltas(part) ?? textDeltas(part);
+  return geminiWebSearchDeltas(part) ?? callDeltas(part) ?? textDeltas(part);
 }
 
 function* blockEvents(
   part: GeminiPart,
   index: number,
   claudeProvenance: boolean,
+  preserveTextSignatures: boolean,
 ): Iterable<HubStreamEvent> {
-  const opening = openingOf(part, index, claudeProvenance);
+  const media = geminiMediaBlock(part);
+
+  if (isStreamMedia(media)) {
+    yield { type: 'media', block: media };
+
+    return;
+  }
+
+  const opening = openingOf(part, index, claudeProvenance, preserveTextSignatures);
 
   if (opening === null) {
     return;
@@ -108,8 +147,16 @@ function* blockEvents(
   yield { type: 'block-close', index };
 }
 
-function finishReason(response: GeminiResponse) {
-  return response.candidates?.[0]?.finishReason;
+function isStreamMedia(
+  block: HubContentBlock | null,
+): block is Extract<HubContentBlock, { type: 'image' | 'audio' | 'video' | 'document' }> {
+  return (
+    block !== null &&
+    (block.type === 'image' ||
+      block.type === 'audio' ||
+      block.type === 'video' ||
+      block.type === 'document')
+  );
 }
 
 function partsIn(response: GeminiResponse): GeminiPart[] {
@@ -118,49 +165,128 @@ function partsIn(response: GeminiResponse): GeminiPart[] {
 
 function* beginning(began: boolean, response: GeminiResponse): Iterable<HubStreamEvent> {
   if (!began) {
+    const id = geminiResponseId(response);
+    const model = geminiResponseModel(response);
+
     yield {
       type: 'message-begin',
-      usage: geminiUsage(response.usageMetadata ?? {}),
-      ...(response.responseId === undefined ? {} : { id: response.responseId }),
-      ...(response.modelVersion === undefined ? {} : { model: response.modelVersion }),
+      usage: geminiUsage(geminiResponseUsage(response)),
+      ...(id === undefined ? {} : { id }),
+      ...(model === undefined ? {} : { model }),
     };
   }
 }
 
-function chunkEvents(response: GeminiResponse, firstIndex: number, claudeProvenance: boolean) {
-  const events: HubStreamEvent[] = [];
-  let index = firstIndex;
+function chunkEvents(
+  response: GeminiResponse,
+  firstIndex: number,
+  claudeProvenance: boolean,
+  toolSeen: boolean,
+  preserveTextSignatures: boolean,
+) {
+  const folded = foldedParts(
+    response,
+    firstIndex,
+    claudeProvenance,
+    toolSeen,
+    preserveTextSignatures,
+  );
+  const events = folded.events;
 
-  for (const part of partsIn(response)) {
-    events.push(...blockEvents(part, index, claudeProvenance));
-    index += 1;
-  }
+  const finish = geminiFinishReason(response);
 
-  if (finishReason(response) !== undefined) {
+  if (finish !== undefined) {
     events.push({
       type: 'message-end',
-      stopReason: geminiStopReason(finishReason(response)),
-      usage: geminiUsage(response.usageMetadata ?? {}),
+      stopReason: folded.sawTool ? 'tool_use' : geminiStopReason(finish),
+      usage: geminiUsage(geminiResponseUsage(response)),
+      ...(finish === 'STOP' ? { nativeStopReason: 'stop' } : {}),
     });
   }
 
-  return { events, nextIndex: index };
+  return { events, nextIndex: folded.nextIndex, sawTool: folded.sawTool };
+}
+
+function foldedParts(
+  response: GeminiResponse,
+  firstIndex: number,
+  claudeProvenance: boolean,
+  toolSeen: boolean,
+  preserveTextSignatures: boolean,
+) {
+  const events: HubStreamEvent[] = [];
+  let nextIndex = firstIndex;
+  let sawTool = toolSeen;
+
+  for (const part of partsIn(response)) {
+    events.push(...blockEvents(part, nextIndex, claudeProvenance, preserveTextSignatures));
+    if (part.functionCall !== undefined) sawTool = true;
+    nextIndex += 1;
+  }
+
+  return { events, nextIndex, sawTool };
 }
 
 export async function* decodeStream(
   source: AsyncIterable<GeminiResponse>,
   claudeProvenance = false,
+  preserveTextSignatures = false,
 ): AsyncIterable<HubStreamEvent> {
-  let began = false;
-  let index = 0;
+  const lifecycle: StreamLifecycle = {
+    began: false,
+    ended: false,
+    index: 0,
+    sawTool: false,
+    usage: {},
+  };
 
   for await (const response of source) {
-    yield* beginning(began, response);
-    began = true;
-
-    const chunk = chunkEvents(response, index, claudeProvenance);
-
-    yield* chunk.events;
-    index = chunk.nextIndex;
+    yield* decodedChunk(lifecycle, response, claudeProvenance, preserveTextSignatures);
   }
+
+  yield* unfinishedTerminal(lifecycle);
+}
+
+function* unfinishedTerminal(lifecycle: StreamLifecycle): Iterable<HubStreamEvent> {
+  if (!lifecycle.began || lifecycle.ended) return;
+
+  yield { type: 'message-end', stopReason: 'end', usage: lifecycle.usage };
+}
+
+type StreamLifecycle = {
+  began: boolean;
+  ended: boolean;
+  index: number;
+  sawTool: boolean;
+  usage: ReturnType<typeof geminiUsage>;
+};
+
+function decodedChunk(
+  lifecycle: StreamLifecycle,
+  response: GeminiResponse,
+  claudeProvenance: boolean,
+  preserveTextSignatures: boolean,
+): HubStreamEvent[] {
+  if (lifecycle.ended) return [];
+
+  lifecycle.usage = {
+    ...lifecycle.usage,
+    ...geminiUsage(geminiResponseUsage(response)),
+  };
+  const events = [...beginning(lifecycle.began, response)];
+  const chunk = chunkEvents(
+    response,
+    lifecycle.index,
+    claudeProvenance,
+    lifecycle.sawTool,
+    preserveTextSignatures,
+  );
+
+  events.push(...chunk.events);
+  lifecycle.began = true;
+  lifecycle.index = chunk.nextIndex;
+  lifecycle.sawTool = chunk.sawTool;
+  lifecycle.ended = chunk.events.some((event) => event.type === 'message-end');
+
+  return events;
 }

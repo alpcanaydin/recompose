@@ -2,7 +2,9 @@ import type { TranslationRefusal } from '../refusals';
 import type {
   ChatAssistantMessage,
   ChatCompletionsRequest,
+  ChatContentPart,
   ChatMessage,
+  ChatCustomToolCall,
   ChatToolCall,
   ChatToolMessage,
   ChatUserMessage,
@@ -10,7 +12,7 @@ import type {
 import type { Fate, TranslateResult } from './fates';
 import type { HubCacheBreakpoint, HubContentBlock, HubMessage, HubRequest } from './hub';
 
-import { emptyConversation, toolIdCollision, unrepairableToolCall } from '../refusals';
+import { emptyConversation } from '../refusals';
 import { hubToolUseFromChatCall } from './chat-completions-blocks';
 import { hubBreakpointFrom } from './chat-completions-cache';
 import {
@@ -22,68 +24,29 @@ import {
   toolsFrom,
 } from './chat-completions-request-fields';
 import { hubOptionsFromChat } from './chat-completions-request-options';
+import { chatRequestViolation } from './chat-completions-request-validation';
+import { chatSystemTexts } from './chat-completions-system-content';
 import { toolResultBlockFrom } from './chat-completions-tool-result';
 import { userBlocks } from './chat-completions-user-decode';
 import { mergeAdjacentSameRole } from './hub-build';
-import { firstToolIdCollision } from './tool-id';
 
 type DecodeAcc = {
+  request: ChatCompletionsRequest;
   systemTexts: string[];
   systemBreakpoint: HubCacheBreakpoint | undefined;
   messages: HubMessage[];
   fates: Fate[];
+  preserveReasoning: boolean;
+  toolFamilies: Map<string, 'function' | 'custom'>;
 };
 
-function collectCallIds(message: ChatMessage, callIds: Set<string>): void {
-  if (message.role !== 'assistant') {
-    return;
-  }
+function declaredFamily(request: ChatCompletionsRequest, name: string): 'function' | 'custom' {
+  const tools = request.tools ?? [];
 
-  for (const call of message.tool_calls ?? []) {
-    callIds.add(call.id);
-  }
-}
+  if (tools.some((tool) => tool.type === 'function' && String(tool.function.name) === name))
+    return 'function';
 
-function callAndResultIds(messages: readonly ChatMessage[]): {
-  callIds: Set<string>;
-  resultIds: Set<string>;
-} {
-  const callIds = new Set<string>();
-  const resultIds = new Set<string>();
-
-  for (const message of messages) {
-    collectCallIds(message, callIds);
-
-    if (message.role === 'tool') {
-      resultIds.add(message.tool_call_id);
-    }
-  }
-
-  return { callIds, resultIds };
-}
-
-function recordStandingCalls(message: ChatMessage, standing: Set<string>): void {
-  if (message.role !== 'assistant') {
-    return;
-  }
-
-  for (const call of message.tool_calls ?? []) {
-    standing.add(call.id);
-  }
-}
-
-function firstToolHistoryViolation(messages: readonly ChatMessage[]): string | undefined {
-  const standing = new Set<string>();
-
-  for (const message of messages) {
-    recordStandingCalls(message, standing);
-
-    if (message.role === 'tool' && !standing.delete(message.tool_call_id)) {
-      return message.tool_call_id;
-    }
-  }
-
-  return undefined;
+  return tools.some((tool) => tool.type === 'custom' && tool.name === name) ? 'custom' : 'function';
 }
 
 function foldUserMessage(message: ChatUserMessage, acc: DecodeAcc): void {
@@ -95,26 +58,51 @@ function foldUserMessage(message: ChatUserMessage, acc: DecodeAcc): void {
 }
 
 function routeToolCall(
-  call: ChatToolCall,
+  call: ChatToolCall | ChatCustomToolCall,
   blocks: HubContentBlock[],
   fates: Fate[],
   answered: Set<string>,
+  family: 'function' | 'custom',
 ): void {
-  if (answered.has(call.id)) {
-    blocks.push(hubToolUseFromChatCall(call));
+  const id = call.id ?? 'call_missing';
+
+  if (answered.has(id)) {
+    blocks.push(hubToolUseFromChatCall(call, family));
 
     return;
   }
 
-  fates.push({ field: call.id, disposition: 'mapped', to: 'absent' });
+  fates.push({ field: id, disposition: 'mapped', to: 'absent' });
 }
 
-function assistantText(content: string | null | undefined): string | undefined {
+function assistantText(content: ChatAssistantMessage['content']): string | undefined {
   if (typeof content === 'string' && content !== '') {
     return content;
   }
 
+  if (isChatContent(content)) {
+    const text = content.flatMap((part) => (part.type === 'text' ? [part.text] : [])).join('');
+
+    return text === '' ? undefined : text;
+  }
+
   return undefined;
+}
+
+function isChatContent(value: unknown): value is readonly ChatContentPart[] {
+  return Array.isArray(value);
+}
+
+function reasoningBlocks(message: ChatAssistantMessage, preserve: boolean): HubContentBlock[] {
+  return preserve && message.reasoning_content !== undefined
+    ? [{ type: 'thinking', text: message.reasoning_content, signature: '' }]
+    : [];
+}
+
+function answerBlocks(message: ChatAssistantMessage): HubContentBlock[] {
+  const text = assistantText(message.content);
+
+  return text === undefined ? [] : [{ type: 'text', text }];
 }
 
 function foldAssistantMessage(
@@ -122,20 +110,29 @@ function foldAssistantMessage(
   acc: DecodeAcc,
   answered: Set<string>,
 ): void {
-  const blocks: HubContentBlock[] = [];
-  const text = assistantText(message.content);
+  const blocks: HubContentBlock[] = [
+    ...reasoningBlocks(message, acc.preserveReasoning),
+    ...answerBlocks(message),
+  ];
 
-  if (text !== undefined) {
-    blocks.push({ type: 'text', text });
-  }
-
-  for (const call of message.tool_calls ?? []) {
-    routeToolCall(call, blocks, acc.fates, answered);
-  }
+  for (const call of message.tool_calls ?? []) foldAssistantCall(call, acc, answered, blocks);
 
   if (blocks.length > 0) {
     acc.messages.push({ role: 'assistant', content: blocks });
   }
+}
+
+function foldAssistantCall(
+  call: ChatToolCall | ChatCustomToolCall,
+  acc: DecodeAcc,
+  answered: Set<string>,
+  blocks: HubContentBlock[],
+): void {
+  const name = call.type === 'custom' ? call.custom.name : call.function.name;
+  const family = call.type === 'custom' ? 'custom' : declaredFamily(acc.request, name);
+
+  acc.toolFamilies.set(call.id ?? 'call_missing', family);
+  routeToolCall(call, blocks, acc.fates, answered, family);
 }
 
 function foldTurnMessage(
@@ -167,7 +164,7 @@ function foldNonToolMessage(
   answered: Set<string>,
 ): void {
   if (message.role === 'system' || message.role === 'developer') {
-    acc.systemTexts.push(message.content);
+    acc.systemTexts.push(...chatSystemTexts(message.content));
 
     if (message.cache_control !== undefined) {
       acc.systemBreakpoint = hubBreakpointFrom(message.cache_control);
@@ -190,13 +187,20 @@ function foldToolRun(messages: readonly ChatMessage[], start: number, acc: Decod
       break;
     }
 
-    blocks.push(toolResultBlockFrom(message));
+    blocks.push(toolResultWithFamily(message, acc));
     index += 1;
   }
 
   acc.messages.push({ role: 'user', content: blocks });
 
   return index;
+}
+
+function toolResultWithFamily(message: ChatToolMessage, acc: DecodeAcc): HubContentBlock {
+  const block = toolResultBlockFrom(message);
+  const family = acc.toolFamilies.get(message.tool_call_id ?? 'call_missing');
+
+  return family === undefined ? block : { ...block, family };
 }
 
 function foldMessages(
@@ -237,31 +241,34 @@ function assembleHubRequest(request: ChatCompletionsRequest, acc: DecodeAcc): Hu
   };
 }
 
+function finalizeMessages(acc: DecodeAcc): void {
+  if (acc.messages.length === 0 && acc.systemTexts.length > 0) {
+    acc.messages.push({ role: 'user', content: [{ type: 'text', text: '' }] });
+  }
+
+  acc.messages = mergeAdjacentSameRole(acc.messages);
+}
+
 export function decodeRequest(
   request: ChatCompletionsRequest,
+  preserveReasoning = false,
 ): TranslateResult<HubRequest, TranslationRefusal> {
-  const { callIds, resultIds } = callAndResultIds(request.messages);
-  const violation = firstToolHistoryViolation(request.messages);
+  const validation = chatRequestViolation(request.messages);
 
-  if (violation !== undefined) {
-    return { refusal: unrepairableToolCall(violation) };
-  }
-
-  const collision = firstToolIdCollision([...callIds, ...resultIds]);
-
-  if (collision !== undefined) {
-    return { refusal: toolIdCollision(collision) };
-  }
+  if (validation.refusal !== undefined) return { refusal: validation.refusal };
 
   const acc: DecodeAcc = {
     systemTexts: [],
     systemBreakpoint: undefined,
     messages: [],
     fates: [],
+    preserveReasoning,
+    toolFamilies: new Map(),
+    request,
   };
 
-  foldMessages(request.messages, acc, resultIds);
-  acc.messages = mergeAdjacentSameRole(acc.messages);
+  foldMessages(request.messages, acc, validation.resultIds);
+  finalizeMessages(acc);
 
   if (acc.messages.length === 0) {
     return { refusal: emptyConversation() };
@@ -271,4 +278,10 @@ export function decodeRequest(
   scanDrops(request, acc.fates);
 
   return { value: assembleHubRequest(request, acc), fates: acc.fates };
+}
+
+export function decodeRequestWithCompat(
+  request: ChatCompletionsRequest,
+): TranslateResult<HubRequest, TranslationRefusal> {
+  return decodeRequest(request, true);
 }

@@ -81,8 +81,10 @@ describe('decodeStream reads the thinking lane and the gaps', () => {
       { type: 'block-delta', index: 0, delta: { kind: 'signature', signature: 'sig-40d1' } },
     ]);
   });
+});
 
-  it('skips a block the hub cannot open, deltas and stop included', async () => {
+describe('decodeStream preserves redacted thinking', () => {
+  it('opens a signed reasoning block and keeps later indices contiguous', async () => {
     const wire: readonly AnthropicStreamEvent[] = [
       {
         type: 'content_block_start',
@@ -100,7 +102,16 @@ describe('decodeStream reads the thinking lane and the gaps', () => {
 
     const events = await collect(decodeStream(streamOf(wire)));
 
-    expect(events).toEqual([{ type: 'block-open', index: 1, opening: { kind: 'text' } }]);
+    expect(events).toEqual([
+      {
+        type: 'block-open',
+        index: 0,
+        opening: { kind: 'thinking', signature: 'claude-redacted-thinking:opaque' },
+      },
+      { type: 'block-delta', index: 0, delta: { kind: 'signature', signature: 'sig-40d1' } },
+      { type: 'block-close', index: 0 },
+      { type: 'block-open', index: 1, opening: { kind: 'text' } },
+    ]);
   });
 });
 

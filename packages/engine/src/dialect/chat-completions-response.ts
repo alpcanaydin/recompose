@@ -1,5 +1,9 @@
 import type { TranslationRefusal } from '../refusals';
-import type { ChatCompletionsResponse, ChatResponseMessage } from './chat-completions-wire';
+import type {
+  ChatCompletionsResponse,
+  ChatResponseImage,
+  ChatResponseMessage,
+} from './chat-completions-wire';
 import type { Fate, TranslateResult, Translated } from './fates';
 import type { HubContentBlock, HubResponse } from './hub';
 
@@ -68,11 +72,14 @@ export function encodeResponse(
     fates.push({ field: 'stopReason', disposition: 'mapped', to: 'finish_reason (lossy)' });
   }
 
-  const { text, toolCalls } = foldAssistantBlocks(hub.content, fates);
+  const nonImageContent = hub.content.filter((block) => block.type !== 'image');
+  const { text, toolCalls } = foldAssistantBlocks(nonImageContent, fates);
+  const images = chatImagesFrom(hub.content);
   const message: ChatResponseMessage = {
     role: 'assistant',
     content: text,
     ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
+    ...(images.length > 0 ? { images } : {}),
   };
   const response: ChatCompletionsResponse = {
     ...chatIdentity(hub),
@@ -81,6 +88,18 @@ export function encodeResponse(
   };
 
   return { value: response, fates };
+}
+
+function chatImagesFrom(content: readonly HubContentBlock[]): ChatResponseImage[] {
+  return content.flatMap((block) => {
+    if (block.type !== 'image') return [];
+
+    const source = block.source;
+    const url =
+      source.type === 'url' ? source.url : `data:${source.mediaType};base64,${source.data}`;
+
+    return [{ type: 'image_url', image_url: { url } }];
+  });
 }
 
 function chatIdentity(hub: HubResponse): Pick<ChatCompletionsResponse, 'id' | 'model'> {

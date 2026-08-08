@@ -7,6 +7,86 @@ function responsePayload(text: string): string {
   return isJsonObject(response) ? JSON.stringify(response) : text;
 }
 
+function vertexGroundingRedirect(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+
+  try {
+    const url = new URL(value);
+
+    return (
+      url.protocol === 'https:' &&
+      url.hostname === 'vertexaisearch.cloud.google.com' &&
+      url.pathname.startsWith('/grounding-api-redirect/')
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function resolvedGroundingURL(uri: string, fetchLike: typeof fetch): Promise<string> {
+  try {
+    const answer = await fetchLike(uri, { method: 'HEAD', redirect: 'manual' });
+    const location = answer.headers.get('location');
+
+    return answer.status >= 300 && answer.status < 400 && location !== null
+      ? new URL(location, uri).href
+      : uri;
+  } catch {
+    return uri;
+  }
+}
+
+async function resolveGroundingChunk(chunk: unknown, fetchLike: typeof fetch): Promise<unknown> {
+  if (!isJsonObject(chunk) || !isJsonObject(chunk['web'])) return chunk;
+
+  const uri = chunk['web']['uri'];
+
+  if (!vertexGroundingRedirect(uri)) return chunk;
+
+  return { ...chunk, web: { ...chunk['web'], uri: await resolvedGroundingURL(uri, fetchLike) } };
+}
+
+async function resolveGroundingMetadata(candidate: unknown, fetchLike: typeof fetch) {
+  if (!isJsonObject(candidate) || !isJsonObject(candidate['groundingMetadata'])) return candidate;
+
+  const chunks = candidate['groundingMetadata']['groundingChunks'];
+
+  if (!Array.isArray(chunks)) return candidate;
+
+  return {
+    ...candidate,
+    groundingMetadata: {
+      ...candidate['groundingMetadata'],
+      groundingChunks: await Promise.all(
+        chunks.map(async (chunk) => {
+          const resolved = await resolveGroundingChunk(chunk, fetchLike);
+
+          return resolved;
+        }),
+      ),
+    },
+  };
+}
+
+async function resolvedResponsePayload(text: string, fetchLike: typeof fetch): Promise<string> {
+  const parsed = parsedJson(text);
+  const response = isJsonObject(parsed) ? parsed['response'] : undefined;
+
+  if (!isJsonObject(response) || !Array.isArray(response['candidates']))
+    return responsePayload(text);
+
+  return JSON.stringify({
+    ...response,
+    candidates: await Promise.all(
+      response['candidates'].map(async (candidate) => {
+        const resolved = await resolveGroundingMetadata(candidate, fetchLike);
+
+        return resolved;
+      }),
+    ),
+  });
+}
+
 function unwrapLine(line: string): string {
   if (!line.startsWith('data:')) {
     return line;
@@ -39,7 +119,10 @@ function unwrappedStream(body: ReadableStream<Uint8Array>): ReadableStream<Uint8
   return lines.pipeThrough(new TextEncoderStream());
 }
 
-export async function unwrapAntigravityResponse(response: Response): Promise<Response> {
+export async function unwrapAntigravityResponse(
+  response: Response,
+  fetchLike: typeof fetch = globalThis.fetch,
+): Promise<Response> {
   const headers = new Headers(response.headers);
 
   headers.delete('content-length');
@@ -53,5 +136,8 @@ export async function unwrapAntigravityResponse(response: Response): Promise<Res
 
   const text = await response.text();
 
-  return new Response(responsePayload(text), { status: response.status, headers });
+  return new Response(await resolvedResponsePayload(text, fetchLike), {
+    status: response.status,
+    headers,
+  });
 }

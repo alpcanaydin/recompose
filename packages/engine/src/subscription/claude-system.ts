@@ -1,6 +1,7 @@
 import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { claudeLocalDate } from './claude-timezone';
 
 const CLI_IDENTITY = "You are Claude Code, Anthropic's official CLI for Claude.";
 const legacyModels = new Set([
@@ -135,20 +136,11 @@ function relocateCallerSystem(body: JsonObject): JsonObject {
   return cloned;
 }
 
-function localDate(now: number): string {
-  const date = new Date(now);
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-function currentDateReminder(now: number): string {
+function currentDateReminder(now: number, timezone?: string): string {
   return `<system-reminder>
 As you answer the user's questions, you can use the following context:
 # currentDate
-Today's date is ${localDate(now)}.
+Today's date is ${claudeLocalDate(now, timezone)}.
 
       IMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.
 </system-reminder>
@@ -193,7 +185,7 @@ function arrayCopy(value: unknown): unknown[] {
   return Array.isArray(value) ? value.map((item: unknown) => item) : [];
 }
 
-function withCurrentDate(body: JsonObject, now: number): JsonObject {
+function withCurrentDate(body: JsonObject, now: number, timezone?: string): JsonObject {
   const messages = arrayCopy(body['messages']);
   const index = firstUserIndex(messages);
   const selected = messages[index];
@@ -208,14 +200,14 @@ function withCurrentDate(body: JsonObject, now: number): JsonObject {
 
   messages[index] = {
     ...selected,
-    content: [textBlock(currentDateReminder(now)), ...cacheFirstUserText(withoutDate)],
+    content: [textBlock(currentDateReminder(now, timezone)), ...cacheFirstUserText(withoutDate)],
   };
 
   return { ...body, messages };
 }
 
-export function claudeMessagesSystem(body: JsonObject, now: number): JsonObject {
-  return withCurrentDate(relocateCallerSystem(body), now);
+export function claudeMessagesSystem(body: JsonObject, now: number, timezone?: string): JsonObject {
+  return withCurrentDate(relocateCallerSystem(body), now, timezone);
 }
 
 export function claudeCountTokensSystem(body: JsonObject): JsonObject {

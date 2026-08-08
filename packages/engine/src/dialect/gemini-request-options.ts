@@ -77,6 +77,11 @@ function formatInto(value: GeminiRequest, hub: HubRequest): void {
   const config = generationConfig(value);
   const schema = schemaIn(format);
 
+  delete config.responseSchema;
+  delete config.responseJsonSchema;
+  delete config['response_schema'];
+  delete config['response_json_schema'];
+
   config.responseMimeType = 'application/json';
   if (schema !== undefined) config.responseJsonSchema = schema;
 }

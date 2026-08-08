@@ -1,43 +1,28 @@
 import type { HubStreamEvent } from './hub';
+import type { ResponsesBlockEvent } from './responses-stream-events';
+import type { ResponsesBlockState } from './responses-stream-state';
 import type { ResponsesKnownStreamEvent, ResponsesStreamItem } from './responses-wire';
 
-import { sanitizeToolId } from './tool-id';
+import { isResponsesBlockEvent } from './responses-stream-events';
+import { webSearchDoneEvents, webSearchOpening } from './responses-stream-web-search';
+import { responsesIdentifier, sanitizeToolId } from './tool-id';
 
-type ResponsesBlockEvent = Extract<
-  ResponsesKnownStreamEvent,
-  {
-    type:
-      | 'response.output_item.added'
-      | 'response.output_text.delta'
-      | 'response.reasoning_summary_text.delta'
-      | 'response.function_call_arguments.delta'
-      | 'response.output_item.done';
-  }
->;
-
-export type ResponsesBlockState = {
-  skipped: Set<number>;
-  open: Set<number>;
-  closed: Set<number>;
-  pending: Map<number, ResponsesStreamItem>;
-  arguments: Map<number, string>;
-};
-
-export function newResponsesBlockState(): ResponsesBlockState {
-  return {
-    skipped: new Set(),
-    open: new Set(),
-    closed: new Set(),
-    pending: new Map(),
-    arguments: new Map(),
-  };
-}
-
-function synthesizedToolId(item: { id?: string; call_id?: string }, index: number): string {
-  return sanitizeToolId(item.call_id ?? item.id ?? `toolu_stream_${String(index)}`);
+function synthesizedToolId(
+  item: { id?: string | undefined; call_id?: string | undefined },
+  index: number,
+): string {
+  return responsesIdentifier(
+    sanitizeToolId(item.call_id ?? item.id ?? `toolu_stream_${String(index)}`),
+  );
 }
 
 export function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
+  const webSearch = webSearchOpening(index, item);
+
+  return webSearch ?? standardBlockOpenOf(index, item);
+}
+
+function standardBlockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
   switch (item.type) {
     case 'message':
       return { type: 'block-open', index, opening: { kind: 'text' } };
@@ -91,15 +76,58 @@ function argumentDelta(state: ResponsesBlockState, index: number, delta: string)
     : [{ type: 'block-delta', index, delta: { kind: 'json-args', partialJson: delta } }];
 }
 
-function decodedDelta(
-  state: ResponsesBlockState,
-  event: Exclude<
-    ResponsesBlockEvent,
-    { type: 'response.output_item.added' | 'response.output_item.done' }
-  >,
-): HubStreamEvent[] {
+type ResponsesDeltaEvent = Exclude<
+  ResponsesBlockEvent,
+  { type: 'response.output_item.added' | 'response.output_item.done' }
+>;
+
+function deltaOpening(event: ResponsesDeltaEvent): HubStreamEvent {
+  switch (event.type) {
+    case 'response.output_text.delta':
+      return { type: 'block-open', index: event.output_index, opening: { kind: 'text' } };
+    case 'response.reasoning_summary_text.delta':
+      return { type: 'block-open', index: event.output_index, opening: { kind: 'thinking' } };
+    case 'response.function_call_arguments.delta':
+      return toolDeltaOpening(event);
+
+    default: {
+      const unhandled: never = event;
+
+      throw new Error(`unhandled Responses delta: ${JSON.stringify(unhandled)}`);
+    }
+  }
+}
+
+function toolDeltaOpening(
+  event: Extract<ResponsesDeltaEvent, { type: 'response.function_call_arguments.delta' }>,
+): HubStreamEvent {
+  return {
+    type: 'block-open',
+    index: event.output_index,
+    opening: {
+      kind: 'tool',
+      id: synthesizedToolId({ id: event.item_id, call_id: event.call_id }, event.output_index),
+      name: event.name ?? '',
+    },
+  };
+}
+
+function openForDelta(state: ResponsesBlockState, event: ResponsesDeltaEvent): HubStreamEvent[] {
+  const index = event.output_index;
+
+  if (state.open.has(index) || state.pending.has(index) || state.closed.has(index)) return [];
+
+  state.open.add(index);
+
+  return [deltaOpening(event)];
+}
+
+function decodedDelta(state: ResponsesBlockState, event: ResponsesDeltaEvent): HubStreamEvent[] {
+  const opened = openForDelta(state, event);
+
   if (event.type === 'response.output_text.delta') {
     return [
+      ...opened,
       {
         type: 'block-delta',
         index: event.output_index,
@@ -110,6 +138,7 @@ function decodedDelta(
 
   if (event.type === 'response.reasoning_summary_text.delta') {
     return [
+      ...opened,
       {
         type: 'block-delta',
         index: event.output_index,
@@ -118,7 +147,7 @@ function decodedDelta(
     ];
   }
 
-  return argumentDelta(state, event.output_index, event.delta);
+  return [...opened, ...argumentDelta(state, event.output_index, event.delta)];
 }
 
 function missingArgumentSuffix(current: string, complete: string): string {
@@ -168,10 +197,19 @@ export function pendingDoneEvents(
 
   return [
     open,
+    ...contentCompletion(index, item),
     ...argumentCompletion(state, index, item.arguments),
     ...signatureCompletion(index, item),
     { type: 'block-close', index },
   ];
+}
+
+function contentCompletion(index: number, item: ResponsesStreamItem): HubStreamEvent[] {
+  if (item.type !== 'message' || item.content === undefined || item.content === null) return [];
+
+  const text = item.content.map((part) => part.text).join('');
+
+  return text === '' ? [] : [{ type: 'block-delta', index, delta: { kind: 'text', text } }];
 }
 
 function doneEvent(
@@ -180,6 +218,21 @@ function doneEvent(
 ): HubStreamEvent[] {
   const pending = state.pending.get(event.output_index);
   const item = event.item === undefined ? pending : { ...pending, ...event.item };
+
+  const webSearch =
+    item === undefined ? null : webSearchDoneEvents(state, event.output_index, item);
+
+  if (webSearch !== null) return webSearch;
+
+  return standardDoneEvent(state, event, item, pending);
+}
+
+function standardDoneEvent(
+  state: ResponsesBlockState,
+  event: Extract<ResponsesBlockEvent, { type: 'response.output_item.done' }>,
+  item: ResponsesStreamItem | undefined,
+  pending: ResponsesStreamItem | undefined,
+): HubStreamEvent[] {
   const synthesized = synthesizedDoneEvents(state, event.output_index, item, pending);
 
   if (synthesized !== null) return synthesized;
@@ -207,7 +260,7 @@ function synthesizedDoneEvents(
     : null;
 }
 
-export function decodeResponsesBlockEvent(
+function decodeResponsesBlockEvent(
   state: ResponsesBlockState,
   event: ResponsesBlockEvent,
 ): HubStreamEvent[] {
@@ -216,4 +269,11 @@ export function decodeResponsesBlockEvent(
   if (event.type === 'response.output_item.done') return doneEvent(state, event);
 
   return decodedDelta(state, event);
+}
+
+export function decodeKnownResponsesBlockEvent(
+  state: ResponsesBlockState,
+  event: ResponsesKnownStreamEvent,
+): HubStreamEvent[] {
+  return isResponsesBlockEvent(event) ? decodeResponsesBlockEvent(state, event) : [];
 }

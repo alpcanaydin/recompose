@@ -1,4 +1,4 @@
-import type { HubJsonObject } from './hub';
+import type { HubJsonObject, HubToolInput } from './hub';
 
 type InteractionsTextPart = { type?: 'text'; text: string };
 
@@ -34,7 +34,8 @@ type InteractionsVideoPart = {
 
 type InteractionsDocumentPart = {
   type: 'document';
-  data: string;
+  data?: string;
+  file_uri?: string;
   mime_type: string;
   name?: string;
 };
@@ -68,7 +69,7 @@ type InteractionsFunctionCall = {
   id?: string;
   call_id?: string;
   name: string;
-  arguments: HubJsonObject | string;
+  arguments: HubToolInput;
   signature?: string;
 };
 
@@ -137,7 +138,7 @@ export type InteractionsRequest = {
     | InteractionsStep
     | InteractionsTurn
     | readonly (InteractionsStep | InteractionsTurn)[];
-  system_instruction?: string;
+  system_instruction?: string | { text?: string; parts?: readonly InteractionsContentPart[] };
   tools?: readonly InteractionsTool[];
   generation_config?: InteractionsGenerationConfig;
   tool_choice?: InteractionsToolChoice;

@@ -2,13 +2,23 @@ import type { ClaudeIdentity } from './claude-identity';
 
 import { isJsonObject } from '../gateway-wire';
 import { claudeBetas, requestedClaudeBetas } from './claude-betas';
+import { ensureClaudeCacheControls } from './claude-cache-control';
 import { signedClaudeBody } from './claude-cch';
 import { withClaudeContextManagement } from './claude-context';
+import { CLAUDE_CODE_220_PROFILE, type ClaudeDeviceProfile } from './claude-device-profile';
 import { applyClaudeCredentialIdentity } from './claude-identity';
 import { withClaudeMaxTokens } from './claude-models';
+import {
+  applyClaudePayloadFinalPolicy,
+  applyClaudePayloadOverrides,
+  payloadSystemPolicy,
+  type ClaudePayloadPolicy,
+} from './claude-payload-policy';
 import { sanitizeClaudeSignatures } from './claude-signatures';
 import { claudeCountTokensSystem, claudeMessagesSystem } from './claude-system';
+import { applyClaudeSystemPolicy, type ClaudeSystemPolicy } from './claude-system-policy';
 import { prepareClaudeTools } from './claude-tools';
+import { claudeWireHeaders } from './claude-wire-headers';
 
 export type ProviderRequest = {
   url: string;
@@ -122,7 +132,7 @@ function sanitizeWebSearchDomains(body: JsonObject): void {
 }
 
 function normalizedCacheControls(body: JsonObject): JsonObject {
-  const cloned = structuredClone(body);
+  const cloned = ensureClaudeCacheControls(body);
 
   normalizeCacheTtls(cloned);
   enforceCacheLimit(cloned);
@@ -185,8 +195,11 @@ function shapedSystemBody(
   body: JsonObject,
   now: number,
   mode: 'messages' | 'count-tokens',
+  timezone?: string,
 ): JsonObject {
-  return mode === 'count-tokens' ? claudeCountTokensSystem(body) : claudeMessagesSystem(body, now);
+  return mode === 'count-tokens'
+    ? claudeCountTokensSystem(body)
+    : claudeMessagesSystem(body, now, timezone);
 }
 
 function messageFeatures(body: JsonObject, mode: 'messages' | 'count-tokens'): JsonObject {
@@ -223,39 +236,32 @@ export function claudeProviderRequest(
   identity?: ClaudeIdentity,
   now = Date.now(),
   mode: 'messages' | 'count-tokens' = 'messages',
+  timezone?: string,
+  systemPolicy?: ClaudeSystemPolicy,
+  payloadPolicy?: ClaudePayloadPolicy,
+  wireProfile: ClaudeDeviceProfile = CLAUDE_CODE_220_PROFILE,
 ): ProviderRequest {
-  const requested = requestedClaudeBetas(rawBody);
-  const identified = identifiedBody(rawBody, identity, ids.sessionId);
-  const shaped = shapedSystemBody(identified, now, mode);
+  const overrideBody = applyClaudePayloadOverrides(rawBody, payloadPolicy);
+  const requested = requestedClaudeBetas(overrideBody);
+  const effectiveSystemPolicy = payloadSystemPolicy(systemPolicy, payloadPolicy);
+  const policyBody = applyClaudeSystemPolicy(overrideBody, effectiveSystemPolicy);
+  const identified = identifiedBody(policyBody, identity, ids.sessionId);
+  const shaped = shapedSystemBody(identified, now, mode, timezone);
   const featured = messageFeatures(normalizedClaudeBody(shaped), mode);
-  const body = upstreamFeatures(featured, providerOrigin, mode);
+  const upstream = upstreamFeatures(featured, providerOrigin, mode);
+  const body = applyClaudePayloadFinalPolicy(upstream, payloadPolicy);
   const prepared = prepareClaudeTools(body, 'recompose-claude-mcp-caller');
 
   return {
     url: `${providerOrigin.replace(/\/+$/u, '')}/v1/messages?beta=true`,
     body: signedClaudeBody(prepared.body),
     ...(Object.keys(prepared.reverse).length === 0 ? {} : { reverseToolNames: prepared.reverse }),
-    headers: [
-      ['Accept', 'application/json'],
-      ['Authorization', `Bearer ${accessToken}`],
-      ['Content-Type', 'application/json'],
-      ['User-Agent', 'claude-cli/2.1.220 (external, cli)'],
-      ['X-Claude-Code-Session-Id', ids.sessionId],
-      ['X-Stainless-Arch', 'arm64'],
-      ['X-Stainless-Lang', 'js'],
-      ['X-Stainless-OS', 'MacOS'],
-      ['X-Stainless-Package-Version', '0.94.0'],
-      ['X-Stainless-Retry-Count', '0'],
-      ['X-Stainless-Runtime', 'node'],
-      ['X-Stainless-Runtime-Version', 'v26.3.0'],
-      ['X-Stainless-Timeout', '600'],
-      ['anthropic-beta', claudeBetas(body, requested)],
-      ['anthropic-dangerous-direct-browser-access', 'true'],
-      ['anthropic-version', '2023-06-01'],
-      ['x-app', 'cli'],
-      ['x-client-request-id', ids.requestId],
-      ['Connection', 'keep-alive'],
-      ['Accept-Encoding', 'gzip, deflate, br, zstd'],
-    ],
+    headers: claudeWireHeaders(
+      accessToken,
+      ids.sessionId,
+      ids.requestId,
+      claudeBetas(body, requested),
+      wireProfile,
+    ),
   };
 }

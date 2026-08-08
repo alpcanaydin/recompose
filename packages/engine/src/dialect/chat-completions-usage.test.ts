@@ -53,6 +53,7 @@ describe('the codec maps cache tokens through the response usage both ways', () 
     ).toEqual({
       prompt_tokens: 10,
       completion_tokens: 8,
+      total_tokens: 18,
       prompt_tokens_details: { cached_tokens: 4 },
     });
   });
@@ -67,7 +68,8 @@ describe('the codec maps cache tokens through the response usage both ways', () 
     ).toEqual({
       prompt_tokens: 15,
       completion_tokens: 8,
-      prompt_tokens_details: { cached_tokens: 4 },
+      total_tokens: 23,
+      prompt_tokens_details: { cached_tokens: 4, cached_creation_tokens: 5 },
     });
   });
 });
@@ -84,7 +86,36 @@ describe('encodeStream merges the opening usage with the closing usage', () => {
     expect(streamUsage(frames)).toEqual({
       prompt_tokens: 14,
       completion_tokens: 25,
+      total_tokens: 39,
       prompt_tokens_details: { cached_tokens: 4 },
+    });
+  });
+});
+
+describe('the codec carries reasoning and aggregate Chat usage', () => {
+  it('decodes reasoning-token details into the hub', () => {
+    const response = aChatResponse({
+      usage: {
+        prompt_tokens: 2,
+        completion_tokens: 6,
+        total_tokens: 8,
+        completion_tokens_details: { reasoning_tokens: 3 },
+      },
+    });
+
+    expect(decodeResponse(response).value.usage).toMatchObject({ reasoningTokens: 3 });
+  });
+
+  it('encodes reasoning details and total tokens from the hub', () => {
+    const usage = encodedUsage(
+      aHubResponse({ usage: { inputTokens: 2, outputTokens: 6, reasoningTokens: 3 } }),
+    );
+
+    expect(usage).toMatchObject({
+      prompt_tokens: 2,
+      completion_tokens: 6,
+      total_tokens: 8,
+      completion_tokens_details: { reasoning_tokens: 3 },
     });
   });
 });

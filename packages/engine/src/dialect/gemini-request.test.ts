@@ -53,7 +53,7 @@ const expectedContents = [
         functionResponse: {
           name: 'weather',
           id: 'call_1',
-          response: { output: 'sunny' },
+          response: { result: 'sunny' },
         },
       },
     ],
@@ -77,7 +77,7 @@ describe('Gemini request encoding', () => {
         functionCallingConfig: { mode: 'ANY', allowedFunctionNames: ['weather'] },
       },
     });
-    expect(translated.value.tools?.[0]?.functionDeclarations[0]).toEqual({
+    expect(translated.value.tools?.[0]?.functionDeclarations[0]).toMatchObject({
       name: 'weather',
       description: 'Read weather',
       parameters: {

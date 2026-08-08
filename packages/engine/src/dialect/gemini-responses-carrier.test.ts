@@ -10,20 +10,18 @@ const signature = 'EjQKMgEMOdbHO0Gd+c9Mxk4ELwPGbpCEcp2mFfYYLix2UVtBH3fL8GECc4+JI
 describe('Gemini Responses function-call signature carriers', () => {
   it('should round-trip a provider signature through the client response', () => {
     const response = translatedGeminiResponse();
+    const carrier = response.value.output[0];
+    const call = response.value.output[1];
+
+    if (carrier?.type !== 'reasoning') throw new Error('Gemini carrier is missing');
+    if (call?.type !== 'function_call') throw new Error('Gemini call is missing');
 
     const request: ResponsesRequest = {
       model: 'alias-without-provider-name',
-      input: [
-        ...response.value.output,
-        { type: 'function_call_output', call_id: 'call_1', output: 'ok' },
-      ],
+      input: [carrier, call, { type: 'function_call_output', call_id: 'call_1', output: 'ok' }],
     };
     const translated = translateRequestToGemini('responses', request);
 
-    const carrier = response.value.output[0];
-
-    expect(carrier?.type).toBe('reasoning');
-    if (carrier?.type !== 'reasoning') throw new Error('Gemini carrier is missing');
     expect(carrier.encrypted_content).toContain('cpa-gemini-responses-carrier-v1:');
     expect(translated).toHaveProperty('value.contents.0.parts.0.thoughtSignature', signature);
     expect(JSON.stringify(translated)).not.toContain('cpa-gemini-responses-carrier-v1:');

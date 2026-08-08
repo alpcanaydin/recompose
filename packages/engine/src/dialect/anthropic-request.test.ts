@@ -185,15 +185,17 @@ describe('decodeRequest accounts for every source field', () => {
     expect(fates).toContainEqual({ field: 'top_k', disposition: 'mapped', to: 'absent' });
   });
 
-  it('drops the thinking configuration with a cost-bearing fate', () => {
-    const { fates } = decodedValue(anAnthropicAsk({ thinking: { type: 'adaptive' } }));
+  it('maps the thinking configuration into provider-neutral reasoning', () => {
+    const { value, fates } = decodedValue(
+      anAnthropicAsk({ thinking: { type: 'enabled', budget_tokens: 8_000 } }),
+    );
 
     expect(fates).toContainEqual({
       field: 'thinking',
       disposition: 'mapped',
-      to: 'absent',
-      costBearing: true,
+      to: 'reasoning',
     });
+    expect(value.reasoning).toEqual({ summary: 'auto', budgetTokens: 8_000 });
   });
 });
 

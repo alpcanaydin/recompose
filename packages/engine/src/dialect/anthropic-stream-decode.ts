@@ -1,7 +1,7 @@
 import type {
   AnthropicBlockDelta,
-  AnthropicContentBlock,
   AnthropicKnownStreamEvent,
+  AnthropicStreamContentBlock,
   AnthropicStreamEvent,
 } from './anthropic-wire';
 import type { HubStopReason, HubStreamEvent, HubUsage } from './hub';
@@ -28,19 +28,31 @@ type DecodeState = {
   stopReason: HubStopReason;
   usage: HubUsage;
   skipped: Set<number>;
+  lastTextIndex: number | undefined;
 };
 
 function initialDecodeState(): DecodeState {
-  return { stopReason: 'end', usage: {}, skipped: new Set() };
+  return { stopReason: 'end', usage: {}, skipped: new Set(), lastTextIndex: undefined };
 }
 
-function blockOpenOf(index: number, block: AnthropicContentBlock): HubStreamEvent | undefined {
+function blockOpenOf(
+  index: number,
+  block: AnthropicStreamContentBlock,
+): HubStreamEvent | undefined {
   if (block.type === 'text') {
     return { type: 'block-open', index, opening: { kind: 'text' } };
   }
 
   if (block.type === 'thinking') {
     return { type: 'block-open', index, opening: { kind: 'thinking' } };
+  }
+
+  if (block.type === 'redacted_thinking') {
+    return {
+      type: 'block-open',
+      index,
+      opening: { kind: 'thinking', signature: `claude-redacted-thinking:${block.data}` },
+    };
   }
 
   if (block.type === 'tool_use') {
@@ -52,7 +64,7 @@ function blockOpenOf(index: number, block: AnthropicContentBlock): HubStreamEven
 
 function openBlock(
   index: number,
-  block: AnthropicContentBlock,
+  block: AnthropicStreamContentBlock,
   state: DecodeState,
 ): HubStreamEvent[] {
   const open = blockOpenOf(index, block);
@@ -63,10 +75,27 @@ function openBlock(
     return [];
   }
 
+  if (open.type === 'block-open' && open.opening.kind === 'text') state.lastTextIndex = index;
+
   return [open];
 }
 
 function hubDeltaOf(index: number, delta: AnthropicBlockDelta): HubStreamEvent {
+  if (delta.type === 'citations_delta') {
+    return {
+      type: 'block-delta',
+      index,
+      delta: { kind: 'annotation', annotation: delta.citation },
+    };
+  }
+
+  return standardHubDeltaOf(index, delta);
+}
+
+function standardHubDeltaOf(
+  index: number,
+  delta: Exclude<AnthropicBlockDelta, { type: 'citations_delta' }>,
+): HubStreamEvent {
   switch (delta.type) {
     case 'text_delta':
       return { type: 'block-delta', index, delta: { kind: 'text', text: delta.text } };
@@ -103,6 +132,17 @@ function decodeBlockEvent(event: BlockEvent, state: DecodeState): HubStreamEvent
     return openBlock(event.index, event.content_block, state);
   }
 
+  return decodeExistingBlockEvent(event, state);
+}
+
+function decodeExistingBlockEvent(
+  event: Exclude<BlockEvent, { type: 'content_block_start' }>,
+  state: DecodeState,
+): HubStreamEvent[] {
+  if (event.type === 'content_block_delta' && event.delta.type === 'citations_delta') {
+    return citationEvents(event.delta, state);
+  }
+
   if (state.skipped.has(event.index)) {
     return [];
   }
@@ -112,6 +152,13 @@ function decodeBlockEvent(event: BlockEvent, state: DecodeState): HubStreamEvent
   }
 
   return [{ type: 'block-close', index: event.index }];
+}
+
+function citationEvents(
+  delta: Extract<AnthropicBlockDelta, { type: 'citations_delta' }>,
+  state: DecodeState,
+) {
+  return state.lastTextIndex === undefined ? [] : [hubDeltaOf(state.lastTextIndex, delta)];
 }
 
 type EnvelopeEvent = Extract<

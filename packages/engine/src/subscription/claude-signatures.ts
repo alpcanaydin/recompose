@@ -1,6 +1,11 @@
 import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { canonicalBase64 } from '../provider/signature-wire';
+import {
+  strictCaisClaudeSignature,
+  strictClassicClaudeSignature,
+} from './claude-signature-structure';
 
 const CLAUDE_PREFIXES = new Set([
   'claude',
@@ -12,6 +17,7 @@ const CLAUDE_PREFIXES = new Set([
   'claude-code-max',
   'claude_code_max',
 ]);
+const MAX_CLAUDE_SIGNATURE_LENGTH = 32 * 1024 * 1024;
 
 function withoutProviderPrefix(signature: string): string | null {
   const trimmed = signature.trim();
@@ -27,13 +33,7 @@ function withoutProviderPrefix(signature: string): string | null {
 }
 
 function decodedBase64(value: string): Buffer | null {
-  if (value === '' || value.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/u.test(value)) {
-    return null;
-  }
-
-  const decoded = Buffer.from(value, 'base64');
-
-  return decoded.toString('base64') === value ? decoded : null;
+  return canonicalBase64(value);
 }
 
 function validSingleLayer(signature: string): string | null {
@@ -53,13 +53,7 @@ function validClassicSignature(signature: string): string | null {
 }
 
 function validCaisSignature(signature: string): string | null {
-  if (!signature.startsWith('C')) {
-    return null;
-  }
-
-  const decoded = decodedBase64(signature);
-
-  return decoded?.[0] === 0x08 && decoded.includes(Buffer.from('claude-')) ? signature : null;
+  return strictCaisClaudeSignature(signature);
 }
 
 export function nativeClaudeSignature(signature: unknown): string | null {
@@ -69,9 +63,27 @@ export function nativeClaudeSignature(signature: unknown): string | null {
 
   const unprefixed = withoutProviderPrefix(signature);
 
-  return unprefixed === null
+  return unprefixed === null || unprefixed.length > MAX_CLAUDE_SIGNATURE_LENGTH
     ? null
     : (validClassicSignature(unprefixed) ?? validCaisSignature(unprefixed));
+}
+
+export function strictNativeClaudeSignature(signature: unknown): string | null {
+  if (typeof signature !== 'string') return null;
+
+  const unprefixed = withoutProviderPrefix(signature);
+
+  return unprefixed === null || unprefixed.length > MAX_CLAUDE_SIGNATURE_LENGTH
+    ? null
+    : (strictClassicClaudeSignature(unprefixed) ?? strictCaisClaudeSignature(unprefixed));
+}
+
+export function antigravityClaudeSignature(signature: unknown): string | null {
+  const native = strictNativeClaudeSignature(signature);
+
+  return native === null || native.startsWith('C')
+    ? null
+    : Buffer.from(native, 'utf8').toString('base64');
 }
 
 function sanitizedToolUse(block: JsonObject): JsonObject {
@@ -86,7 +98,7 @@ function sanitizedToolUse(block: JsonObject): JsonObject {
 }
 
 function sanitizedThinking(block: JsonObject): JsonObject | null {
-  const signature = nativeClaudeSignature(block['signature']);
+  const signature = strictNativeClaudeSignature(block['signature']);
 
   return signature === null ? null : { ...block, signature };
 }

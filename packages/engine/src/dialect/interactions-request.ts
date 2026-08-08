@@ -6,6 +6,7 @@ import type {
   HubSampling,
   HubTool,
   HubToolChoice,
+  HubToolInput,
 } from './hub';
 import type {
   InteractionsFunctionTool,
@@ -16,15 +17,16 @@ import type {
   InteractionsTurn,
 } from './interactions-wire';
 
-import { mergeAdjacentSameRole, parseToolArguments } from './hub-build';
+import { parseToolArguments } from './hub-build';
 import { hubBlocksFromInteractionsContent, interactionsText } from './interactions-content';
 import { hubOptionsFromInteractions } from './interactions-request-options';
+import { hubToolSchemaFrom } from './tool-schema';
 
 function isJsonObject(value: unknown): value is HubJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function callInput(value: HubJsonObject | string): HubJsonObject {
+function callInput(value: HubToolInput): HubToolInput {
   return typeof value === 'string' ? parseToolArguments(value) : value;
 }
 
@@ -55,6 +57,10 @@ function stepMessage(step: InteractionsStep): HubMessage {
 }
 
 function thoughtMessage(step: Extract<InteractionsStep, { type: 'thought' }>): HubMessage {
+  const media = hubBlocksFromInteractionsContent(step.content ?? []).filter(
+    (block) => block.type !== 'text',
+  );
+
   return {
     role: 'assistant',
     content: [
@@ -63,6 +69,7 @@ function thoughtMessage(step: Extract<InteractionsStep, { type: 'thought' }>): H
         text: interactionsText(step.content),
         ...(step.signature === undefined ? {} : { signature: step.signature }),
       },
+      ...media,
     ],
   };
 }
@@ -95,6 +102,7 @@ function functionResultMessage(
         toolUseId: step.call_id,
         ...(step.name === undefined ? {} : { name: normalizedName(step.name) }),
         content: [{ type: 'text', text: resultText(step.result) }],
+        structuredResult: step.result,
       },
     ],
   };
@@ -105,7 +113,13 @@ function isTurn(value: InteractionsStep | InteractionsTurn): value is Interactio
 }
 
 function turnMessages(turn: InteractionsTurn): HubMessage[] {
-  if (turn.steps !== undefined) return turn.steps.map(stepMessage);
+  if (turn.steps !== undefined) {
+    const messages = turn.steps.map(stepMessage);
+
+    return turn.role === 'user'
+      ? messages
+      : messages.map((message) => ({ ...message, role: 'assistant' }));
+  }
 
   const role = turn.role === 'user' ? 'user' : 'assistant';
 
@@ -122,7 +136,7 @@ function inputMessages(input: InteractionsRequest['input']): HubMessage[] {
     isTurn(item) ? turnMessages(item) : [stepMessage(item)],
   );
 
-  return mergeAdjacentSameRole(messages);
+  return messages;
 }
 
 function inputArray(
@@ -131,31 +145,11 @@ function inputArray(
   return Array.isArray(value);
 }
 
-function toolProperties(tool: InteractionsFunctionTool): HubJsonObject {
-  const properties = tool.parameters?.['properties'];
-
-  return isJsonObject(properties) ? properties : {};
-}
-
-function requiredProperties(tool: InteractionsFunctionTool): readonly string[] | undefined {
-  const required = tool.parameters?.['required'];
-
-  return Array.isArray(required)
-    ? required.filter((value): value is string => typeof value === 'string')
-    : undefined;
-}
-
 function toolOf(tool: InteractionsFunctionTool): HubTool {
-  const required = requiredProperties(tool);
-
   return {
     name: normalizedName(tool.name),
     ...(tool.description === undefined ? {} : { description: tool.description }),
-    inputSchema: {
-      type: 'object',
-      properties: toolProperties(tool),
-      ...(required === undefined ? {} : { required }),
-    },
+    inputSchema: hubToolSchemaFrom(tool.parameters),
   };
 }
 
@@ -226,9 +220,14 @@ function applyStops(sampling: HubSampling, value: readonly string[] | undefined)
 }
 
 function optionalSystem(request: InteractionsRequest): Pick<HubRequest, 'system'> | object {
-  return request.system_instruction === undefined
-    ? {}
-    : { system: [{ text: request.system_instruction }] };
+  const instruction = request.system_instruction;
+
+  if (instruction === undefined) return {};
+  if (typeof instruction === 'string') return { system: [{ text: instruction }] };
+
+  const text = instruction.text ?? interactionsText(instruction.parts);
+
+  return text === '' ? {} : { system: [{ text }] };
 }
 
 function optionalTools(request: InteractionsRequest): Pick<HubRequest, 'tools'> | object {

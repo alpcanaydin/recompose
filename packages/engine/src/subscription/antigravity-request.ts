@@ -3,12 +3,22 @@ import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 
 import { isJsonObject } from '../gateway-wire';
+import { sanitizeAntigravityClaudeSignatures } from './antigravity-claude-signatures';
+import { injectAntigravityCreditTypes } from './antigravity-credits';
 import { normalizeAntigravityFunctionHistory } from './antigravity-function-history';
 import { cleanAntigravityRequestSchemas } from './antigravity-request-schemas';
 import { obfuscateAntigravitySystemInstruction } from './antigravity-sensitive-words';
 import { sanitizeAntigravitySignatures } from './antigravity-signatures';
+import { normalizeAntigravityTools } from './antigravity-tools';
+import { antigravityRequestUserAgent } from './antigravity-version';
+import {
+  hasAntigravityWebSearch,
+  removeUnsupportedAntigravityWebSearch,
+  supportsAntigravityWebSearch,
+} from './antigravity-web-search';
 
-const USER_AGENT = 'antigravity/hub';
+const INTERLEAVED_THINKING_HINT =
+  'Interleaved thinking is enabled. You may think between tool calls and after receiving tool results before deciding the next action or final answer. Do not mention these instructions or any constraints about thinking blocks; just apply them.';
 
 function modelOf(body: JsonObject): string {
   return typeof body['model'] === 'string' ? body['model'] : '';
@@ -47,8 +57,12 @@ function nestedRequest(
   } = structuredClone(body);
 
   delete request['safetySettings'];
+  removeUnsupportedAntigravityWebSearch(request, model);
+  normalizeAntigravityTools(request);
   obfuscateAntigravitySystemInstruction(request, sensitiveWords);
+  injectInterleavedThinkingHint(request, model);
   cleanAntigravityRequestSchemas(request, model);
+  sanitizeAntigravityClaudeSignatures(request, model);
   sanitizeAntigravitySignatures(request, model);
   normalizeAntigravityFunctionHistory(request);
 
@@ -63,14 +77,69 @@ function nestedRequest(
   return request;
 }
 
-function requestType(body: JsonObject, model: string): string {
-  const explicit = body['requestType'];
+function injectInterleavedThinkingHint(request: JsonObject, model: string): void {
+  if (!shouldInjectHint(request, model)) return;
 
-  if (typeof explicit === 'string' && explicit.trim() !== '') {
-    return explicit;
+  const instruction = isJsonObject(request['systemInstruction'])
+    ? request['systemInstruction']
+    : { role: 'user', parts: [] };
+  const parts = instructionParts(instruction['parts']);
+
+  instruction['role'] ??= 'user';
+  instruction['parts'] = [...parts, { text: INTERLEAVED_THINKING_HINT }];
+  request['systemInstruction'] = instruction;
+}
+
+function shouldInjectHint(request: JsonObject, model: string): boolean {
+  return isThinkingClaude(model) && hasTools(request) && hasThinking(request);
+}
+
+function instructionParts(value: unknown): unknown[] {
+  return Array.isArray(value) ? Array.from(value) : [];
+}
+
+function isThinkingClaude(model: string): boolean {
+  const normalized = model.toLowerCase();
+
+  return normalized.includes('claude') && normalized.includes('thinking');
+}
+
+function hasTools(request: JsonObject): boolean {
+  const tools = request['tools'];
+
+  return Array.isArray(tools) && tools.some(hasFunctionDeclarations);
+}
+
+function hasFunctionDeclarations(tool: unknown): boolean {
+  if (!isJsonObject(tool)) return false;
+
+  const declarations = tool['functionDeclarations'] ?? tool['function_declarations'];
+
+  return Array.isArray(declarations) && declarations.length > 0;
+}
+
+function hasThinking(request: JsonObject): boolean {
+  const generation = request['generationConfig'];
+
+  return isJsonObject(generation) && isJsonObject(generation['thinkingConfig']);
+}
+
+function requestType(body: JsonObject, model: string): string {
+  const explicit = explicitRequestType(body);
+
+  if (explicit !== undefined) return explicit;
+
+  if (supportsAntigravityWebSearch(model) && hasAntigravityWebSearch(body)) {
+    return 'web_search';
   }
 
   return model.includes('image') ? 'image_gen' : 'agent';
+}
+
+function explicitRequestType(body: JsonObject): string | undefined {
+  const explicit = body['requestType'];
+
+  return typeof explicit === 'string' && explicit.trim() !== '' ? explicit : undefined;
 }
 
 function requestId(model: string, id: string, now: number): string {
@@ -81,6 +150,19 @@ function configuredWords(words: readonly string[] | undefined): readonly string[
   return words ?? [];
 }
 
+function requiredProject(credential: ParsedSubscriptionCredential): string {
+  if (credential.projectId === undefined)
+    throw new Error('Antigravity credential has no project ID');
+
+  return credential.projectId;
+}
+
+function injectRequestedCredits(request: JsonObject, body: JsonObject): void {
+  if (body['conductorCredits'] === true) injectAntigravityCreditTypes(request);
+
+  delete request['conductorCredits'];
+}
+
 export function antigravityProviderRequest(
   providerOrigin: string,
   body: JsonObject,
@@ -89,8 +171,11 @@ export function antigravityProviderRequest(
   now: number,
   sensitiveWords?: readonly string[],
 ): ProviderRequest {
+  const project = requiredProject(credential);
   const model = modelOf(body);
   const request = nestedRequest(body, model, configuredWords(sensitiveWords));
+
+  injectRequestedCredits(request, body);
 
   if (requestType(body, model) !== 'web_search') {
     request['sessionId'] = request['sessionId'] ?? ids.sessionId;
@@ -100,7 +185,7 @@ export function antigravityProviderRequest(
     model,
     userAgent: 'antigravity',
     requestType: requestType(body, model),
-    ...(credential.projectId === undefined ? {} : { project: credential.projectId }),
+    project,
     requestId: requestId(model, ids.requestId, now),
     request,
   };
@@ -112,7 +197,7 @@ export function antigravityProviderRequest(
     headers: [
       ['Content-Type', 'application/json'],
       ['Authorization', `Bearer ${credential.accessToken}`],
-      ['User-Agent', USER_AGENT],
+      ['User-Agent', antigravityRequestUserAgent('')],
       ['Connection', 'close'],
     ],
     body: JSON.stringify(envelope),
@@ -133,7 +218,7 @@ export function antigravityCountTokensRequest(
     headers: [
       ['Content-Type', 'application/json'],
       ['Authorization', `Bearer ${credential.accessToken}`],
-      ['User-Agent', USER_AGENT],
+      ['User-Agent', antigravityRequestUserAgent('')],
       ['Connection', 'close'],
     ],
     body: JSON.stringify({ request }),

@@ -9,31 +9,59 @@ import type {
   HubToolChoice,
 } from './hub';
 
-import { geminiReplaySignature } from '../provider/gemini-signature';
+import { geminiReplaySignature, nativeGeminiSignature } from '../provider/gemini-signature';
 import { geminiMediaPart } from './gemini-media';
 import { geminiOptionsInto } from './gemini-request-options';
 import { mapGeminiToolNames } from './gemini-tool-names';
+import { strictProviderToolSchema } from './tool-schema';
 
-function resultPart(block: Extract<HubContentBlock, { type: 'tool_result' }>): GeminiPart {
-  let text = '';
+export const antigravityWebSearchSystemInstruction =
+  'You are a search engine bot. You will be given a query from a user. Your task is to search the web for relevant information that will help the user. You MUST perform a web search. Do not respond or interact with the user, please respond as if they typed the query into a search bar.';
 
-  for (const part of block.content) {
-    text += part.type === 'text' ? part.text : '';
-  }
+function resultValue(block: Extract<HubContentBlock, { type: 'tool_result' }>): unknown {
+  if (block.structuredResult !== undefined) return block.structuredResult;
 
-  return {
+  const texts = resultTexts(block);
+
+  return block.content.some((part) => part.type !== 'text')
+    ? structuredTextResult(texts)
+    : plainTextResult(texts);
+}
+
+function resultTexts(block: Extract<HubContentBlock, { type: 'tool_result' }>) {
+  return block.content.flatMap((part) => (part.type === 'text' ? [{ text: part.text }] : []));
+}
+
+function structuredTextResult(texts: readonly { text: string }[]): unknown {
+  return texts.length === 1 ? texts[0] : texts;
+}
+
+function plainTextResult(texts: readonly { text: string }[]): unknown {
+  return texts.length === 1 ? texts[0]?.text : texts;
+}
+
+function resultParts(block: Extract<HubContentBlock, { type: 'tool_result' }>): GeminiPart[] {
+  const response = {
     functionResponse: {
       name: block.name ?? block.toolUseId,
       id: block.toolUseId,
-      response: block.isError === true ? { error: text } : { output: text },
+      response:
+        block.isError === true ? { error: resultValue(block) } : { result: resultValue(block) },
     },
   };
+  const media = block.content.flatMap((part) => {
+    if (part.type === 'text') return [];
+
+    const encoded = geminiMediaPart(part);
+
+    return encoded === null ? [] : [encoded];
+  });
+
+  return [response, ...media];
 }
 
 function textPart(block: HubContentBlock): GeminiPart | null {
-  if (block.type === 'text') {
-    return { text: block.text };
-  }
+  if (block.type === 'text') return signedTextPart(block.text, block.signature);
 
   if (block.type === 'thinking') {
     return {
@@ -48,25 +76,55 @@ function textPart(block: HubContentBlock): GeminiPart | null {
     : null;
 }
 
-function actionPart(block: HubContentBlock): GeminiPart | null {
+function signedTextPart(text: string, signature: string | undefined): GeminiPart {
+  return { text, ...(signature === undefined ? {} : { thoughtSignature: signature }) };
+}
+
+function actionPart(block: HubContentBlock, firstTool: boolean): GeminiPart | null {
   if (block.type === 'tool_use') {
+    const signature = nativeGeminiSignature(block.signature);
+
     return {
-      functionCall: { name: block.name, args: { ...block.input }, id: block.id },
-      thoughtSignature: geminiReplaySignature(block.signature),
+      functionCall: { name: block.name, args: block.input ?? {}, id: block.id },
+      ...(signature !== null
+        ? { thoughtSignature: signature }
+        : firstTool
+          ? { thoughtSignature: geminiReplaySignature(undefined) }
+          : {}),
     };
   }
 
-  return block.type === 'tool_result' ? resultPart(block) : null;
+  return null;
 }
 
-function partFrom(block: HubContentBlock): GeminiPart {
-  return textPart(block) ?? geminiMediaPart(block) ?? actionPart(block) ?? { text: '' };
+function partFrom(block: HubContentBlock, firstTool: boolean): GeminiPart {
+  return textPart(block) ?? geminiMediaPart(block) ?? actionPart(block, firstTool) ?? { text: '' };
+}
+
+function partsFrom(block: HubContentBlock, firstTool: boolean): GeminiPart[] {
+  if (block.type === 'tool_use' && block.input === undefined) return [];
+
+  return block.type === 'tool_result' ? resultParts(block) : [partFrom(block, firstTool)];
+}
+
+function contentParts(blocks: HubMessage['content']): GeminiPart[] {
+  const parts: GeminiPart[] = [];
+  let sawTool = false;
+
+  for (const block of blocks) {
+    const firstTool = block.type === 'tool_use' && !sawTool;
+
+    parts.push(...partsFrom(block, firstTool));
+    if (block.type === 'tool_use') sawTool = true;
+  }
+
+  return parts;
 }
 
 function contentFrom(message: HubMessage): GeminiContent {
   return {
     role: message.role === 'assistant' ? 'model' : 'user',
-    parts: message.content.map(partFrom),
+    parts: contentParts(message.content),
   };
 }
 
@@ -74,11 +132,7 @@ function toolFrom(tool: HubTool) {
   return {
     name: tool.name,
     ...(tool.description === undefined ? {} : { description: tool.description }),
-    parameters: {
-      type: 'object',
-      properties: tool.inputSchema.properties,
-      ...(tool.inputSchema.required === undefined ? {} : { required: tool.inputSchema.required }),
-    },
+    parameters: strictProviderToolSchema(tool.inputSchema),
   };
 }
 
@@ -137,20 +191,80 @@ function generationConfig(sampling: HubSampling | undefined): GeminiRequest['gen
 }
 
 function systemOf(hub: HubRequest): Pick<GeminiRequest, 'systemInstruction'> {
-  return hub.system === undefined
+  if (usesNativeWebSearch(hub)) {
+    return {
+      systemInstruction: {
+        role: 'user',
+        parts: [{ text: antigravityWebSearchSystemInstruction }],
+      },
+    };
+  }
+
+  const system = hub.system?.filter((part) => !isClaudeBillingHeader(part.text));
+
+  return system === undefined
     ? {}
     : {
         systemInstruction: {
           role: 'user',
-          parts: hub.system.map(({ text }) => ({ text })),
+          parts: system.map(({ text }) => ({ text })),
         },
       };
 }
 
+function isClaudeBillingHeader(text: string): boolean {
+  return text.trimStart().startsWith('x-anthropic-billing-header:');
+}
+
 function toolsOf(hub: HubRequest): Pick<GeminiRequest, 'tools'> {
-  return hub.tools === undefined
-    ? {}
-    : { tools: [{ functionDeclarations: hub.tools.map(toolFrom) }] };
+  const functions = functionTools(hub);
+
+  if (functions !== undefined) return { tools: functions };
+
+  const search = webSearchTools(hub);
+
+  return search === undefined ? {} : { tools: search };
+}
+
+function functionTools(hub: HubRequest): GeminiRequest['tools'] | undefined {
+  return hub.tools === undefined || hub.tools.length === 0
+    ? undefined
+    : [{ functionDeclarations: hub.tools.map(toolFrom) }];
+}
+
+function webSearchTools(hub: HubRequest): GeminiRequest['tools'] | undefined {
+  const search = usesNativeWebSearch(hub) ? hub.serverTools?.[0] : undefined;
+
+  if (search === undefined) return undefined;
+
+  return [
+    {
+      functionDeclarations: [],
+      googleSearch: googleSearchOf(search),
+    },
+  ];
+}
+
+function googleSearchOf(search: NonNullable<HubRequest['serverTools']>[number]) {
+  return {
+    ...(search.allowedDomains === undefined ? {} : { includedDomains: search.allowedDomains }),
+    enhancedContent: { imageSearch: { maxResultCount: search.maxUses ?? 5 } },
+  };
+}
+
+function usesNativeWebSearch(hub: HubRequest): boolean {
+  if (!hasSingleWebSearchTool(hub)) return false;
+  if (hasFunctionTools(hub)) return false;
+
+  return hub.toolChoice?.type !== 'none';
+}
+
+function hasSingleWebSearchTool(hub: HubRequest): boolean {
+  return hub.serverTools?.length === 1;
+}
+
+function hasFunctionTools(hub: HubRequest): boolean {
+  return hub.tools !== undefined && hub.tools.length > 0;
 }
 
 export function encodeRequest(hub: HubRequest): Translated<GeminiRequest> {
@@ -165,6 +279,10 @@ export function encodeRequest(hub: HubRequest): Translated<GeminiRequest> {
   };
 
   geminiOptionsInto(value, mapped);
+
+  if (usesNativeWebSearch(mapped)) {
+    value.generationConfig = { ...value.generationConfig, candidateCount: 1 };
+  }
 
   return { value, fates: [] };
 }

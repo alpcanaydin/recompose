@@ -4,9 +4,7 @@ import type {
   AnthropicDocumentPart,
   AnthropicImageBlock,
   AnthropicImageSource,
-  AnthropicSearchResultPart,
   AnthropicTextBlock,
-  AnthropicToolReferencePart,
   AnthropicToolResultBlock,
   AnthropicToolResultContent,
   AnthropicToolUseBlock,
@@ -25,6 +23,7 @@ import type {
 } from './hub';
 
 import { anthropicMediaBlock, isHubAudioVideo } from './anthropic-media';
+import { hubToolResultFrom } from './anthropic-tool-result';
 
 function hubSourceFrom(source: AnthropicImageSource): HubImageSource {
   if (source.type === 'url') {
@@ -45,92 +44,31 @@ function wireSourceFrom(source: HubImageSource): AnthropicImageSource {
 export function hubBreakpointOf(control: AnthropicCacheControl | undefined): {
   cacheBreakpoint?: HubCacheBreakpoint;
 } {
-  return control === undefined ? {} : { cacheBreakpoint: { type: 'ephemeral' } };
+  return control === undefined
+    ? {}
+    : {
+        cacheBreakpoint: {
+          type: 'ephemeral',
+          ...(control.ttl === undefined ? {} : { ttl: control.ttl }),
+        },
+      };
 }
 
 export function wireCacheControlOf(breakpoint: HubCacheBreakpoint | undefined): {
   cache_control?: AnthropicCacheControl;
 } {
-  return breakpoint === undefined ? {} : { cache_control: { type: 'ephemeral' } };
+  return breakpoint === undefined
+    ? {}
+    : {
+        cache_control: {
+          type: 'ephemeral',
+          ...(breakpoint.ttl === undefined ? {} : { ttl: breakpoint.ttl }),
+        },
+      };
 }
 
 function hubTextFrom(block: AnthropicTextBlock): HubTextBlock {
   return { type: 'text', text: block.text, ...hubBreakpointOf(block.cache_control) };
-}
-
-function dropToolResultPart(
-  part: AnthropicSearchResultPart | AnthropicDocumentPart | AnthropicToolReferencePart,
-  fates: Fate[],
-): void {
-  switch (part.type) {
-    case 'search_result':
-    case 'document':
-      fates.push({
-        field: `tool_result[${part.type}]`,
-        disposition: 'mapped',
-        to: 'absent',
-        costBearing: true,
-      });
-
-      return;
-    case 'tool_reference':
-      fates.push({ field: 'tool_result[tool_reference]', disposition: 'mapped', to: 'absent' });
-
-      return;
-
-    default: {
-      const unknownPart: never = part;
-
-      throw new Error(
-        `hubBlockFrom met an unknown tool_result part: ${JSON.stringify(unknownPart)}`,
-      );
-    }
-  }
-}
-
-function hubToolResultPartFrom(
-  part: AnthropicToolResultContent,
-  fates: Fate[],
-): HubToolResultContent | undefined {
-  if (part.type === 'text') {
-    return hubTextFrom(part);
-  }
-
-  if (part.type === 'image') {
-    return { type: 'image', source: hubSourceFrom(part.source) };
-  }
-
-  dropToolResultPart(part, fates);
-
-  return undefined;
-}
-
-function hubToolResultContentFrom(
-  content: AnthropicToolResultBlock['content'],
-  fates: Fate[],
-): readonly HubToolResultContent[] {
-  if (content === undefined) {
-    return [];
-  }
-
-  if (typeof content === 'string') {
-    return [{ type: 'text', text: content }];
-  }
-
-  return content.flatMap((part) => {
-    const carried = hubToolResultPartFrom(part, fates);
-
-    return carried === undefined ? [] : [carried];
-  });
-}
-
-function hubToolResultFrom(block: AnthropicToolResultBlock, fates: Fate[]): HubToolResultBlock {
-  return {
-    type: 'tool_result',
-    toolUseId: block.tool_use_id,
-    content: hubToolResultContentFrom(block.content, fates),
-    ...(block.is_error === true ? { isError: true } : {}),
-  };
 }
 
 function hubContentBlockFrom(
@@ -147,7 +85,7 @@ function hubContentBlockFrom(
     case 'image':
       return { type: 'image', source: hubSourceFrom(block.source) };
     case 'tool_use':
-      return { type: 'tool_use', id: block.id, name: block.name, input: block.input };
+      return hubToolUseFrom(block);
     case 'tool_result':
       return hubToolResultFrom(block, fates);
 
@@ -157,6 +95,16 @@ function hubContentBlockFrom(
       throw new Error(`hubBlockFrom met an unknown wire block: ${JSON.stringify(unknownBlock)}`);
     }
   }
+}
+
+function hubToolUseFrom(block: AnthropicToolUseBlock): HubContentBlock {
+  return {
+    type: 'tool_use',
+    id: block.id,
+    name: block.name,
+    input: block.input,
+    ...(block.signature === undefined ? {} : { signature: block.signature }),
+  };
 }
 
 function hubDocumentFrom(block: AnthropicDocumentPart): HubDocumentBlock {
@@ -196,7 +144,12 @@ export function hubBlockFrom(block: AnthropicContentBlock, fates: Fate[]): HubCo
 }
 
 function wireTextFrom(block: HubTextBlock): AnthropicTextBlock {
-  return { type: 'text', text: block.text, ...wireCacheControlOf(block.cacheBreakpoint) };
+  return {
+    type: 'text',
+    text: block.text,
+    ...(block.citations === undefined ? {} : { citations: block.citations }),
+    ...wireCacheControlOf(block.cacheBreakpoint),
+  };
 }
 
 function wireToolResultPartFrom(part: HubToolResultContent): AnthropicToolResultContent {
@@ -212,6 +165,7 @@ function wireToolResultFrom(block: HubToolResultBlock): AnthropicToolResultBlock
     type: 'tool_result',
     tool_use_id: block.toolUseId,
     content: block.content.map(wireToolResultPartFrom),
+    ...wireCacheControlOf(block.cacheBreakpoint),
     ...(block.isError === true ? { is_error: true } : {}),
   };
 }
@@ -240,21 +194,28 @@ function wireContentBlockFrom(
 export function wireBlockFrom(block: HubContentBlock): AnthropicContentBlock {
   if (isHubAudioVideo(block)) return anthropicMediaBlock(block);
 
-  if (block.type === 'document') {
-    return {
-      type: 'document',
-      source: {
-        type: 'base64',
-        media_type: block.source.mediaType,
-        data: block.source.data,
-      },
-      title: block.filename,
-    };
-  }
+  if (block.type === 'document') return wireDocument(block);
 
   if (block.type === 'thinking' || block.type === 'redacted_thinking') return wireThinking(block);
 
   return wireContentBlockFrom(block);
+}
+
+function wireDocument(
+  block: Extract<HubContentBlock, { type: 'document' }>,
+): AnthropicContentBlock {
+  return {
+    type: 'document',
+    source:
+      block.source.type === 'url'
+        ? { type: 'url', url: block.source.url }
+        : {
+            type: 'base64',
+            media_type: block.source.mediaType,
+            data: block.source.data,
+          },
+    title: block.filename,
+  };
 }
 
 function wireThinking(

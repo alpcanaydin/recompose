@@ -33,7 +33,13 @@ describe('Gemini response decoding', () => {
         { type: 'tool_use', id: 'call_1', name: 'weather', input: { city: 'Istanbul' } },
       ],
       stopReason: 'max_output',
-      usage: { inputTokens: 10, outputTokens: 4, cacheReadTokens: 3, reasoningTokens: 2 },
+      usage: {
+        inputTokens: 7,
+        totalInputTokens: 10,
+        outputTokens: 4,
+        cacheReadTokens: 3,
+        reasoningTokens: 2,
+      },
     });
   });
 });

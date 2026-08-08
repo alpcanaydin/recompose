@@ -5,9 +5,10 @@ import type {
 } from './dialect/chat-completions-wire';
 import type { JsonObject } from './gateway-wire';
 
+import { asyncSseBody } from './async-sse-body';
 import { isJsonObject, parsedJson } from './gateway-wire';
 
-function withoutTrailingReturn(line: string): string {
+export function withoutTrailingReturn(line: string): string {
   return line.endsWith('\r') ? line.slice(0, -1) : line;
 }
 
@@ -47,7 +48,7 @@ async function* linesFrom(body: ReadableStream<Uint8Array>): AsyncIterable<strin
 
 const DATA_PREFIX = 'data:';
 
-function sseDataOf(line: string): string | null {
+export function sseDataOf(line: string): string | null {
   if (!line.startsWith(DATA_PREFIX)) {
     return null;
   }
@@ -214,31 +215,10 @@ export function chatSseBodyFrom(
 export function namedSseBodyFrom(
   events: AsyncIterable<{ type: string }>,
 ): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  const iterator = events[Symbol.asyncIterator]();
-
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
-        const step = await iterator.next();
-
-        if (step.done === true) {
-          controller.close();
-
-          return;
-        }
-
-        controller.enqueue(
-          encoder.encode(`event: ${step.value.type}\ndata: ${JSON.stringify(step.value)}\n\n`),
-        );
-      } catch (failure) {
-        controller.error(failure);
-      }
-    },
-    async cancel() {
-      await iterator.return?.(undefined);
-    },
-  });
+  return asyncSseBody(
+    events,
+    (event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
+  );
 }
 
 export function interactionSseBodyFrom(

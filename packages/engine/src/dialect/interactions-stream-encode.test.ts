@@ -39,7 +39,15 @@ describe('encodeStream: Hub text lifecycle to Interactions', () => {
         interaction: {
           id: 'interaction_translated',
           status: 'completed',
-          usage: { total_input_tokens: 2, total_output_tokens: 3, total_tokens: 5 },
+          usage: {
+            input_tokens: 2,
+            total_input_tokens: 2,
+            prompt_tokens: 2,
+            output_tokens: 3,
+            total_output_tokens: 3,
+            completion_tokens: 3,
+            total_tokens: 5,
+          },
         },
       },
       { event_type: 'done' },

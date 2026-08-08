@@ -14,6 +14,7 @@ import {
   interactionsToolCall,
   isHubInteractionsMedia,
 } from './interactions-content';
+import { sumDefinedTokens } from './usage-tokens';
 
 function thoughtBlock(step: Extract<InteractionsStep, { type: 'thought' }>): HubContentBlock {
   return {
@@ -48,12 +49,18 @@ export function hubUsageFromInteractions(usage: InteractionsUsage | undefined): 
 
   const result: HubUsage = {};
 
-  applyUsage(result, 'inputTokens', inputUsage(usage));
+  applyUsage(result, 'inputTokens', uncachedInputUsage(usage));
   applyUsage(result, 'outputTokens', outputUsage(usage));
   applyUsage(result, 'cacheReadTokens', cacheUsage(usage));
   applyUsage(result, 'reasoningTokens', reasoningUsage(usage));
 
   return result;
+}
+
+function uncachedInputUsage(usage: InteractionsUsage): number | undefined {
+  const input = inputUsage(usage);
+
+  return input === undefined ? undefined : Math.max(0, input - (cacheUsage(usage) ?? 0));
 }
 
 function inputUsage(usage: InteractionsUsage): number | undefined {
@@ -79,13 +86,23 @@ function applyUsage(result: HubUsage, field: keyof HubUsage, value: number | und
 export function interactionsUsage(usage: HubUsage): InteractionsUsage {
   const result: InteractionsUsage = {};
   const cachedTokens = totalCachedTokens(usage);
+  const inputTokens = usage.totalInputTokens ?? sumDefinedTokens([usage.inputTokens, cachedTokens]);
 
-  applyInteractionUsage(result, 'total_input_tokens', usage.inputTokens);
+  applyInteractionUsage(result, 'input_tokens', inputTokens);
+  applyInteractionUsage(result, 'total_input_tokens', inputTokens);
+  applyInteractionUsage(result, 'prompt_tokens', inputTokens);
+  applyInteractionUsage(result, 'output_tokens', usage.outputTokens);
   applyInteractionUsage(result, 'total_output_tokens', usage.outputTokens);
+  applyInteractionUsage(result, 'completion_tokens', usage.outputTokens);
   applyInteractionUsage(result, 'cached_tokens', cachedTokens);
   applyInteractionUsage(result, 'total_cached_tokens', cachedTokens);
   applyInteractionUsage(result, 'reasoning_tokens', usage.reasoningTokens);
-  applyInteractionUsage(result, 'total_tokens', totalTokens(usage));
+  applyInteractionUsage(result, 'total_thought_tokens', usage.reasoningTokens);
+  applyInteractionUsage(
+    result,
+    'total_tokens',
+    sumDefinedTokens([inputTokens, usage.outputTokens]),
+  );
 
   return result;
 }
@@ -98,16 +115,8 @@ function applyInteractionUsage(
   if (value !== undefined) result[field] = value;
 }
 
-function totalTokens(usage: HubUsage): number | undefined {
-  return usage.inputTokens === undefined && usage.outputTokens === undefined
-    ? undefined
-    : (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0);
-}
-
 function totalCachedTokens(usage: HubUsage): number | undefined {
-  return usage.cacheReadTokens === undefined && usage.cacheWriteTokens === undefined
-    ? undefined
-    : (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
+  return sumDefinedTokens([usage.cacheReadTokens, usage.cacheWriteTokens]);
 }
 
 function thoughtStep(block: Extract<HubContentBlock, { type: 'thinking' }>): InteractionsStep {

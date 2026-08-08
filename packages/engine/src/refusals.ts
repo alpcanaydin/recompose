@@ -1,41 +1,15 @@
-export type Dialect = 'anthropic' | 'chat-completions' | 'interactions' | 'responses';
+import type {
+  AnthropicRefusal,
+  Dialect,
+  OpenAiCode,
+  OpenAiRefusal,
+  RenderedRefusal,
+  ResponsesRefusal,
+} from './refusal-wire';
 
-export type AnthropicRefusal = {
-  type: 'error';
-  error: {
-    type: 'not_found_error' | 'permission_error' | 'invalid_request_error' | 'api_error';
-    message: string;
-  };
-};
+import { geminiRefusal } from './gemini-refusal';
 
-type OpenAiCode =
-  | 'model_not_found'
-  | 'unmappable_stop_reason'
-  | 'unrepairable_tool_call'
-  | 'unsupported_field'
-  | 'empty_conversation'
-  | 'tool_id_collision'
-  | 'missing_target'
-  | 'missing_credential'
-  | 'invalid_json';
-
-export type OpenAiRefusal = {
-  error: {
-    message: string;
-    type: 'invalid_request_error';
-    param: null;
-    code: OpenAiCode;
-  };
-};
-
-type ResponsesRefusal = {
-  error: {
-    message: string;
-    type: 'invalid_request_error';
-    code: OpenAiCode;
-    param: null;
-  };
-};
+export type { AnthropicRefusal, Dialect, OpenAiRefusal, RenderedRefusal } from './refusal-wire';
 
 export type TranslationRefusal =
   | { reason: 'unknown-model'; model: string }
@@ -47,11 +21,6 @@ export type TranslationRefusal =
   | { reason: 'missing-target'; displayName: string; model: string }
   | { reason: 'missing-credential'; displayName: string; model: string }
   | { reason: 'invalid-json'; message: string };
-
-export type RenderedRefusal = {
-  status: number;
-  body: AnthropicRefusal | OpenAiRefusal | ResponsesRefusal;
-};
 
 function missingModelMessage(displayName: string): string {
   return `The gateway "${displayName}" holds no virtual model.`;
@@ -271,7 +240,10 @@ function responsesBody(facts: RefusalFacts): ResponsesRefusal {
   };
 }
 
-function bodyInDialect(dialect: Dialect, facts: RefusalFacts): RenderedRefusal['body'] {
+function bodyOutsideGemini(
+  dialect: Exclude<Dialect, 'gemini'>,
+  facts: RefusalFacts,
+): RenderedRefusal['body'] {
   switch (dialect) {
     case 'anthropic':
       return anthropicBody(facts);
@@ -283,6 +255,12 @@ function bodyInDialect(dialect: Dialect, facts: RefusalFacts): RenderedRefusal['
     default:
       throw new Error(`unhandled dialect: ${String(dialect)}`);
   }
+}
+
+function bodyInDialect(dialect: Dialect, facts: RefusalFacts): RenderedRefusal['body'] {
+  return dialect === 'gemini'
+    ? geminiRefusal(facts.status, facts.message)
+    : bodyOutsideGemini(dialect, facts);
 }
 
 export function renderRefusal(dialect: Dialect, refusal: TranslationRefusal): RenderedRefusal {

@@ -35,7 +35,10 @@ describe('decodeRequest names the tool schema union it drops', () => {
   it('records the dropped root union as a mapped loss while normalizing to a bare object', () => {
     const { value, fates } = translationOf(aChatRequest({ tools: [aUnionTool('pick')] }));
 
-    expect(value.tools?.[0]?.inputSchema).toEqual({ type: 'object', properties: {} });
+    expect(value.tools?.[0]?.inputSchema).toEqual({
+      type: 'object',
+      properties: { a: { type: 'string' } },
+    });
     expect(fates).toContainEqual(droppedUnionFate);
   });
 

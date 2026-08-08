@@ -99,7 +99,12 @@ function invalidRequestError(error: CodexEventError): boolean {
   );
 }
 
+function requestLifecycleError(error: CodexEventError): boolean {
+  return ['upstream_stream_incomplete', 'upstream_stream_error'].includes(lower(error.code));
+}
+
 export function codexEventErrorStatus(error: CodexEventError): number {
+  if (requestLifecycleError(error)) return 408;
   if (authenticationError(error)) return 401;
   if (rateLimitError(error)) return 429;
   if (invalidRequestError(error)) return 400;

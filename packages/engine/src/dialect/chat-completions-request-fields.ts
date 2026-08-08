@@ -1,16 +1,11 @@
-import type { ChatCompletionsRequest, ChatSystemMessage, ChatTool } from './chat-completions-wire';
+import type { ChatCompletionsRequest, ChatSystemMessage } from './chat-completions-wire';
 import type { Fate } from './fates';
-import type {
-  HubCacheBreakpoint,
-  HubSampling,
-  HubSystemText,
-  HubTool,
-  HubToolChoice,
-  HubToolSchema,
-} from './hub';
+import type { HubCacheBreakpoint, HubSampling, HubSystemText } from './hub';
 
 import { chatCacheControlFrom } from './chat-completions-cache';
 import { chatCompletionsDrops } from './chat-completions-drops';
+
+export { toolChoiceFrom, toolsFrom } from './chat-completions-request-tools';
 
 export const injectedMaxOutputTokensDefault = 4096;
 
@@ -106,83 +101,6 @@ export function samplingFrom(request: ChatCompletionsRequest, fates: Fate[]): Hu
   return stopInto(request, withTopP, fates);
 }
 
-function hasRootSchemaUnion(parameters: ChatTool['function']['parameters']): boolean {
-  return parameters.anyOf !== undefined || parameters.oneOf !== undefined;
-}
-
-function hubToolSchemaFrom(parameters: ChatTool['function']['parameters']): HubToolSchema {
-  if (hasRootSchemaUnion(parameters)) {
-    return { type: 'object', properties: {} };
-  }
-
-  return {
-    type: 'object',
-    properties: parameters.properties ?? {},
-    ...(parameters.required ? { required: parameters.required } : {}),
-  };
-}
-
-function hubToolFromChat(tool: ChatTool): HubTool {
-  return {
-    name: tool.function.name,
-    ...(tool.function.description !== undefined ? { description: tool.function.description } : {}),
-    inputSchema: hubToolSchemaFrom(tool.function.parameters),
-  };
-}
-
-export function toolsFrom(
-  request: ChatCompletionsRequest,
-  fates: Fate[],
-): readonly HubTool[] | undefined {
-  if (request.tools === undefined) {
-    return undefined;
-  }
-
-  fates.push({ field: 'tools', disposition: 'carried' });
-
-  if (request.tools.some((tool) => hasRootSchemaUnion(tool.function.parameters))) {
-    fates.push({ field: 'tools[schema union]', disposition: 'mapped', to: 'absent' });
-  }
-
-  return request.tools.map(hubToolFromChat);
-}
-
-function stringToolChoice(choice: 'auto' | 'none' | 'required'): HubToolChoice {
-  switch (choice) {
-    case 'auto':
-      return { type: 'auto' };
-    case 'none':
-      return { type: 'none' };
-    case 'required':
-      return { type: 'required' };
-
-    default: {
-      const unknownChoice: never = choice;
-
-      throw new Error(`decodeRequest met an unknown tool choice: ${JSON.stringify(unknownChoice)}`);
-    }
-  }
-}
-
-export function toolChoiceFrom(
-  request: ChatCompletionsRequest,
-  fates: Fate[],
-): HubToolChoice | undefined {
-  const choice = request.tool_choice;
-
-  if (choice === undefined) {
-    return undefined;
-  }
-
-  fates.push({ field: 'tool_choice', disposition: 'mapped', to: 'toolChoice' });
-
-  if (typeof choice !== 'string') {
-    return { type: 'tool', name: choice.function.name };
-  }
-
-  return stringToolChoice(choice);
-}
-
 export function scanDrops(request: ChatCompletionsRequest, fates: Fate[]): void {
   for (const drop of chatCompletionsDrops) {
     if (drop.field in request) {
@@ -212,22 +130,27 @@ export function systemFrom(
     return undefined;
   }
 
-  const text = texts.join('\n');
-
-  return [{ text, ...(breakpoint === undefined ? {} : { cacheBreakpoint: breakpoint }) }];
+  return texts.map((text, index) => ({
+    text,
+    ...(index === texts.length - 1 && breakpoint !== undefined
+      ? { cacheBreakpoint: breakpoint }
+      : {}),
+  }));
 }
 
 export function systemMessageFrom(
   system: readonly HubSystemText[] | undefined,
   fates: Fate[],
 ): ChatSystemMessage | undefined {
-  if (system === undefined || system.length === 0) {
+  const carried = carriedSystem(system);
+
+  if (carried === undefined || carried.length === 0) {
     return undefined;
   }
 
   fates.push({ field: 'system', disposition: 'mapped', to: 'messages[system]' });
 
-  const droppedBreakpoints = system
+  const droppedBreakpoints = carried
     .slice(0, -1)
     .filter((text) => text.cacheBreakpoint !== undefined);
 
@@ -242,7 +165,13 @@ export function systemMessageFrom(
 
   return {
     role: 'system',
-    content: system.map((text) => text.text).join('\n'),
-    ...chatCacheControlFrom(system.at(-1)?.cacheBreakpoint),
+    content: carried.map((text) => text.text).join('\n'),
+    ...chatCacheControlFrom(carried.at(-1)?.cacheBreakpoint),
   };
+}
+
+function carriedSystem(system: readonly HubSystemText[] | undefined): HubSystemText[] | undefined {
+  return system?.filter(
+    (part) => part.text !== '' && !part.text.trimStart().startsWith('x-anthropic-billing-header:'),
+  );
 }

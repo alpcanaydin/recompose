@@ -1,6 +1,6 @@
 import type { ChatCompletionsRequest } from './chat-completions-wire';
 import type { Fate } from './fates';
-import type { HubRequest } from './hub';
+import type { HubReasoning, HubRequest } from './hub';
 
 function mapped(fates: Fate[], field: string, to: string): void {
   fates.push({ field, disposition: 'mapped', to });
@@ -17,8 +17,36 @@ export function hubOptionsFromChat(
   reasoningFrom(request, options, fates);
   modalitiesFrom(request, options, fates);
   parallelFrom(request, options, fates);
+  generationConfigFrom(request, options, fates);
 
   return options;
+}
+
+function generationConfigFrom(
+  request: ChatCompletionsRequest,
+  options: Partial<HubRequest>,
+  fates: Fate[],
+): void {
+  if (request.generationConfig === undefined) return;
+
+  options.geminiGenerationConfig = normalizedGenerationConfig(request.generationConfig);
+  mapped(fates, 'generationConfig', 'geminiGenerationConfig');
+}
+
+function normalizedGenerationConfig(config: Record<string, unknown>): Record<string, unknown> {
+  const thinking = config['thinkingConfig'];
+
+  if (!isRecord(thinking)) return config;
+
+  const clean = { ...thinking };
+  const include = clean['includeThoughts'] ?? clean['include_thoughts'];
+
+  delete clean['includeThoughts'];
+  delete clean['include_thoughts'];
+
+  if (typeof include === 'boolean') clean['includeThoughts'] = include;
+
+  return { ...config, thinkingConfig: clean };
 }
 
 function responseFormatFrom(
@@ -48,10 +76,77 @@ function reasoningFrom(
   options: Partial<HubRequest>,
   fates: Fate[],
 ): void {
-  if (request.reasoning_effort === undefined) return;
+  const reasoning = reasoningOption(request);
 
-  options.reasoning = { effort: request.reasoning_effort };
+  if (reasoning === undefined) return;
+
+  options.reasoning = reasoning;
   mapped(fates, 'reasoning_effort', 'reasoning.effort');
+}
+
+function reasoningOption(request: ChatCompletionsRequest): HubReasoning | undefined {
+  const summary = thinkingSummary(request);
+  const effort = request.reasoning_effort;
+
+  if (effort === undefined && summary === undefined) return undefined;
+
+  return {
+    ...reasoningEffortField(effort),
+    ...reasoningSummaryField(summary),
+  };
+}
+
+function reasoningEffortField(effort: string | undefined): Pick<HubReasoning, 'effort'> | object {
+  return effort === undefined ? {} : { effort };
+}
+
+function reasoningSummaryField(
+  summary: boolean | undefined,
+): Pick<HubReasoning, 'summary'> | object {
+  if (summary === undefined) return {};
+
+  return { summary: summary ? 'auto' : 'none' };
+}
+
+function thinkingSummary(request: ChatCompletionsRequest): boolean | undefined {
+  const candidates = [
+    googleThinking(request.extra_body),
+    reasoningExclusion(request.reasoning),
+    includeThoughts(request.thinking),
+    includeThoughts(recordMember(request.generationConfig, 'thinkingConfig')),
+    request.reasoning_effort === undefined ? undefined : true,
+  ];
+
+  return candidates.find((candidate) => candidate !== undefined);
+}
+
+function includeThoughts(value: unknown): boolean | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const config = value;
+  const include = config['includeThoughts'] ?? config['include_thoughts'];
+
+  return typeof include === 'boolean' ? include : undefined;
+}
+
+function reasoningExclusion(value: unknown): boolean | undefined {
+  if (!isRecord(value)) return undefined;
+
+  const exclude = value['exclude'];
+
+  return typeof exclude === 'boolean' ? !exclude : undefined;
+}
+
+function googleThinking(value: unknown): boolean | undefined {
+  return includeThoughts(recordMember(recordMember(value, 'google'), 'thinking_config'));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function recordMember(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
 }
 
 function modalitiesFrom(

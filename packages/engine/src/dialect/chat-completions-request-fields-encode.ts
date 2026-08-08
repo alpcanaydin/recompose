@@ -2,18 +2,18 @@ import type { ChatCompletionsRequestCore, ChatTool, ChatToolChoice } from './cha
 import type { Fate } from './fates';
 import type { HubRequest, HubSampling, HubTool, HubToolChoice } from './hub';
 
+import { chatCacheControlFrom } from './chat-completions-cache';
+import { chatToolSchema } from './tool-schema';
+
 function chatToolFromHub(tool: HubTool): ChatTool {
   return {
     type: 'function',
     function: {
       name: tool.name,
       ...(tool.description !== undefined ? { description: tool.description } : {}),
-      parameters: {
-        type: 'object',
-        properties: tool.inputSchema.properties,
-        ...(tool.inputSchema.required ? { required: tool.inputSchema.required } : {}),
-      },
+      parameters: chatToolSchema(tool.inputSchema),
     },
+    ...chatCacheControlFrom(tool.cacheBreakpoint),
   };
 }
 

@@ -1,13 +1,13 @@
 import type { ChatDropField } from './chat-completions-drops';
 import type { HubJsonObject } from './hub';
 
-export type ChatCacheControl = { type: 'ephemeral' };
+export type ChatCacheControl = { type: 'ephemeral'; ttl?: '5m' | '1h' };
 
 type ChatTextPart = { type: 'text'; text: string; cache_control?: ChatCacheControl };
 
 type ChatImagePart = {
   type: 'image_url';
-  image_url: { url: string };
+  image_url: { url: string; detail?: string };
   cache_control?: ChatCacheControl;
 };
 
@@ -26,15 +26,23 @@ type ChatFilePart = {
   file: { filename: string; file_data: string };
 };
 
+type ChatDocumentPart = {
+  type: 'document';
+  mime_type: string;
+  data: string;
+  name?: string;
+};
+
 export type ChatContentPart =
   | ChatTextPart
   | ChatImagePart
   | ChatAudioPart
   | ChatVideoPart
-  | ChatFilePart;
+  | ChatFilePart
+  | ChatDocumentPart;
 
 export type ChatToolCall = {
-  id: string;
+  id?: string;
   type: 'function';
   function: {
     name: string;
@@ -45,16 +53,21 @@ export type ChatToolCall = {
   thoughtSignature?: string;
   thought_signature?: string;
 };
+export type ChatCustomToolCall = {
+  id?: string;
+  type: 'custom';
+  custom: { name: string; input: string };
+};
 
 export type ChatSystemMessage = {
   role: 'system';
-  content: string;
+  content: string | readonly ChatContentPart[];
   cache_control?: ChatCacheControl;
 };
 
 export type ChatDeveloperMessage = {
   role: 'developer';
-  content: string;
+  content: string | readonly ChatContentPart[];
   cache_control?: ChatCacheControl;
 };
 
@@ -66,14 +79,16 @@ export type ChatUserMessage = {
 
 export type ChatAssistantMessage = {
   role: 'assistant';
-  content?: string | null;
-  tool_calls?: readonly ChatToolCall[];
+  content?: string | readonly ChatContentPart[] | null;
+  reasoning_content?: string;
+  tool_calls?: readonly (ChatToolCall | ChatCustomToolCall)[];
 };
 
 export type ChatToolMessage = {
   role: 'tool';
-  tool_call_id: string;
-  content: string | readonly ChatContentPart[];
+  tool_call_id?: string;
+  content: string | readonly unknown[] | HubJsonObject | null;
+  cache_control?: ChatCacheControl;
 };
 
 export type ChatMessage =
@@ -84,6 +99,7 @@ export type ChatMessage =
   | ChatToolMessage;
 
 type ChatFunctionSchema = {
+  readonly [key: string]: unknown;
   type?: 'object';
   properties?: HubJsonObject;
   required?: readonly string[];
@@ -93,10 +109,14 @@ type ChatFunctionSchema = {
 
 export type ChatTool = {
   type: 'function';
-  function: { name: string; description?: string; parameters: ChatFunctionSchema };
+  function: { name: unknown; description?: string; parameters: ChatFunctionSchema };
+  cache_control?: ChatCacheControl;
 };
+type ChatCustomTool = { type: 'custom'; name: string; description?: string };
 
-type ChatNamedToolChoice = { type: 'function'; function: { name: string } };
+type ChatNamedToolChoice =
+  | { type: 'function'; function: { name: string } }
+  | { type: 'custom'; name: string };
 
 export type ChatToolChoice = 'auto' | 'none' | 'required' | ChatNamedToolChoice;
 
@@ -105,7 +125,7 @@ type ChatIgnoredFields = { readonly [K in ChatDropField]?: unknown };
 export type ChatCompletionsRequestCore = {
   model?: string;
   messages: readonly ChatMessage[];
-  tools?: readonly ChatTool[];
+  tools?: readonly (ChatTool | ChatCustomTool)[];
   tool_choice?: ChatToolChoice;
   max_tokens?: number;
   max_completion_tokens?: number;
@@ -117,6 +137,10 @@ export type ChatCompletionsRequestCore = {
   reasoning_effort?: string;
   modalities?: readonly string[];
   parallel_tool_calls?: boolean;
+  generationConfig?: HubJsonObject;
+  thinking?: HubJsonObject;
+  reasoning?: HubJsonObject;
+  extra_body?: HubJsonObject;
 };
 
 export type ChatCompletionsRequest = ChatCompletionsRequestCore & ChatIgnoredFields;
@@ -126,14 +150,20 @@ export type ChatFinishReason = 'stop' | 'length' | 'tool_calls' | 'content_filte
 export type ChatUsage = {
   prompt_tokens: number;
   completion_tokens: number;
-  prompt_tokens_details?: { cached_tokens?: number };
+  total_tokens?: number;
+  prompt_tokens_details?: { cached_tokens?: number; cached_creation_tokens?: number };
+  completion_tokens_details?: { reasoning_tokens?: number };
 };
 
 export type ChatResponseMessage = {
   role: 'assistant';
   content: string | null;
+  reasoning_content?: string;
   tool_calls?: readonly ChatToolCall[];
+  images?: readonly ChatResponseImage[];
 };
+
+export type ChatResponseImage = { type: 'image_url'; image_url: { url: string } };
 
 type ChatResponseChoice = {
   index: number;
@@ -151,19 +181,21 @@ export type ChatCompletionsResponse = {
 export type ChatToolCallDelta = {
   index?: number;
   id?: string;
-  function?: { name?: string; arguments?: string };
+  function?: { name?: unknown; arguments?: string };
 };
 
 type ChatChunkDelta = {
   role?: 'assistant';
   content?: string | null;
   tool_calls?: readonly ChatToolCallDelta[];
+  images?: readonly { type: 'image_url'; image_url: { url: string } }[];
 };
 
 export type ChatChunkChoice = {
   index: number;
   delta: ChatChunkDelta;
   finish_reason?: ChatFinishReason | null;
+  native_finish_reason?: string;
 };
 
 export type ChatCompletionChunk = {

@@ -198,7 +198,11 @@ describe('decodeRequest: the tool schema normalizes for a strict target', () => 
 
     const { value } = expectTranslation(decodeRequest(aResponsesRequest({ tools: [bareTool] })));
 
-    expect(value.tools?.[0]?.inputSchema).toEqual({ type: 'object', properties: {} });
+    expect(value.tools?.[0]?.inputSchema).toEqual({
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    });
   });
 });
 

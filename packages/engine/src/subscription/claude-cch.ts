@@ -50,8 +50,12 @@ function billingFingerprint(message: string): string {
   return createHash('sha256').update(`59cf53e54c78${sampled}2.1.220`).digest('hex').slice(0, 3);
 }
 
+export function claudeBillingFingerprint(body: JsonObject): string {
+  return billingFingerprint(lastUserText(body));
+}
+
 function billingText(body: JsonObject): string {
-  return `${BILLING_PREFIX} cc_version=2.1.220.${billingFingerprint(lastUserText(body))}; cc_entrypoint=cli; cch=00000;`;
+  return `${BILLING_PREFIX} cc_version=2.1.220.${claudeBillingFingerprint(body)}; cc_entrypoint=cli; cch=00000;`;
 }
 
 function systemBlocks(value: unknown): unknown[] {

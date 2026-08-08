@@ -9,6 +9,12 @@ function binaryPart(
     : { fileData: { fileUri: block.source.url } };
 }
 
+function documentPart(block: Extract<HubContentBlock, { type: 'document' }>): GeminiPart {
+  return block.source.type === 'url'
+    ? { fileData: { fileUri: block.source.url } }
+    : { inlineData: { mimeType: block.source.mediaType, data: block.source.data } };
+}
+
 export function geminiMediaPart(block: HubContentBlock): GeminiPart | null {
   if (block.type === 'image' || block.type === 'audio' || block.type === 'video') {
     return binaryPart(block);
@@ -16,5 +22,5 @@ export function geminiMediaPart(block: HubContentBlock): GeminiPart | null {
 
   if (block.type !== 'document') return null;
 
-  return { inlineData: { mimeType: block.source.mediaType, data: block.source.data } };
+  return documentPart(block);
 }

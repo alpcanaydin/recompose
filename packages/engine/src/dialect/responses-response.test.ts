@@ -162,6 +162,7 @@ describe('encodeResponse: a hub answer folds back out to Responses', () => {
     expect(value.status).toBe('completed');
     expect(value.output[0]).toEqual({
       type: 'function_call',
+      id: 'fc_toolu_weather',
       call_id: 'toolu_weather',
       name: 'get_weather',
       arguments: '{"city":"Paris"}',
@@ -178,6 +179,7 @@ describe('encodeResponse: a hub answer folds back out to Responses', () => {
     expect(value.usage).toEqual({
       input_tokens: 12,
       output_tokens: 3,
+      total_tokens: 15,
       input_tokens_details: { cached_tokens: 5 },
       output_tokens_details: { reasoning_tokens: 2 },
     });
@@ -222,7 +224,7 @@ describe('encodeResponse: the stop reason maps or refuses', () => {
     });
   });
 
-  it('drops a thinking block toward Responses with a cost-bearing fate', () => {
+  it('preserves a thinking block as a reasoning output item', () => {
     const response = aHubResponse({
       content: [aHubThinkingBlock(), aHubTextBlock({ text: 'ok' })],
     });
@@ -231,13 +233,15 @@ describe('encodeResponse: the stop reason maps or refuses', () => {
 
     const reasoning = value.output.flatMap((item) => (item.type === 'reasoning' ? [item] : []));
 
-    expect(reasoning).toHaveLength(0);
-    expect(fateFor(fates, 'thinking')).toEqual({
-      field: 'thinking',
-      disposition: 'mapped',
-      to: 'absent',
-      costBearing: true,
-    });
+    expect(reasoning).toEqual([
+      {
+        type: 'reasoning',
+        id: 'rs_0',
+        summary: [{ type: 'summary_text', text: 'weigh the two routes before answering' }],
+        content: null,
+      },
+    ]);
+    expect(fates).not.toContainEqual(expect.objectContaining({ field: 'thinking' }));
   });
 
   it('refuses typed when a paused stop has no Responses counterpart', () => {

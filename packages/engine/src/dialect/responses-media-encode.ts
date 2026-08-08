@@ -31,12 +31,18 @@ function audioPart(role: 'user' | 'assistant', block: HubAudioBlock): ResponsesC
       type: 'input_audio',
       input_audio: {
         data: block.source.data,
-        format: block.source.mediaType.split('/').at(-1) ?? block.source.mediaType,
+        format: responsesAudioFormat(block.source.mediaType),
       },
     };
   }
 
   return { type: 'output_text', text: `[audio: ${mediaData(block.source)}]` };
+}
+
+function responsesAudioFormat(mediaType: string): string {
+  if (mediaType === 'audio/mpeg') return 'mp3';
+
+  return mediaType.split('/').at(-1) ?? mediaType;
 }
 
 export function responsesPartFromHubBlock(
@@ -45,11 +51,7 @@ export function responsesPartFromHubBlock(
 ): ResponsesContentPart {
   if (block.type !== 'document') return basicPart(role, block);
 
-  return filePart(
-    role,
-    `data:${block.source.mediaType};base64,${block.source.data}`,
-    block.filename,
-  );
+  return filePart(role, mediaData(block.source), block.filename);
 }
 
 function basicPart(

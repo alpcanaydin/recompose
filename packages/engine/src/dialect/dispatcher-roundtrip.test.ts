@@ -143,24 +143,61 @@ function textOf(content: string | readonly ResponsesContentPart[]): string {
 }
 
 function responsesSignature(input: readonly ResponsesInputItem[]): unknown[] {
-  return input.map((item) => {
-    switch (item.type) {
-      case 'message':
-        return { kind: 'message', role: item.role, text: textOf(item.content) };
-      case 'function_call':
-        return { kind: 'call', call_id: item.call_id, name: item.name };
-      case 'function_call_output':
-        return { kind: 'output', call_id: item.call_id, output: item.output };
-      case 'reasoning':
-        return { kind: 'reasoning' };
+  return input.map((item) =>
+    isExtensionItem(item) ? extensionSignature(item) : coreResponseSignature(item),
+  );
+}
 
-      default: {
-        const unhandled: never = item;
+type ExtensionItem = Extract<
+  ResponsesInputItem,
+  { type: 'additional_tools' | 'custom_tool_call' | 'custom_tool_call_output' }
+>;
 
-        throw new Error(`unhandled input item: ${JSON.stringify(unhandled)}`);
-      }
+function isExtensionItem(item: ResponsesInputItem): item is ExtensionItem {
+  return (
+    item.type === 'additional_tools' ||
+    item.type === 'custom_tool_call' ||
+    item.type === 'custom_tool_call_output'
+  );
+}
+
+function extensionSignature(item: ExtensionItem): unknown {
+  switch (item.type) {
+    case 'additional_tools':
+      return { kind: 'additional_tools' };
+    case 'custom_tool_call':
+      return { kind: 'custom_call', call_id: item.call_id, name: item.name };
+    case 'custom_tool_call_output':
+      return { kind: 'custom_output', call_id: item.call_id, output: item.output };
+
+    default: {
+      const unhandled: never = item;
+
+      throw new Error(`unhandled extension item: ${JSON.stringify(unhandled)}`);
     }
-  });
+  }
+}
+
+function coreResponseSignature(item: Exclude<ResponsesInputItem, ExtensionItem>): unknown {
+  switch (item.type) {
+    case 'message':
+      return { kind: 'message', role: item.role, text: textOf(item.content) };
+
+    case 'function_call':
+      return { kind: 'call', call_id: item.call_id, name: item.name };
+
+    case 'function_call_output':
+      return { kind: 'output', call_id: item.call_id, output: item.output };
+
+    case 'reasoning':
+      return { kind: 'reasoning' };
+
+    default: {
+      const unhandled: never = item;
+
+      throw new Error(`unhandled input item: ${JSON.stringify(unhandled)}`);
+    }
+  }
 }
 
 const responsesTextTurn = fc

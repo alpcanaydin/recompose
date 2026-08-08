@@ -3,7 +3,6 @@ import type { VendorDrop } from './chat-completions-drops';
 export const anthropicDrops = [
   { field: 'top_k', costBearing: false },
   { field: 'metadata', costBearing: false },
-  { field: 'thinking', costBearing: true },
   { field: 'inference_geo', costBearing: false },
   { field: 'container', costBearing: false },
   { field: 'output_config', costBearing: true },

@@ -6,11 +6,19 @@ import type {
   AnthropicToolSchema,
 } from './anthropic-wire';
 import type { Fate } from './fates';
-import type { HubSampling, HubSystemText, HubTool, HubToolChoice, HubWebSearchTool } from './hub';
+import type {
+  HubReasoning,
+  HubSampling,
+  HubSystemText,
+  HubTool,
+  HubToolChoice,
+  HubWebSearchTool,
+} from './hub';
 
 import { hubBreakpointOf } from './anthropic-blocks';
 import { anthropicDrops } from './anthropic-drops';
 import { injectedMaxOutputTokensDefault } from './chat-completions-request';
+import { hubToolSchemaFrom } from './tool-schema';
 
 export function systemFrom(
   system: AnthropicSystem | undefined,
@@ -23,21 +31,29 @@ export function systemFrom(
   fates.push({ field: 'system', disposition: 'carried' });
 
   if (typeof system === 'string') {
-    return [{ text: system }];
+    return system === '' ? undefined : [{ text: system }];
   }
 
-  return system.map((block) => ({ text: block.text, ...hubBreakpointOf(block.cache_control) }));
+  const blocks = system.flatMap(systemBlock);
+
+  return blocks.length === 0 ? undefined : blocks;
+}
+
+function systemBlock(block: Exclude<AnthropicSystem, string>[number]): HubSystemText[] {
+  if ('text' in block && block.text.startsWith('x-anthropic-billing-header:')) return [];
+
+  return [
+    'text' in block && typeof block.text === 'string'
+      ? { text: block.text, ...hubBreakpointOf(block.cache_control) }
+      : { text: '', markerType: block.type, ...hubBreakpointOf(block.cache_control) },
+  ];
 }
 
 function hubToolFrom(tool: AnthropicTool, schema: AnthropicToolSchema): HubTool {
   return {
     name: tool.name,
     ...(tool.description === undefined ? {} : { description: tool.description }),
-    inputSchema: {
-      type: 'object',
-      properties: schema.properties ?? {},
-      ...(schema.required === undefined ? {} : { required: schema.required }),
-    },
+    inputSchema: hubToolSchemaFrom(schema),
   };
 }
 
@@ -86,6 +102,7 @@ export function serverToolsFrom(
             name: tool.name,
             ...(tool.allowed_domains === undefined ? {} : { allowedDomains: tool.allowed_domains }),
             ...(tool.user_location === undefined ? {} : { userLocation: tool.user_location }),
+            ...(tool.max_uses === undefined ? {} : { maxUses: tool.max_uses }),
           },
         ]
       : [],
@@ -143,6 +160,21 @@ export function serviceTierFrom(request: AnthropicRequest, fates: Fate[]): 'prio
   return priority ? 'priority' : undefined;
 }
 
+export function reasoningFrom(request: AnthropicRequest, fates: Fate[]): HubReasoning | undefined {
+  const thinking = request.thinking;
+
+  if (thinking === undefined || !['enabled', 'adaptive', 'auto'].includes(thinking.type)) {
+    return undefined;
+  }
+
+  fates.push({ field: 'thinking', disposition: 'mapped', to: 'reasoning' });
+
+  return {
+    summary: 'auto',
+    ...(thinking.budget_tokens === undefined ? {} : { budgetTokens: thinking.budget_tokens }),
+  };
+}
+
 function isPriorityTier(value: unknown): boolean {
   return value === 'fast' || value === 'priority';
 }
@@ -151,9 +183,7 @@ export function parallelToolCallsFrom(
   choice: AnthropicToolChoice | undefined,
   fates: Fate[],
 ): boolean | undefined {
-  if (choice?.disable_parallel_tool_use === undefined) {
-    return undefined;
-  }
+  if (choice?.disable_parallel_tool_use === undefined) return undefined;
 
   fates.push({
     field: 'tool_choice.disable_parallel_tool_use',
