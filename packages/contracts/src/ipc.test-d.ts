@@ -231,8 +231,8 @@ describe('push surface totality', () => {
     expectTypeOf<keyof RecomposeIpcEvents>().toEqualTypeOf<IpcEvent>();
   });
 
-  test('one event exists, and it is the state push', () => {
-    expectTypeOf<IpcEvent>().toEqualTypeOf<'engine:state'>();
+  test('the state and account-change pushes are the complete event vocabulary', () => {
+    expectTypeOf<IpcEvent>().toEqualTypeOf<'engine:state' | 'accounts:changed'>();
   });
 
   test('the push carries the whole snapshot rather than one gateway', () => {
@@ -243,6 +243,10 @@ describe('push surface totality', () => {
     expectTypeOf<RecomposeIpcEvents['engine:state']>().toEqualTypeOf<
       (listener: (payload: EngineStates) => void) => () => void
     >();
+  });
+
+  test('the account change carries only its fresh-read signal', () => {
+    expectTypeOf<IpcEventPayload<'accounts:changed'>>().toEqualTypeOf<'changed'>();
   });
 });
 

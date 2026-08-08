@@ -217,7 +217,7 @@ describe('the spend a resolved grant authorizes', () => {
 
   test('a subscription spend carries the provider account and whole credential document', () => {
     expectTypeOf<keyof SubscriptionSpend>().toEqualTypeOf<
-      'custody' | 'provider' | 'accountId' | 'credential'
+      'custody' | 'provider' | 'accountId' | 'credential' | 'transportPolicy'
     >();
   });
 

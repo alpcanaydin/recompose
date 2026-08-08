@@ -16,8 +16,8 @@ import type {
 import { defaultAccountsDocument, loadAccountsDocument } from './accounts';
 
 describe('the account row the document stores', () => {
-  test('the document pins itself to schema version 4', () => {
-    expectTypeOf<AccountsDocument['schemaVersion']>().toEqualTypeOf<4>();
+  test('the document pins itself to schema version 6', () => {
+    expectTypeOf<AccountsDocument['schemaVersion']>().toEqualTypeOf<6>();
   });
 
   test('a stored row is a subscription, a credentialed account, or a local runtime', () => {
@@ -30,7 +30,9 @@ describe('the account row the document stores', () => {
   test('a subscription row structurally cannot reference the vault', () => {
     expectTypeOf<SubscriptionAccount>().not.toHaveProperty('credentialRef');
     expectTypeOf<Extract<Account, { kind: 'subscription' }>>().not.toHaveProperty('credentialRef');
-    expectTypeOf<keyof SubscriptionAccount>().toEqualTypeOf<'id' | 'provider' | 'kind' | 'label'>();
+    expectTypeOf<keyof SubscriptionAccount>().toEqualTypeOf<
+      'id' | 'provider' | 'kind' | 'label' | 'credentialPolicy' | 'transportPolicy'
+    >();
   });
 
   test('a subscription row names a provider whose own tool signs it in', () => {

@@ -81,7 +81,10 @@ function systemHandlers(): SystemHandlers {
 }
 
 function eventBridge(): RecomposeIpcEvents {
-  return { 'engine:state': (listener) => listenForEngineStates(listener) };
+  return {
+    'engine:state': (listener) => listenForEngineStates(listener),
+    'accounts:changed': () => () => undefined,
+  };
 }
 
 const noGateways: readonly GatewayConfig[] = [];

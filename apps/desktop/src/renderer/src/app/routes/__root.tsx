@@ -18,6 +18,7 @@ import type { AccountKind } from '../../entities/account';
 import { AddProviderAct } from '../../pages/providers';
 import {
   accountsQueryOptions,
+  bindAccountChangesToCache,
   bindEngineStatesToCache,
   engineStatesQueryOptions,
   gatewaysQueryOptions,
@@ -78,6 +79,7 @@ function RootLayout() {
   useTitleBarDoubleClick();
 
   useEffect(() => bindEngineStatesToCache(queryClient), [queryClient]);
+  useEffect(() => bindAccountChangesToCache(queryClient), [queryClient]);
 
   useEffect(() => {
     void window.recompose['system:window-band'](sidebarAway ? 'toolbar' : 'sidebar');

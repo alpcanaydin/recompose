@@ -8,6 +8,7 @@ type WatcherWiring = {
   userDataPath: string;
   lifecycle: Pick<GatewayLifecycleRequests, 'restart' | 'stop'>;
   onCorrupt: (quarantinedPath: string) => void;
+  signal?: AbortSignal | undefined;
 };
 
 export async function startGatewayWatcher(wiring: WatcherWiring): Promise<GatewayConfigWatcher> {
@@ -25,7 +26,7 @@ export async function startGatewayWatcher(wiring: WatcherWiring): Promise<Gatewa
     },
   });
 
-  await watcher.start();
+  await watcher.start(wiring.signal);
 
   return watcher;
 }

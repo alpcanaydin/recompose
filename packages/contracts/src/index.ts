@@ -1,4 +1,7 @@
 export * from './migration';
+export * from './model-policy';
+export * from './credential-policy';
+export * from './transport-policy';
 export * from './non-blank';
 export * from './gateway-config';
 export * from './engine-state';

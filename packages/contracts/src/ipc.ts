@@ -156,6 +156,7 @@ export type RecomposeIpc = {
 
 export const ipcEvents = {
   'engine:state': { payload: engineStatesSchema },
+  'accounts:changed': { payload: z.literal('changed') },
 } as const;
 
 export type IpcEvent = keyof typeof ipcEvents;

@@ -60,6 +60,7 @@ const recompose: RecomposeIpc = Object.freeze({
 
 const recomposeEvents: RecomposeIpcEvents = Object.freeze({
   'engine:state': eventEntry('engine:state'),
+  'accounts:changed': eventEntry('accounts:changed'),
 });
 
 contextBridge.exposeInMainWorld('recompose', recompose);

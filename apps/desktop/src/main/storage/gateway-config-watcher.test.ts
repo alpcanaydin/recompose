@@ -130,7 +130,7 @@ async function watcherFixture(config: GatewayConfig, factory?: TestWatchFactory)
     onCorrupt: () => undefined,
     ...(factory === undefined
       ? {}
-      : { watchDirectory: (_directory, listener) => factory(listener) }),
+      : { watchDirectory: (_directory, _signal, events) => factory(events.change) }),
   });
 
   return { directory, upserts, removals, watcher };

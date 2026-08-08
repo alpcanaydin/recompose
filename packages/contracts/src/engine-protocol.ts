@@ -6,6 +6,7 @@ import { gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import { loopbackAddressSchema, runtimeReachabilitySchema } from './local-runtimes';
 import { nonBlankString } from './non-blank';
 import { subscriptionProviderIdSchema } from './subscriptions';
+import { accountTransportPolicySchema } from './transport-policy';
 
 const targetStandingSchema = z.discriminatedUnion('standing', [
   z.strictObject({ standing: z.literal('bound'), providerModel: nonBlankString }),
@@ -36,6 +37,7 @@ const subscriptionCustodyShape = {
   provider: subscriptionProviderIdSchema,
   accountId: nonBlankString,
   credential: nonBlankString,
+  transportPolicy: accountTransportPolicySchema.optional(),
 };
 
 /**

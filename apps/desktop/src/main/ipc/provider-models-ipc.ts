@@ -4,6 +4,7 @@ import type { TargetCustodyContext } from '../engine-host/target-custody';
 import type { IpcHandlers } from './dispatch';
 
 import { resolveTargetCustody } from '../engine-host/target-custody';
+import { applyModelPolicy } from '../storage/model-policy-diff';
 import { storageFailure } from './storage-envelope';
 
 export type ProviderModelsIpcContext = TargetCustodyContext & {
@@ -35,9 +36,11 @@ async function listModelsOf(ctx: ProviderModelsIpcContext, accountId: string) {
       return { ok: true as const, value: nothingListed };
     }
 
+    const listing = await ctx.listModels(resolved.providerOrigin, resolved.custody);
+
     return {
       ok: true as const,
-      value: await ctx.listModels(resolved.providerOrigin, resolved.custody),
+      value: applyModelPolicy(listing, resolved.modelPolicy),
     };
   } catch (error) {
     return storageFailure(error, ctx.homeFolder);

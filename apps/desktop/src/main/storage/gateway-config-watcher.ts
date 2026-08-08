@@ -1,13 +1,23 @@
 import type { GatewayConfig } from '@recompose/contracts';
 
 import { watch } from 'node:fs';
+import { isAbsolute, normalize, relative, resolve, sep } from 'node:path';
 
 import { gatewayConfigHash } from './gateway-config-hash';
 import { listGatewayConfigs } from './gateway-store';
 
 type WatchHandle = { close: () => void };
-type WatchListener = (filename: string | null) => void;
-type WatchDirectory = (directory: string, listener: WatchListener) => WatchHandle;
+
+export type GatewayWatchEvents = {
+  change: (filename: string | null) => void;
+  close: () => void;
+  error: (failure: unknown) => void;
+};
+export type GatewayWatchDirectory = (
+  directory: string,
+  signal: AbortSignal | undefined,
+  events: GatewayWatchEvents,
+) => WatchHandle;
 
 type GatewayWatcherOptions = {
   directory: string;
@@ -16,17 +26,52 @@ type GatewayWatcherOptions = {
   onCorrupt: (quarantinedPath: string) => void;
   onError?: ((failure: unknown) => void) | undefined;
   debounceMs?: number | undefined;
-  watchDirectory?: WatchDirectory | undefined;
+  watchDirectory?: GatewayWatchDirectory | undefined;
 };
 
-function nodeWatchDirectory(directory: string, listener: WatchListener): WatchHandle {
-  return watch(directory, { persistent: false, encoding: 'utf8' }, (_event, filename) => {
-    listener(filename);
+function nodeWatchDirectory(
+  directory: string,
+  signal: AbortSignal | undefined,
+  events: GatewayWatchEvents,
+): WatchHandle {
+  const options =
+    signal === undefined
+      ? { persistent: false, encoding: 'utf8' as const }
+      : { persistent: false, encoding: 'utf8' as const, signal };
+  const handle = watch(directory, options, (_event, filename) => {
+    events.change(filename);
   });
+
+  handle.on('error', events.error);
+  handle.on('close', events.close);
+
+  return handle;
 }
 
-function jsonFilename(filename: string | null): boolean {
-  return filename === null || filename.endsWith('.json');
+function eventKey(directory: string, filename: string | null): string | undefined {
+  if (filename === null) return '*';
+
+  const trimmed = filename.trim();
+
+  if (trimmed.length === 0) return undefined;
+
+  const normalized = normalize(relative(resolve(directory), resolve(directory, trimmed)));
+
+  if (!validEventPath(normalized)) return undefined;
+
+  return normalized;
+}
+
+function validEventPath(path: string): boolean {
+  return !outsideDirectory(path) && !isAbsolute(path) && path.endsWith('.json');
+}
+
+function outsideDirectory(path: string): boolean {
+  return path === '..' || path.startsWith(`..${sep}`);
+}
+
+function aborted(signal: AbortSignal | undefined): boolean {
+  return signal?.aborted ?? false;
 }
 
 export class GatewayConfigWatcher {
@@ -34,6 +79,10 @@ export class GatewayConfigWatcher {
   private readonly hashes = new Map<string, string>();
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
   private handle: WatchHandle | undefined;
+  private signal: AbortSignal | undefined;
+  private readonly abort = (): void => {
+    this.close();
+  };
 
   public constructor(options: GatewayWatcherOptions) {
     this.options = options;
@@ -46,14 +95,27 @@ export class GatewayConfigWatcher {
     for (const config of configs) this.hashes.set(config.slug, gatewayConfigHash(config));
   }
 
-  public async start(): Promise<void> {
+  public async start(signal?: AbortSignal): Promise<void> {
+    this.close();
+    if (aborted(signal)) return;
+
     await this.prime();
-    this.handle = (this.options.watchDirectory ?? nodeWatchDirectory)(
-      this.options.directory,
-      (filename) => {
-        this.schedule(filename);
-      },
-    );
+    if (aborted(signal)) return;
+
+    this.activate(signal);
+  }
+
+  private activate(signal: AbortSignal | undefined): void {
+    this.signal = signal;
+    signal?.addEventListener('abort', this.abort, { once: true });
+
+    try {
+      this.openWatch();
+    } catch (failure: unknown) {
+      this.close();
+
+      throw failure;
+    }
   }
 
   public noteWrite(config: GatewayConfig): void {
@@ -71,17 +133,31 @@ export class GatewayConfigWatcher {
     for (const [slug, hash] of next) this.hashes.set(slug, hash);
   }
 
+  public async refreshImmediately(): Promise<void> {
+    this.clearTimers();
+    await this.refresh();
+  }
+
   public close(): void {
-    this.handle?.close();
+    const handle = this.handle;
+
     this.handle = undefined;
+    this.signal?.removeEventListener('abort', this.abort);
+    this.signal = undefined;
+    this.clearTimers();
+    handle?.close();
+  }
+
+  private clearTimers(): void {
     for (const timer of this.timers.values()) clearTimeout(timer);
     this.timers.clear();
   }
 
   private schedule(filename: string | null): void {
-    if (!jsonFilename(filename)) return;
+    const key = eventKey(this.options.directory, filename);
 
-    const key = filename ?? '*';
+    if (key === undefined) return;
+
     const waiting = this.timers.get(key);
 
     if (waiting !== undefined) clearTimeout(waiting);
@@ -95,6 +171,35 @@ export class GatewayConfigWatcher {
         });
       }, this.options.debounceMs ?? 75),
     );
+  }
+
+  private openWatch(): void {
+    let installed: WatchHandle | undefined;
+    const events: GatewayWatchEvents = {
+      change: (filename) => {
+        if (this.handle === installed) this.schedule(filename);
+      },
+      error: (failure) => {
+        if (this.handle === installed) this.options.onError?.(failure);
+      },
+      close: () => {
+        if (this.handle === installed) this.watcherClosed();
+      },
+    };
+
+    installed = (this.options.watchDirectory ?? nodeWatchDirectory)(
+      this.options.directory,
+      this.signal,
+      events,
+    );
+    this.handle = installed;
+  }
+
+  private watcherClosed(): void {
+    this.handle = undefined;
+    this.signal?.removeEventListener('abort', this.abort);
+    this.signal = undefined;
+    this.clearTimers();
   }
 
   private publishUpserts(

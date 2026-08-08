@@ -1,6 +1,7 @@
+import type { EngineStates } from '@recompose/contracts';
+
 import { electronApp, optimizer } from '@electron-toolkit/utils';
-import { type EngineStates } from '@recompose/contracts';
-import { app, BrowserWindow, nativeTheme, safeStorage, shell } from 'electron';
+import { app, nativeTheme, safeStorage, shell } from 'electron';
 import { join } from 'path';
 
 import type { EngineHost } from './engine-host/engine-host';
@@ -10,7 +11,7 @@ import type { IpcHandlers } from './ipc/dispatch';
 import type { KeyCheckIpcContext } from './ipc/key-check-ipc';
 import type { StorageIpcContext } from './ipc/storage-context';
 import type { SettingsEffects } from './settings/apply-settings';
-import type { GatewayConfigWatcher } from './storage/gateway-config-watcher';
+import type { StorageWatchers } from './storage/storage-watchers';
 import type { CredentialCustody } from './subscriptions/credential-custody';
 
 import { registerAppLifecycle } from './app-lifecycle';
@@ -24,6 +25,7 @@ import { createEngineIpcHandlers } from './ipc/engine-ipc';
 import { createKeyCheckIpcHandlers } from './ipc/key-check-ipc';
 import { createLocalRuntimesIpcHandlers } from './ipc/local-runtimes-ipc';
 import { createProviderModelsIpcHandlers, providerModelsReach } from './ipc/provider-models-ipc';
+import { pushAccountsChanged, pushEngineStates } from './ipc/push-events';
 import { registerIpcHandlers } from './ipc/register-ipc';
 import { storagePathsFor } from './ipc/storage-context';
 import { createStorageIpcHandlers } from './ipc/storage-ipc';
@@ -38,8 +40,8 @@ import {
 } from './settings/apply-settings';
 import { storedBootState } from './storage/boot-state';
 import { listGatewayConfigs } from './storage/gateway-store';
-import { startGatewayWatcher } from './storage/gateway-watcher-wiring';
 import { createSafeStorageCodec } from './storage/safe-storage-codec';
+import { startStorageWatchers } from './storage/storage-watchers';
 import { subscriptionCredentialStore } from './subscriptions/subscription-credential-store';
 import { subscriptionHomes } from './subscriptions/subscription-homes';
 import { subscriptionRelease } from './subscriptions/subscription-release';
@@ -68,7 +70,7 @@ app.setName('Recompose');
 app.setAboutPanelOptions({ applicationName: 'Recompose' });
 
 let engineHost: EngineHost | null = null;
-let gatewayWatcher: GatewayConfigWatcher | null = null;
+let storageWatchers: StorageWatchers | null = null;
 
 const gatewayLifecycle = createGatewayLifecycleRequests({
   host: () => engineHost,
@@ -146,7 +148,7 @@ function storageContext(
     startGateway: startStoredGateway(engineHost),
     restartGateway: serveRewrittenGateway(engineHost),
     noteGatewayWrite: (gateway) => {
-      gatewayWatcher?.noteWrite(gateway);
+      storageWatchers?.noteGatewayWrite(gateway);
     },
     isServing: (slug) => engineHost.states()[slug]?.status === 'running',
     releaseSubscription: subscriptionRelease(
@@ -205,12 +207,6 @@ function assembleIpcHandlers(
   };
 }
 
-function pushEngineStates(states: EngineStates): void {
-  for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send('engine:state', states);
-  }
-}
-
 function repaintTray(states: EngineStates): void {
   listGatewayConfigs(storagePathsFor(app.getPath('userData')).gatewaysDir, onStorageCorrupt)
     .then((stored) => {
@@ -262,10 +258,11 @@ async function startRecompose(): Promise<void> {
   engineHost.onStatesChanged(repaintTray);
   repaintTray(engineHost.states());
 
-  gatewayWatcher = await startGatewayWatcher({
+  storageWatchers = await startStorageWatchers({
     userDataPath: app.getPath('userData'),
     lifecycle: gatewayLifecycle,
     onCorrupt: onStorageCorrupt,
+    onAccountsChanged: pushAccountsChanged,
   });
 
   registerIpcHandlers(assembleIpcHandlers(engineHost, custody));
@@ -293,8 +290,8 @@ registerAppLifecycle({
   start: startRecompose,
   activate: showMainWindow,
   dispose: () => {
-    gatewayWatcher?.close();
-    gatewayWatcher = null;
+    storageWatchers?.close();
+    storageWatchers = null;
     engineHost?.dispose();
   },
 });

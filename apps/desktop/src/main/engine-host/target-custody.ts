@@ -2,10 +2,11 @@ import type {
   Account,
   CredentialedAccount,
   LookCustody,
+  ProviderModelPolicy,
   SubscriptionAccount,
 } from '@recompose/contracts';
 
-import { keyProviderIdSchema } from '@recompose/contracts';
+import { keyProviderIdSchema, normalizeProviderKey } from '@recompose/contracts';
 
 import type { StoragePaths } from '../ipc/storage-context';
 import type { SecretCodec } from '../storage/safe-storage-codec';
@@ -31,7 +32,12 @@ export type TargetCustodyContext = {
 
 /** Where one account is reached and how the credential opening it is spelled, or why neither. */
 export type ResolvedTarget =
-  | { verdict: 'resolved'; providerOrigin: string; custody: LookCustody }
+  | {
+      verdict: 'resolved';
+      providerOrigin: string;
+      custody: LookCustody;
+      modelPolicy?: ProviderModelPolicy;
+    }
   | { verdict: 'missing-target' }
   | { verdict: 'missing-credential' };
 
@@ -43,6 +49,7 @@ async function subscriptionTarget(
   ctx: TargetCustodyContext,
   providerOrigin: string,
   account: SubscriptionAccount,
+  modelPolicy: ProviderModelPolicy | undefined,
 ): Promise<ResolvedTarget> {
   const credential = await ctx.readSubscriptionCredential(account.provider, account.id);
 
@@ -56,7 +63,11 @@ async function subscriptionTarget(
           provider: account.provider,
           accountId: account.id,
           credential,
+          ...(account.transportPolicy === undefined
+            ? {}
+            : { transportPolicy: account.transportPolicy }),
         },
+        ...(modelPolicy === undefined ? {} : { modelPolicy }),
       };
 }
 
@@ -91,12 +102,46 @@ async function credentialedTarget(
   paths: StoragePaths,
   providerOrigin: string,
   account: CredentialedAccount,
+  modelPolicy: ProviderModelPolicy | undefined,
 ): Promise<ResolvedTarget> {
   const credential = await inVaultOrder(async () => heldSecret(ctx, paths, account.credentialRef));
 
   return credential === undefined
     ? { verdict: 'missing-credential' }
-    : { verdict: 'resolved', providerOrigin, custody: spelledFor(account, credential) };
+    : {
+        verdict: 'resolved',
+        providerOrigin,
+        custody: spelledFor(account, credential),
+        ...(modelPolicy === undefined ? {} : { modelPolicy }),
+      };
+}
+
+function modelPolicyFor(
+  provider: string,
+  policies: Readonly<Record<string, ProviderModelPolicy>> | undefined,
+): ProviderModelPolicy | undefined {
+  return policies?.[normalizeProviderKey(provider)];
+}
+
+function resolvedAccountTarget(
+  ctx: TargetCustodyContext,
+  paths: StoragePaths,
+  providerOrigin: string,
+  account: Account,
+  modelPolicy: ProviderModelPolicy | undefined,
+): Promise<ResolvedTarget> | ResolvedTarget {
+  if (account.kind === 'local') {
+    return {
+      verdict: 'resolved',
+      providerOrigin,
+      custody: { custody: 'open' },
+      ...(modelPolicy === undefined ? {} : { modelPolicy }),
+    };
+  }
+
+  return account.kind === 'subscription'
+    ? subscriptionTarget(ctx, providerOrigin, account, modelPolicy)
+    : credentialedTarget(ctx, paths, providerOrigin, account, modelPolicy);
 }
 
 /**
@@ -126,11 +171,7 @@ export async function resolveTargetCustody(
     return { verdict: 'missing-target' };
   }
 
-  if (account.kind === 'local') {
-    return { verdict: 'resolved', providerOrigin, custody: { custody: 'open' } };
-  }
+  const modelPolicy = modelPolicyFor(account.provider, registry.modelPolicies);
 
-  return account.kind === 'subscription'
-    ? subscriptionTarget(ctx, providerOrigin, account)
-    : credentialedTarget(ctx, paths, providerOrigin, account);
+  return resolvedAccountTarget(ctx, paths, providerOrigin, account, modelPolicy);
 }
