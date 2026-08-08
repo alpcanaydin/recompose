@@ -71,9 +71,11 @@ function namespaceChildCandidate(
     return [{ tool: { ...child, name: qualified }, priority, order, ref }];
   }
 
-  const normalized = customFunction({ ...child, name: qualified });
+  const normalized = customFunction(child);
 
-  return normalized === null ? [] : [{ tool: normalized, priority, order, ref }];
+  return normalized === null
+    ? []
+    : [{ tool: { ...normalized, name: qualified }, priority, order, ref }];
 }
 
 function candidatesOf(
