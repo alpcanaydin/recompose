@@ -14,8 +14,6 @@ function readyState(socket: WebSocket): 0 | 1 | 2 | 3 {
 }
 
 function webSocketData(data: RawData): WebSocketData {
-  if (Array.isArray(data)) return data;
-
   return data;
 }
 

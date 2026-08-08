@@ -43,17 +43,11 @@ function maskField(name: string, value: string): JsonObject | null {
   return { [key]: value };
 }
 
-function ignoredField(name: string): boolean {
-  return name === 'model' || name === 'stream';
-}
-
 function currentMask(body: JsonObject): JsonObject {
   return isJsonObject(body['mask']) ? body['mask'] : {};
 }
 
 function setField(body: JsonObject, name: string, value: string): void {
-  if (ignoredField(name)) return;
-
   const mask = maskField(name, value);
 
   if (mask !== null) {

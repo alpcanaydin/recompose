@@ -53,7 +53,9 @@ describe('management logs', () => {
     expect(deleted.status).toBe(200);
     expect(read.lines).toEqual([]);
   });
+});
 
+describe('management logs without a configured store', () => {
   it('should report disabled file logging without a configured store', async () => {
     const app = createGatewayApp(aGatewayHolding(), grantsNothing, neverFetches);
 
@@ -61,6 +63,79 @@ describe('management logs', () => {
 
     expect(answer.status).toBe(400);
     await expect(answer.json()).resolves.toEqual({ error: 'logging to file disabled' });
+  });
+
+  it('should refuse truncation without a configured store', async () => {
+    const app = createGatewayApp(aGatewayHolding(), grantsNothing, neverFetches);
+
+    const answer = await app.request('http://127.0.0.1:8397/v0/management/logs', {
+      method: 'DELETE',
+    });
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toEqual({ error: 'logging to file disabled' });
+  });
+});
+
+describe('management logs request bounds', () => {
+  it('should reject a limit that is not a whole number', async () => {
+    const fixture = await logsFixture(['first']);
+    const app = gatewayWithLogs(fixture.store);
+
+    const answer = await app.request('http://127.0.0.1:8397/v0/management/logs?limit=2.5');
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toEqual({ error: 'invalid limit' });
+  });
+
+  it('should reject a negative starting timestamp', async () => {
+    const fixture = await logsFixture(['first']);
+    const app = gatewayWithLogs(fixture.store);
+
+    const answer = await app.request('http://127.0.0.1:8397/v0/management/logs?after=-1');
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toEqual({ error: 'invalid after' });
+  });
+
+  it('should read blank bounds as no bounds at all', async () => {
+    const fixture = await logsFixture(['[2026-06-15 10:00:00] first']);
+    const app = gatewayWithLogs(fixture.store);
+
+    const answer = await app.request('http://127.0.0.1:8397/v0/management/logs?limit=&after=');
+    const body = await responseObject(answer);
+
+    expect(body['lines']).toEqual(['[2026-06-15 10:00:00] first']);
+  });
+});
+
+describe('management logs selection', () => {
+  it('should return only the lines newer than the requested timestamp', async () => {
+    const fixture = await logsFixture([
+      '[2026-06-15 10:00:00] first',
+      '[2026-06-15 11:00:00] second',
+    ]);
+    const app = gatewayWithLogs(fixture.store);
+    const boundary = Math.floor(new Date('2026-06-15T10:30:00').getTime() / 1000);
+
+    const answer = await app.request(
+      `http://127.0.0.1:8397/v0/management/logs?after=${String(boundary)}`,
+    );
+    const body = await responseObject(answer);
+
+    expect(body['lines']).toEqual(['[2026-06-15 11:00:00] second']);
+  });
+
+  it('should report a cursor the store cannot read', async () => {
+    const fixture = await logsFixture(['[2026-06-15 10:00:00] first']);
+    const app = gatewayWithLogs(fixture.store);
+
+    const answer = await app.request(
+      'http://127.0.0.1:8397/v0/management/logs?cursor=not-a-cursor',
+    );
+
+    expect(answer.status).toBe(500);
+    await expect(answer.json()).resolves.toEqual({ error: 'invalid log cursor' });
   });
 });
 
