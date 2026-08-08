@@ -74,6 +74,14 @@ describe('remapping Claude tool names in a raw body', () => {
     expect(remapped.fallback).toBe(false);
   });
 
+  test('leaves a body that declares no tools unchanged', () => {
+    const body = encoded({ messages: [{ role: 'user', content: 'hello' }] });
+    const remapped = remapClaudeToolNamesRaw(body, SECRET);
+
+    expect(remapped.reverse).toEqual({});
+    expect(decoded(remapped.body)).toEqual({ messages: [{ role: 'user', content: 'hello' }] });
+  });
+
   test('falls back to a scan when the body is not a JSON object', () => {
     const remapped = remapClaudeToolNamesRaw(bytes('[{"name":"Read"}]'), SECRET);
 
