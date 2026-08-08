@@ -88,3 +88,4 @@ This index records every technical decision in recompose (see `CLAUDE.md`). For 
 | [0080](0080-subscriptions-spend-through-provider-native-transports.md)          | Subscriptions Spend Through Provider-Native Transports in the Engine Child          | Accepted   | 2026-08-06 |
 | [0081](0081-router-engine-parity-is-deferred-with-a-source-map.md)              | Router Engine Parity Waits for Its Feature                                          | Accepted   | 2026-08-07 |
 | [0082](0082-gemini-is-a-client-and-provider-dialect.md)                         | Gemini Is a Client and Provider Dialect                                             | Accepted   | 2026-08-07 |
+| [0083](0083-the-storage-watcher-startup-window-stays-accepted.md)               | The Storage Watcher Startup Window Stays Accepted                                   | Accepted   | 2026-08-08 |
