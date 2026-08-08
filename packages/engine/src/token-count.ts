@@ -6,6 +6,22 @@ import { isJsonObject } from './gateway-wire';
 
 type EncodingName = Parameters<typeof getEncoding>[0];
 
+const encoders = new Map<EncodingName, ReturnType<typeof getEncoding>>();
+
+function encoderFor(encoding: EncodingName): ReturnType<typeof getEncoding> {
+  const cached = encoders.get(encoding);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const created = getEncoding(encoding);
+
+  encoders.set(encoding, created);
+
+  return created;
+}
+
 function trimmedString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 }
@@ -248,7 +264,7 @@ function codexSegments(body: JsonObject): string[] {
 }
 
 function countSegments(encoding: EncodingName, segments: string[]): number {
-  return segments.length === 0 ? 0 : getEncoding(encoding).encode(segments.join('\n')).length;
+  return segments.length === 0 ? 0 : encoderFor(encoding).encode(segments.join('\n')).length;
 }
 
 export function countClaudeInputTokens(body: JsonObject): number {
