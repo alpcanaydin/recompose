@@ -34,7 +34,8 @@ watchers, so the change stays small when it becomes worth making.
 
 ### Positive
 
-- The watcher contract stays one thing: report a content change after boot settles.
+- The watcher contract stays one thing: best-effort reporting of content changes, with the boot
+  window as its one named exception.
 - No API surface exists solely to serve a millisecond window nobody has hit in use.
 - The specs state the OS behavior as it stands instead of asserting FSEvents never drops an event.
 
