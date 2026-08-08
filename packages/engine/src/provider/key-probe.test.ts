@@ -3,9 +3,11 @@ import type { KeyCheckVerdict } from '@recompose/contracts';
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { probeKey } from './key-probe';
+import { authHeadersFor, probeKey } from './key-probe';
 
 const aKey = 'sk-ant-api03-1f2e3d4c';
+
+type StoredProviderProbe = { headersFor(provider: string, key: string): Record<string, string> };
 
 type SentRequest = { url: string; init: RequestInit };
 
@@ -125,6 +127,22 @@ describe('the Gemini Interactions probe', () => {
 
     expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
     expect(headers.get('x-goog-api-key')).toBe(aKey);
+  });
+});
+
+describe('a provider name the probe does not speak to', () => {
+  test('a stored provider name no vendor answers is refused by name', () => {
+    const stored: StoredProviderProbe = { headersFor: authHeadersFor };
+
+    expect(() => stored.headersFor('mistral', aKey)).toThrow(
+      'no probe speaks to the provider: mistral',
+    );
+  });
+
+  test('the refusal names the provider it was handed, whatever it was', () => {
+    const stored: StoredProviderProbe = { headersFor: authHeadersFor };
+
+    expect(() => stored.headersFor('anthropic-legacy', aKey)).toThrow('anthropic-legacy');
   });
 });
 

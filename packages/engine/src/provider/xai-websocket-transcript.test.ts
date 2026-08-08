@@ -98,3 +98,70 @@ test('an empty xAI full reset clears pending compacted replay', () => {
   expect(transcript.prepare({ input: [] }).replayed).toBe(false);
   expect(transcript.snapshot()).toEqual([]);
 });
+
+describe('the shapes a recorded xAI turn arrives in', () => {
+  test('a completed turn naming its output at the top level still records', () => {
+    const transcript = new XAIWebSocketTranscript();
+
+    transcript.record({ input: [user] }, { output: [assistant] }, false);
+
+    expect(transcript.snapshot()).toEqual([user, assistant]);
+  });
+
+  test('an input that is not a list contributes nothing but the output still records', () => {
+    const transcript = new XAIWebSocketTranscript();
+
+    transcript.record({ input: 'not a list' }, { response: { output: [assistant] } }, false);
+
+    expect(transcript.snapshot()).toEqual([assistant]);
+  });
+
+  test('a turn carrying neither input nor output leaves the transcript as it stands', () => {
+    const transcript = new XAIWebSocketTranscript();
+
+    transcript.record({ input: [user] }, { response: { output: [assistant] } }, false);
+    transcript.record({}, {}, false);
+
+    expect(transcript.snapshot()).toEqual([user, assistant]);
+  });
+});
+
+describe('the compaction item an xAI transcript accepts in place of its history', () => {
+  test.each([
+    ['a plain message', user],
+    [
+      'a compaction whose encrypted content is too short to be real',
+      { type: 'compaction', encrypted_content: 'nope' },
+    ],
+  ])('%s is refused and the standing transcript survives', (_name, item) => {
+    const transcript = new XAIWebSocketTranscript();
+
+    transcript.record({ input: [user] }, { response: { output: [assistant] } }, false);
+
+    expect(transcript.replaceWithCompaction(item)).toBe(false);
+    expect(transcript.snapshot()).toEqual([user, assistant]);
+  });
+});
+
+describe('the turns an xAI transcript declines to replay into', () => {
+  test('a turn resuming an upstream response the compaction never covered is left alone', () => {
+    const transcript = new XAIWebSocketTranscript();
+    const body = { previous_response_id: 'resp_upstream', input: [user] };
+
+    transcript.replaceWithCompaction(compaction, 'resp_compact');
+    const prepared = transcript.prepare(body);
+
+    expect(prepared.replayed).toBe(false);
+    expect(prepared.body).toBe(body);
+  });
+
+  test('a turn on a transcript with nothing pending is left alone', () => {
+    const transcript = new XAIWebSocketTranscript();
+
+    transcript.record({ input: [user] }, { response: { output: [assistant] } }, false);
+    const prepared = transcript.prepare({ input: [user] });
+
+    expect(prepared.replayed).toBe(false);
+    expect(prepared.body['input']).toEqual([user]);
+  });
+});
