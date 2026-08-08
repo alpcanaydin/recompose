@@ -166,6 +166,23 @@ describe('discarding unmatched Antigravity text carriers', () => {
     expect(JSON.stringify(injected)).not.toContain(unmatched);
   });
 
+  test('a part that carries neither text nor a signature changes nothing', async () => {
+    const signature = nativeSignature(0x4e);
+    const { replay, key } = await replayFromResponse([
+      { thought: true },
+      { text: 'hidden', thought: true, thoughtSignature: signature },
+    ]);
+    const body = {
+      model: 'gemini-3.6-flash-high',
+      contents: [{ role: 'model', parts: [{ text: 'hidden', thought: true }] }],
+    };
+
+    expect(replay.inject(key, body)).toHaveProperty(
+      'contents.0.parts.0.thoughtSignature',
+      signature,
+    );
+  });
+
   test('a direct signature closes before later unsigned text', async () => {
     const signature = nativeSignature(0x4d);
     const { replay, key } = await replayFromResponse([

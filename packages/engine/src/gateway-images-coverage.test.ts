@@ -1,9 +1,15 @@
-import type { EngineVirtualModel, SpendGrant } from '@recompose/contracts';
+import type { EngineVirtualModel } from '@recompose/contracts';
 
 import { describe, expect, it } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
-import { aGatewayHolding, aVirtualModel, granting, neverFetches } from './gateway-app.testkit';
+import {
+  aGatewayHolding,
+  anOpenGrant,
+  aVirtualModel,
+  granting,
+  neverFetches,
+} from './gateway-app.testkit';
 import {
   codexCredential,
   runtimeAnswering,
@@ -11,107 +17,10 @@ import {
 } from './gateway-proxy-subscription.testkit';
 import { isJsonObject, parsedJson } from './gateway-wire';
 
-const anthropicKey: SpendGrant = {
-  verdict: 'resolved',
-  providerOrigin: 'https://api.anthropic.com',
-  spend: {
-    custody: 'credentialed',
-    provider: 'anthropic',
-    credential: 'sk-ant-key',
-    accountId: 'acc-anthropic',
-  },
-};
+const IMAGES = 'http://127.0.0.1:8397/v1/images';
 
-describe('an image request the gateway cannot serve', () => {
-  it('should say the model does not exist when the gateway holds no such model', async () => {
-    const answer = await imageRequest(
-      '/v1/images/generations',
-      { model: 'missing', prompt: 'otter' },
-      aVirtualModel({ id: 'fast' }),
-    );
-
-    expect(answer.status).toBe(404);
-    await expect(answer.json()).resolves.toMatchObject({
-      error: { message: 'The model "missing" does not exist.' },
-    });
-  });
-
-  it('should say the image model has no target when nothing is bound to it', async () => {
-    const answer = await imageRequest(
-      '/v1/images/generations',
-      { model: 'fast', prompt: 'otter' },
-      aVirtualModel({ id: 'fast', target: { standing: 'removed' } }),
-    );
-
-    expect(answer.status).toBe(400);
-    await expect(answer.json()).resolves.toMatchObject({
-      error: { message: 'The image model has no target.' },
-    });
-  });
-
-  it('should refuse an image target whose account cannot make images', async () => {
-    const answer = await imageRequest(
-      '/v1/images/generations',
-      { model: 'fast', prompt: 'otter' },
-      aVirtualModel({ id: 'fast', target: { standing: 'bound', providerModel: 'gpt-image-1.5' } }),
-      anthropicKey,
-    );
-
-    expect(answer.status).toBe(400);
-    await expect(answer.json()).resolves.toMatchObject({
-      error: { message: 'The image target has no supported credential.' },
-    });
-  });
-});
-
-describe('an image edit request', () => {
-  it('should ask the provider to edit rather than generate', async () => {
-    const fixture = editFixture(() =>
-      Response.json({
-        created_at: 1,
-        output: [{ type: 'image_generation_call', result: 'EDITED', output_format: 'png' }],
-      }),
-    );
-
-    await fixture.app.request('http://127.0.0.1:8397/v1/images/edits', {
-      method: 'POST',
-      body: JSON.stringify({ model: 'fast', prompt: 'add a hat', image: 'AA==' }),
-    });
-
-    expect(sentBody(fixture.answering.sent[0]?.request.body)).toMatchObject({
-      tools: [{ type: 'image_generation', action: 'edit' }],
-    });
-  });
-
-  it('should name its streamed events after the edit it performs', async () => {
-    const completed = {
-      type: 'response.completed',
-      response: {
-        created_at: 2,
-        output: [{ type: 'image_generation_call', result: 'EDITED', output_format: 'png' }],
-      },
-    };
-    const fixture = editFixture(
-      () =>
-        new Response(`data: ${JSON.stringify(completed)}\n\n`, {
-          headers: { 'content-type': 'text/event-stream' },
-        }),
-    );
-
-    const answer = await fixture.app.request('http://127.0.0.1:8397/v1/images/edits', {
-      method: 'POST',
-      body: JSON.stringify({ model: 'fast', prompt: 'add a hat', stream: true }),
-    });
-
-    await expect(answer.text()).resolves.toContain('event: image_edit.completed');
-  });
-});
-
-function editFixture(answer: () => Response) {
-  const model = aVirtualModel({
-    id: 'fast',
-    target: { standing: 'bound', providerModel: 'gpt-5.4-mini' },
-  });
+function codexImageApp(providerModel: string, answer: () => Response) {
+  const model = aVirtualModel({ target: { standing: 'bound', providerModel } });
   const answering = runtimeAnswering(answer);
   const app = createGatewayApp(
     aGatewayHolding(model),
@@ -123,27 +32,96 @@ function editFixture(answer: () => Response) {
   return { app, answering };
 }
 
-async function imageRequest(
-  path: string,
-  body: Record<string, unknown>,
-  model: EngineVirtualModel,
-  grant: SpendGrant = subscriptionGrant('openai', codexCredential()),
-): Promise<Response> {
-  const app = createGatewayApp(
-    aGatewayHolding(model),
-    granting(grant).grantFor,
-    neverFetches,
-    runtimeAnswering(() => Response.json({})).runtime,
-  );
+function refusingApp(model: EngineVirtualModel, grant = anOpenGrant()) {
+  return createGatewayApp(aGatewayHolding(model), granting(grant).grantFor, neverFetches);
+}
 
-  return app.request(`http://127.0.0.1:8397${path}`, {
-    method: 'POST',
-    body: JSON.stringify(body),
+function sentTool(answering: ReturnType<typeof runtimeAnswering>): unknown {
+  const parsed = parsedJson(answering.sent[0]?.request.body ?? '{}');
+  const tools = isJsonObject(parsed) ? parsed['tools'] : undefined;
+
+  return Array.isArray(tools) ? tools[0] : undefined;
+}
+
+function responsesStream(events: readonly unknown[]): Response {
+  return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(''), {
+    headers: { 'content-type': 'text/event-stream' },
   });
 }
 
-function sentBody(body: string | undefined) {
-  const parsed = parsedJson(body ?? '{}');
+const completedImage = {
+  type: 'response.completed',
+  response: {
+    created_at: 42,
+    output: [{ type: 'image_generation_call', result: 'FINAL', output_format: 'png' }],
+  },
+};
 
-  return isJsonObject(parsed) ? parsed : {};
+async function imageRequest(app: ReturnType<typeof refusingApp>, path: string, body: unknown) {
+  const answer = await app.request(`${IMAGES}${path}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+
+  return answer;
 }
+
+describe('refusing an image request the gateway cannot serve', () => {
+  it('reports an unknown model as missing', async () => {
+    const app = refusingApp(aVirtualModel({ id: 'fast' }));
+    const answer = await imageRequest(app, '/generations', { model: 'slow', prompt: 'otter' });
+
+    expect(answer.status).toBe(404);
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { type: 'invalid_request_error', message: 'The model "slow" does not exist.' },
+    });
+  });
+
+  it('reports a model whose target is not bound', async () => {
+    const app = refusingApp(aVirtualModel({ target: { standing: 'removed' } }));
+    const answer = await imageRequest(app, '/generations', { model: 'fast', prompt: 'otter' });
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { message: 'The image model has no target.' },
+    });
+  });
+
+  it('reports a bound target that holds no image credential', async () => {
+    const app = refusingApp(aVirtualModel());
+    const answer = await imageRequest(app, '/generations', { model: 'fast', prompt: 'otter' });
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { message: 'The image target has no supported credential.' },
+    });
+  });
+});
+
+describe('editing an image through the Codex Responses tool', () => {
+  it('asks the image tool to edit rather than generate', async () => {
+    const { app, answering } = codexImageApp('gpt-5.4-mini', () =>
+      responsesStream([completedImage]),
+    );
+
+    await app.request(`${IMAGES}/edits`, {
+      method: 'POST',
+      body: JSON.stringify({ model: 'fast', prompt: 'brighten it' }),
+    });
+
+    expect(sentTool(answering)).toMatchObject({ type: 'image_generation', action: 'edit' });
+  });
+
+  it('names its streamed events after the edit action', async () => {
+    const { app } = codexImageApp('gpt-5.4-mini', () => responsesStream([completedImage]));
+    const answer = await app.request(`${IMAGES}/edits`, {
+      method: 'POST',
+      body: JSON.stringify({ model: 'fast', prompt: 'brighten it', stream: true }),
+    });
+    const body = await answer.text();
+
+    expect(body).toContain('event: image_edit.completed');
+    expect(body).toContain('"b64_json":"FINAL"');
+    expect(body).not.toContain('image_generation.completed');
+  });
+});

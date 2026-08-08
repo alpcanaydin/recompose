@@ -22,7 +22,7 @@ function imageError(message: string, status: 400 | 404 = 400): Response {
 }
 
 function directImageModel(model: string): string | null {
-  const base = model.trim().split('/').at(-1)?.toLowerCase() ?? '';
+  const base = model.trim().split('/').at(-1)?.toLowerCase();
 
   return base === 'gpt-image-1.5' || base === 'gpt-image-2' ? base : null;
 }

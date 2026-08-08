@@ -63,6 +63,19 @@ test('abandons a tool input delta that exceeds the replay budget', () => {
   expect(accumulator.abandoned).toBe(true);
 });
 
+test('ignores a stream event that names no block lifecycle it knows', () => {
+  const accumulator = replaying([
+    { type: 'message_start' },
+    { type: 'ping' },
+    textBlockStart('hello'),
+    { type: 'content_block_stop', index: 0 },
+    { type: 'message_stop' },
+  ]);
+
+  expect(accumulator.abandoned).toBe(false);
+  expect(accumulator.content()).toEqual([{ type: 'text', text: 'hello' }]);
+});
+
 test('withholds content whose serialized form outgrows the replay budget', () => {
   const escaping = '"'.repeat(REPLAY_BUDGET / 2);
   const accumulator = replaying([

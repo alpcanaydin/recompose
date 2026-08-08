@@ -121,6 +121,25 @@ test('rejects the active turn when the upstream socket fails', async () => {
   await expect(fixture.executor.execute(turn())).rejects.toThrow('socket exploded');
 });
 
+test('passes an interim payload downstream and keeps the turn open', async () => {
+  const delta = '{"type":"response.output_text.delta","delta":"hi"}';
+  const seen: string[] = [];
+  const fixture = scriptedExecutor((socket) => {
+    socket.deliver(delta);
+    socket.deliver(COMPLETED);
+  });
+
+  await fixture.executor.execute(
+    turn({
+      downstream: (payload) => {
+        seen.push(payload);
+      },
+    }),
+  );
+
+  expect(seen).toEqual([delta, COMPLETED]);
+});
+
 test('ignores an upstream payload that arrives after the turn completed', async () => {
   const seen: string[] = [];
   const fixture = completingExecutor();
