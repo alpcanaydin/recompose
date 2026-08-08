@@ -42,7 +42,7 @@ describe('anchoring a replayed Codex turn that names no call and no text', () =>
     expect(result[2]).toBe('loose-entry');
   });
 
-  test('it has nowhere to land when the conversation holds only framing', () => {
+  test('it lands after the preamble when the conversation holds only framing', () => {
     const input = [
       { role: 'system', content: 'rules' },
       { role: 'developer', content: 'more' },
@@ -50,7 +50,7 @@ describe('anchoring a replayed Codex turn that names no call and no text', () =>
 
     const result = insertReplayTurns(input, [turn({ reasoning: [reasoning('sig-3')] })]);
 
-    expect(result).toStrictEqual(input);
+    expect(result).toStrictEqual([...input, reasoning('sig-3')]);
   });
 });
 

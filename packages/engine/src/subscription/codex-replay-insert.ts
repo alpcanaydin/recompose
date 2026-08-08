@@ -224,5 +224,8 @@ export function insertReplayTurns(input: unknown[], turns: readonly ReplayTurn[]
 
   for (const turn of turns.toReversed()) applyTurn(input, turn, state);
 
-  return input.flatMap((item, index) => [...(state.insertions.get(index) ?? []), item]);
+  return [
+    ...input.flatMap((item, index) => [...(state.insertions.get(index) ?? []), item]),
+    ...(state.insertions.get(input.length) ?? []),
+  ];
 }
