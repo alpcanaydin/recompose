@@ -3,6 +3,7 @@ import type { RawData } from 'ws';
 import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { websocketRawText } from './websocket-raw-text';
 import { parseXAIWebSocketError } from './xai-websocket-error';
 
 export function upstreamXAIWebSocketUrl(origin: string): string {
@@ -33,10 +34,7 @@ export function xaiWebSocketRequestBody(value: JsonObject): JsonObject {
 }
 
 export function xaiWebSocketText(data: RawData): string {
-  if (Array.isArray(data)) return Buffer.concat(data).toString();
-  if (data instanceof ArrayBuffer) return Buffer.from(new Uint8Array(data)).toString();
-
-  return Buffer.from(data).toString();
+  return websocketRawText(data);
 }
 
 export function xaiWebSocketErrorPayload(value: unknown, fallbackStatus: number): JsonObject {

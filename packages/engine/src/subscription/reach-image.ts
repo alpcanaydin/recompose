@@ -31,7 +31,7 @@ export async function reachCodexImage(
     sourceHeaders,
     stream,
   );
-  const answer = await runtime.send('openai', request);
+  const answer = await runtime.send('openai', request, grant.spend.transportPolicy);
 
   if (!shouldRefreshUnauthorized(answer, ready.credential)) return answer;
 
@@ -47,5 +47,6 @@ export async function reachCodexImage(
       sourceHeaders,
       stream,
     ),
+    grant.spend.transportPolicy,
   );
 }

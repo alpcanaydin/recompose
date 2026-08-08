@@ -7,6 +7,7 @@ import type { ProviderRequest } from './claude-request';
 
 import { afterAuthPlugins } from '../plugin-after-auth';
 import { notePluginExecution } from '../plugin-execution-context';
+import { claudeRequestUsesFastMode, ClaudeRequestScopedError } from './claude-fast-failure';
 import { sendObservedSubscription } from './observed-send';
 
 type SubscriptionSend = (
@@ -22,6 +23,7 @@ export type SubscriptionPluginContext = {
 export type SubscriptionAttempt = {
   answer: Response;
   terminated: boolean;
+  failureScope?: 'request' | 'credential';
 };
 
 function providerDialect(provider: SubscriptionProviderId): ProviderDialect {
@@ -94,8 +96,23 @@ export async function sendInterceptedSubscription(
     );
   }
 
-  return {
-    answer: await sendObservedSubscription(provider, accountId, body, prepared.request, send),
-    terminated: false,
-  };
+  return observedAttempt(provider, accountId, body, prepared.request, send);
+}
+
+async function observedAttempt(
+  provider: SubscriptionProviderId,
+  accountId: string,
+  body: JsonObject,
+  request: ProviderRequest,
+  send: SubscriptionSend,
+): Promise<SubscriptionAttempt> {
+  try {
+    const answer = await sendObservedSubscription(provider, accountId, body, request, send);
+
+    return { answer, terminated: false };
+  } catch (error) {
+    if (provider !== 'anthropic' || !claudeRequestUsesFastMode(body)) throw error;
+
+    throw new ClaudeRequestScopedError(error);
+  }
 }

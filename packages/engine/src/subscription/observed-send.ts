@@ -4,7 +4,7 @@ import type { ProviderDialect } from '../gateway-wire';
 import type { JsonObject } from '../gateway-wire';
 import type { ProviderRequest } from './claude-request';
 
-import { providerObservability } from '../provider/provider-observability';
+import { providerObservability, providerRequestId } from '../provider/provider-observability';
 
 type SubscriptionSend = (
   provider: SubscriptionProviderId,
@@ -31,9 +31,7 @@ export async function sendObservedSubscription(
     accountId,
     dialect: providerDialect(provider),
     method: 'POST',
-    url: request.url,
-    headers: new Headers(request.headers),
-    body: new TextEncoder().encode(request.body),
+    requestId: providerRequestId(new Headers(request.headers)),
   });
 
   return span.observe(await send(provider, request));

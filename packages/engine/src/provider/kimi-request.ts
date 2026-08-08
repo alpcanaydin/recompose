@@ -2,17 +2,12 @@ import type { JsonObject, ProxyDialect } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
 import { normalizeKimiToolHistory } from './kimi-tool-history';
+import { mapReasoningLevel } from './reasoning-capabilities';
 
 type ParsedKimiModel = { base: string; suffix?: string };
 const KIMI_SUFFIX = /\(([^()]*)\)\s*$/u;
-const KIMI_EFFORTS = new Map([
-  ['minimal', 'low'],
-  ['low', 'low'],
-  ['medium', 'medium'],
-  ['high', 'high'],
-  ['xhigh', 'high'],
-  ['max', 'high'],
-]);
+const KIMI_LEVELS = new Set(['minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
+const KIMI_CAPABILITIES = { levels: ['low', 'medium', 'high'] } as const;
 
 function withoutSuffix(model: string, match: RegExpExecArray | null): string {
   return match === null ? model : model.slice(0, match.index).trim();
@@ -38,7 +33,11 @@ export function normalizeKimiUpstreamModel(model: string): string {
 }
 
 function kimiEffort(suffix: string | undefined): string | undefined {
-  return suffix === undefined ? undefined : KIMI_EFFORTS.get(suffix.toLowerCase());
+  const level = suffix?.toLowerCase();
+
+  return level === undefined || !KIMI_LEVELS.has(level)
+    ? undefined
+    : mapReasoningLevel(level, KIMI_CAPABILITIES, false);
 }
 
 function withClaudeEffort(body: JsonObject, effort: string): JsonObject {

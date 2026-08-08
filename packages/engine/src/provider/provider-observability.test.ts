@@ -2,37 +2,76 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ProviderObservability,
+  providerRequestId,
   providerUsageFrom,
   type ProviderRequestLog,
 } from './provider-observability';
 
-describe('ProviderObservability request snapshots', () => {
-  it('should retain the original request body and headers', async () => {
+describe('ProviderObservability request privacy', () => {
+  it('should retain only allowlisted metadata in snapshots and listeners', async () => {
     const observability = new ProviderObservability();
-    const request = requestLog();
+    const heard: unknown[] = [];
+    const credential = 'sk-secret-observability-sentinel';
+    const prompt = 'private prompt and tool arguments';
+    const request = sensitiveRequest(credential, prompt);
+
+    observability.subscribe((record) => {
+      heard.push(record);
+    });
     const span = observability.start(request);
 
-    request.body[0] = 88;
-    request.headers.set('x-request-id', 'mutated');
+    expect(JSON.stringify(span)).not.toContain(credential);
+
     await span.observe(Response.json({ usage: { input_tokens: 1, output_tokens: 1 } })).text();
     const recorded = observability.snapshot()[0];
+    const serialized = JSON.stringify({ recorded, heard });
 
-    expect(new TextDecoder().decode(recorded?.body)).toBe('{"model":"original"}');
-    expect(recorded?.headers.get('x-request-id')).toBe('request-1');
+    expect(recorded).toMatchObject({
+      provider: 'openai',
+      model: 'gpt-5.4',
+      version: '2.1.0',
+      media: { connection: 'direct', sessionId: 'media-session-1' },
+    });
+    expect(recorded?.requestIdHash).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(serialized).not.toMatch(new RegExp(`${credential}|${prompt}|private-signature`, 'u'));
+    expect(Object.keys(recorded ?? {})).not.toEqual(
+      expect.arrayContaining(['url', 'headers', 'body', 'responseHeaders', 'requestId']),
+    );
   });
 
-  it('should clone response headers before their source changes', async () => {
+  it('should fingerprint an allowlisted upstream request ID without retaining response headers', async () => {
     const observability = new ProviderObservability();
-    const headers = new Headers({ 'x-upstream-request-id': 'upstream-1' });
+    const headers = new Headers({
+      'x-upstream-request-id': 'upstream-1',
+      Authorization: 'Bearer response-secret',
+      'set-cookie': 'session=response-secret',
+    });
     const response = new Response('{}', { headers });
     const observed = observability.start(requestLog()).observe(response);
 
-    headers.set('x-upstream-request-id', 'mutated');
     await observed.text();
+    const recorded = observability.snapshot()[0];
 
-    expect(observability.snapshot()[0]?.responseHeaders.get('x-upstream-request-id')).toBe(
-      'upstream-1',
-    );
+    expect(recorded?.upstreamRequestIdHash).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(JSON.stringify(recorded)).not.toContain('upstream-1');
+    expect(JSON.stringify(recorded)).not.toContain('response-secret');
+    expect(recorded).not.toHaveProperty('responseHeaders');
+  });
+});
+
+describe('providerRequestId', () => {
+  it('should select only an allowlisted outbound request ID header', () => {
+    const credential = 'sk-secret-header-sentinel';
+    const headers = new Headers({
+      Authorization: `Bearer ${credential}`,
+      'x-api-key': credential,
+      'x-client-request-id': 'request-1',
+    });
+
+    expect(providerRequestId(headers)).toBe('request-1');
+    expect(
+      providerRequestId(new Headers({ Authorization: `Bearer ${credential}` })),
+    ).toBeUndefined();
   });
 });
 
@@ -164,10 +203,26 @@ function requestLog(overrides: Partial<ProviderRequestLog> = {}): ProviderReques
     model: 'gpt-5.4',
     dialect: 'responses',
     method: 'POST',
-    url: 'https://api.openai.com/v1/responses',
-    headers: new Headers({ 'x-request-id': 'request-1' }),
-    body: new TextEncoder().encode('{"model":"original"}'),
     ...overrides,
+  };
+}
+
+type SensitiveRequest = ProviderRequestLog & {
+  url: string;
+  headers: Headers;
+  body: Uint8Array;
+  signature: string;
+};
+
+function sensitiveRequest(credential: string, prompt: string): SensitiveRequest {
+  const media = { connection: 'direct', sessionId: 'media-session-1', credential };
+
+  return {
+    ...requestLog({ requestId: credential, version: '2.1.0', media }),
+    url: `https://api.openai.com/v1/responses?key=${credential}`,
+    headers: new Headers({ Authorization: `Bearer ${credential}`, 'x-api-key': credential }),
+    body: new TextEncoder().encode(prompt),
+    signature: 'private-signature',
   };
 }
 

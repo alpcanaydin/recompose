@@ -1,4 +1,4 @@
-import type { SubscriptionProviderId } from '@recompose/contracts';
+import type { AccountTransportPolicy, SubscriptionProviderId } from '@recompose/contracts';
 
 import type { ClaudeProfile } from './provider-transport';
 
@@ -12,6 +12,7 @@ type ReadyCredential = {
 type SubscriptionSpend = {
   provider: SubscriptionProviderId;
   accountId: string;
+  transportPolicy?: AccountTransportPolicy | undefined;
 };
 
 type ClaudeIdentityRuntime = {
@@ -21,10 +22,20 @@ type ClaudeIdentityRuntime = {
     credential: string,
   ) => Promise<void>;
   newClaudeDeviceId: () => string;
-  fetchClaudeProfile: (accessToken: string) => Promise<ClaudeProfile>;
+  fetchClaudeProfile: (
+    accessToken: string,
+    policy?: AccountTransportPolicy,
+  ) => Promise<ClaudeProfile>;
 };
 
-function claudeIdentityOf(credential: ReadyCredential['credential']) {
+type ClaudeIdentity = { accountUuid: string; deviceId: string };
+
+const initializedIdentities = new Map<
+  string,
+  { accessToken: string; identity: Promise<ClaudeIdentity> }
+>();
+
+function claudeIdentityOf(credential: ReadyCredential['credential']): ClaudeIdentity | undefined {
   const deviceId = credential.deviceIds?.[0];
 
   return credential.accountUuid === undefined || deviceId === undefined
@@ -32,13 +43,53 @@ function claudeIdentityOf(credential: ReadyCredential['credential']) {
     : { accountUuid: credential.accountUuid, deviceId };
 }
 
+async function initializeClaudeIdentity(
+  spend: SubscriptionSpend,
+  ready: ReadyCredential,
+  runtime: ClaudeIdentityRuntime,
+): Promise<ClaudeIdentity> {
+  const accountUuid = await accountUuidFor(ready.credential, runtime, spend.transportPolicy);
+  const deviceId = deviceIdFor(ready.credential, runtime);
+  const blob = withClaudeCredentialIdentity(ready.blob, accountUuid, deviceId);
+
+  await runtime.persist(spend.provider, spend.accountId, blob);
+
+  return { accountUuid, deviceId };
+}
+
+async function sharedClaudeIdentity(
+  spend: SubscriptionSpend,
+  ready: ReadyCredential,
+  runtime: ClaudeIdentityRuntime,
+): Promise<ClaudeIdentity> {
+  const standing = initializedIdentities.get(spend.accountId);
+
+  if (standing?.accessToken === ready.credential.accessToken) return standing.identity;
+
+  const identity = initializeClaudeIdentity(spend, ready, runtime).catch((failure: unknown) => {
+    if (initializedIdentities.get(spend.accountId)?.accessToken === ready.credential.accessToken) {
+      initializedIdentities.delete(spend.accountId);
+    }
+
+    throw failure;
+  });
+
+  initializedIdentities.set(spend.accountId, {
+    accessToken: ready.credential.accessToken,
+    identity,
+  });
+
+  return identity;
+}
+
 async function accountUuidFor(
   credential: ReadyCredential['credential'],
   runtime: ClaudeIdentityRuntime,
+  policy?: AccountTransportPolicy,
 ): Promise<string> {
   if (credential.accountUuid !== undefined) return credential.accountUuid;
 
-  return (await runtime.fetchClaudeProfile(credential.accessToken)).account.uuid;
+  return (await runtime.fetchClaudeProfile(credential.accessToken, policy)).account.uuid;
 }
 
 function deviceIdFor(
@@ -53,15 +104,18 @@ export async function readyClaudeIdentity(
   ready: ReadyCredential,
   runtime: ClaudeIdentityRuntime,
 ): Promise<ReadyCredential> {
-  if (spend.provider !== 'anthropic' || claudeIdentityOf(ready.credential) !== undefined) {
+  if (spend.provider !== 'anthropic') {
     return ready;
   }
 
-  const accountUuid = await accountUuidFor(ready.credential, runtime);
-  const deviceId = deviceIdFor(ready.credential, runtime);
-  const blob = withClaudeCredentialIdentity(ready.blob, accountUuid, deviceId);
+  if (
+    claudeIdentityOf(ready.credential) !== undefined &&
+    ready.credential.deviceMigrationNeeded !== true
+  )
+    return ready;
 
-  await runtime.persist(spend.provider, spend.accountId, blob);
+  const { accountUuid, deviceId } = await sharedClaudeIdentity(spend, ready, runtime);
+  const blob = withClaudeCredentialIdentity(ready.blob, accountUuid, deviceId);
 
   const credential = parseSubscriptionCredential(spend.provider, blob);
 

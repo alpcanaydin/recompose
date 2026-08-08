@@ -1,0 +1,51 @@
+export const CLAUDE_TLS_FINGERPRINT = {
+  clientHelloLength: 508,
+  ja3: '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49161-49171-49162-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-21,29-23-24,0',
+  ja3Md5: 'd871d02cecbde59abbf8f4806134addf',
+  cipherSuites: [
+    4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49161, 49171, 49162, 49172, 156,
+    157, 47, 53,
+  ],
+  extensionTypes: [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 21],
+  supportedGroups: [29, 23, 24],
+  signatureAlgorithms: [1027, 2052, 1025, 1283, 2053, 1281, 2054, 1537, 513],
+} as const;
+
+export const CLAUDE_OAUTH_TLS_FINGERPRINT = {
+  clientHelloLength: 245,
+  ja3: '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49161-49171-49162-49172-156-157-47-53,0-23-65281-10-11-35-13-51-45-43,29-23-24,0',
+  ja3Md5: '203503b7023848ab87b9836c336b8e81',
+  extensionTypes: [0, 23, 65281, 10, 11, 35, 13, 51, 45, 43],
+} as const;
+
+export const CLAUDE_CIPHERS = [
+  'TLS_AES_128_GCM_SHA256',
+  'TLS_AES_256_GCM_SHA384',
+  'TLS_CHACHA20_POLY1305_SHA256',
+  'ECDHE-ECDSA-AES128-GCM-SHA256',
+  'ECDHE-RSA-AES128-GCM-SHA256',
+  'ECDHE-ECDSA-AES256-GCM-SHA384',
+  'ECDHE-RSA-AES256-GCM-SHA384',
+  'ECDHE-ECDSA-CHACHA20-POLY1305',
+  'ECDHE-RSA-CHACHA20-POLY1305',
+  'ECDHE-ECDSA-AES128-SHA',
+  'ECDHE-RSA-AES128-SHA',
+  'ECDHE-ECDSA-AES256-SHA',
+  'ECDHE-RSA-AES256-SHA',
+  'AES128-GCM-SHA256',
+  'AES256-GCM-SHA384',
+  'AES128-SHA',
+  'AES256-SHA',
+].join(':');
+
+export const CLAUDE_SIGNATURES = [
+  'ecdsa_secp256r1_sha256',
+  'rsa_pss_rsae_sha256',
+  'rsa_pkcs1_sha256',
+  'ecdsa_secp384r1_sha384',
+  'rsa_pss_rsae_sha384',
+  'rsa_pkcs1_sha384',
+  'rsa_pss_rsae_sha512',
+  'rsa_pkcs1_sha512',
+  'rsa_pkcs1_sha1',
+].join(':');

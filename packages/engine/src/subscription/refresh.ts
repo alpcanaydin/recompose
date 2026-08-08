@@ -1,4 +1,4 @@
-import type { SubscriptionProviderId } from '@recompose/contracts';
+import type { AccountTransportPolicy, SubscriptionProviderId } from '@recompose/contracts';
 
 import type { ParsedSubscriptionCredential, RefreshedTokens } from './credentials';
 
@@ -9,9 +9,14 @@ type RefreshRequest = {
   method: 'POST';
   headers: [string, string][];
   body: string;
+  signal?: AbortSignal;
 };
 
-export type RefreshFetch = (url: string, init: RefreshRequest) => Promise<Response>;
+export type RefreshFetch = (
+  url: string,
+  init: RefreshRequest,
+  transportPolicy?: AccountTransportPolicy,
+) => Promise<Response>;
 
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 const CLAUDE_TOKEN_URL = 'https://platform.claude.com/v1/oauth/token';
@@ -26,6 +31,7 @@ const CLAUDE_SCOPE =
   'user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload';
 const CLAUDE_REFRESH_MIN_BACKOFF_MS = 5_000;
 const CLAUDE_REFRESH_MAX_BACKOFF_MS = 5 * 60 * 1_000;
+const REFRESH_TIMEOUT_MS = 30_000;
 
 const refreshing = new Map<string, Promise<RefreshedTokens>>();
 const claudeRefreshBlockedUntil = new Map<string, number>();
@@ -98,6 +104,15 @@ function refreshRequest(
       refresh_token: refreshToken,
     }),
   ];
+}
+
+function boundedRefreshRequest(
+  provider: SubscriptionProviderId,
+  request: RefreshRequest,
+): RefreshRequest {
+  return provider === 'antigravity'
+    ? request
+    : { ...request, signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS) };
 }
 
 function tokenResponse(value: unknown): RefreshedTokens | null {
@@ -189,9 +204,14 @@ async function refreshOnce(
   refreshToken: string,
   fetchLike: RefreshFetch,
   now: number,
+  transportPolicy?: AccountTransportPolicy,
 ): Promise<RefreshedTokens> {
   const [url, init] = refreshRequest(provider, refreshToken);
-  const response = await fetchLike(url, init);
+  const request = boundedRefreshRequest(provider, init);
+  const response =
+    transportPolicy === undefined
+      ? await fetchLike(url, request)
+      : await fetchLike(url, request, transportPolicy);
 
   if (!response.ok) {
     rememberRateLimit(provider, response, refreshToken, now);
@@ -227,6 +247,7 @@ export async function refreshSubscriptionCredential(
   blob: string,
   fetchLike: RefreshFetch,
   now = Date.now(),
+  transportPolicy?: AccountTransportPolicy,
 ): Promise<string> {
   const credential = parseSubscriptionCredential(provider, blob);
   const refreshToken = credential?.refreshToken;
@@ -245,9 +266,11 @@ export async function refreshSubscriptionCredential(
     return refreshedCredentialBlob(provider, blob, await standing, now);
   }
 
-  const started = refreshOnce(provider, refreshToken, fetchLike, now).finally(() => {
-    refreshing.delete(key);
-  });
+  const started = refreshOnce(provider, refreshToken, fetchLike, now, transportPolicy).finally(
+    () => {
+      refreshing.delete(key);
+    },
+  );
 
   refreshing.set(key, started);
 

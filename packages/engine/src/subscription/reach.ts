@@ -1,9 +1,17 @@
-import type { SpendGrant, SubscriptionProviderId } from '@recompose/contracts';
-
-import { randomUUID } from 'node:crypto';
+import type {
+  AccountTransportPolicy,
+  SpendGrant,
+  SubscriptionProviderId,
+} from '@recompose/contracts';
 
 import type { JsonObject, ProxyDialect } from '../gateway-wire';
+import type { AntigravityReasoningReplay } from './antigravity-replay';
+import type { ClaudeDeviceProfile } from './claude-device-profile';
+import type { ClaudePayloadPolicy } from './claude-payload-policy';
 import type { ProviderRequest } from './claude-request';
+import type { ClaudeSystemPolicy } from './claude-system-policy';
+import type { CodexReasoningReplay } from './codex-replay';
+import type { CredentialRuntimePolicy } from './credential-runtime-policy';
 import type { ParsedSubscriptionCredential } from './credentials';
 import type { SubscriptionAttempt, SubscriptionPluginContext } from './intercepted-send';
 import type { ClaudeProfile } from './provider-transport';
@@ -11,29 +19,26 @@ import type { RefreshFetch } from './refresh';
 
 import { normalizeAntigravityError } from './antigravity-errors';
 import { antigravityPairingPreflight } from './antigravity-pairing';
-import { AntigravityReasoningReplay, replayedAntigravityBody } from './antigravity-replay';
-import { antigravityProviderRequest } from './antigravity-request';
+import { antigravityReachRequest } from './antigravity-reach-request';
 import { completeSubscriptionAttempt } from './attempt-completion';
 import { ClaudeDiagnostics, injectClaudeDiagnostics } from './claude-diagnostics';
-import { newClaudeDeviceId } from './claude-identity';
-import { claudeProviderRequest } from './claude-request';
+import { claudeReachRequest } from './claude-reach-request';
 import { hydrateCodexCompletionStream } from './codex-completion';
 import { normalizeCodexError } from './codex-errors';
-import { codexPromptCacheKey } from './codex-prompt-cache';
-import { CodexReasoningReplay } from './codex-replay';
-import { codexProviderRequest } from './codex-request';
+import { codexReachRequest } from './codex-reach-request';
 import { sendInterceptedSubscription } from './intercepted-send';
-import {
-  fetchClaudeProfile,
-  sendSubscriptionRequest,
-  subscriptionRefreshFetch,
-} from './provider-transport';
 import { readySubscriptionCredential, refreshedAndPersisted } from './reach-credential';
 import { observeSubscriptionAnswer, subscriptionDiagnosticsKey } from './reach-observation';
 import { readyClaudeIdentity } from './ready-claude-identity';
 
+export { subscriptionRuntime } from './subscription-runtime';
+
 export type SubscriptionRuntime = {
-  send: (provider: SubscriptionProviderId, request: ProviderRequest) => Promise<Response>;
+  send: (
+    provider: SubscriptionProviderId,
+    request: ProviderRequest,
+    policy?: AccountTransportPolicy,
+  ) => Promise<Response>;
   refreshFetch: RefreshFetch;
   persist: (
     provider: SubscriptionProviderId,
@@ -43,32 +48,21 @@ export type SubscriptionRuntime = {
   now: () => number;
   randomUUID: () => string;
   newClaudeDeviceId: () => string;
-  fetchClaudeProfile: (accessToken: string) => Promise<ClaudeProfile>;
+  fetchClaudeProfile: (
+    accessToken: string,
+    policy?: AccountTransportPolicy,
+  ) => Promise<ClaudeProfile>;
   diagnostics: ClaudeDiagnostics;
+  claudeTimezone?: string;
+  claudeSystemPolicy?: ClaudeSystemPolicy;
+  claudePayloadPolicy?: ClaudePayloadPolicy;
+  claudeDeviceProfile?: ClaudeDeviceProfile;
+  credentialPolicy?: CredentialRuntimePolicy;
   codexReplay?: CodexReasoningReplay;
   antigravityReplay?: AntigravityReasoningReplay;
   antigravitySensitiveWords?: readonly string[];
   wait?: ((milliseconds: number) => Promise<void>) | undefined;
 };
-
-export function subscriptionRuntime(
-  persist: SubscriptionRuntime['persist'] = async () => {
-    await Promise.reject(new Error('subscription credential persistence is unavailable'));
-  },
-): SubscriptionRuntime {
-  return {
-    send: sendSubscriptionRequest,
-    refreshFetch: subscriptionRefreshFetch,
-    persist,
-    now: Date.now,
-    randomUUID,
-    newClaudeDeviceId,
-    fetchClaudeProfile,
-    diagnostics: new ClaudeDiagnostics(),
-    codexReplay: new CodexReasoningReplay(),
-    antigravityReplay: new AntigravityReasoningReplay(),
-  };
-}
 
 export type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
 type SubscriptionSpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
@@ -110,7 +104,7 @@ function attemptCallbacks(
         spend.accountId,
         body,
         providerRequestFor(grant, body, ready.credential, runtime, scope),
-        runtime.send,
+        async (provider, request) => runtime.send(provider, request, spend.transportPolicy),
         pluginContext,
       ),
     refresh: async () =>
@@ -125,75 +119,67 @@ function providerRequestFor(
   runtime: SubscriptionRuntime,
   scope: SubscriptionScope,
 ): ProviderRequest {
-  const spend = grant.spend;
-
-  if (spend.custody !== 'subscription') {
-    throw new Error('a non-subscription spend reached the subscription request builder');
-  }
+  const spend = subscriptionSpend(grant);
 
   if (spend.provider === 'anthropic') {
-    return claudeProviderRequest(
-      grant.providerOrigin,
-      injectClaudeDiagnostics(
-        body,
-        runtime.diagnostics.previous(subscriptionDiagnosticsKey(grant, scope.sessionId)),
-      ),
-      credential.accessToken,
-      { sessionId: scope.sessionId, requestId: runtime.randomUUID() },
-      claudeIdentityOf(credential),
-      runtime.now(),
-    );
+    return claudeReachRequest({
+      providerOrigin: grant.providerOrigin,
+      body: diagnosedClaudeBody(grant, scope, body, runtime),
+      credential,
+      sessionId: scope.sessionId,
+      requestId: runtime.randomUUID(),
+      now: runtime.now(),
+      configuredTimezone: runtime.claudeTimezone,
+      systemPolicy: runtime.claudeSystemPolicy,
+      payloadPolicy: runtime.claudePayloadPolicy,
+      wireProfile: runtime.claudeDeviceProfile,
+    });
   }
 
   if (spend.provider === 'antigravity') {
-    const replayed = replayedAntigravityBody(
-      runtime.antigravityReplay,
-      spend.accountId,
+    return antigravityReachRequest({
+      providerOrigin: grant.providerOrigin,
       body,
-      scope.replayScopeId,
-    );
-
-    return antigravityProviderRequest(
-      grant.providerOrigin,
-      replayed,
       credential,
-      { sessionId: scope.sessionId, requestId: runtime.randomUUID() },
-      runtime.now(),
-      runtime.antigravitySensitiveWords,
-    );
+      accountId: spend.accountId,
+      replayScopeId: scope.replayScopeId,
+      sessionId: scope.sessionId,
+      replay: runtime.antigravityReplay,
+      requestId: runtime.randomUUID(),
+      now: runtime.now(),
+      sensitiveWords: runtime.antigravitySensitiveWords,
+    });
   }
 
-  const replayed = replayedCodexBody(body, runtime, scope.replayScopeId, scope.sourceDialect);
-
-  return codexProviderRequest(
-    grant.providerOrigin,
-    replayed,
+  return codexReachRequest({
+    providerOrigin: grant.providerOrigin,
+    body,
     credential,
-    runtime.randomUUID(),
-    scope.responsesLite,
-    codexPromptCacheKey(body, scope.replayScopeId, scope.sessionId),
+    replay: runtime.codexReplay,
+    replayScopeId: scope.replayScopeId,
+    sessionId: scope.sessionId,
+    sourceDialect: scope.sourceDialect,
+    responsesLite: scope.responsesLite,
+    requestId: runtime.randomUUID(),
+  });
+}
+
+function diagnosedClaudeBody(
+  grant: ResolvedGrant,
+  scope: SubscriptionScope,
+  body: JsonObject,
+  runtime: SubscriptionRuntime,
+): JsonObject {
+  return injectClaudeDiagnostics(
+    body,
+    runtime.diagnostics.previous(subscriptionDiagnosticsKey(grant, scope.sessionId)),
   );
 }
 
-function replayedCodexBody(
-  body: JsonObject,
-  runtime: SubscriptionRuntime,
-  sessionId: string,
-  sourceDialect: ProxyDialect,
-): JsonObject {
-  if (sourceDialect !== 'anthropic' || runtime.codexReplay === undefined) {
-    return body;
-  }
+function subscriptionSpend(grant: ResolvedGrant): SubscriptionSpend {
+  if (grant.spend.custody === 'subscription') return grant.spend;
 
-  return runtime.codexReplay.inject(codexReplayKey(body, sessionId), body);
-}
-
-function claudeIdentityOf(credential: ParsedSubscriptionCredential) {
-  const deviceId = credential.deviceIds?.[0];
-
-  return credential.accountUuid === undefined || deviceId === undefined
-    ? undefined
-    : { accountUuid: credential.accountUuid, deviceId };
+  throw new Error('a non-subscription spend reached the subscription request builder');
 }
 
 export async function reachSubscription(
@@ -224,7 +210,7 @@ export async function reachSubscription(
     spend.accountId,
     body,
     providerRequestFor(grant, body, identified.credential, runtime, scope),
-    runtime.send,
+    async (provider, request) => runtime.send(provider, request, spend.transportPolicy),
     pluginContext,
   );
 
@@ -232,6 +218,7 @@ export async function reachSubscription(
     attempt,
     provider: spend.provider,
     credential: identified.credential,
+    requestBody: body,
     wait: runtime.wait,
     ...attemptCallbacks(grant, spend, body, identified, runtime, scope, pluginContext),
   });
@@ -269,12 +256,6 @@ function subscriptionSpendOf(grant: ResolvedGrant): SubscriptionSpend {
   return grant.spend;
 }
 
-function codexReplayKey(body: JsonObject, sessionId: string): string {
-  const model = typeof body['model'] === 'string' ? body['model'] : '';
-
-  return `${model}\0${sessionId}`;
-}
-
 async function retryWithRefreshedCredential(
   grant: ResolvedGrant,
   spend: SubscriptionSpend,
@@ -291,7 +272,7 @@ async function retryWithRefreshedCredential(
     spend.accountId,
     body,
     providerRequestFor(grant, body, retried.credential, runtime, scope),
-    runtime.send,
+    async (provider, request) => runtime.send(provider, request, spend.transportPolicy),
     pluginContext,
   );
 }

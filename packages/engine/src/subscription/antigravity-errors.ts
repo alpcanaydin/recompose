@@ -85,7 +85,15 @@ function retryForRateLimit(delay: number | null): number | null {
   return null;
 }
 
-export async function antigravitySameTargetRetryDelay(response: Response): Promise<number | null> {
+async function noCapacityRetry(response: Response): Promise<number | null> {
+  if (response.status !== 503) return null;
+
+  const body = await response.clone().text();
+
+  return /model_capacity_exhausted|no capacity available/iu.test(body) ? 500 : null;
+}
+
+async function rateLimitRetry(response: Response): Promise<number | null> {
   if (response.status !== 429) return null;
 
   const body = await response.clone().text();
@@ -99,6 +107,14 @@ export async function antigravitySameTargetRetryDelay(response: Response): Promi
   }
 
   return SOFT_RETRY_DELAY_MS;
+}
+
+export async function antigravitySameTargetRetryDelay(response: Response): Promise<number | null> {
+  const capacity = await noCapacityRetry(response);
+
+  if (capacity !== null) return capacity;
+
+  return rateLimitRetry(response);
 }
 
 export async function normalizeAntigravityError(response: Response): Promise<Response> {

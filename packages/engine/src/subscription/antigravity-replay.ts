@@ -1,18 +1,26 @@
 import type { JsonObject } from '../gateway-wire';
 import type { AntigravityReplayItem } from './antigravity-replay-items';
 
-import { isJsonObject, parsedJson } from '../gateway-wire';
 import { injectAntigravityReplay } from './antigravity-replay-inject';
-import { mergedReplayItems, replayItemKey, scanReplayParts } from './antigravity-replay-items';
-import {
-  finalizeTextReplay,
-  scanTextReplayParts,
-  type TextReplayState,
-} from './antigravity-replay-text';
-import { observingSseLines } from './observing-sse';
+import { mergedReplayItems } from './antigravity-replay-items';
+import { canonicalJson } from './canonical-json';
 
 const MAX_SESSIONS = 4096;
 const MAX_ITEMS = 256;
+
+type ReplayEntry = {
+  items: AntigravityReplayItem[];
+  generation: number;
+  branch: number;
+  deleted: boolean;
+};
+
+export type AntigravityReplaySnapshot = {
+  generation: number;
+  branch: number;
+  items: readonly AntigravityReplayItem[];
+  found: boolean;
+};
 
 export function antigravityReplayKey(
   accountId: string,
@@ -31,10 +39,15 @@ export function antigravityUsesReplay(body: JsonObject): boolean {
 }
 
 export class AntigravityReasoningReplay {
-  readonly #items = new Map<string, AntigravityReplayItem[]>();
+  readonly #entries = new Map<string, ReplayEntry>();
+  readonly #fences = new Map<string, number>();
+  #generation = 0;
+  #branch = 0;
 
   inject(key: string, body: JsonObject): JsonObject {
-    return injectAntigravityReplay(body, this.#items.get(key) ?? []);
+    const entry = this.#entries.get(key);
+
+    return injectAntigravityReplay(body, entry === undefined || entry.deleted ? [] : entry.items);
   }
 
   commit(key: string, items: AntigravityReplayItem[]): void {
@@ -44,28 +57,166 @@ export class AntigravityReasoningReplay {
       return;
     }
 
-    const merged = mergedReplayItems(this.#items.get(key) ?? [], items).slice(-MAX_ITEMS);
+    const previous = this.#entries.get(key);
+    const previousItems = liveItems(previous);
+    const merged = mergedReplayItems(previousItems, items).slice(-MAX_ITEMS);
+    const branch = branchForCommit(previous, previousItems, merged, this.nextBranch());
 
-    this.#items.delete(key);
-    this.#items.set(key, merged);
+    this.store(key, merged, branch, false);
     this.evictOldest();
   }
 
   clear(key: string): void {
-    this.#items.delete(key);
+    this.store(key, [], this.nextBranch(), true);
+    this.evictOldest();
   }
 
   snapshot(key: string): readonly AntigravityReplayItem[] {
-    return this.#items.get(key) ?? [];
+    const entry = this.#entries.get(key);
+
+    return entry === undefined || entry.deleted ? [] : entry.items;
+  }
+
+  stateSnapshot(key: string): AntigravityReplaySnapshot {
+    const existing = this.#entries.get(key);
+
+    if (existing !== undefined) return snapshotOf(existing);
+
+    const reserved = this.store(key, [], this.nextBranch(), true);
+
+    this.evictOldest();
+
+    return snapshotOf(reserved);
+  }
+
+  replaceIfUnchanged(
+    key: string,
+    snapshot: AntigravityReplaySnapshot,
+    items: AntigravityReplayItem[],
+  ): boolean {
+    const current = this.#entries.get(key);
+
+    if (!canReplace(current, snapshot, items)) return false;
+
+    const branch = isPrefix(current.items, items) ? current.branch : this.nextBranch();
+
+    this.store(key, items.slice(-MAX_ITEMS), branch, false);
+
+    return true;
+  }
+
+  deleteIfUnchanged(key: string, snapshot: AntigravityReplaySnapshot): boolean {
+    const current = this.#entries.get(key);
+
+    if (current?.generation !== snapshot.generation) return false;
+
+    this.store(key, [], this.nextBranch(), true);
+
+    return true;
+  }
+
+  entryCount(): number {
+    return this.#entries.size;
+  }
+
+  evictOldestForTest(count: number): void {
+    for (let index = 0; index < count; index += 1) this.evictOne();
   }
 
   private evictOldest(): void {
-    if (this.#items.size <= MAX_SESSIONS) return;
-
-    const oldest = this.#items.keys().next().value;
-
-    if (typeof oldest === 'string') this.#items.delete(oldest);
+    while (this.#entries.size > MAX_SESSIONS) this.evictOne();
   }
+
+  private evictOne(): void {
+    const oldest = this.#entries.keys().next().value;
+
+    if (typeof oldest === 'string') this.#entries.delete(oldest);
+  }
+
+  private store(
+    key: string,
+    items: AntigravityReplayItem[],
+    branch: number,
+    deleted: boolean,
+  ): ReplayEntry {
+    const entry = {
+      items: structuredClone(items),
+      generation: this.nextGeneration(),
+      branch,
+      deleted,
+    };
+
+    this.#entries.delete(key);
+    this.#entries.set(key, entry);
+    this.#fences.set(key, entry.generation);
+
+    return entry;
+  }
+
+  private nextGeneration(): number {
+    this.#generation += 1;
+
+    return this.#generation;
+  }
+
+  private nextBranch(): number {
+    this.#branch += 1;
+
+    return this.#branch;
+  }
+}
+
+function liveItems(entry: ReplayEntry | undefined): AntigravityReplayItem[] {
+  return entry === undefined || entry.deleted ? [] : entry.items;
+}
+
+function branchForCommit(
+  previous: ReplayEntry | undefined,
+  previousItems: readonly AntigravityReplayItem[],
+  merged: readonly AntigravityReplayItem[],
+  nextBranch: number,
+): number {
+  return isPrefix(previousItems, merged) ? (previous?.branch ?? nextBranch) : nextBranch;
+}
+
+function canReplace(
+  current: ReplayEntry | undefined,
+  snapshot: AntigravityReplaySnapshot,
+  items: readonly AntigravityReplayItem[],
+): current is ReplayEntry {
+  if (current === undefined) return false;
+
+  return current.generation === snapshot.generation || descendantReplace(current, snapshot, items);
+}
+
+function snapshotOf(entry: ReplayEntry): AntigravityReplaySnapshot {
+  return {
+    generation: entry.generation,
+    branch: entry.branch,
+    items: structuredClone(entry.items),
+    found: !entry.deleted,
+  };
+}
+
+function isPrefix(
+  prefix: readonly AntigravityReplayItem[],
+  items: readonly AntigravityReplayItem[],
+): boolean {
+  if (prefix.length > items.length) return false;
+
+  return prefix.every((item, index) => canonicalJson(item) === canonicalJson(items[index] ?? item));
+}
+
+function descendantReplace(
+  current: ReplayEntry,
+  snapshot: AntigravityReplaySnapshot,
+  proposed: readonly AntigravityReplayItem[],
+): boolean {
+  return (
+    current.branch === snapshot.branch &&
+    isPrefix(snapshot.items, current.items) &&
+    isPrefix(current.items, proposed)
+  );
 }
 
 export function replayedAntigravityBody(
@@ -79,171 +230,4 @@ export function replayedAntigravityBody(
   return replay.inject(antigravityReplayKey(accountId, body, sessionId), body);
 }
 
-function firstCandidate(value: unknown): JsonObject | null {
-  if (!isJsonObject(value) || !Array.isArray(value['candidates'])) return null;
-
-  const candidates: unknown[] = value['candidates'];
-  const candidate = candidates[0];
-
-  return isJsonObject(candidate) ? candidate : null;
-}
-
-function candidateParts(value: unknown): unknown[] {
-  const candidate = firstCandidate(value);
-
-  if (candidate === null || !isJsonObject(candidate['content'])) return [];
-
-  const parts = candidate['content']['parts'];
-
-  if (!Array.isArray(parts)) return [];
-
-  const values: unknown[] = parts;
-
-  return values;
-}
-
-function completed(value: unknown): boolean {
-  const candidate = firstCandidate(value);
-
-  return candidate !== null && typeof candidate['finishReason'] === 'string';
-}
-
-function invalidSignature(response: Response, text: string): boolean {
-  if (response.status !== 400) return false;
-
-  return /thought_?signature|signature/iu.test(text);
-}
-
-type ReplayObservation = {
-  baseline: readonly AntigravityReplayItem[];
-  items: AntigravityReplayItem[];
-  pendingSignature?: string;
-  text: TextReplayState;
-  completed: boolean;
-};
-
-function observedValue(value: unknown, accumulated: ReplayObservation): ReplayObservation {
-  const parts = candidateParts(value);
-  const scan = scanReplayParts(parts, accumulated.pendingSignature);
-  const rawText = scanTextReplayParts(parts, accumulated.text);
-  const text = completed(value) ? finalizeTextReplay(rawText) : rawText;
-  const pendingSignature = scan.pendingSignature;
-  const incoming = offsetOccurrences(
-    [...accumulated.baseline, ...accumulated.items],
-    [...scan.items, ...text.items],
-  );
-
-  return {
-    baseline: accumulated.baseline,
-    items: mergedReplayItems(accumulated.items, incoming),
-    ...(pendingSignature === undefined ? {} : { pendingSignature }),
-    text: text.state,
-    completed: completed(value),
-  };
-}
-
-function offsetOccurrences(
-  accumulated: AntigravityReplayItem[],
-  incoming: AntigravityReplayItem[],
-): AntigravityReplayItem[] {
-  const counts = occurrenceCounts(accumulated);
-
-  return incoming.map((item) => withNextOccurrence(item, counts));
-}
-
-function occurrenceCounts(items: AntigravityReplayItem[]): Map<string, number> {
-  const counts = new Map<string, number>();
-
-  for (const item of items) {
-    if (item.id !== '') continue;
-
-    const key = replayItemKey(item);
-
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-
-  return counts;
-}
-
-function withNextOccurrence(
-  item: AntigravityReplayItem,
-  counts: Map<string, number>,
-): AntigravityReplayItem {
-  if (item.id !== '') return item;
-
-  const key = replayItemKey(item);
-  const occurrence = counts.get(key) ?? 0;
-
-  counts.set(key, occurrence + 1);
-
-  return { ...item, occurrence };
-}
-
-function observeLine(line: string, accumulated: ReplayObservation): ReplayObservation {
-  if (!line.startsWith('data:')) return { ...accumulated, completed: false };
-
-  return observedValue(parsedJson(line.slice(5).trim()), accumulated);
-}
-
-function observingStream(
-  body: ReadableStream<Uint8Array>,
-  commit: (items: AntigravityReplayItem[]) => void,
-  baseline: readonly AntigravityReplayItem[],
-): ReadableStream<Uint8Array> {
-  let observation: ReplayObservation = {
-    baseline,
-    items: [],
-    text: { buffer: '', thought: false },
-    completed: false,
-  };
-
-  return observingSseLines(body, (line) => {
-    observation = observeLine(line, observation);
-
-    if (observation.completed) commit(observation.items);
-  });
-}
-
-async function observeJson(
-  response: Response,
-  commit: (items: AntigravityReplayItem[]) => void,
-  clear: () => void,
-  baseline: readonly AntigravityReplayItem[],
-): Promise<Response> {
-  const text = await response.clone().text();
-
-  if (invalidSignature(response, text)) clear();
-  if (!response.ok) return response;
-
-  const observed = observedValue(parsedJson(text), {
-    baseline,
-    items: [],
-    text: { buffer: '', thought: false },
-    completed: false,
-  });
-
-  if (observed.completed) commit(observed.items);
-
-  return response;
-}
-
-export async function observeAntigravityReasoning(
-  response: Response,
-  commit: (items: AntigravityReplayItem[]) => void,
-  clear: () => void,
-  baseline?: readonly AntigravityReplayItem[],
-): Promise<Response> {
-  const existing = observationBaseline(baseline);
-  const stream = response.headers.get('content-type')?.includes('text/event-stream') === true;
-
-  if (!stream || response.body === null || !response.ok)
-    return observeJson(response, commit, clear, existing);
-
-  return new Response(observingStream(response.body, commit, existing), response);
-}
-
-function observationBaseline(
-  baseline: readonly AntigravityReplayItem[] | undefined,
-): readonly AntigravityReplayItem[] {
-  return baseline ?? [];
-}
+export { observeAntigravityReasoning } from './antigravity-replay-observer';

@@ -2,20 +2,22 @@ import type { ProviderRequest } from './claude-request';
 import type { ParsedSubscriptionCredential } from './credentials';
 
 import { isJsonObject } from '../gateway-wire';
+import { modelOverrideHeaders } from '../provider/model-metadata';
 import {
   boundedCodexCallId,
   dropsCodexEncryptedReasoning,
   normalizedCodexItemId,
+  sanitizedCodexReasoning,
 } from './codex-identities';
 import { codexResponsesLite, injectCodexImageTool } from './codex-image-tools';
+import { optimizeCodexMultiAgent } from './codex-multi-agent';
+import { CODEX_ORIGINATOR, codexRequestHeaders, CODEX_USER_AGENT } from './codex-request-headers';
 
 type JsonObject = Record<string, unknown>;
 
 const WEB_SEARCH_ALIASES = new Set(['web_search_preview', 'web_search_preview_2025_03_11']);
 
-export const CODEX_USER_AGENT =
-  'codex-tui/0.146.0 (Mac OS 26.5.0; arm64) iTerm.app/3.6.10 (codex-tui; 0.146.0)';
-export const CODEX_ORIGINATOR = 'codex-tui';
+export { CODEX_ORIGINATOR, CODEX_USER_AGENT };
 
 const REMOVED_FIELDS = [
   'previous_response_id',
@@ -138,11 +140,13 @@ function toolNameOf(value: unknown): string[] {
 }
 
 function renamedEntry(value: unknown, names: Map<string, string>): unknown {
-  const normalized = searchEntry(value);
+  const searched = searchEntry(value);
 
-  if (!isJsonObject(normalized)) {
-    return normalized;
+  if (!isJsonObject(searched)) {
+    return searched;
   }
+
+  const normalized = sanitizedCodexReasoning(searched);
 
   const originalName = normalized['name'];
   const name = typeof originalName === 'string' ? names.get(originalName) : undefined;
@@ -188,12 +192,24 @@ function renamedToolChoice(value: unknown, names: Map<string, string>): unknown 
   return isJsonObject(entry) ? { ...entry, tools: renamedEntries(entry['tools'], names) } : entry;
 }
 
+function normalizedToolBody(rawBody: JsonObject): JsonObject {
+  const body: JsonObject = { ...rawBody };
+  const names = toolNameMap(body['tools']);
+
+  body['input'] = renamedEntries(developerInput(body['input']), names);
+  body['tools'] = renamedEntries(body['tools'], names);
+  body['tool_choice'] = renamedToolChoice(body['tool_choice'], names);
+  body['instructions'] ??= '';
+
+  return body;
+}
+
 function normalizedBody(
   rawBody: JsonObject,
   planType: string | undefined,
   forcedResponsesLite: boolean,
 ): JsonObject {
-  const body: JsonObject = { ...rawBody };
+  const body = normalizedToolBody(rawBody);
 
   for (const field of REMOVED_FIELDS) {
     delete body[field];
@@ -203,17 +219,19 @@ function normalizedBody(
     delete body['service_tier'];
   }
 
-  const names = toolNameMap(body['tools']);
-
-  body['input'] = renamedEntries(developerInput(body['input']), names);
-  body['tools'] = renamedEntries(body['tools'], names);
-  body['tool_choice'] = renamedToolChoice(body['tool_choice'], names);
   body['stream'] = true;
   body['store'] = false;
   injectCodexImageTool(body, planType, forcedResponsesLite);
   normalizeParallelToolCalls(body, forcedResponsesLite);
   body['include'] = ['reasoning.encrypted_content'];
-  body['instructions'] ??= '';
+
+  return body;
+}
+
+function normalizedCompactBody(rawBody: JsonObject): JsonObject {
+  const body = normalizedToolBody(rawBody);
+
+  delete body['stream'];
 
   return body;
 }
@@ -241,28 +259,42 @@ export function codexProviderRequest(
   sessionId: string,
   responsesLite = false,
   promptCacheKey = sessionId,
+  compact = false,
 ): ProviderRequest {
-  const body = normalizedBody(rawBody, credential.planType, responsesLite);
-
-  body['prompt_cache_key'] = promptCacheKey;
-
-  const headers: [string, string][] = [
-    ['Content-Type', 'application/json'],
-    ['Authorization', `Bearer ${credential.accessToken}`],
-    ['User-Agent', CODEX_USER_AGENT],
-    ['Session_id', sessionId],
-    ['Accept', 'text/event-stream'],
-    ['Connection', 'Keep-Alive'],
-    ['Originator', CODEX_ORIGINATOR],
-  ];
-
-  if (credential.accountId !== undefined) {
-    headers.push(['Chatgpt-Account-Id', credential.accountId]);
-  }
+  const body = codexRequestBody(rawBody, credential, responsesLite, promptCacheKey, compact);
+  const headers = withModelHeaderOverrides(
+    codexRequestHeaders(credential, sessionId, compact),
+    rawBody['model'],
+  );
 
   return {
-    url: `${providerOrigin.replace(/\/+$/u, '')}/responses`,
+    url: `${providerOrigin.replace(/\/+$/u, '')}/responses${compact ? '/compact' : ''}`,
     headers,
     body: JSON.stringify(body),
   };
+}
+
+function withModelHeaderOverrides(headers: [string, string][], model: unknown): [string, string][] {
+  const overrides = typeof model === 'string' ? modelOverrideHeaders(model) : undefined;
+
+  if (overrides === undefined) return headers;
+
+  return headers.map(([name, value]) => [name, overrides[name.toLowerCase()] ?? value]);
+}
+
+function codexRequestBody(
+  rawBody: JsonObject,
+  credential: ParsedSubscriptionCredential,
+  responsesLite: boolean,
+  promptCacheKey: string,
+  compact: boolean,
+): JsonObject {
+  const normalized = compact
+    ? normalizedCompactBody(rawBody)
+    : normalizedBody(rawBody, credential.planType, responsesLite);
+  const body = optimizeCodexMultiAgent(normalized);
+
+  body['prompt_cache_key'] = promptCacheKey;
+
+  return body;
 }

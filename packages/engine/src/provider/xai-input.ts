@@ -1,6 +1,9 @@
 import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
+import { validGrokEncryptedContent } from './xai-encrypted-content';
+
+export { validGrokEncryptedContent } from './xai-encrypted-content';
 
 function normalizedAgentPart(part: unknown): unknown {
   if (!isJsonObject(part) || part['type'] !== 'encrypted_content') return part;
@@ -78,16 +81,6 @@ function normalizedInputItem(item: unknown): unknown {
   if (item['type'] === 'custom_tool_call') return normalizedCustomCall(item);
 
   return item['type'] === 'custom_tool_call_output' ? normalizedCustomOutput(item) : item;
-}
-
-export function validGrokEncryptedContent(value: unknown): boolean {
-  if (typeof value !== 'string' || value.trim() === '') return false;
-
-  try {
-    return Buffer.from(value, 'base64').length === 256;
-  } catch {
-    return false;
-  }
 }
 
 function sanitizedReasoning(item: JsonObject): JsonObject {

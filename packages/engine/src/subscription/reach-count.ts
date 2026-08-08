@@ -38,7 +38,7 @@ export async function reachSubscriptionCount(
 
   const ready = await readySubscriptionCredential(grant.spend, runtime);
   const request = countRequestFor(grant, body, ready.credential, runtime, sessionId);
-  const answer = await runtime.send('anthropic', request);
+  const answer = await runtime.send('anthropic', request, grant.spend.transportPolicy);
 
   if (!shouldRefreshUnauthorized(answer, ready.credential)) {
     return answer;
@@ -49,6 +49,7 @@ export async function reachSubscriptionCount(
   return runtime.send(
     'anthropic',
     countRequestFor(grant, body, retried.credential, runtime, sessionId),
+    grant.spend.transportPolicy,
   );
 }
 
@@ -103,6 +104,7 @@ async function sendAntigravityCount(
   const answer = await runtime.send(
     'antigravity',
     antigravityCountRequest(grant, body, ready.credential, runtime.antigravitySensitiveWords),
+    grant.spend.transportPolicy,
   );
 
   if (!shouldRefreshUnauthorized(answer, ready.credential)) {
@@ -114,5 +116,6 @@ async function sendAntigravityCount(
   return runtime.send(
     'antigravity',
     antigravityCountRequest(grant, body, retried.credential, runtime.antigravitySensitiveWords),
+    grant.spend.transportPolicy,
   );
 }

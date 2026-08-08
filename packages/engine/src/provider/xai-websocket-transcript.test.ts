@@ -3,7 +3,11 @@ import { describe, expect, test } from 'vitest';
 import { XAIWebSocketTranscript, validateXAICompactionResponse } from './xai-websocket-transcript';
 
 function encrypted(seed = 5): string {
-  return Buffer.alloc(256, seed).toString('base64').replace(/=+$/u, '');
+  return Buffer.from(
+    Array.from({ length: 256 }, (_value, index) => (index * 41 + seed * 67 + 17) % 251),
+  )
+    .toString('base64')
+    .replace(/=+$/u, '');
 }
 
 const compaction = { type: 'compaction', encrypted_content: encrypted() };

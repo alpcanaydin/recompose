@@ -6,6 +6,19 @@ import { normalizeKimiUpstreamModel } from './kimi-request';
 
 type ReplayInjection = { body: JsonObject; applied: boolean };
 
+const MAX_ENTRY_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 256 * 1024 * 1024;
+const MAX_ENTRIES = 10_240;
+
+type ReplayEntry = {
+  content: JsonObject[];
+  generation: number;
+  deleted: boolean;
+  bytes: number;
+};
+
+export type KimiReplaySnapshot = { generation: number; found: boolean };
+
 function modelWithoutSuffix(model: string): string {
   return model.trim().replace(/\([^()]*\)\s*$/u, '');
 }
@@ -127,7 +140,9 @@ function replayKey(model: string, scope: string): string {
 }
 
 export class KimiThinkingReplay {
-  readonly #entries = new Map<string, JsonObject[]>();
+  readonly #entries = new Map<string, ReplayEntry>();
+  #generation = 0;
+  #totalBytes = 0;
 
   public commit(model: string, scope: string, content: unknown): boolean {
     const parts = contentParts(content);
@@ -135,24 +150,125 @@ export class KimiThinkingReplay {
     if (scope.trim() === '' || parts === null || !replayableKimiThinkingContent(parts))
       return false;
 
-    this.#entries.set(replayKey(model, scope), structuredClone(parts));
+    return this.store(replayKey(model, scope), parts);
+  }
+
+  public snapshot(model: string, scope: string): KimiReplaySnapshot {
+    const key = replayKey(model, scope);
+    const existing = this.#entries.get(key);
+
+    if (existing !== undefined) {
+      return { generation: existing.generation, found: !existing.deleted };
+    }
+
+    const entry = this.tombstone();
+
+    this.#entries.set(key, entry);
+    this.evictOldest();
+
+    return { generation: entry.generation, found: false };
+  }
+
+  public replaceIfUnchanged(
+    model: string,
+    scope: string,
+    snapshot: KimiReplaySnapshot,
+    content: unknown,
+  ): boolean {
+    const parts = contentParts(content);
+
+    if (parts === null || !replayableKimiThinkingContent(parts)) return false;
+
+    const key = replayKey(model, scope);
+    const current = this.#entries.get(key);
+
+    return current?.generation === snapshot.generation ? this.store(key, parts) : false;
+  }
+
+  public deleteIfUnchanged(model: string, scope: string, snapshot: KimiReplaySnapshot): boolean {
+    const key = replayKey(model, scope);
+    const current = this.#entries.get(key);
+
+    if (current?.generation !== snapshot.generation) return false;
+
+    this.replaceEntry(key, this.tombstone());
 
     return true;
   }
 
   public inject(model: string, scope: string, body: JsonObject): ReplayInjection {
-    const content = this.#entries.get(replayKey(model, scope));
+    const entry = this.#entries.get(replayKey(model, scope));
 
-    return content === undefined
+    return entry === undefined || entry.deleted
       ? { body, applied: false }
-      : restoreKimiThinkingContent(body, content);
+      : restoreKimiThinkingContent(body, entry.content);
   }
 
   public clear(model: string, scope: string): void {
-    this.#entries.delete(replayKey(model, scope));
+    this.deleteEntry(replayKey(model, scope));
   }
 
   public clearAll(): void {
     this.#entries.clear();
+    this.#totalBytes = 0;
+  }
+
+  public totalBytes(): number {
+    return this.#totalBytes;
+  }
+
+  private store(key: string, content: JsonObject[]): boolean {
+    const cloned = structuredClone(content);
+    const bytes = Buffer.byteLength(JSON.stringify(cloned));
+    const previous = this.#entries.get(key)?.bytes ?? 0;
+
+    if (bytes > MAX_ENTRY_BYTES) return false;
+    if (this.#totalBytes - previous + bytes > MAX_TOTAL_BYTES) return false;
+
+    this.replaceEntry(key, {
+      content: cloned,
+      generation: this.nextGeneration(),
+      deleted: false,
+      bytes,
+    });
+    this.evictOldest();
+
+    return true;
+  }
+
+  private tombstone(): ReplayEntry {
+    return { content: [], generation: this.nextGeneration(), deleted: true, bytes: 0 };
+  }
+
+  private replaceEntry(key: string, entry: ReplayEntry): void {
+    this.#totalBytes -= this.#entries.get(key)?.bytes ?? 0;
+    this.#entries.delete(key);
+    this.#entries.set(key, entry);
+    this.#totalBytes += entry.bytes;
+  }
+
+  private deleteEntry(key: string): void {
+    const entry = this.#entries.get(key);
+
+    if (entry === undefined) return;
+
+    this.#totalBytes -= entry.bytes;
+    this.#entries.delete(key);
+  }
+
+  private nextGeneration(): number {
+    this.#generation += 1;
+
+    return this.#generation;
+  }
+
+  private evictOldest(): void {
+    while (this.#entries.size > MAX_ENTRIES) {
+      const oldest = this.#entries.keys().next().value;
+
+      if (typeof oldest !== 'string') return;
+
+      this.deleteEntry(oldest);
+    }
   }
 }

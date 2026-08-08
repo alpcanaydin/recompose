@@ -43,7 +43,7 @@ describe('building the CLIProxyAPI-compatible Antigravity envelope', () => {
     expect(request.headers).toEqual([
       ['Content-Type', 'application/json'],
       ['Authorization', 'Bearer google-access'],
-      ['User-Agent', 'antigravity/hub'],
+      ['User-Agent', 'antigravity/hub/2.2.1 darwin/arm64'],
       ['Connection', 'close'],
     ]);
     expect(body).toMatchObject({

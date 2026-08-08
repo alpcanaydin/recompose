@@ -3,7 +3,11 @@ import { describe, expect, test } from 'vitest';
 import { normalizeXAIInput } from './xai-input';
 
 function validEncryptedContent(seed = 7): string {
-  return Buffer.alloc(256, seed).toString('base64').replace(/=+$/u, '');
+  return Buffer.from(
+    Array.from({ length: 256 }, (_value, index) => (index * 41 + seed * 67 + 17) % 251),
+  )
+    .toString('base64')
+    .replace(/=+$/u, '');
 }
 
 describe('xAI agent messages', () => {

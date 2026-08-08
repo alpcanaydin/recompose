@@ -76,6 +76,63 @@ test('the Claude OAuth transport carries the captured control-plane fingerprint'
   });
 });
 
+test('TestUtlsRoundTripperBoundsTLSHandshake', () => {
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token'),
+  ).toMatchObject({ connectTimeout: 10_000 });
+});
+
+test('TestNewCodexAuthWithProxyURL_OverrideDirectDisablesProxy', () => {
+  expect(subscriptionTransportOptions('openai', { mode: 'direct' })).toMatchObject({
+    proxy: false,
+  });
+  expect(
+    subscriptionRefreshTransportOptions('https://auth.openai.com/oauth/token', {
+      mode: 'direct',
+    }),
+  ).toMatchObject({ proxy: false });
+});
+
+test('TestNewCodexAuthWithProxyURL_OverrideProxyTakesPrecedence', () => {
+  const policy = { mode: 'proxy', url: 'http://override.example.com:8081' } as const;
+
+  expect(subscriptionTransportOptions('openai', policy)).toMatchObject({ proxy: policy.url });
+  expect(
+    subscriptionRefreshTransportOptions('https://auth.openai.com/oauth/token', policy),
+  ).toMatchObject({ proxy: policy.url });
+});
+
+test('TestNewClaudeAuthWithProxyURL_OverrideDirectTakesPrecedence', () => {
+  expect(subscriptionTransportOptions('anthropic', { mode: 'direct' })).toMatchObject({
+    proxy: false,
+  });
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token', {
+      mode: 'direct',
+    }),
+  ).toMatchObject({ proxy: false });
+});
+
+test('TestNewClaudeAuthWithProxyURL_OverrideProxyAppliedWithoutConfig', () => {
+  const policy = { mode: 'proxy', url: 'socks5://proxy.example.com:1080' } as const;
+
+  expect(subscriptionTransportOptions('anthropic', policy)).toMatchObject({ proxy: policy.url });
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token', policy),
+  ).toMatchObject({ proxy: policy.url });
+});
+
+test('TestClaudeOAuthTLSResumptionIsWireSafe', () => {
+  const first = subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token');
+  const second = subscriptionRefreshTransportOptions('https://api.anthropic.com/api/oauth/profile');
+
+  expect(first).toMatchObject({
+    tlsSessionCacheCapacity: 8,
+    tlsOptions: { sessionTicket: true, preSharedKey: true, pskDheKe: true },
+  });
+  expect(second).toMatchObject(first);
+});
+
 test('Claude profile lookup uses the native OAuth request shape', async () => {
   const fetchLike = vi.fn(async () => {
     await Promise.resolve();

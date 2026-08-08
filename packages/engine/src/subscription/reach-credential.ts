@@ -1,4 +1,4 @@
-import type { SubscriptionProviderId } from '@recompose/contracts';
+import type { AccountTransportPolicy, SubscriptionProviderId } from '@recompose/contracts';
 
 import type { ParsedSubscriptionCredential } from './credentials';
 import type { RefreshFetch } from './refresh';
@@ -10,6 +10,7 @@ type CredentialSpend = {
   provider: SubscriptionProviderId;
   accountId: string;
   credential: string;
+  transportPolicy?: AccountTransportPolicy | undefined;
 };
 
 type CredentialRuntime = {
@@ -32,6 +33,7 @@ export async function refreshedAndPersisted(
     blob,
     runtime.refreshFetch,
     runtime.now(),
+    spend.transportPolicy,
   );
 
   await runtime.persist(spend.provider, spend.accountId, refreshed);

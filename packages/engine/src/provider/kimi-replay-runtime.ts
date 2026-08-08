@@ -9,7 +9,15 @@ const replay = new KimiThinkingReplay();
 const applied = new WeakSet<Crossing>();
 
 function replayScope(crossing: Crossing): string | undefined {
-  return crossing.dialect === 'anthropic' ? crossing.replayScopeId : undefined;
+  if (
+    crossing.dialect !== 'anthropic' ||
+    crossing.replayScopeId === undefined ||
+    crossing.callerFingerprint === undefined
+  ) {
+    return undefined;
+  }
+
+  return `${crossing.callerFingerprint}:${crossing.replayScopeId}`;
 }
 
 export function prepareKimiReplay(crossing: Crossing, body: JsonObject): JsonObject {

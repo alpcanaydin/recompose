@@ -2,9 +2,18 @@ import type { SpendGrant } from '@recompose/contracts';
 
 import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from '../gateway-wire';
 
+import {
+  geminiInteractionsBody,
+  geminiInteractionsHeaders as interactionsHeaders,
+  parseGeminiInteractionsCredential,
+} from './gemini-interactions-policy';
 import { cappedGeminiOutput } from './gemini-model-limits';
 import { prepareKimiReplay } from './kimi-replay-runtime';
 import { kimiProviderBody } from './kimi-request';
+import {
+  applyOpenAICompatPayloadOverride,
+  withOpenAICompatPromptCache,
+} from './openai-compat-payload';
 import {
   parseVertexCredential,
   vertexHeaders,
@@ -13,6 +22,7 @@ import {
 } from './vertex-request';
 import { prepareXAIReplay } from './xai-replay-runtime';
 import { xaiProviderBody } from './xai-request';
+import { collectXAIClientTools } from './xai-tool-ownership';
 import { collectXAINamespaceTools } from './xai-tools';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
@@ -43,11 +53,38 @@ export function credentialedRequestBody(
 ): JsonObject {
   if (grant.spend.custody !== 'credentialed') return body;
 
-  return BODY_BUILDERS.get(grant.spend.provider)?.(crossing, body) ?? body;
+  return preparedCredentialedBody(grant.spend, crossing, body);
+}
+
+function preparedCredentialedBody(
+  spend: Extract<GrantedSpend, { custody: 'credentialed' }>,
+  crossing: Crossing,
+  body: JsonObject,
+): JsonObject {
+  if (spend.provider === 'gemini-interactions') {
+    return geminiInteractionsBody(
+      crossing,
+      body,
+      parseGeminiInteractionsCredential(spend.credential),
+    );
+  }
+
+  const prepared = BODY_BUILDERS.get(spend.provider)?.(crossing, body) ?? body;
+  const cached = withOpenAICompatPromptCache(prepared, {
+    ...(crossing.sessionId === undefined ? {} : { sessionId: crossing.sessionId }),
+    model: crossing.providerModel,
+    protocol: crossing.dialect,
+  });
+
+  return applyOpenAICompatPayloadOverride(cached);
 }
 
 function xaiBody(crossing: Crossing, body: JsonObject): JsonObject {
   crossing.xaiNamespaceTools = collectXAINamespaceTools(body);
+
+  if (crossing.xaiInjectSearch === true) {
+    crossing.xaiSearchOwnership = { clientTools: collectXAIClientTools(body) };
+  }
 
   return xaiProviderBody(prepareXAIReplay(crossing, body), crossing);
 }
@@ -168,10 +205,7 @@ function firstRequestHeader(crossing: Crossing, name: string): string | undefine
 function geminiInteractionsHeaders(credential: string, crossing: Crossing): Record<string, string> {
   const revision = firstRequestHeader(crossing, 'api-revision');
 
-  return {
-    'x-goog-api-key': credential,
-    ...(revision === undefined ? {} : { 'api-revision': revision }),
-  };
+  return interactionsHeaders(parseGeminiInteractionsCredential(credential), revision);
 }
 
 function vertexCredentialHeaders(credential: string): Record<string, string> {

@@ -19,6 +19,22 @@ function metadataOf(body: Record<string, unknown>): Record<string, unknown> {
 }
 
 describe('Claude credential identity', () => {
+  it('TestClaudeExecutorDuplicateMetadataIsRequestScoped', () => {
+    const duplicate = '{"device_id":"first","device_id":"second"}';
+
+    expect(() =>
+      applyClaudeCredentialIdentity({ metadata: { user_id: duplicate } }, identity, 'session'),
+    ).toThrow(
+      expect.objectContaining({
+        name: 'InvalidJsonBodyError',
+        status: 400,
+        scope: 'request',
+      }),
+    );
+  });
+});
+
+describe('Claude credential identity rewriting', () => {
   it('writes credential identity first and preserves non-identity metadata', () => {
     const body = applyClaudeCredentialIdentity(
       {

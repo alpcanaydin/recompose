@@ -2,6 +2,7 @@ import type { JsonObject } from '../gateway-wire';
 
 import { isJsonObject } from '../gateway-wire';
 import { jsonEventsFrom, namedSseBodyFrom } from '../stream-wire';
+import { restoreCodexMultiAgentValue } from './codex-multi-agent';
 import { orderedCodexItems } from './codex-output-items';
 
 const TERMINAL_EVENT_TYPES = new Set([
@@ -69,6 +70,14 @@ function hydratedTerminalEvent(
   return { ...event, response: hydrateCodexResponse(event['response'], indexed) };
 }
 
+function restoredEvent(event: JsonObject & { type: string }): JsonObject & { type: string } {
+  const restored = restoreCodexMultiAgentValue(event);
+
+  return isJsonObject(restored) && typeof restored['type'] === 'string'
+    ? { ...restored, type: restored['type'] }
+    : event;
+}
+
 type CompletionLifecycle = { terminal: boolean };
 
 async function* hydratedSource(
@@ -79,7 +88,7 @@ async function* hydratedSource(
 
   for await (const event of jsonEventsFrom(body)) {
     collectDoneItem(event, indexed);
-    yield hydratedTerminalEvent(event, indexed);
+    yield restoredEvent(hydratedTerminalEvent(event, indexed));
 
     if (TERMINAL_EVENT_TYPES.has(event.type)) {
       lifecycle.terminal = true;
@@ -93,6 +102,8 @@ function incompleteEvent(): JsonObject & { type: string } {
   return {
     type: 'error',
     code: 'upstream_stream_incomplete',
+    scope: 'request',
+    status: 408,
     message:
       'stream error: stream disconnected before completion: stream closed before response.completed',
   };
@@ -102,6 +113,8 @@ function failureEvent(failure: unknown): JsonObject & { type: string } {
   return {
     type: 'error',
     code: 'upstream_stream_error',
+    scope: 'request',
+    status: 408,
     message: failure instanceof Error ? failure.message : 'Codex upstream stream failed',
   };
 }

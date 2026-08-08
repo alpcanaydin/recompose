@@ -12,7 +12,8 @@ import { reachSubscription } from './reach';
 const reasoning = {
   type: 'reasoning',
   id: 'rs_1',
-  encrypted_content: 'opaque-reasoning-state',
+  encrypted_content:
+    'gAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
 };
 const assistant = {
   type: 'message',

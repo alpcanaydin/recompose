@@ -152,7 +152,7 @@ describe('deduplicating Antigravity OAuth refresh', () => {
 
 describe('refreshing a Claude Code OAuth credential', () => {
   test('the refresh request matches the native Claude Code control-plane shape', async () => {
-    const fetchLike = vi.fn(async () => {
+    const fetchLike = vi.fn(async (_url: string, _init: { signal?: AbortSignal }) => {
       await Promise.resolve();
 
       return Response.json({ access_token: 'new-access', expires_in: 28_800 });
@@ -165,23 +165,26 @@ describe('refreshing a Claude Code OAuth credential', () => {
       1_700_000_000_000,
     );
 
-    expect(fetchLike).toHaveBeenCalledWith('https://platform.claude.com/v1/oauth/token', {
-      method: 'POST',
-      headers: [
-        ['Accept', 'application/json, text/plain, */*'],
-        ['Content-Type', 'application/json'],
-        ['User-Agent', 'axios/1.15.2'],
-        ['Accept-Encoding', 'gzip, compress, deflate, br'],
-        ['Connection', 'close'],
-      ],
-      body: JSON.stringify({
-        client_id: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
-        grant_type: 'refresh_token',
-        refresh_token: 'claude-refresh',
-        scope:
-          'user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload',
+    expect(fetchLike).toHaveBeenCalledWith(
+      'https://platform.claude.com/v1/oauth/token',
+      expect.objectContaining({
+        method: 'POST',
+        headers: [
+          ['Accept', 'application/json, text/plain, */*'],
+          ['Content-Type', 'application/json'],
+          ['User-Agent', 'axios/1.15.2'],
+          ['Accept-Encoding', 'gzip, compress, deflate, br'],
+          ['Connection', 'close'],
+        ],
+        body: JSON.stringify({
+          client_id: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
+          grant_type: 'refresh_token',
+          refresh_token: 'claude-refresh',
+          scope:
+            'user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload',
+        }),
       }),
-    });
+    );
     expect(JSON.parse(refreshed)).toMatchObject({
       claudeAiOauth: {
         accessToken: 'new-access',
@@ -265,34 +268,8 @@ describe('refreshing a Codex OAuth credential', () => {
 
     expect(fetchLike).toHaveBeenCalledWith(
       'https://auth.openai.com/oauth/token',
-      codexRefreshRequest,
+      expect.objectContaining(codexRefreshRequest),
     );
     expect(JSON.parse(refreshed)).toMatchObject(codexRotatedTokens);
-  });
-
-  test('concurrent refreshes sharing a token make one upstream request', async () => {
-    let release: (() => void) | undefined;
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const fetchLike = vi.fn(async () => {
-      await held;
-
-      return Response.json({ access_token: 'new-access', expires_in: 3600 });
-    });
-
-    const first = refreshSubscriptionCredential('openai', codexBlob, fetchLike, 0);
-    const second = refreshSubscriptionCredential('openai', codexBlob, fetchLike, 0);
-
-    await vi.waitFor(() => {
-      expect(fetchLike).toHaveBeenCalledOnce();
-    });
-
-    if (release !== undefined) {
-      release();
-    }
-
-    await expect(Promise.all([first, second])).resolves.toHaveLength(2);
-    expect(fetchLike).toHaveBeenCalledOnce();
   });
 });

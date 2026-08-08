@@ -1,5 +1,6 @@
 import type { JsonObject } from '../gateway-wire';
 import type { ProviderRequest } from './claude-request';
+import type { ClaudeSystemPolicy } from './claude-system-policy';
 
 import { isJsonObject, parsedJson } from '../gateway-wire';
 import { claudeProviderRequest } from './claude-request';
@@ -42,6 +43,7 @@ export function claudeCountTokensProviderRequest(
   rawBody: JsonObject,
   accessToken: string,
   ids: { sessionId: string; requestId: string },
+  systemPolicy?: ClaudeSystemPolicy,
 ): ProviderRequest {
   const prepared = claudeProviderRequest(
     providerOrigin,
@@ -51,6 +53,8 @@ export function claudeCountTokensProviderRequest(
     undefined,
     Date.now(),
     'count-tokens',
+    undefined,
+    systemPolicy,
   );
 
   return {

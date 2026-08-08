@@ -256,6 +256,7 @@ describe('Claude built-in web-search compatibility', () => {
         name: 'web_search',
         allowed_domains: ['anthropic.com'],
         max_uses: 8,
+        cache_control: { type: 'ephemeral' },
       },
     ]);
   });
@@ -276,6 +277,7 @@ describe('Claude built-in web-search compatibility', () => {
       type: 'web_search_20250305',
       name: 'web_search',
       blocked_domains: ['evil.com'],
+      cache_control: { type: 'ephemeral' },
     });
   });
 });

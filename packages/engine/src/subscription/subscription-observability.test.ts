@@ -16,7 +16,7 @@ describe('subscription provider observability', () => {
     providerObservability().clear();
   });
 
-  it('should record the exact subscription request and provider usage', async () => {
+  it('should record subscription metadata and usage without credential or body retention', async () => {
     const answering = runtimeAnswering(claudeUsageAnswer);
     const grant = subscriptionGrant(
       'anthropic',
@@ -48,8 +48,11 @@ describe('subscription provider observability', () => {
         totalTokens: 17,
       },
     });
-    expect(record?.url).toBe('https://api.anthropic.com/v1/messages?beta=true');
-    expect(new TextDecoder().decode(record?.body)).toContain('claude-sonnet-4-5');
+    expect(record).not.toHaveProperty('url');
+    expect(record).not.toHaveProperty('headers');
+    expect(record).not.toHaveProperty('body');
+    expect(record).not.toHaveProperty('responseHeaders');
+    expect(JSON.stringify(record)).not.toContain('claude-access');
   });
 });
 

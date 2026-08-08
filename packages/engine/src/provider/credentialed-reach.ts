@@ -16,9 +16,10 @@ import {
   credentialedRequestUrl,
 } from './credentialed-target';
 import { observeKimiReplay } from './kimi-replay-runtime';
-import { providerObservability } from './provider-observability';
+import { providerObservability, providerRequestId } from './provider-observability';
 import { observeXAIReplay } from './xai-replay-runtime';
 import { withXaiRetryAfter } from './xai-response';
+import { filterXAIInternalSearchResponse } from './xai-search-response';
 import { restoreXAIToolResponse } from './xai-tool-response';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
@@ -70,9 +71,10 @@ async function providerAnswer(
   if (grant.spend.provider !== 'xai') return answer;
 
   const decorated = await withXaiRetryAfter(answer);
-  const observed = observeXAIReplay(crossing, decorated);
+  const restored = restoreXAIToolResponse(decorated, crossing.xaiNamespaceTools ?? {});
+  const filtered = filterXAIInternalSearchResponse(restored, crossing);
 
-  return restoreXAIToolResponse(observed, crossing.xaiNamespaceTools ?? {});
+  return observeXAIReplay(crossing, filtered);
 }
 
 async function interceptedRequest(
@@ -133,9 +135,7 @@ export async function reachCredentialed(
         ? credentialedDialect(spend.provider, crossing.dialect)
         : 'chat-completions',
     method: request.method,
-    url: request.url,
-    headers: new Headers(request.headers),
-    body: new TextEncoder().encode(request.body),
+    requestId: providerRequestId(new Headers(request.headers)),
   });
   const answer = span.observe(await rawAnswer(grant, request, fetchLike, aiStudio));
 

@@ -110,7 +110,7 @@ export async function observeSubscriptionAnswer(
 
   return observeCodexReasoning(
     answer,
-    (output) => runtime.codexReplay?.commit(key, output),
+    (output) => runtime.codexReplay?.commit(key, output, body),
     () => runtime.codexReplay?.clear(key),
   );
 }
