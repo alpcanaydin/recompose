@@ -4,7 +4,7 @@
 
 ### Requirement: A virtual model maps to one target
 
-A gateway MUST let a person define a virtual model by name and bind it to exactly one target: a stored account and one real model name that account serves. The gateway screen MUST list the defined models in the shipped row language, and adding one MUST run through a sheet. No definition holds a second target, a router, or a fallback in this contract.
+A gateway MUST let a person define a virtual model by name and bind it to exactly one target: a stored account and one real model name that account serves. The gateway screen MUST list the defined models in the shipped row language, and adding one MUST take the gateway drawer over rather than opening a sheet. No definition holds a second target, a router, or a fallback in this contract.
 
 #### Scenario: a person defines a virtual model
 
