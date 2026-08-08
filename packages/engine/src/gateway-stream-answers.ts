@@ -1,6 +1,6 @@
-import type { AnthropicStreamEvent } from './dialect/anthropic-wire';
+import type { ChatStreamFrame } from './dialect/chat-completions-wire';
+import type { Dialect, StreamOf } from './dialect/dispatcher';
 import type { GeminiResponse } from './dialect/gemini-wire';
-import type { InteractionsStreamEvent } from './dialect/interactions-wire';
 import type { ResponsesStreamEvent } from './dialect/responses-wire';
 import type { Crossing, ProviderDialect } from './gateway-wire';
 
@@ -20,6 +20,8 @@ import {
   namedSseBodyFrom,
 } from './stream-wire';
 
+type SseEncoder<To extends Dialect> = (stream: StreamOf[To]) => ReadableStream<Uint8Array>;
+
 export function translatedStreamBody(
   from: ProviderDialect,
   crossing: Crossing,
@@ -38,6 +40,17 @@ export function translatedStreamBody(
     : from === 'interactions'
       ? translatedInteractionsStream(crossing, body)
       : translatedResponsesStream(crossing, body);
+}
+
+function crossedBody<From extends Dialect, To extends Dialect>(
+  from: From,
+  to: To,
+  source: StreamOf[From],
+  encode: SseEncoder<To>,
+): ReadableStream<Uint8Array> | null {
+  const crossed = translateStream(from, to, source);
+
+  return 'outcome' in crossed ? null : encode(crossed.stream);
 }
 
 async function* geminiResponsesFrom(
@@ -91,173 +104,111 @@ function translatedGeminiStream(
   );
 }
 
+function anthropicEncoder(crossing: Crossing): SseEncoder<'anthropic'> {
+  return (stream) => namedSseBodyFrom(answeringModelInto(stream, crossing.providerModel));
+}
+
+function responsesEncoder(crossing: Crossing): SseEncoder<'responses'> {
+  return (stream) => responsesStreamBody(crossing, stream);
+}
+
 function translatedChatStream(
   crossing: Crossing,
   body: ReadableStream<Uint8Array>,
 ): ReadableStream<Uint8Array> | null {
-  if (crossing.dialect === 'anthropic') return chatToAnthropic(crossing, body);
-  if (crossing.dialect === 'interactions') return chatToInteractions(body);
-  if (crossing.dialect === 'gemini') return chatToGemini(body);
+  const source: StreamOf['chat-completions'] = chatFramesFrom(body);
 
-  return chatToResponses(crossing, body);
-}
+  if (crossing.dialect === 'anthropic') {
+    return crossedBody('chat-completions', 'anthropic', source, anthropicEncoder(crossing));
+  }
 
-function chatToGemini(body: ReadableStream<Uint8Array>) {
-  const crossed = translateStream('chat-completions', 'gemini', chatFramesFrom(body));
+  if (crossing.dialect === 'interactions') {
+    return crossedBody('chat-completions', 'interactions', source, interactionSseBodyFrom);
+  }
 
-  return 'outcome' in crossed ? null : geminiSseBodyFrom(crossed.stream);
-}
+  if (crossing.dialect === 'gemini') {
+    return crossedBody('chat-completions', 'gemini', source, geminiSseBodyFrom);
+  }
 
-function chatToAnthropic(crossing: Crossing, body: ReadableStream<Uint8Array>) {
-  const crossed = translateStream('chat-completions', 'anthropic', chatFramesFrom(body));
-
-  return 'outcome' in crossed
-    ? null
-    : namedSseBodyFrom(answeringModelInto(crossed.stream, crossing.providerModel));
-}
-
-function chatToInteractions(body: ReadableStream<Uint8Array>) {
-  const crossed = translateStream('chat-completions', 'interactions', chatFramesFrom(body));
-
-  return 'outcome' in crossed ? null : interactionSseBodyFrom(crossed.stream);
-}
-
-function chatToResponses(crossing: Crossing, body: ReadableStream<Uint8Array>) {
-  const crossed = translateStream('chat-completions', 'responses', chatFramesFrom(body));
-
-  return 'outcome' in crossed ? null : responsesStreamBody(crossing, crossed.stream);
+  return crossedBody('chat-completions', 'responses', source, responsesEncoder(crossing));
 }
 
 function translatedAnthropicStream(
   crossing: Crossing,
   body: ReadableStream<Uint8Array>,
 ): ReadableStream<Uint8Array> | null {
-  const source: AsyncIterable<AnthropicStreamEvent> = jsonEventsFrom(body);
+  const source: StreamOf['anthropic'] = jsonEventsFrom(body);
 
-  if (crossing.dialect === 'chat-completions') return anthropicToChat(source);
-  if (crossing.dialect === 'interactions') return anthropicToInteractions(source);
-  if (crossing.dialect === 'gemini') return anthropicToGemini(source);
+  if (crossing.dialect === 'chat-completions') {
+    return crossedBody('anthropic', 'chat-completions', source, chatSseBodyFrom);
+  }
 
-  return anthropicToResponses(crossing, source);
+  if (crossing.dialect === 'interactions') {
+    return crossedBody('anthropic', 'interactions', source, interactionSseBodyFrom);
+  }
+
+  if (crossing.dialect === 'gemini') {
+    return crossedBody('anthropic', 'gemini', source, geminiSseBodyFrom);
+  }
+
+  return crossedBody('anthropic', 'responses', source, responsesEncoder(crossing));
 }
 
-function anthropicToGemini(source: AsyncIterable<AnthropicStreamEvent>) {
-  const crossed = translateStream('anthropic', 'gemini', source);
-
-  return 'outcome' in crossed ? null : geminiSseBodyFrom(crossed.stream);
+async function* chatModelInto(source: AsyncIterable<ChatStreamFrame>, model: string) {
+  for await (const frame of source) {
+    yield frame.type === 'chunk' ? { ...frame, chunk: { ...frame.chunk, model } } : frame;
+  }
 }
 
-function anthropicToChat(source: AsyncIterable<AnthropicStreamEvent>) {
-  const crossed = translateStream('anthropic', 'chat-completions', source);
-
-  return 'outcome' in crossed ? null : chatSseBodyFrom(crossed.stream);
-}
-
-function anthropicToInteractions(source: AsyncIterable<AnthropicStreamEvent>) {
-  const crossed = translateStream('anthropic', 'interactions', source);
-
-  return 'outcome' in crossed ? null : interactionSseBodyFrom(crossed.stream);
-}
-
-function anthropicToResponses(crossing: Crossing, source: AsyncIterable<AnthropicStreamEvent>) {
-  const crossed = translateStream('anthropic', 'responses', source);
-
-  return 'outcome' in crossed ? null : responsesStreamBody(crossing, crossed.stream);
+function chatEncoderNaming(virtualModel: string): SseEncoder<'chat-completions'> {
+  return (stream) => chatSseBodyFrom(chatModelInto(stream, virtualModel));
 }
 
 function translatedResponsesStream(
   crossing: Crossing,
   body: ReadableStream<Uint8Array>,
 ): ReadableStream<Uint8Array> | null {
-  const source: AsyncIterable<ResponsesStreamEvent> = jsonEventsFrom(body);
+  const source: StreamOf['responses'] = jsonEventsFrom(body);
 
-  if (crossing.dialect === 'chat-completions') return responsesToChat(crossing, source);
-  if (crossing.dialect === 'interactions') return responsesToInteractions(source);
-  if (crossing.dialect === 'gemini') return responsesToGemini(source);
-
-  return responsesToAnthropic(crossing, source);
-}
-
-function responsesToGemini(source: AsyncIterable<ResponsesStreamEvent>) {
-  const crossed = translateStream('responses', 'gemini', source);
-
-  return 'outcome' in crossed ? null : geminiSseBodyFrom(crossed.stream);
-}
-
-function responsesToChat(crossing: Crossing, source: AsyncIterable<ResponsesStreamEvent>) {
-  const crossed = translateStream('responses', 'chat-completions', source);
-
-  return 'outcome' in crossed
-    ? null
-    : chatSseBodyFrom(chatModelInto(crossed.stream, crossing.virtualModel));
-}
-
-async function* chatModelInto(
-  source: AsyncIterable<import('./dialect/chat-completions-wire').ChatStreamFrame>,
-  model: string,
-) {
-  for await (const frame of source) {
-    yield frame.type === 'chunk' ? { ...frame, chunk: { ...frame.chunk, model } } : frame;
+  if (crossing.dialect === 'chat-completions') {
+    return crossedBody(
+      'responses',
+      'chat-completions',
+      source,
+      chatEncoderNaming(crossing.virtualModel),
+    );
   }
-}
 
-function responsesToInteractions(source: AsyncIterable<ResponsesStreamEvent>) {
-  const crossed = translateStream('responses', 'interactions', source);
+  if (crossing.dialect === 'interactions') {
+    return crossedBody('responses', 'interactions', source, interactionSseBodyFrom);
+  }
 
-  return 'outcome' in crossed ? null : interactionSseBodyFrom(crossed.stream);
-}
+  if (crossing.dialect === 'gemini') {
+    return crossedBody('responses', 'gemini', source, geminiSseBodyFrom);
+  }
 
-function responsesToAnthropic(crossing: Crossing, source: AsyncIterable<ResponsesStreamEvent>) {
-  const crossed = translateStream('responses', 'anthropic', source);
-
-  return 'outcome' in crossed
-    ? null
-    : namedSseBodyFrom(answeringModelInto(crossed.stream, crossing.providerModel));
+  return crossedBody('responses', 'anthropic', source, anthropicEncoder(crossing));
 }
 
 function translatedInteractionsStream(
   crossing: Crossing,
   body: ReadableStream<Uint8Array>,
 ): ReadableStream<Uint8Array> | null {
-  const source: AsyncIterable<InteractionsStreamEvent> = interactionEventsFrom(body);
+  const source: StreamOf['interactions'] = interactionEventsFrom(body);
 
-  if (crossing.dialect === 'chat-completions') return interactionsToChat(source);
-  if (crossing.dialect === 'anthropic') return interactionsToAnthropic(crossing, source);
-  if (crossing.dialect === 'gemini') return interactionsToGemini(source);
+  if (crossing.dialect === 'chat-completions') {
+    return crossedBody('interactions', 'chat-completions', source, chatSseBodyFrom);
+  }
 
-  return interactionsToResponses(crossing, source);
-}
+  if (crossing.dialect === 'anthropic') {
+    return crossedBody('interactions', 'anthropic', source, anthropicEncoder(crossing));
+  }
 
-function interactionsToGemini(source: AsyncIterable<InteractionsStreamEvent>) {
-  const crossed = translateStream('interactions', 'gemini', source);
+  if (crossing.dialect === 'gemini') {
+    return crossedBody('interactions', 'gemini', source, geminiSseBodyFrom);
+  }
 
-  return 'outcome' in crossed ? null : geminiSseBodyFrom(crossed.stream);
-}
-
-function interactionsToChat(source: AsyncIterable<InteractionsStreamEvent>) {
-  const crossed = translateStream('interactions', 'chat-completions', source);
-
-  return 'outcome' in crossed ? null : chatSseBodyFrom(crossed.stream);
-}
-
-function interactionsToAnthropic(
-  crossing: Crossing,
-  source: AsyncIterable<InteractionsStreamEvent>,
-) {
-  const crossed = translateStream('interactions', 'anthropic', source);
-
-  return 'outcome' in crossed
-    ? null
-    : namedSseBodyFrom(answeringModelInto(crossed.stream, crossing.providerModel));
-}
-
-function interactionsToResponses(
-  crossing: Crossing,
-  source: AsyncIterable<InteractionsStreamEvent>,
-) {
-  const crossed = translateStream('interactions', 'responses', source);
-
-  return 'outcome' in crossed ? null : responsesStreamBody(crossing, crossed.stream);
+  return crossedBody('interactions', 'responses', source, responsesEncoder(crossing));
 }
 
 function responsesStreamBody(

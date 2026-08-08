@@ -12,16 +12,13 @@ import { restoreCodexMultiAgentValue } from './subscription/codex-multi-agent';
 import { reachCodexCompact } from './subscription/reach-compact';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
+type RefusedGrant = Exclude<SpendGrant, { verdict: 'resolved' }>;
 type CompactTarget = { response: Response } | { providerModel: string; virtualId: string };
 
-function denied(gateway: EngineGateway, model: string, grant: SpendGrant): Response | null {
-  if (grant.verdict === 'missing-target') {
-    return refusalResponse('responses', missingTarget(gateway.displayName, model));
-  }
-
-  return grant.verdict === 'missing-credential'
-    ? refusalResponse('responses', missingCredential(gateway.displayName, model))
-    : null;
+function denied(gateway: EngineGateway, model: string, grant: RefusedGrant): Response {
+  return grant.verdict === 'missing-target'
+    ? refusalResponse('responses', missingTarget(gateway.displayName, model))
+    : refusalResponse('responses', missingCredential(gateway.displayName, model));
 }
 
 function isCodexGrant(grant: ResolvedGrant): boolean {
@@ -94,13 +91,7 @@ async function resolvedCompact(
   providerModel: string,
   fetchLike: typeof fetch,
 ): Promise<Response> {
-  const refusal = denied(gateway, model, grant);
-
-  if (grant.verdict !== 'resolved') {
-    return refusal ?? refusalResponse('responses', missingTarget(gateway.displayName, model));
-  }
-
-  if (refusal !== null) return refusal;
+  if (grant.verdict !== 'resolved') return denied(gateway, model, grant);
 
   if (!isCodexGrant(grant)) {
     return nonCodexCompact(
