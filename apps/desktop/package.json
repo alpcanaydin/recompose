@@ -45,6 +45,7 @@
     "@tanstack/react-form": "1.33.2",
     "@tanstack/react-router": "1.170.18",
     "electron-liquid-glass": "^1.1.1",
+    "koffi": "3.1.4",
     "node-wreq": "3.1.0"
   },
   "devDependencies": {

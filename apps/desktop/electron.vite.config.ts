@@ -21,7 +21,7 @@ export default defineConfig({
   main: {
     build: {
       rolldownOptions: {
-        external: ['node-wreq', /^@node-wreq\//u],
+        external: ['node-wreq', /^@node-wreq\//u, 'koffi'],
       },
     },
   },

@@ -10,7 +10,7 @@
         "e2e/fake-tools/*.mts",
         "vitest.mutation.config.ts"
       ],
-      "ignoreDependencies": ["chromatic", "fast-check", "node-wreq"],
+      "ignoreDependencies": ["chromatic", "fast-check", "koffi", "node-wreq"],
       "ignoreBinaries": ["dpkg-deb"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },

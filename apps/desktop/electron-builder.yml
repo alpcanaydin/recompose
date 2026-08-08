@@ -13,6 +13,7 @@ files:
 asarUnpack:
   - resources/**
   - node_modules/@node-wreq/**
+  - node_modules/koffi/**
 win:
   executableName: recompose
   icon: build/icon.ico

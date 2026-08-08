@@ -4,13 +4,17 @@ import { readParentPort } from './parent-port';
 import { loadInstalledPluginHost } from './plugin-runtime';
 import { stayResident } from './stay-resident';
 
-const plugins = await loadInstalledPluginHost(process.env['RECOMPOSE_PLUGIN_DIR']);
+async function startEngineChild(): Promise<void> {
+  const plugins = await loadInstalledPluginHost(process.env['RECOMPOSE_PLUGIN_DIR']);
 
-attachEngineChild(
-  readParentPort(process),
-  openGatewayListeners,
-  globalThis.fetch,
-  undefined,
-  plugins,
-);
-stayResident();
+  attachEngineChild(
+    readParentPort(process),
+    openGatewayListeners,
+    globalThis.fetch,
+    undefined,
+    plugins,
+  );
+  stayResident();
+}
+
+void startEngineChild();
