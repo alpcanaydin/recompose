@@ -50,14 +50,13 @@ function changedProviders(
   newSummary: Readonly<Record<string, ModelPolicySummary>>,
   label: string,
 ): ModelPolicyDiff {
+  const changed = changeByProvider(label, oldSummary, newSummary);
   const providers = [...new Set([...Object.keys(oldSummary), ...Object.keys(newSummary)])].sort();
   const changes: string[] = [];
   const affectedProviders: string[] = [];
 
   for (const provider of providers) {
-    const previous = oldSummary[provider];
-    const next = newSummary[provider];
-    const change = providerChange(label, provider, previous, next);
+    const change = changed.get(provider);
 
     if (change !== undefined) {
       changes.push(change);
@@ -68,18 +67,32 @@ function changedProviders(
   return { changes, affectedProviders };
 }
 
-function providerChange(
+function changeByProvider(
   label: string,
-  provider: string,
-  previous: ModelPolicySummary | undefined,
-  next: ModelPolicySummary | undefined,
-): string | undefined {
-  if (previous === undefined) {
-    return next === undefined
-      ? undefined
-      : `${label}[${provider}]: added (${String(next.count)} entries)`;
+  oldSummary: Readonly<Record<string, ModelPolicySummary>>,
+  newSummary: Readonly<Record<string, ModelPolicySummary>>,
+): Map<string, string | undefined> {
+  const changed = new Map<string, string | undefined>();
+
+  for (const [provider, previous] of Object.entries(oldSummary)) {
+    changed.set(provider, removedOrUpdated(label, provider, previous, newSummary[provider]));
   }
 
+  for (const [provider, next] of Object.entries(newSummary)) {
+    if (oldSummary[provider] === undefined) {
+      changed.set(provider, `${label}[${provider}]: added (${String(next.count)} entries)`);
+    }
+  }
+
+  return changed;
+}
+
+function removedOrUpdated(
+  label: string,
+  provider: string,
+  previous: ModelPolicySummary,
+  next: ModelPolicySummary | undefined,
+): string | undefined {
   if (next === undefined) return `${label}[${provider}]: removed`;
   if (previous.hash === next.hash) return undefined;
 
