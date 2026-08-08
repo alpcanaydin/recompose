@@ -1,4 +1,4 @@
-export { noAccounts, subscriptionOnlyAccounts } from './fake-accounts';
+export { noAccounts } from './fake-accounts';
 export { installFakeBridge } from './fake-bridge';
 export type { BridgeParameters } from './fake-bridge';
 export { emitEngineStates, gatewaySeed } from './fake-gateways';

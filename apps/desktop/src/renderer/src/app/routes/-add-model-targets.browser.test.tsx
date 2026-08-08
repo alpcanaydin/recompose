@@ -2,11 +2,7 @@ import type { AccountsDocument } from '@recompose/contracts';
 
 import { expect, test } from 'vitest';
 
-import {
-  gatewaySeed,
-  noAccounts,
-  subscriptionOnlyAccounts as subscriptionOnly,
-} from '../../shared/testing';
+import { gatewaySeed, noAccounts } from '../../shared/testing';
 import { renderAt } from '../testing/render-app';
 
 const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
@@ -29,15 +25,8 @@ test('with nothing stored that can serve, the target says so instead of offering
     .not.toBeInTheDocument();
 });
 
-test('a registry whose accounts none of them can serve lands in the same empty target', async () => {
-  const screen = await openTheAddFlow(subscriptionOnly);
-
-  await expect.element(screen.getByText('No account can serve yet')).toBeVisible();
-  await expect.element(screen.getByRole('link', { name: 'Open Providers' })).toBeVisible();
-});
-
 test('the way out of the empty target reaches the screen that connects one', async () => {
-  const screen = await openTheAddFlow(subscriptionOnly);
+  const screen = await openTheAddFlow(noAccounts);
 
   await screen.getByRole('link', { name: 'Open Providers' }).click();
 

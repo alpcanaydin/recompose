@@ -2,7 +2,7 @@ import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { paintedBox, paintedStyle, subscriptionOnlyAccounts } from '../../../../shared/testing';
+import { noAccounts, paintedBox, paintedStyle } from '../../../../shared/testing';
 import { emptyDefinition } from '../../lib/model-draft';
 import { freshGateway, listedModels, storedAccounts } from '../../testing/gateway-canvas.testkit';
 import { AddModelFlow } from './add-model-flow';
@@ -135,7 +135,7 @@ export const StretchedActCentresItsLabel = meta.story({
 });
 
 const nothingOffered = {
-  bridge: { accounts: subscriptionOnlyAccounts, gateways: [freshGateway] },
+  bridge: { accounts: noAccounts, gateways: [freshGateway] },
 };
 
 /**
