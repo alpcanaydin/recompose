@@ -12,6 +12,18 @@ function functionTool(name: string): ResponsesFunctionTool {
   return { type: 'function', name, parameters: { type: 'object' } };
 }
 
+function customAsFunction(name: string): ResponsesFunctionTool {
+  return {
+    type: 'function',
+    name,
+    parameters: {
+      type: 'object',
+      properties: { input: { type: 'string' } },
+      required: ['input'],
+    },
+  };
+}
+
 describe('flattening a namespace of tools', () => {
   test('an unnamed namespace keeps only the children it can express as functions', () => {
     const request = requestWith({
@@ -41,6 +53,35 @@ describe('flattening a namespace of tools', () => {
         },
       },
     ]);
+  });
+});
+
+describe('dropping the patch tool no target can express', () => {
+  test('an apply_patch tool under a named namespace normalizes like the bare one', () => {
+    const request = requestWith({
+      tools: [
+        {
+          type: 'namespace',
+          name: 'shell',
+          tools: [
+            { type: 'custom', name: 'apply_patch' },
+            { type: 'custom', name: 'run' },
+          ],
+        },
+      ],
+    });
+
+    const normalized = normalizeResponsesExtensions(request);
+
+    expect(normalized.tools).toStrictEqual([customAsFunction('shell__run')]);
+  });
+
+  test('a tool whose own name ends in apply_patch is left to the target', () => {
+    const request = requestWith({ tools: [{ type: 'custom', name: 'editor__apply_patch' }] });
+
+    const normalized = normalizeResponsesExtensions(request);
+
+    expect(normalized.tools).toStrictEqual([customAsFunction('editor__apply_patch')]);
   });
 });
 
