@@ -146,3 +146,73 @@ test('preserves assistants linked by tools, function calls, reasoning, or visibl
   expect(messages).toHaveProperty('2.reasoning_content', 'thought');
   expect(messages).toHaveProperty('3.content.0.text', ' visible ');
 });
+
+test('leaves a body that carries no message list untouched', () => {
+  const body = { model: 'kimi-k2', prompt: 'hello' };
+
+  expect(normalizeKimiToolHistory(body)).toBe(body);
+});
+
+test('leaves an entry that is not a message untouched', () => {
+  const messages = normalized(['loose text', 42, { role: 'user', content: 'hi' }]);
+
+  expect(messages).toEqual(['loose text', 42, { role: 'user', content: 'hi' }]);
+});
+
+test('drops an assistant whose every content part says nothing', () => {
+  const messages = normalized([
+    { role: 'assistant', content: [null, '  ', {}, { type: 'text' }, { text: null }] },
+    { role: 'user', content: 'next' },
+  ]);
+
+  expect(messages).toEqual([{ role: 'user', content: 'next' }]);
+});
+
+test('keeps an assistant whose content parts carry something unreadable', () => {
+  const messages = normalized([
+    { role: 'assistant', content: [7] },
+    { role: 'assistant', content: [{ text: 7 }] },
+    { role: 'assistant', content: ['visible'] },
+    { role: 'assistant', content: 7 },
+  ]);
+
+  expect(messages).toHaveLength(4);
+});
+
+test('borrows the assistant text as reasoning when the turn calls a tool', () => {
+  const messages = normalized([assistantCall('call_1', { content: '  thinking out loud  ' })]);
+
+  expect(messages).toHaveProperty('0.reasoning_content', 'thinking out loud');
+});
+
+test('joins the readable assistant parts into the borrowed reasoning', () => {
+  const messages = normalized([
+    assistantCall('call_1', { content: [{ text: ' one ' }, 5, { text: '  ' }, { text: 'two' }] }),
+  ]);
+
+  expect(messages).toHaveProperty('0.reasoning_content', 'one\ntwo');
+});
+
+test('says the reasoning is unavailable when the turn carries no readable text', () => {
+  const messages = normalized([assistantCall('call_1', { content: [] })]);
+
+  expect(messages).toHaveProperty('0.reasoning_content', '[reasoning unavailable]');
+});
+
+test('keeps a tool result that answers a call this history never opened', () => {
+  const messages = normalized([{ role: 'tool', tool_call_id: 'call_absent', content: 'result' }]);
+
+  expect(messages).toEqual([{ role: 'tool', tool_call_id: 'call_absent', content: 'result' }]);
+});
+
+test('leaves a tool call that names no identifier out of the pending links', () => {
+  const messages = normalized([
+    { role: 'assistant', content: 'calling', tool_calls: [{ type: 'function', function: {} }] },
+    { role: 'tool', content: 'result' },
+  ]);
+
+  expect(messages).toEqual([
+    { role: 'assistant', content: 'calling', tool_calls: [{ type: 'function', function: {} }] },
+    { role: 'tool', content: 'result' },
+  ]);
+});
