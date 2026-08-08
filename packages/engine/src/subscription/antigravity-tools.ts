@@ -4,9 +4,7 @@ import { isJsonObject } from '../gateway-wire';
 
 const DECLARATION_KEYS = ['functionDeclarations', 'function_declarations'] as const;
 
-function declarationName(value: unknown): string | undefined {
-  if (!isJsonObject(value)) return undefined;
-
+function declarationName(value: JsonObject): string | undefined {
   const name = value['name'];
 
   if (typeof name === 'string') return name;
@@ -29,13 +27,15 @@ function uniqueDeclarations(value: unknown, seen: Set<string>): unknown[] | null
   const declarations: unknown[] = value;
 
   return declarations.flatMap((declaration) => {
+    if (!isJsonObject(declaration)) return [];
+
     const name = declarationName(declaration);
 
     if (name === undefined || seen.has(name)) return [];
 
     seen.add(name);
 
-    return isJsonObject(declaration) ? [{ ...declaration, name }] : [];
+    return [{ ...declaration, name }];
   });
 }
 

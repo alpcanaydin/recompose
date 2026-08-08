@@ -1,8 +1,14 @@
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
 import type { ChatStreamFrame } from './dialect/chat-completions-wire';
 
-import { chatSseBodyFrom, interactionSseBodyFrom, transformingSseLines } from './stream-wire';
+import {
+  chatSseBodyFrom,
+  interactionEventsFrom,
+  interactionSseBodyFrom,
+  jsonObjectsFrom,
+  transformingSseLines,
+} from './stream-wire';
 
 async function* streamed<Value>(values: readonly Value[]): AsyncIterable<Value> {
   await Promise.resolve();
@@ -94,4 +100,54 @@ test('transforms a trailing line that arrives without a newline', async () => {
   const stream = transformingSseLines(bodyOf('data: one\ndata: two'), (line) => line.toUpperCase());
 
   await expect(textOf(stream)).resolves.toBe('DATA: ONE\nDATA: TWO');
+});
+
+function sseBodyOf(...payloads: readonly string[]): ReadableStream<Uint8Array> {
+  return bodyOf(payloads.map((payload) => `data: ${payload}\n\n`).join(''));
+}
+
+async function collected<Value>(source: AsyncIterable<Value>): Promise<Value[]> {
+  const items: Value[] = [];
+
+  for await (const item of source) items.push(item);
+
+  return items;
+}
+
+describe('reading JSON objects off an event stream', () => {
+  test('a payload that parses to something other than an object is skipped', async () => {
+    const objects = await collected(jsonObjectsFrom(sseBodyOf('42', '"text"', '[1,2]', 'null')));
+
+    expect(objects).toEqual([]);
+  });
+
+  test('a payload that is not JSON at all is skipped', async () => {
+    const objects = await collected(jsonObjectsFrom(sseBodyOf('not json', '{"id":"resp_1"}')));
+
+    expect(objects).toEqual([{ id: 'resp_1' }]);
+  });
+
+  test('the terminating sentinel and non-data lines are skipped', async () => {
+    const body = bodyOf('event: ping\ndata: {"id":"resp_1"}\n\ndata: [DONE]\n\n');
+
+    await expect(collected(jsonObjectsFrom(body))).resolves.toEqual([{ id: 'resp_1' }]);
+  });
+});
+
+describe('reading interaction events off an event stream', () => {
+  test('an event naming its type is handed on with that type', async () => {
+    const body = sseBodyOf('{"event_type":"turn.start","seq":1}');
+
+    await expect(collected(interactionEventsFrom(body))).resolves.toEqual([
+      { event_type: 'turn.start', seq: 1 },
+    ]);
+  });
+
+  test('an object that names no event type is skipped', async () => {
+    const body = sseBodyOf('{"seq":1}', '{"event_type":7}', '{"event_type":"turn.end"}');
+
+    await expect(collected(interactionEventsFrom(body))).resolves.toEqual([
+      { event_type: 'turn.end' },
+    ]);
+  });
 });

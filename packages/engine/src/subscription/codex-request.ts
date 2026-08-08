@@ -62,11 +62,7 @@ function developerInput(input: unknown): unknown {
   });
 }
 
-function searchEntry(value: unknown): unknown {
-  if (!isJsonObject(value)) {
-    return value;
-  }
-
+function searchObject(value: JsonObject): JsonObject {
   const entry: JsonObject = { ...value };
   const type = entry['type'];
 
@@ -75,6 +71,10 @@ function searchEntry(value: unknown): unknown {
   }
 
   return entry;
+}
+
+function searchEntry(value: unknown): unknown {
+  return isJsonObject(value) ? searchObject(value) : value;
 }
 
 function searchEntries(value: unknown): unknown {
@@ -139,14 +139,8 @@ function toolNameOf(value: unknown): string[] {
   return typeof name === 'string' ? [name] : [];
 }
 
-function renamedEntry(value: unknown, names: Map<string, string>): unknown {
-  const searched = searchEntry(value);
-
-  if (!isJsonObject(searched)) {
-    return searched;
-  }
-
-  const normalized = sanitizedCodexReasoning(searched);
+function renamedObjectEntry(value: JsonObject, names: Map<string, string>): JsonObject {
+  const normalized = sanitizedCodexReasoning(searchObject(value));
 
   const originalName = normalized['name'];
   const name = typeof originalName === 'string' ? names.get(originalName) : undefined;
@@ -156,6 +150,10 @@ function renamedEntry(value: unknown, names: Map<string, string>): unknown {
     ...normalized,
     ...renamedIdentityFields(normalized, name, id),
   };
+}
+
+function renamedEntry(value: unknown, names: Map<string, string>): unknown {
+  return isJsonObject(value) ? renamedObjectEntry(value, names) : value;
 }
 
 function renamedIdentityFields(
@@ -187,9 +185,9 @@ function renamedToolChoice(value: unknown, names: Map<string, string>): unknown 
     return choice;
   }
 
-  const entry = renamedEntry(choice, names);
+  const entry = renamedObjectEntry(choice, names);
 
-  return isJsonObject(entry) ? { ...entry, tools: renamedEntries(entry['tools'], names) } : entry;
+  return { ...entry, tools: renamedEntries(entry['tools'], names) };
 }
 
 function normalizedToolBody(rawBody: JsonObject): JsonObject {

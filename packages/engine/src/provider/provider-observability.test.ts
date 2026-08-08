@@ -197,6 +197,34 @@ describe('providerUsageFrom Gemini', () => {
 
 // Helpers
 
+describe('ProviderObservability record retention', () => {
+  it('should drop the oldest records once the retained count is exceeded', async () => {
+    const observability = new ProviderObservability({ maxRecords: 2 });
+
+    for (const model of ['first', 'second', 'third']) {
+      await observability
+        .start(requestLog({ model }))
+        .observe(Response.json({ usage: { input_tokens: 1, output_tokens: 1 } }))
+        .text();
+    }
+
+    expect(observability.snapshot().map(({ model }) => model)).toEqual(['second', 'third']);
+  });
+
+  it('should retain every record while the count stays within the bound', async () => {
+    const observability = new ProviderObservability({ maxRecords: 3 });
+
+    for (const model of ['first', 'second']) {
+      await observability
+        .start(requestLog({ model }))
+        .observe(Response.json({ usage: { input_tokens: 1, output_tokens: 1 } }))
+        .text();
+    }
+
+    expect(observability.snapshot().map(({ model }) => model)).toEqual(['first', 'second']);
+  });
+});
+
 function requestLog(overrides: Partial<ProviderRequestLog> = {}): ProviderRequestLog {
   return {
     provider: 'openai',

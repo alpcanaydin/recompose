@@ -8,10 +8,13 @@ function functionCallNames(content: GeminiContent): string[] {
   });
 }
 
-function backfilledPart(part: GeminiPart, name: string | undefined): GeminiPart {
-  const response = part.functionResponse;
+type GeminiFunctionResponse = NonNullable<GeminiPart['functionResponse']>;
 
-  if (response === undefined) return part;
+function backfilledPart(
+  part: GeminiPart,
+  response: GeminiFunctionResponse,
+  name: string | undefined,
+): GeminiPart {
   if (response.name.trim() !== '' || name === undefined) return part;
 
   return { ...part, functionResponse: { ...response, name } };
@@ -20,9 +23,11 @@ function backfilledPart(part: GeminiPart, name: string | undefined): GeminiPart 
 function backfilledContent(content: GeminiContent, names: readonly string[]): GeminiContent {
   let responseIndex = 0;
   const parts = content.parts.map((part) => {
-    if (part.functionResponse === undefined) return part;
+    const response = part.functionResponse;
 
-    const backfilled = backfilledPart(part, names[responseIndex]);
+    if (response === undefined) return part;
+
+    const backfilled = backfilledPart(part, response, names[responseIndex]);
 
     responseIndex += 1;
 

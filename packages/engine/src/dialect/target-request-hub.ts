@@ -1,5 +1,5 @@
 import type { Dialect, TranslationRefusal } from '../refusals';
-import type { TranslateResult } from './fates';
+import type { TranslateResult, Translated } from './fates';
 import type { HubRequest } from './hub';
 
 import { geminiRequestForAnthropic } from './gemini-anthropic-request';
@@ -28,10 +28,8 @@ export function requestHubForTarget(
 }
 
 function responsesHubForChat(
-  decoded: TranslateResult<HubRequest, TranslationRefusal>,
+  decoded: Translated<HubRequest>,
 ): TranslateResult<HubRequest, TranslationRefusal> {
-  if ('refusal' in decoded) return decoded;
-
   return {
     ...decoded,
     value: omitOrphanToolSettingsForChat({
@@ -42,10 +40,8 @@ function responsesHubForChat(
 }
 
 function withoutTemperature(
-  decoded: TranslateResult<HubRequest, TranslationRefusal>,
+  decoded: Translated<HubRequest>,
 ): TranslateResult<HubRequest, TranslationRefusal> {
-  if ('refusal' in decoded) return decoded;
-
   const sampling = decoded.value.sampling;
 
   if (sampling?.temperature === undefined) return decoded;

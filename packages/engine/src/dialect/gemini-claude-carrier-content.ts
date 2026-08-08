@@ -31,11 +31,14 @@ function unsigned(block: SignedBlock): HubContentBlock {
   return rest;
 }
 
-function semanticTarget(block: HubContentBlock | undefined): Target | null {
-  if (block === undefined) return null;
+function semanticTarget(block: HubContentBlock): Target | null {
   if (block.type === 'tool_use') return 'function';
 
   return block.type === 'text' || block.type === 'thinking' ? 'text' : null;
+}
+
+function signedTarget(block: SignedBlock): Target {
+  return block.type === 'tool_use' ? 'function' : 'text';
 }
 
 function signedContentBlock(
@@ -43,22 +46,15 @@ function signedContentBlock(
   block: HubContentBlock,
   index: number,
 ): HubContentBlock[] {
-  const signature = blockSignature(block);
-  const target = semanticTarget(block);
+  if (!isSignedBlock(block)) return [block];
 
-  if (signature === null || target === null) return [block];
+  const signature = nativeSignature(block.signature);
 
-  if (emptyTextBlock(block)) {
-    return [detachedCarrier(content, index, signature)];
-  }
+  if (signature === null) return [block];
 
-  return isSignedBlock(block)
-    ? [carrierBlock(signature, 'next', target), unsigned(block)]
-    : [block];
-}
-
-function blockSignature(block: HubContentBlock): string | null {
-  return isSignedBlock(block) ? nativeSignature(block.signature) : null;
+  return emptyTextBlock(block)
+    ? [detachedCarrier(content, index, signature)]
+    : [carrierBlock(signature, 'next', signedTarget(block)), unsigned(block)];
 }
 
 function isSignedBlock(block: HubContentBlock): block is SignedBlock {

@@ -3,9 +3,43 @@ import { describe, expect, it } from 'vitest';
 import type { ChatCompletionsRequest } from './chat-completions-wire';
 import type { HubImageBlock, HubMessage, HubRequest, HubTextBlock } from './hub';
 
+import { chatCacheControlFrom, hubBreakpointFrom } from './chat-completions-cache';
 import { decodeRequest, encodeRequest } from './chat-completions-request';
 import { aChatRequest, aChatSystemMessage, aChatUserMessage } from './chat-completions.testkit';
 import { aHubRequest, aHubSystemText, aHubTextBlock } from './hub.testkit';
+
+describe('a cache breakpoint crosses the wire in both directions', () => {
+  it('carries a declared lifetime into the hub breakpoint', () => {
+    expect(hubBreakpointFrom({ type: 'ephemeral', ttl: '1h' })).toEqual({
+      type: 'ephemeral',
+      ttl: '1h',
+    });
+  });
+
+  it('reads a cache_control that declares no lifetime as plain ephemeral', () => {
+    expect(hubBreakpointFrom({ type: 'ephemeral' })).toEqual({ type: 'ephemeral' });
+  });
+
+  it('reads an absent cache_control as no breakpoint at all', () => {
+    expect(hubBreakpointFrom(undefined)).toBeUndefined();
+  });
+
+  it('renders a hub lifetime back onto cache_control', () => {
+    expect(chatCacheControlFrom({ type: 'ephemeral', ttl: '5m' })).toEqual({
+      cache_control: { type: 'ephemeral', ttl: '5m' },
+    });
+  });
+
+  it('renders a breakpoint without a lifetime as plain ephemeral', () => {
+    expect(chatCacheControlFrom({ type: 'ephemeral' })).toEqual({
+      cache_control: { type: 'ephemeral' },
+    });
+  });
+
+  it('renders no cache_control when the hub declares no breakpoint', () => {
+    expect(chatCacheControlFrom(undefined)).toEqual({});
+  });
+});
 
 function decodedValue(request: ChatCompletionsRequest): HubRequest {
   const result = decodeRequest(request);

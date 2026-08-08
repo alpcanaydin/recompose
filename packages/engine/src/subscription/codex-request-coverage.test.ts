@@ -63,6 +63,28 @@ test('keeps two tools distinct when bounding collapses them onto one name', () =
   expect(names[1]).not.toBe(names[0]);
 });
 
+test('keeps a third tool distinct when bounding collapses three onto one name', () => {
+  const overlong = `lookup_${'x'.repeat(70)}`;
+  const names = toolNames(
+    requestBody({
+      model: 'gpt-5.6',
+      tools: [{ name: overlong }, { name: `${overlong}_two` }, { name: `${overlong}_three` }],
+    }),
+  );
+
+  expect(names[0]).toBe(overlong.slice(0, 64));
+  expect(names[1]).toMatch(/_1$/u);
+  expect(names[2]).toMatch(/_2$/u);
+  expect(new Set(names.slice(0, 3)).size).toBe(3);
+});
+
+test('passes a tool entry that is not an object through untouched', () => {
+  const body = requestBody({ model: 'gpt-5.6', tools: ['bare-tool', { name: 'lookup' }] });
+  const tools = Array.isArray(body['tools']) ? body['tools'] : [];
+
+  expect(tools.slice(0, 2)).toEqual(['bare-tool', { name: 'lookup' }]);
+});
+
 test('leaves a tool that declares no name unnamed', () => {
   const body = requestBody({ model: 'gpt-5.6', tools: [{ type: 'function' }] });
 

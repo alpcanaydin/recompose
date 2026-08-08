@@ -5,8 +5,37 @@ import type { HubResponse, HubStreamEvent } from './hub';
 
 import { decodeResponse, encodeResponse } from './chat-completions-response';
 import { encodeStream } from './chat-completions-stream';
+import { chatUsageFromHub } from './chat-completions-usage';
 import { aChatResponse, collect, streamOf } from './chat-completions.testkit';
 import { aHubResponse } from './hub.testkit';
+
+describe('cache token details are reported only for the sides that were counted', () => {
+  it('reports a cache write on its own without inventing a cache read', () => {
+    expect(chatUsageFromHub({ outputTokens: 4, cacheWriteTokens: 7 })).toEqual({
+      prompt_tokens: 7,
+      completion_tokens: 4,
+      total_tokens: 11,
+      prompt_tokens_details: { cached_creation_tokens: 7 },
+    });
+  });
+
+  it('reports a cache read on its own without inventing a cache write', () => {
+    expect(chatUsageFromHub({ inputTokens: 1, outputTokens: 4, cacheReadTokens: 6 })).toEqual({
+      prompt_tokens: 7,
+      completion_tokens: 4,
+      total_tokens: 11,
+      prompt_tokens_details: { cached_tokens: 6 },
+    });
+  });
+
+  it('reports no cache details at all when neither side was counted', () => {
+    expect(chatUsageFromHub({})).toEqual({
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+    });
+  });
+});
 
 function encodedUsage(hub: HubResponse) {
   const result = encodeResponse(hub);
