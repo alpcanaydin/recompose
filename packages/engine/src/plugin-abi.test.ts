@@ -50,6 +50,56 @@ describe('plugin RPC envelopes', () => {
   it('should reject malformed envelopes', () => {
     expect(() => decodePluginEnvelope(encoded({ result: {} }))).toThrow('valid RPC envelope');
   });
+
+  it('should reject a payload that is not an object at all', () => {
+    expect(() => decodePluginEnvelope(encoded(['ok']))).toThrow('valid RPC envelope');
+  });
+
+  it('should reject a failure envelope whose error is not an object', () => {
+    expect(() => decodePluginEnvelope(encoded({ ok: false, error: 'quota exhausted' }))).toThrow(
+      'plugin error envelope carries no error',
+    );
+  });
+});
+
+describe('plugin failures the plugin spelled incompletely', () => {
+  it('should name an unspelled code, message, retry and status for the caller', async () => {
+    const client = clientAnswering({ ok: false, error: {} });
+
+    await expect(callPlugin(client, 'executor.execute', {}, String)).rejects.toMatchObject({
+      code: 'plugin_error',
+      message: 'plugin call failed',
+      retryable: false,
+      httpStatus: 0,
+    } satisfies Partial<PluginRPCError>);
+  });
+
+  it('should ignore code, message and status the plugin spelled in the wrong shape', async () => {
+    const client = clientAnswering({
+      ok: false,
+      error: { code: 7, message: { text: 'nope' }, retryable: 'yes', http_status: '429' },
+    });
+
+    await expect(callPlugin(client, 'executor.execute', {}, String)).rejects.toMatchObject({
+      code: 'plugin_error',
+      message: 'plugin call failed',
+      retryable: false,
+      httpStatus: 0,
+    } satisfies Partial<PluginRPCError>);
+  });
+
+  it('should stand in a message when the plugin sent an empty one', async () => {
+    const client = clientAnswering({
+      ok: false,
+      error: { code: 'quota', message: '', retryable: true, http_status: 429 },
+    });
+
+    await expect(callPlugin(client, 'executor.execute', {}, String)).rejects.toMatchObject({
+      code: 'quota',
+      message: 'plugin call failed',
+      httpStatus: 429,
+    } satisfies Partial<PluginRPCError>);
+  });
 });
 
 describe('plugin lifecycle requests', () => {

@@ -1,4 +1,4 @@
-import { brotliCompressSync, gzipSync, zstdCompressSync } from 'node:zlib';
+import { brotliCompressSync, deflateSync, gzipSync, zstdCompressSync } from 'node:zlib';
 import { describe, expect, test } from 'vitest';
 
 import { decodeClaudeResponse } from './claude-compression';
@@ -61,4 +61,51 @@ describe('Claude response compression', () => {
 
     await expect(response.text()).rejects.toThrow();
   });
+
+  test('decodes an advertised deflate body', async () => {
+    const response = await decodeClaudeResponse(
+      fragmentedResponse(deflateSync(payload), 'deflate'),
+    );
+
+    await expect(response.text()).resolves.toBe(payload);
+  });
 });
+
+describe('a Claude body the decoder cannot take on', () => {
+  test('refuses an advertised encoding it does not speak', async () => {
+    const encoded = new TextEncoder().encode(payload);
+
+    await expect(decodeClaudeResponse(fragmentedResponse(encoded, 'snappy'))).rejects.toThrow(
+      'unsupported Claude response content encoding: snappy',
+    );
+  });
+
+  test('hands back an answer that carries no body at all', async () => {
+    const response = new Response(null, { status: 204 });
+
+    await expect(decodeClaudeResponse(response)).resolves.toBe(response);
+  });
+
+  test('canceling the decoded body cancels the upstream reader', async () => {
+    const cancelled: unknown[] = [];
+    const decoded = await decodeClaudeResponse(cancellableResponse(cancelled));
+
+    await decoded.body?.cancel('gateway closed');
+
+    expect(cancelled).toEqual(['gateway closed']);
+  });
+});
+
+function cancellableResponse(cancelled: unknown[]): Response {
+  const chunk = new TextEncoder().encode(payload);
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      controller.enqueue(chunk);
+    },
+    cancel(reason: unknown) {
+      cancelled.push(reason);
+    },
+  });
+
+  return new Response(body);
+}

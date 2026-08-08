@@ -14,24 +14,24 @@ function sanitizedThought(part: JsonObject): JsonObject | null {
 
 function sanitizedPart(value: unknown): unknown {
   if (!isJsonObject(value)) return value;
-  if (isJsonObject(value['functionCall'])) return withoutFunctionSignature(value);
+
+  const functionCall = value['functionCall'];
+
+  if (isJsonObject(functionCall)) return withoutFunctionSignature(value, functionCall);
   if (value['thought'] !== true) return value;
 
   return sanitizedThought(value);
 }
 
-function withoutFunctionSignature(part: JsonObject): JsonObject {
+function withoutFunctionSignature(part: JsonObject, functionCall: JsonObject): JsonObject {
   const clean = { ...part };
-  const call = isJsonObject(clean['functionCall']) ? { ...clean['functionCall'] } : undefined;
+  const call = { ...functionCall };
 
   delete clean['thoughtSignature'];
   delete clean['thought_signature'];
-
-  if (call !== undefined) {
-    delete call['thoughtSignature'];
-    delete call['thought_signature'];
-    clean['functionCall'] = call;
-  }
+  delete call['thoughtSignature'];
+  delete call['thought_signature'];
+  clean['functionCall'] = call;
 
   return clean;
 }

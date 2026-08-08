@@ -14,6 +14,7 @@ import { observeClaudeDiagnostics } from './claude-diagnostics';
 import { observeCodexReasoning } from './codex-replay';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
+type AntigravitySpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
 type ObservationRuntime = {
   diagnostics: ClaudeDiagnostics;
   codexReplay?: CodexReasoningReplay;
@@ -67,21 +68,16 @@ function observesCodex(
   );
 }
 
-function observesAntigravity(
+function antigravitySpendFor(
   grant: ResolvedGrant,
   runtime: ObservationRuntime,
   body: JsonObject,
-): boolean {
-  return (
-    grant.spend.custody === 'subscription' &&
-    grant.spend.provider === 'antigravity' &&
-    runtime.antigravityReplay !== undefined &&
-    antigravityUsesReplay(body)
-  );
-}
+): AntigravitySpend | null {
+  const spend = grant.spend;
 
-function subscriptionAccountId(grant: ResolvedGrant): string {
-  return grant.spend.custody === 'subscription' ? grant.spend.accountId : '';
+  if (spend.custody !== 'subscription' || spend.provider !== 'antigravity') return null;
+
+  return runtime.antigravityReplay !== undefined && antigravityUsesReplay(body) ? spend : null;
 }
 
 export async function observeSubscriptionAnswer(
@@ -91,8 +87,10 @@ export async function observeSubscriptionAnswer(
   runtime: ObservationRuntime,
   scope: ObservationScope,
 ): Promise<Response> {
-  if (observesAntigravity(grant, runtime, body)) {
-    const key = antigravityReplayKey(subscriptionAccountId(grant), body, scope.replayScopeId);
+  const antigravitySpend = antigravitySpendFor(grant, runtime, body);
+
+  if (antigravitySpend !== null) {
+    const key = antigravityReplayKey(antigravitySpend.accountId, body, scope.replayScopeId);
 
     return observeAntigravityReasoning(
       answer,
