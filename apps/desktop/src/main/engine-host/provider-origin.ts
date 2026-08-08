@@ -1,4 +1,10 @@
-import type { Account } from '@recompose/contracts';
+import type { Account, SubscriptionProviderId } from '@recompose/contracts';
+
+const subscriptionOrigins: Record<SubscriptionProviderId, string> = {
+  anthropic: 'https://api.anthropic.com',
+  openai: 'https://chatgpt.com/backend-api/codex',
+  antigravity: 'https://daily-cloudcode-pa.googleapis.com',
+};
 
 const servingOrigins = new Map<string, string>([
   ['aistudio', 'https://generativelanguage.googleapis.com'],
@@ -48,8 +54,9 @@ function standInOrigin(): string | undefined {
  * a turn is served. A provider the table serves nothing for stays unserved whatever the environment
  * says, because the stand-in redirects a vendor rather than inventing one.
  *
- * The lookup is a Map rather than an object, because a stored provider is any non-blank string a
- * person typed and an object would answer `constructor` or `toString` with an inherited member.
+ * The keyed lookup is a Map rather than an object, because a stored key provider is any non-blank
+ * string a person typed and an object would answer `constructor` or `toString` with an inherited
+ * member.
  */
 export function providerOriginOf(account: Account): string | undefined {
   if (account.kind === 'local') {
@@ -64,14 +71,7 @@ function subscriptionOriginOf(account: Account): string | undefined {
     return undefined;
   }
 
-  const origins = new Map([
-    ['anthropic', 'https://api.anthropic.com'],
-    ['openai', 'https://chatgpt.com/backend-api/codex'],
-    ['antigravity', 'https://daily-cloudcode-pa.googleapis.com'],
-  ]);
-  const origin = origins.get(account.provider);
-
-  return origin === undefined ? undefined : (standInOrigin() ?? origin);
+  return standInOrigin() ?? subscriptionOrigins[account.provider];
 }
 
 function keyedOriginOf(provider: string): string | undefined {
