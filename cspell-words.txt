@@ -63,6 +63,7 @@ Gebert
 Gemini
 gitdir
 glassmorphism
+goarch
 Grok
 Groq
 IDAT
