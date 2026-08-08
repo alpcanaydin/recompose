@@ -119,3 +119,53 @@ describe('persisting a refreshed subscription credential', () => {
     expect(keychain.blobAt(VENDOR_SERVICE, osUser)).toBe('active-blob');
   });
 });
+
+describe('a Gemini (Antigravity) subscription credential', () => {
+  test('a refreshed Antigravity credential is written to antigravity.json', async () => {
+    const store = subscriptionCredentialStore(userDataPath, 'linux', null);
+
+    await store.write('antigravity', 'acc-gemini', 'gemini-blob');
+
+    await expect(
+      readFile(
+        join(userDataPath, 'subscriptions', 'antigravity', 'acc-gemini', 'antigravity.json'),
+        'utf8',
+      ),
+    ).resolves.toBe('gemini-blob');
+  });
+
+  test('an Antigravity account reads its credential back from that same file', async () => {
+    const home = join(userDataPath, 'subscriptions', 'antigravity', 'acc-gemini');
+
+    await mkdir(home, { recursive: true });
+    await writeFile(join(home, 'antigravity.json'), 'gemini-blob', 'utf8');
+    const store = subscriptionCredentialStore(userDataPath, 'linux', null);
+
+    await expect(store.read('antigravity', 'acc-gemini')).resolves.toBe('gemini-blob');
+  });
+});
+
+describe('a subscription credential the store cannot reach', () => {
+  test('a credential the filesystem refuses to read is surfaced, not reported as absent', async () => {
+    await mkdir(join(userDataPath, 'subscriptions', 'openai', 'acc-blocked', 'auth.json'), {
+      recursive: true,
+    });
+    const store = subscriptionCredentialStore(userDataPath, 'linux', null);
+
+    await expect(store.read('openai', 'acc-blocked')).rejects.toThrow();
+  });
+
+  test('a Claude account on macOS without keychain custody has no credential to read', async () => {
+    const store = subscriptionCredentialStore(userDataPath, 'darwin', null);
+
+    await expect(store.read('anthropic', 'acc-claude')).resolves.toBeNull();
+  });
+
+  test('a refreshed Claude credential on macOS refuses to be written without keychain custody', async () => {
+    const store = subscriptionCredentialStore(userDataPath, 'darwin', null);
+
+    await expect(store.write('anthropic', 'acc-claude', 'new-blob')).rejects.toThrow(
+      'Claude credential custody is unavailable',
+    );
+  });
+});
