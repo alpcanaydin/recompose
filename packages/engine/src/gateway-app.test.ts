@@ -2,7 +2,7 @@ import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
-import { aGatewayHolding, grantsNothing, neverFetches } from './gateway-app.testkit';
+import { aGatewayHolding, aVirtualModel, grantsNothing, neverFetches } from './gateway-app.testkit';
 
 const ANTHROPIC_MODEL_PATHS = ['/v1/messages', '/messages'];
 const OPENAI_MODEL_PATHS = ['/v1/chat/completions', '/chat/completions'];
@@ -175,5 +175,51 @@ describe('a path the gateway does not serve', () => {
         message: 'The gateway "Codex" serves no path "/v2/messages".',
       },
     });
+  });
+});
+
+describe('a Gemini model path the gateway serves', () => {
+  test('a body that is not JSON refuses in the Gemini envelope', async () => {
+    const refusal = await askCodex('/v1beta/models/gemini-2.5-pro:generateContent', {
+      method: 'POST',
+      body: 'not json at all',
+    });
+
+    expect(refusal.status).toBe(400);
+    expect(await refusal.json()).toMatchObject({ error: { status: 'INVALID_ARGUMENT' } });
+  });
+
+  test('an action the gateway does not serve refuses as an unserved path', async () => {
+    const refusal = await askCodex('/v1beta/models/gemini-2.5-pro:countTokens', {
+      method: 'POST',
+      body: JSON.stringify({ contents: [] }),
+    });
+
+    expect(refusal.status).toBe(404);
+    expect(await refusal.json()).toMatchObject({
+      error: {
+        type: 'not_found_error',
+        message: 'The gateway "Codex" serves no path "/v1beta/models/gemini-2.5-pro:countTokens".',
+      },
+    });
+  });
+});
+
+describe('a fault the gateway cannot answer for', () => {
+  test('a fault that is not a body fault travels on rather than being disguised', async () => {
+    const app = createGatewayApp(
+      aGatewayHolding(aVirtualModel()),
+      () => {
+        throw new Error('the spend ledger is unreachable');
+      },
+      neverFetches,
+    );
+
+    await expect(
+      app.request('http://127.0.0.1:8397/v1/messages', {
+        method: 'POST',
+        body: JSON.stringify({ model: 'fast', messages: [] }),
+      }),
+    ).rejects.toThrow('the spend ledger is unreachable');
   });
 });

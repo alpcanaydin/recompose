@@ -210,3 +210,32 @@ describe('renderRefusal refuses a structurally invalid conversation as a 400', (
     });
   });
 });
+
+describe('a refusal rendered for a Gemini caller', () => {
+  it('names an unknown model as a Gemini not-found error', () => {
+    const rendered = renderRefusal('gemini', unknownModel('gemini-9'));
+
+    expect(rendered.status).toBe(404);
+    expect(rendered.body).toEqual({
+      error: {
+        code: 404,
+        message: 'No model named "gemini-9" is defined.',
+        status: 'NOT_FOUND',
+      },
+    });
+  });
+
+  it('names a missing target as a Gemini internal error', () => {
+    const rendered = renderRefusal('gemini', missingTarget('Work', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toHaveProperty('error.status', 'INTERNAL');
+  });
+
+  it('names an empty conversation as a Gemini invalid-argument error', () => {
+    expect(renderRefusal('gemini', emptyConversation()).body).toHaveProperty(
+      'error.status',
+      'INVALID_ARGUMENT',
+    );
+  });
+});

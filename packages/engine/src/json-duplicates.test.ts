@@ -21,3 +21,25 @@ describe('duplicate JSON key detection', () => {
     expect(duplicateJsonKey(body)).toBeUndefined();
   });
 });
+
+function nested(depth: number): string {
+  return `${'{"a":'.repeat(depth)}1${'}'.repeat(depth)}`;
+}
+
+describe('scanning bodies the JSON grammar does not describe', () => {
+  test('a truncated body whose key reads as a number finds no duplicate', () => {
+    expect(duplicateJsonKey('{12')).toBeUndefined();
+  });
+
+  test('a value ending before the closing brace finds no duplicate', () => {
+    expect(duplicateJsonKey('{"a":123,"b":true}')).toBeUndefined();
+  });
+
+  test('nesting past the scanner ceiling is reported as its own fault', () => {
+    expect(duplicateJsonKey(nested(300))).toBe('<nesting-limit>');
+  });
+
+  test('nesting within the scanner ceiling is scanned to the bottom', () => {
+    expect(duplicateJsonKey(nested(50))).toBeUndefined();
+  });
+});

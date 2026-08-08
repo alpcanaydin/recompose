@@ -4,6 +4,7 @@ import {
   antigravityClaudeSignature,
   nativeClaudeSignature,
   sanitizeClaudeSignatures,
+  strictNativeClaudeSignature,
 } from './claude-signatures';
 
 function classicSignature(): string {
@@ -85,6 +86,51 @@ describe('Claude signature request sanitation', () => {
         ],
       },
     ]);
+  });
+});
+
+describe('Claude signatures that are not text at all', () => {
+  test.each([
+    ['nothing', undefined],
+    ['a number', 7],
+    ['an object', { signature: 'x' }],
+  ])('reads %s as no signature', (_label, value) => {
+    expect(nativeClaudeSignature(value)).toBeNull();
+    expect(strictNativeClaudeSignature(value)).toBeNull();
+  });
+
+  test('reads a foreign provider prefix as no strict signature', () => {
+    expect(strictNativeClaudeSignature(`gemini#${classicSignature()}`)).toBeNull();
+  });
+
+  test('reads a Claude provider prefix through to the strict signature', () => {
+    const signature = strictSignature(20_000);
+
+    expect(strictNativeClaudeSignature(`ccmax#${signature}`)).toBe(signature);
+  });
+});
+
+describe('Claude signature sanitation of content the wire did not shape', () => {
+  test('a content entry that is not a block survives untouched', () => {
+    const body = sanitizeClaudeSignatures({
+      messages: [{ role: 'assistant', content: ['legacy text'] }],
+    });
+
+    expect(body['messages']).toEqual([{ role: 'assistant', content: ['legacy text'] }]);
+  });
+
+  test('a message whose content is not a list survives untouched', () => {
+    const body = sanitizeClaudeSignatures({
+      messages: [{ role: 'user', content: 'hello' }],
+    });
+
+    expect(body['messages']).toEqual([{ role: 'user', content: 'hello' }]);
+  });
+
+  test('a body without messages survives untouched', () => {
+    const body = { model: 'claude-sonnet-4-5' };
+
+    expect(sanitizeClaudeSignatures(body)).toBe(body);
   });
 });
 

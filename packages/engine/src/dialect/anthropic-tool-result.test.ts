@@ -185,3 +185,13 @@ describe('a Claude tool result carries its caching and error standing', () => {
     expect(translated(source).value.isError).toBeUndefined();
   });
 });
+
+describe('a Claude tool result the hub cannot read carries nothing', () => {
+  test('a scalar result carries no content', () => {
+    expect(translated(block(42)).value.content).toEqual([]);
+  });
+
+  test('a scalar result carries no structured result either', () => {
+    expect(translated(block(42)).value.structuredResult).toBeUndefined();
+  });
+});

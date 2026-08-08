@@ -188,4 +188,10 @@ describe('provider-specific schema modes', () => {
     expect(cleaned).not.toHaveProperty('anyOf.0.format');
     expect(cleaned).not.toHaveProperty('anyOf.1.default');
   });
+
+  test('a union member that is not a schema object survives the response mode', () => {
+    expect(
+      cleanAntigravityResponseSchema({ anyOf: [{ type: 'string' }, 'legacy'] }),
+    ).toHaveProperty('anyOf.1', 'legacy');
+  });
 });

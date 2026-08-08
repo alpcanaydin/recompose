@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { GeminiGroundingMetadata } from './gemini-wire';
 
-import { webSearchResultsFromGrounding } from './gemini-web-search-citations';
+import { citedGroundingParts, webSearchResultsFromGrounding } from './gemini-web-search-citations';
 
 function chunk(
   uri: string | undefined,
@@ -87,5 +87,59 @@ describe('a Gemini grounding chunk the hub cannot cite is dropped', () => {
     );
 
     expect(results).toHaveLength(2);
+  });
+});
+
+function support(
+  startIndex: number,
+  endIndex: number,
+  indices?: number[],
+): NonNullable<GeminiGroundingMetadata['groundingSupports']>[number] {
+  return {
+    segment: { startIndex, endIndex },
+    ...(indices === undefined ? {} : { groundingChunkIndices: indices }),
+  };
+}
+
+describe('splitting grounded text into cited and uncited parts', () => {
+  test('a support naming no chunk cites nothing but still splits the text', () => {
+    const parts = citedGroundingParts('hello world', {
+      groundingChunks: [chunk('https://example.test/a', 'A gateway')],
+      groundingSupports: [support(0, 5)],
+    });
+
+    expect(parts[0]).toEqual({ text: 'hello', citations: [] });
+    expect(parts[1]).toEqual({ text: ' world' });
+  });
+
+  test('a support naming a chunk cites that chunk on its span', () => {
+    const parts = citedGroundingParts('hello world', {
+      groundingChunks: [chunk('https://example.test/a', 'A gateway')],
+      groundingSupports: [support(0, 5, [0])],
+    });
+
+    expect(parts[0]).toHaveProperty('citations.0.url', 'https://example.test/a');
+  });
+
+  test('a support whose span is empty adds no part of its own', () => {
+    const parts = citedGroundingParts('hello world', {
+      groundingChunks: [chunk('https://example.test/a')],
+      groundingSupports: [support(4, 4, [0])],
+    });
+
+    expect(parts).toEqual([{ text: 'hell' }, { text: 'o world' }]);
+  });
+
+  test('a support that reaches no further than the last one is skipped', () => {
+    const parts = citedGroundingParts('hello', {
+      groundingChunks: [chunk('https://example.test/a')],
+      groundingSupports: [support(0, 5, [0]), support(0, 3, [0])],
+    });
+
+    expect(parts).toHaveLength(1);
+  });
+
+  test('text without any support stays whole', () => {
+    expect(citedGroundingParts('hello', {})).toEqual([{ text: 'hello' }]);
   });
 });

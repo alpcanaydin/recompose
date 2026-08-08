@@ -74,4 +74,10 @@ describe('naming the error type an answer carries', () => {
 
     expect(codexEventErrorStatus(throttled)).toBe(429);
   });
+
+  test('a throttled answer keeps the upstream type, so no default is ever invented for it', () => {
+    const throttled = errorOf(failedEvent({ type: 'usage_limit_reached', message: 'slow down' }));
+
+    expect(codexEventErrorBody(throttled)).toHaveProperty('error.type', 'usage_limit_reached');
+  });
 });

@@ -115,7 +115,6 @@ export function codexEventErrorStatus(error: CodexEventError): number {
 function defaultErrorType(status: number): string {
   if (status === 400) return 'invalid_request_error';
   if (status === 401) return 'authentication_error';
-  if (status === 429) return 'rate_limit_error';
 
   return 'upstream_error';
 }

@@ -81,7 +81,9 @@ describe('remapping Claude tool names in a raw body', () => {
     expect(remapped.reverse).toEqual({});
     expect(decoded(remapped.body)).toEqual({ messages: [{ role: 'user', content: 'hello' }] });
   });
+});
 
+describe('remapping a Claude body the parser cannot read as an object', () => {
   test('falls back to a scan when the body is not a JSON object', () => {
     const remapped = remapClaudeToolNamesRaw(bytes('[{"name":"Read"}]'), SECRET);
 
@@ -94,5 +96,52 @@ describe('remapping Claude tool names in a raw body', () => {
 
     expect(remapped.reverse).toEqual({});
     expect(new TextDecoder().decode(remapped.body)).toContain('mcp__exa__search');
+  });
+
+  test('a request declaring no tools is left exactly as it arrived', () => {
+    const body = encoded({ messages: [] });
+    const remapped = remapClaudeToolNamesRaw(body, SECRET);
+
+    expect(remapped.fallback).toBe(false);
+    expect(remapped.reverse).toEqual({});
+    expect(remapped.body).toBe(body);
+  });
+
+  test('a name that belongs to no declared tool is left alone', () => {
+    const remapped = remapClaudeToolNamesRaw(
+      encoded({ tools: [{ name: 'Read' }], metadata: { name: 'session-7' } }),
+      SECRET,
+    );
+
+    expect(Object.values(remapped.reverse)).toEqual(['Read']);
+    expect(new TextDecoder().decode(remapped.body)).toContain('"name":"session-7"');
+  });
+});
+
+function mangled(prefix: string, suffix: string): Uint8Array {
+  return Buffer.concat([
+    Buffer.from(prefix, 'utf8'),
+    Buffer.from([0xff, 0xff]),
+    Buffer.from(suffix, 'utf8'),
+  ]);
+}
+
+describe('remapping a body whose bytes are not valid text', () => {
+  test('a declared tool that cannot be located by byte offset leaves the body alone', () => {
+    const body = mangled('{"a":"', '","tools":[{"name":"Read"}]}');
+    const remapped = remapClaudeToolNamesRaw(body, SECRET);
+
+    expect(remapped.body).toBe(body);
+    expect(remapped.reverse).toEqual({});
+    expect(remapped.fallback).toBe(true);
+  });
+
+  test('a scanned name that cannot be located by byte offset leaves the body alone', () => {
+    const body = mangled('[{"a":"', '","name":"Read"}]');
+    const remapped = remapClaudeToolNamesRaw(body, SECRET);
+
+    expect(remapped.body).toBe(body);
+    expect(Object.values(remapped.reverse)).toEqual(['Read']);
+    expect(remapped.fallback).toBe(true);
   });
 });

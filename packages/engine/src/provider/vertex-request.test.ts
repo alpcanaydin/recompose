@@ -200,3 +200,48 @@ describe('vertexCountBody', () => {
     ).toEqual({ contents: [{ role: 'user', parts: [{ text: 'hello' }] }] });
   });
 });
+
+describe('a Vertex secret that names no credential', () => {
+  test.each([
+    ['a blank secret', '   '],
+    ['an empty secret', ''],
+  ])('reads %s as no credential', (_label, secret) => {
+    expect(parseVertexCredential(secret)).toBeNull();
+  });
+});
+
+describe('a Vertex bearer target the operator pinned to their own origin', () => {
+  test('keeps the configured origin instead of the regional one', () => {
+    const credential = parseVertexCredential(
+      '{"access_token":"vertex-token","project":"cloud-project","location":"europe-west4"}',
+    );
+
+    expect(
+      vertexRequestUrl(
+        'https://vertex.internal/',
+        credential ?? { kind: 'api-key', apiKey: '' },
+        crossing,
+      ),
+    ).toContain('https://vertex.internal/v1/projects/cloud-project');
+  });
+});
+
+describe('a Vertex request body the wire did not shape', () => {
+  test('a content entry that is not an object survives untouched', () => {
+    const body: JsonObject = { contents: ['legacy'] };
+
+    expect(stripVertexToolCallIds(body, 'responses')).toBe(body);
+  });
+
+  test('a content without parts survives untouched', () => {
+    const body: JsonObject = { contents: [{ role: 'user' }] };
+
+    expect(stripVertexToolCallIds(body, 'responses')).toBe(body);
+  });
+
+  test('a part that is not an object survives untouched', () => {
+    const body: JsonObject = { contents: [{ role: 'user', parts: ['legacy'] }] };
+
+    expect(stripVertexToolCallIds(body, 'responses')).toBe(body);
+  });
+});

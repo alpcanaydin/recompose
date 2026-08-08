@@ -217,4 +217,10 @@ describe('encodeRequest writes the choice and sampling knobs', () => {
       to: 'max_tokens (default)',
     });
   });
+
+  it('leaves a web-search tool choice to the model, because the wire cannot name it', () => {
+    const { value } = encodeRequest(aHubRequest({ toolChoice: { type: 'web_search' } }));
+
+    expect(value.tool_choice).toEqual({ type: 'auto' });
+  });
 });
