@@ -122,13 +122,7 @@ export const test = base.extend<ElectronFixtures>({
     await rm(userDataDir, { force: true, recursive: true });
     await mkdir(userDataDir, { recursive: true });
     const app = await electron.launch({
-      args: [
-        appRoot,
-        '--force-color-profile=srgb',
-        '--font-render-hinting=none',
-        '--disable-lcd-text',
-        '--disable-gpu',
-      ],
+      args: [appRoot],
       env: subscriptionTools.env({
         ...inheritedEnv(),
         NODE_ENV: 'production',
