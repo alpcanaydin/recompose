@@ -79,7 +79,9 @@ describe('Claude input counting reads documents and search results', () => {
 
     expect(claude(userSaying([part]))).toBe(roleOnly());
   });
+});
 
+describe('Claude input counting reads search results and tool traffic', () => {
   test('a web search result is counted with its source and url', () => {
     const part = {
       type: 'web_search_result',
