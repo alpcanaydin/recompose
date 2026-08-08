@@ -82,6 +82,24 @@ describe('Gemini function call history pairing', () => {
   test.each(invalidCases)('rejects %s', (_label, value, message) => {
     expect(antigravityPairingError(value)).toContain(message);
   });
+
+  test('accepts a request that declares no contents list', () => {
+    expect(antigravityPairingError({ model: 'gemini-3.6-flash-high' })).toBeNull();
+  });
+
+  test('ignores entries that carry no parts list', () => {
+    const contents = ['plain', { role: 'model' }, { role: 'user', parts: 'text' }];
+
+    expect(antigravityPairingError({ model: 'gemini-3.6-flash-high', contents })).toBeNull();
+  });
+
+  test('treats a call id or name of the wrong shape as absent', () => {
+    const parts = [{ functionCall: { id: 7, name: 4, args: {} } }];
+
+    expect(antigravityPairingError(body({ role: 'user', parts }))).toBe(
+      'missing functionCall.name',
+    );
+  });
 });
 
 function grant(): ResolvedGrant {
