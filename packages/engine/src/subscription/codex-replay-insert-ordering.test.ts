@@ -1,7 +1,44 @@
+import { fc } from '@fast-check/vitest';
 import { describe, expect, test } from 'vitest';
 
 import { insertReplayTurns } from './codex-replay-insert';
 import { assistantSaying, reasoningItem, replayTurn } from './codex-replay-insert.testkit';
+
+function replayedSignature(item: unknown): unknown {
+  return typeof item === 'object' && item !== null
+    ? Reflect.get(item, 'encrypted_content')
+    : undefined;
+}
+
+type AnchoredHistory = { texts: string[]; picked: Set<number> };
+
+function anchoredHistories() {
+  return fc
+    .uniqueArray(fc.string({ minLength: 1 }), { minLength: 2, maxLength: 6 })
+    .chain((texts) =>
+      fc
+        .uniqueArray(fc.integer({ min: 0, max: texts.length - 1 }), { minLength: 1 })
+        .map((picks) => ({ texts, picked: new Set(picks) })),
+    );
+}
+
+function turnOrderHoldsAtEveryAnchor({ texts, picked }: AnchoredHistory): void {
+  const replayedTexts = texts.filter((_, index) => picked.has(index));
+
+  const result = insertReplayTurns(
+    texts.map((text) => assistantSaying(text)),
+    replayedTexts.map((text) =>
+      replayTurn({ assistantText: text, reasoning: [reasoningItem(`sig of ${text}`)] }),
+    ),
+  );
+
+  const positions = replayedTexts.map((text) =>
+    result.findIndex((item) => replayedSignature(item) === `sig of ${text}`),
+  );
+
+  expect(positions).not.toContain(-1);
+  expect(positions).toStrictEqual([...positions].sort((left, right) => left - right));
+}
 
 describe('replaying several turns into one history', () => {
   test('an earlier turn never lands after a later one', () => {
@@ -44,6 +81,12 @@ describe('replaying several turns into one history', () => {
     );
 
     expect(result).toStrictEqual([reasoningItem('sig-kept'), spoke]);
+  });
+});
+
+describe('replaying into generated histories', () => {
+  test('chronological turn order holds at every matched anchor', () => {
+    fc.assert(fc.property(anchoredHistories(), turnOrderHoldsAtEveryAnchor));
   });
 });
 
