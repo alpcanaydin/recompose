@@ -69,12 +69,41 @@ describe('plugin artifacts', () => {
   });
 });
 
+describe('plugin sources that name no host', () => {
+  it('should keep the raw entry as the source name when it is not a url', () => {
+    const sources = normalizePluginSources(['  internal-registry  ']);
+
+    expect(sources[1]).toEqual({
+      id: pluginSourceId('internal-registry'),
+      name: 'internal-registry',
+      url: 'internal-registry',
+    });
+  });
+});
+
+describe('plugins the store cannot download directly', () => {
+  it('should list no artifacts for a release-tagged plugin or its history', () => {
+    const released = { ...plugin(), versions: [{ version: '0.0.9', install: plugin().install }] };
+
+    expect(pluginArtifacts(released)).toEqual([]);
+  });
+
+  it('should select no artifact when the install plan is not a direct download', () => {
+    expect(selectPluginArtifact(plugin().install, 'linux', 'amd64')).toBeNull();
+  });
+});
+
 describe('pluginUpdateAvailable', () => {
   it('should compare numeric versions without downgrading', () => {
     expect(pluginUpdateAvailable('1.9.0', '1.10.0')).toBe(true);
     expect(pluginUpdateAvailable('2.0.0', '1.10.0')).toBe(false);
     expect(pluginUpdateAvailable('v1.0.0', '1.0.0')).toBe(false);
     expect(pluginUpdateAvailable('dev-a', 'dev-b')).toBe(true);
+  });
+
+  it('should read a missing version segment as zero', () => {
+    expect(pluginUpdateAvailable('1.2', '1.2.1')).toBe(true);
+    expect(pluginUpdateAvailable('1.2.1', '1.2')).toBe(false);
   });
 });
 

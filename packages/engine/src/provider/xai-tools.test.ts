@@ -168,6 +168,14 @@ test('collects namespace child references and ignores every other entry', () => 
   });
 });
 
+test('collects namespace children from a request that carries no input at all', () => {
+  const refs = collectXAINamespaceTools({
+    tools: [{ type: 'namespace', name: 'acme', tools: [{ name: 'lookup' }] }],
+  });
+
+  expect(refs).toEqual({ acme__lookup: { namespace: 'acme', name: 'lookup' } });
+});
+
 test('qualifies a namespaced choice that carries no name of its own', () => {
   const body = normalizeXAITools({
     tools: [{ type: 'namespace', name: 'acme', tools: [{ type: 'function', name: '' }] }],

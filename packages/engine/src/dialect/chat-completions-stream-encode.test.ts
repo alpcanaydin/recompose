@@ -89,6 +89,63 @@ describe('encodeStream folds hub events back into Chat Completions frames', () =
   });
 });
 
+describe('encodeStream renders only what a Chat Completions client can read', () => {
+  it('opens a thinking block without spending a frame on it', async () => {
+    const events: readonly HubStreamEvent[] = [
+      { type: 'message-begin' },
+      { type: 'block-open', index: 0, opening: { kind: 'thinking' } },
+      { type: 'block-close', index: 0 },
+      { type: 'message-end', stopReason: 'end', usage: {} },
+    ];
+
+    const frames = await collect(encodeStream(streamOf(events)));
+
+    expect(frames.filter((frame) => frame.type === 'chunk')).toHaveLength(3);
+  });
+
+  it('drops a citation annotation delta the chat frames have no room for', async () => {
+    const events: readonly HubStreamEvent[] = [
+      { type: 'message-begin' },
+      { type: 'block-open', index: 0, opening: { kind: 'text' } },
+      {
+        type: 'block-delta',
+        index: 0,
+        delta: { kind: 'annotation', annotation: { url: 'https://example.test' } },
+      },
+      { type: 'message-end', stopReason: 'end', usage: {} },
+    ];
+
+    const frames = await collect(encodeStream(streamOf(events)));
+
+    expect(JSON.stringify(frames)).not.toContain('example.test');
+  });
+});
+
+describe('encodeStream carries generated media the chat shape can hold', () => {
+  it('renders a hosted image as an image url and drops an audio block', async () => {
+    const events: readonly HubStreamEvent[] = [
+      { type: 'message-begin' },
+      {
+        type: 'media',
+        block: { type: 'image', source: { type: 'url', url: 'https://example.test/cat.png' } },
+      },
+      {
+        type: 'media',
+        block: {
+          type: 'audio',
+          source: { type: 'base64', mediaType: 'audio/mp3', data: 'aGVsbG8=' },
+        },
+      },
+      { type: 'message-end', stopReason: 'end', usage: {} },
+    ];
+
+    const frames = await collect(encodeStream(streamOf(events)));
+
+    expect(JSON.stringify(frames)).toContain('"url":"https://example.test/cat.png"');
+    expect(JSON.stringify(frames)).not.toContain('audio/mp3');
+  });
+});
+
 const expectedChatToolFrames: readonly ChatStreamFrame[] = [
   {
     type: 'chunk',

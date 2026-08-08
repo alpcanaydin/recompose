@@ -68,6 +68,37 @@ describe('Claude OAuth MCP request remapping', () => {
   });
 });
 
+const unmappedHistoryRequest = {
+  tools: [{ name: 'Bash', input_schema: { type: 'object' } }],
+  messages: [
+    { role: 'user', content: 'What is the weather in Paris?' },
+    { role: 'assistant', content: [{ type: 'tool_use', id: 'one', name: 'Unlisted', input: {} }] },
+    {
+      role: 'user',
+      content: [
+        { type: 'tool_result', tool_use_id: 'one', content: 'sunny, 21C' },
+        { type: 'tool_result', tool_use_id: 'two', content: [{ type: 'text', text: 'ok' }] },
+      ],
+    },
+  ],
+};
+
+describe('Claude OAuth MCP request remapping leaves the rest of the history alone', () => {
+  test('renames only declared tools and keeps every other reference as it was', () => {
+    const prepared = prepareClaudeTools(unmappedHistoryRequest, 'caller-secret');
+    const body = JSON.stringify(prepared.body);
+
+    expect(body).toContain('"name":"Unlisted"');
+    expect(body).toContain('"content":"sunny, 21C"');
+    expect(body).toContain('"content":"What is the weather in Paris?"');
+    expect(body).not.toContain('"name":"Bash"');
+  });
+
+  test('falls back to a generic suffix when the tool name carries no usable characters', () => {
+    expect(claudeMcpAlias('caller', '***')).toMatch(/_tool$/u);
+  });
+});
+
 describe('Claude OAuth MCP response remapping', () => {
   test('restores only names allocated for this request in JSON and SSE', () => {
     const reverse = { mcp__server__tool: 'Search_Web' };

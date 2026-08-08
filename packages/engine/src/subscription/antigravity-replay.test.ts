@@ -6,6 +6,7 @@ import { parsedJson } from '../gateway-wire';
 import {
   AntigravityReasoningReplay,
   antigravityReplayKey,
+  antigravityUsesReplay,
   observeAntigravityReasoning,
 } from './antigravity-replay';
 import { nativeSignature, responseOf, toolResultBody } from './antigravity-replay.testkit';
@@ -43,6 +44,37 @@ describe('Antigravity reasoning replay cache', () => {
         body,
       ),
     ).toBe(body);
+  });
+});
+
+describe('Antigravity replay scoping when the request names no model', () => {
+  test('scopes an unnamed model to one empty slot and asks for no replay', () => {
+    expect(antigravityReplayKey('account-1', {}, 'session-1')).toBe(
+      antigravityReplayKey('account-1', { model: 7 }, 'session-1'),
+    );
+    expect(antigravityUsesReplay({})).toBe(false);
+  });
+});
+
+describe('Antigravity replay branching', () => {
+  test('starts a new branch when a call comes back with different arguments', () => {
+    const replay = new AntigravityReasoningReplay();
+    const key = antigravityReplayKey('account-1', toolResultBody(), 'session-1');
+
+    replay.commit(key, [{ id: 'call-1', name: 'Bash', args: { command: 'true' } }]);
+    const first = replay.stateSnapshot(key).branch;
+
+    replay.commit(key, [{ id: 'call-1', name: 'Bash', args: { command: 'false' } }]);
+
+    expect(replay.stateSnapshot(key).branch).not.toBe(first);
+  });
+
+  test('evicts nothing from a cache that holds no session', () => {
+    const replay = new AntigravityReasoningReplay();
+
+    replay.evictOldestForTest(1);
+
+    expect(replay.entryCount()).toBe(0);
   });
 });
 

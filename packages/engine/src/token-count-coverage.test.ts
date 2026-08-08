@@ -121,6 +121,13 @@ describe('Claude input counting reads search results and tool traffic', () => {
 
     expect(claude(userSaying([part]))).toBeGreaterThan(0);
   });
+
+  test('a tool input the caller already serialized is counted as the text it is', () => {
+    const serialized = { type: 'tool_use', id: 'call-1', name: 'Bash', input: '{"a":"b"}' };
+    const structured = { type: 'tool_use', id: 'call-1', name: 'Bash', input: { a: 'b' } };
+
+    expect(claude(userSaying([serialized]))).toBe(claude(userSaying([structured])));
+  });
 });
 
 describe('Claude input counting reads the system prompt and tool declarations', () => {

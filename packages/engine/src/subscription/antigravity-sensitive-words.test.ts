@@ -53,7 +53,27 @@ describe('Antigravity sensitive-word obfuscation', () => {
       'You are H\u200Bermes, created by N\u200Bous Research. Use PROXY safely.',
     );
   });
+});
 
+describe('Antigravity sensitive-word obfuscation on an instruction with no text', () => {
+  test('leaves an instruction with no parts and a part with no text alone', () => {
+    const request = antigravityCountTokensRequest(
+      'https://daily-cloudcode-pa.googleapis.com',
+      {
+        model: 'gemini-3.6-flash-high',
+        systemInstruction: { role: 'user' },
+        system_instruction: { role: 'user', parts: ['proxy', { inlineData: { data: 'proxy' } }] },
+        contents: [],
+      },
+      credential,
+      ['proxy'],
+    );
+
+    expect(parsedJson(request.body)).toHaveProperty('request.system_instruction.parts.0', 'proxy');
+  });
+});
+
+describe('Antigravity sensitive-word obfuscation on a snake-case instruction', () => {
   test('supports the snake-case string spelling and ignores unusable words', () => {
     const request = antigravityCountTokensRequest(
       'https://daily-cloudcode-pa.googleapis.com',
