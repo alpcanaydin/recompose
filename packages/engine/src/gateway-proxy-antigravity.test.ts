@@ -49,6 +49,55 @@ describe('serving an Antigravity subscription target', () => {
   });
 });
 
+describe('serving Responses through an Antigravity subscription', () => {
+  test('preserves OpenAI tools and returns a function call', async () => {
+    const provider = runtimeAnswering(() =>
+      Response.json({
+        responseId: 'antigravity-tool-response',
+        candidates: [
+          {
+            content: {
+              role: 'model',
+              parts: [{ functionCall: { name: 'get_weather', args: { city: 'Tokyo' } } }],
+            },
+            finishReason: 'STOP',
+          },
+        ],
+      }),
+    );
+    const answer = await antigravityApp(provider.runtime).request(
+      'http://127.0.0.1:8397/v1/responses',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          model: 'fast',
+          input: 'Call get_weather for Tokyo.',
+          tools: [
+            {
+              type: 'function',
+              name: 'get_weather',
+              description: 'Get weather for a city',
+              parameters: { type: 'object', properties: { city: { type: 'string' } } },
+            },
+          ],
+          tool_choice: 'required',
+        }),
+      },
+    );
+
+    await expect(answer.json()).resolves.toMatchObject({
+      tools: [{ type: 'function', name: 'get_weather' }],
+      output: [
+        {
+          type: 'function_call',
+          name: 'get_weather',
+          arguments: '{"city":"Tokyo"}',
+        },
+      ],
+    });
+  });
+});
+
 describe('retrying Antigravity subscription rate limits', () => {
   test('a transient resource exhaustion retries the same target once', async () => {
     let attempts = 0;

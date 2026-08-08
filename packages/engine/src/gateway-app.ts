@@ -7,6 +7,8 @@ import type { ProxyDialect } from './gateway-wire';
 import type { PluginHost } from './plugin-host';
 import type { ProviderLogStore } from './provider/provider-log-store';
 
+import { proxyCodexAlphaSearch } from './gateway-codex-alpha-search';
+import { proxyCodexCompactRequest } from './gateway-codex-compact';
 import { proxyTokenCountRequest } from './gateway-count-tokens';
 import { modelListing } from './gateway-discovery';
 import { type ImagePath, proxyImageRequest } from './gateway-images';
@@ -38,7 +40,12 @@ const MODEL_ROUTES: readonly (readonly [string, ProxyDialect])[] = [
   ['/interactions', 'interactions'],
 ];
 
+const GEMINI_MODEL_ROUTE = '/v1beta/models/:action{.+}';
+const generateContentSuffix = ':generateContent';
+const streamGenerateContentSuffix = ':streamGenerateContent';
+
 const COUNT_TOKENS_PATHS = ['/v1/messages/count_tokens', '/messages/count_tokens'];
+const COMPACT_PATHS = ['/v1/responses/compact', '/responses/compact'];
 const IMAGE_ROUTES: readonly (readonly [string, ImagePath])[] = [
   ['/v1/images/generations', '/images/generations'],
   ['/images/generations', '/images/generations'],
@@ -69,6 +76,8 @@ function preparedLogStore(store?: ProviderLogStore): ProviderLogStore | null {
 }
 
 function dialectForPath(path: string): ProxyDialect {
+  if (isGeminiModelPath(path)) return 'gemini';
+
   if (path.endsWith('/interactions')) {
     return 'interactions';
   }
@@ -77,6 +86,14 @@ function dialectForPath(path: string): ProxyDialect {
     return 'responses';
   }
 
+  return defaultDialectForPath(path);
+}
+
+function isGeminiModelPath(path: string): boolean {
+  return path.includes('/models/') && path.includes('generateContent');
+}
+
+function defaultDialectForPath(path: string): ProxyDialect {
   return path.includes('/messages') ? 'anthropic' : 'chat-completions';
 }
 
@@ -121,6 +138,20 @@ function registerCountRoutes(
   }
 }
 
+function registerCompactRoutes(
+  app: Hono,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+): void {
+  for (const path of COMPACT_PATHS) {
+    app.post(path, async (c) =>
+      proxyCodexCompactRequest(c, gateway, spendGrantFor, subscriptions, fetchLike),
+    );
+  }
+}
+
 function registerModelRoutes(
   app: Hono,
   gateway: EngineGateway,
@@ -144,6 +175,71 @@ function registerModelRoutes(
       ),
     );
   }
+
+  registerGeminiModelRoutes(app, gateway, spendGrantFor, subscriptions, fetchLike, relay, plugins);
+}
+
+function registerGeminiModelRoutes(
+  app: Hono,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+  relay: AIStudioRelay,
+  plugins?: PluginHost,
+): void {
+  app.post(GEMINI_MODEL_ROUTE, async (c) =>
+    proxyGeminiAction(
+      c,
+      c.req.param('action'),
+      gateway,
+      spendGrantFor,
+      subscriptions,
+      fetchLike,
+      relay,
+      plugins,
+    ),
+  );
+}
+
+type GeminiAction = { model: string; stream: boolean };
+
+function parsedGeminiAction(action: string): GeminiAction | null {
+  if (action.endsWith(streamGenerateContentSuffix)) {
+    return { model: action.slice(0, -streamGenerateContentSuffix.length), stream: true };
+  }
+
+  return action.endsWith(generateContentSuffix)
+    ? { model: action.slice(0, -generateContentSuffix.length), stream: false }
+    : null;
+}
+
+async function proxyGeminiAction(
+  c: Parameters<typeof proxyModelRequest>[0],
+  action: string,
+  gateway: EngineGateway,
+  spendGrantFor: SpendGrantFor,
+  subscriptions: SubscriptionRuntime,
+  fetchLike: typeof fetch,
+  relay: AIStudioRelay,
+  plugins?: PluginHost,
+): Promise<Response> {
+  const parsed = parsedGeminiAction(action);
+
+  if (parsed === null) return c.json(unservedPath(gateway.displayName, c.req.path), 404);
+
+  return proxyModelRequest(
+    c,
+    'gemini',
+    gateway,
+    spendGrantFor,
+    fetchLike,
+    subscriptions,
+    relay,
+    plugins,
+    parsed.model,
+    parsed.stream,
+  );
 }
 
 export function createGatewayApp(
@@ -171,12 +267,22 @@ export function createGatewayApp(
   });
 
   app.get('/health', (c) => c.json({ gateway: gateway.displayName }));
+  app.on(['GET', 'HEAD'], '/healthz', (c) =>
+    c.req.method === 'HEAD' ? c.body(null, 200) : c.json({ status: 'ok' }),
+  );
   app.get('/v1/models', (c) => c.json(modelListing(gateway.virtualModels)));
   registerManagementUsage(app);
   registerManagementLogs(app, logStore);
   registerGatewayWebSockets(app, gateway, spendGrantFor, fetchLike, relay);
+  app.post('/v1/alpha/search', async (c) =>
+    proxyCodexAlphaSearch(c, gateway, spendGrantFor, fetchLike),
+  );
+  app.post('/backend-api/codex/alpha/search', async (c) =>
+    proxyCodexAlphaSearch(c, gateway, spendGrantFor, fetchLike),
+  );
 
   registerCountRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike, relay, plugins);
+  registerCompactRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike);
 
   registerImageRoutes(app, gateway, spendGrantFor, subscriptionServing, fetchLike);
   registerVideoRoutes(app, gateway, spendGrantFor, fetchLike);

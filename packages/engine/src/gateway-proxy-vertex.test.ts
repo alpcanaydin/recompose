@@ -116,7 +116,7 @@ describe('Vertex Responses tool history', () => {
           parts: [{ functionCall: { name: 'lookup', args: { id: 9_007_199_254_740_992 } } }],
         },
         {
-          parts: [{ functionResponse: { name: 'lookup', response: { output: '{"id":"keep"}' } } }],
+          parts: [{ functionResponse: { name: 'lookup', response: { result: '{"id":"keep"}' } } }],
         },
       ],
     });

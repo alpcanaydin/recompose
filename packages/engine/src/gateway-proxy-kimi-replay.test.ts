@@ -83,7 +83,7 @@ async function ask(
 ): Promise<Response> {
   return app.request('http://127.0.0.1:8397/v1/messages', {
     method: 'POST',
-    headers: { 'x-session-id': 'family-switch' },
+    headers: { authorization: 'Bearer replay-caller', 'x-session-id': 'family-switch' },
     body: JSON.stringify({
       model,
       max_tokens: 32,

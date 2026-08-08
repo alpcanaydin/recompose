@@ -45,7 +45,9 @@ export function translatedResponse(from: ProviderDialect, crossing: Crossing, an
 
 function translatedGeminiResponse(crossing: Crossing, answer: JsonObject) {
   return isGeminiResponse(answer)
-    ? translateResponseFromGemini(crossing.dialect, answer, crossing.geminiToolNames)
+    ? translateResponseFromGemini(crossing.dialect, answer, crossing.geminiToolNames, {
+        nativeWebSearch: crossing.geminiNativeWebSearch,
+      })
     : null;
 }
 

@@ -156,3 +156,34 @@ describe('a caller abandoning the stream', () => {
     });
   });
 });
+
+describe('a same-dialect Chat stream after its terminal sentinel', () => {
+  test('drops provider chunks that arrive after DONE', async () => {
+    const upstream = [
+      `data: ${chunkOf('kept')}\n\n`,
+      'data: [DONE]\n\n',
+      `data: ${chunkOf('dropped')}\n\n`,
+    ].join('');
+    const provider = new Hono();
+
+    provider.post('/v1/chat/completions', (c) =>
+      c.body(upstream, 200, { 'content-type': 'text/event-stream' }),
+    );
+    running = await servedOrigin(provider);
+
+    const app = createGatewayApp(
+      aGatewayHolding(aVirtualModel()),
+      async () => Promise.resolve(aCredentialedGrant(running?.origin ?? '')),
+      globalThis.fetch,
+    );
+    const answer = await app.request('http://127.0.0.1:8397/v1/chat/completions', {
+      method: 'POST',
+      body: JSON.stringify(aWireStreamAsk),
+    });
+    const text = await answer.text();
+
+    expect(text).toContain('kept');
+    expect(text).toContain('[DONE]');
+    expect(text).not.toContain('dropped');
+  });
+});

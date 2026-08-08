@@ -106,7 +106,60 @@ describe('serving a Claude subscription target', () => {
     });
     expect(provider.persist).not.toHaveBeenCalled();
   });
+
+  test('a Responses stream exposes the requested virtual model', async () => {
+    const provider = runtimeAnswering(() => claudeStreamAnswer());
+    const app = claudeApp(claudeCredential('claude-access', 1_800_000_000_000), provider.runtime);
+    const answer = await app.request('http://127.0.0.1:8397/v1/responses', {
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'fast',
+        stream: true,
+        input: [{ type: 'message', role: 'user', content: 'hello' }],
+      }),
+    });
+    const events = ssePayloads(await answer.text());
+
+    expect(events.find((event) => event['type'] === 'response.created')).toHaveProperty(
+      'response.model',
+      'fast',
+    );
+    expect(events.find((event) => event['type'] === 'response.completed')).toHaveProperty(
+      'response.model',
+      'fast',
+    );
+  });
 });
+
+function claudeStreamAnswer(): Response {
+  const events = [
+    {
+      type: 'message_start',
+      message: {
+        id: 'msg_1',
+        model: 'claude-sonnet-4-5',
+        type: 'message',
+        role: 'assistant',
+        content: [],
+        stop_reason: null,
+        usage: { input_tokens: 1, output_tokens: 0 },
+      },
+    },
+    { type: 'message_stop' },
+  ];
+
+  return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(''), {
+    headers: { 'content-type': 'text/event-stream' },
+  });
+}
+
+function ssePayloads(text: string): Record<string, unknown>[] {
+  return text
+    .split('\n')
+    .filter((line) => line.startsWith('data: '))
+    .map((line): unknown => JSON.parse(line.slice(6)))
+    .filter(isJsonObject);
+}
 
 describe('preparing a Claude subscription identity', () => {
   test('a missing Claude identity is fetched, persisted, and sent upstream', async () => {

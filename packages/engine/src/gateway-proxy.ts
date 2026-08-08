@@ -1,32 +1,39 @@
 import type { EngineGateway, SpendGrant } from '@recompose/contracts';
 import type { Context } from 'hono';
 
-import type { RequestOf } from './dialect/dispatcher';
-import type { Crossing, JsonObject, ProviderDialect, ProxyDialect } from './gateway-wire';
+import type { Crossing, JsonObject, ProxyDialect } from './gateway-wire';
 import type { PluginGatewayTarget } from './plugin-gateway';
 import type { PluginHost } from './plugin-host';
 import type { AIStudioRelay } from './provider/ai-studio-relay';
-import type { TranslationRefusal } from './refusals';
 import type { SubscriptionRuntime } from './subscription/reach';
 
-import { translateRequest } from './dialect/dispatcher';
-import { translateRequestToGemini } from './dialect/gemini-bridge';
 import { unreachableTargetAnswer, unreachableTargetMessage } from './gateway-answers';
+import { outboundBodyFor } from './gateway-outbound-body';
 import { beforeGatewayPlugins } from './gateway-plugin-before';
 import { answerThroughPlugins } from './gateway-plugin-response';
 import { dialectFor } from './gateway-provider-dialect';
 import { gatewayRequestCrossing } from './gateway-request-crossing';
-import { ingressPayload, InvalidJsonBodyError, refusalResponse, streamAsk } from './gateway-wire';
+import { InvalidJsonBodyError, refusalResponse } from './gateway-wire';
 import { pluginGatewayTarget, reachPluginExecutor } from './plugin-gateway';
 import { reachCredentialed } from './provider/credentialed-reach';
-import { emptyConversation, missingCredential, missingTarget } from './refusals';
+import { missingCredential, missingTarget } from './refusals';
 import { parseSubscriptionCredential } from './subscription/credentials';
 import { reachSubscription, subscriptionRuntime } from './subscription/reach';
 
 export type { SubscriptionRuntime } from './subscription/reach';
 export { subscriptionRuntime } from './subscription/reach';
 
-export type SpendGrantFor = (slug: string, virtualModel: string) => Promise<SpendGrant>;
+export type SpendGrantContext = {
+  headers: Headers;
+  query: URLSearchParams;
+  sessionId?: string;
+};
+
+export type SpendGrantFor = (
+  slug: string,
+  virtualModel: string,
+  context?: SpendGrantContext,
+) => Promise<SpendGrant>;
 
 export async function proxyModelRequest(
   c: Context,
@@ -37,8 +44,10 @@ export async function proxyModelRequest(
   subscriptions: SubscriptionRuntime = subscriptionRuntime(),
   aiStudio?: AIStudioRelay,
   plugins?: PluginHost,
+  modelOverride?: string,
+  streamOverride?: boolean,
 ): Promise<Response> {
-  const lookup = await gatewayRequestCrossing(c, dialect, gateway);
+  const lookup = await gatewayRequestCrossing(c, dialect, gateway, modelOverride, streamOverride);
 
   if ('response' in lookup) return lookup.response;
 
@@ -137,7 +146,11 @@ async function forwardProviderResolved(
   plugins?: PluginHost,
 ): Promise<Response> {
   const upstreamDialect = dialectFor(grant, effectiveCrossing.dialect);
-  const outbound = outboundBodyFor(effectiveCrossing, upstreamDialect);
+  const outbound = outboundBodyFor(
+    effectiveCrossing,
+    upstreamDialect,
+    isAntigravitySubscription(grant),
+  );
 
   if ('refusal' in outbound) {
     return refusalResponse(effectiveCrossing.dialect, outbound.refusal);
@@ -158,6 +171,10 @@ async function forwardProviderResolved(
   }
 
   return answerThroughPlugins(effectiveCrossing, upstream, upstreamDialect, plugins);
+}
+
+function isAntigravitySubscription(grant: Extract<SpendGrant, { verdict: 'resolved' }>): boolean {
+  return grant.spend.custody === 'subscription' && grant.spend.provider === 'antigravity';
 }
 
 async function forwardPluginExecutor(
@@ -234,60 +251,4 @@ async function reachedUpstream(
 
     return null;
   }
-}
-
-type OutboundBody = { body: JsonObject } | { refusal: TranslationRefusal };
-
-function rawResponsesBody(crossing: Crossing, upstreamDialect: ProviderDialect): JsonObject | null {
-  return crossing.dialect === 'responses' && upstreamDialect === 'responses'
-    ? { ...crossing.raw, model: crossing.providerModel, ...streamAsk(crossing.raw) }
-    : null;
-}
-
-function crossedRequest(
-  crossing: Crossing,
-  upstreamDialect: ProviderDialect,
-  payload: RequestOf[ProxyDialect],
-) {
-  return upstreamDialect === 'gemini'
-    ? translateRequestToGemini(crossing.dialect, payload, (names) => {
-        crossing.geminiToolNames = names;
-      })
-    : translateRequest(crossing.dialect, upstreamDialect, payload);
-}
-
-function outboundBodyFor(crossing: Crossing, upstreamDialect: ProviderDialect): OutboundBody {
-  const raw = rawResponsesBody(crossing, upstreamDialect);
-
-  if (raw !== null) return { body: raw };
-
-  const payload = ingressPayload(crossing.dialect, crossing.raw);
-
-  if (payload === null) {
-    return { refusal: emptyConversation() };
-  }
-
-  const crossed = crossedRequest(crossing, upstreamDialect, payload);
-
-  if ('outcome' in crossed) {
-    return { body: passthroughBody(crossing) };
-  }
-
-  if ('refusal' in crossed) {
-    return { refusal: crossed.refusal };
-  }
-
-  return {
-    body: { ...crossed.value, model: crossing.providerModel, ...streamAsk(crossing.raw) },
-  };
-}
-
-function passthroughBody(crossing: Crossing): JsonObject {
-  if (crossing.dialect !== 'interactions' || typeof crossing.raw['agent'] !== 'string') {
-    return { ...crossing.raw, model: crossing.providerModel };
-  }
-
-  const { agent: _agent, model: _model, ...body } = crossing.raw;
-
-  return { ...body, agent: crossing.providerModel };
 }

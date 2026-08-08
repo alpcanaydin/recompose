@@ -2,8 +2,11 @@ import type { ResponsesResponse } from './dialect/responses-wire';
 import type { Crossing, JsonObject, ProviderDialect } from './gateway-wire';
 import type { AnthropicRefusal } from './refusals';
 
-import { answeredBy } from './dialect/anthropic-attribution';
-import { terminalResponseIn } from './dialect/responses-answer-shape';
+import { chatSseUntilDone } from './chat-sse-hygiene';
+import { answeredBy, answeringModelInto } from './dialect/anthropic-attribution';
+import { isResponsesAnswer, terminalResponseIn } from './dialect/responses-answer-shape';
+import { respondingModelInto, responsesAnsweredBy } from './dialect/responses-attribution';
+import { restoreResponsesToolResponse } from './dialect/responses-tool-restoration';
 import { isAnthropicAnswer, translatedResponse } from './gateway-response-translation';
 import { translatedStreamBody } from './gateway-stream-answers';
 import {
@@ -13,7 +16,7 @@ import {
   refusalResponse,
   wantsStream,
 } from './gateway-wire';
-import { jsonEventsFrom } from './stream-wire';
+import { jsonEventsFrom, namedSseBodyFrom } from './stream-wire';
 import { codexTerminalErrorAnswer } from './subscription/codex-terminal-error';
 
 function attributionOf(crossing: Crossing): Record<string, string> {
@@ -99,7 +102,7 @@ async function streamedAnswer(
   }
 
   if (crossing.dialect === upstreamDialect) {
-    return passedAlong(upstream, attribution);
+    return sameDialectStreamedAnswer(crossing, upstream, attribution);
   }
 
   const body = upstream.body;
@@ -118,6 +121,38 @@ async function streamedAnswer(
     status: upstream.status,
     headers: { ...attribution, 'content-type': 'text/event-stream' },
   });
+}
+
+function sameDialectStreamedAnswer(
+  crossing: Crossing,
+  upstream: Response,
+  attribution: Record<string, string>,
+): Response {
+  if (upstream.body === null) return passedAlong(upstream, attribution);
+
+  const body = sameDialectStreamBody(crossing, upstream.body);
+
+  if (body === upstream.body) return passedAlong(upstream, attribution);
+
+  return new Response(body, {
+    status: upstream.status,
+    headers: upstreamHeaders(upstream, attribution),
+  });
+}
+
+function sameDialectStreamBody(
+  crossing: Crossing,
+  body: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  if (crossing.dialect === 'chat-completions') return chatSseUntilDone(body);
+
+  if (crossing.dialect === 'anthropic') {
+    return namedSseBodyFrom(answeringModelInto(jsonEventsFrom(body), crossing.providerModel));
+  }
+
+  return crossing.dialect === 'responses'
+    ? namedSseBodyFrom(respondingModelInto(jsonEventsFrom(body), crossing.virtualModel))
+    : body;
 }
 
 function needsCompletedResponses(upstreamDialect: ProviderDialect, crossing: Crossing): boolean {
@@ -144,11 +179,27 @@ async function translatedAnswer(
   const text = await upstream.text();
   const answer = parsedJson(text);
 
-  if (!isJsonObject(answer) || crossing.dialect === upstreamDialect) {
+  if (!isJsonObject(answer)) {
     return textAnswer(text, upstream, attribution);
   }
 
+  if (crossing.dialect === upstreamDialect) {
+    return sameDialectJsonAnswer(crossing, answer, text, upstream, attribution);
+  }
+
   return translatedJsonAnswer(crossing, upstreamDialect, answer, text, upstream, attribution);
+}
+
+function sameDialectJsonAnswer(
+  crossing: Crossing,
+  answer: JsonObject,
+  text: string,
+  upstream: Response,
+  attribution: Record<string, string>,
+): Response {
+  return crossing.dialect === 'anthropic' && isAnthropicAnswer(answer)
+    ? jsonResponse(answeredBy(answer, crossing.providerModel), upstream.status, attribution)
+    : textAnswer(text, upstream, attribution);
 }
 
 function translatedJsonAnswer(
@@ -169,15 +220,39 @@ function translatedJsonAnswer(
     return refusalResponse(crossing.dialect, crossed.refusal);
   }
 
-  const value = attributedAnswer(crossing, crossed.value);
+  const restored = restoredResponsesAnswer(crossing, crossed.value);
+  const value = attributedAnswer(crossing, restored);
 
   return jsonResponse(value, upstream.status, attribution);
 }
 
+function restoredResponsesAnswer(crossing: Crossing, value: unknown): unknown {
+  if (crossing.dialect !== 'responses' || !isJsonObject(value) || !isResponsesAnswer(value)) {
+    return value;
+  }
+
+  return restoreResponsesToolResponse(value, crossing.responsesToolRefs ?? {});
+}
+
 function attributedAnswer(crossing: Crossing, value: unknown): unknown {
-  return crossing.dialect === 'anthropic' && isJsonObject(value) && isAnthropicAnswer(value)
-    ? answeredBy(value, crossing.providerModel)
-    : value;
+  if (!isJsonObject(value)) return value;
+  if (crossing.dialect === 'anthropic') return attributedAnthropic(crossing, value);
+  if (crossing.dialect === 'responses') return attributedResponses(crossing, value);
+
+  return value;
+}
+
+function attributedAnthropic(crossing: Crossing, value: JsonObject): unknown {
+  return isAnthropicAnswer(value) ? answeredBy(value, crossing.providerModel) : value;
+}
+
+function attributedResponses(crossing: Crossing, value: JsonObject): unknown {
+  if (!isResponsesAnswer(value)) return value;
+
+  const answer = responsesAnsweredBy(value, crossing.virtualModel);
+  const tools = crossing.raw['tools'];
+
+  return Array.isArray(tools) ? { ...answer, tools } : answer;
 }
 
 async function completedResponsesAnswer(

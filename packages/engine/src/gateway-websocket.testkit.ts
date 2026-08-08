@@ -115,7 +115,11 @@ async function handleCompact(
   }
 
   stats.compactBodies.push(parsedJson(await requestText(request)));
-  const encrypted = Buffer.alloc(256, 9).toString('base64').replace(/=+$/u, '');
+  const encrypted = Buffer.from(
+    Array.from({ length: 256 }, (_value, index) => (index * 41 + 9 * 67 + 17) % 251),
+  )
+    .toString('base64')
+    .replace(/=+$/u, '');
 
   response.setHeader('content-type', 'application/json');
   response.end(

@@ -23,6 +23,14 @@ function urlOf(input: Parameters<typeof fetch>[0]): string {
   return input instanceof URL ? input.href : input.url;
 }
 
+function encrypted(seed: number): string {
+  return Buffer.from(
+    Array.from({ length: 256 }, (_value, index) => (index * 41 + seed * 67 + 17) % 251),
+  )
+    .toString('base64')
+    .replace(/=+$/u, '');
+}
+
 function completedResponse(): Response {
   const event = {
     type: 'response.completed',
@@ -251,8 +259,8 @@ test('flattens xAI namespace tools and restores completed function calls', async
 });
 
 test('replays final xAI reasoning and assistant state into the next session turn', async () => {
-  const added = Buffer.alloc(256, 1).toString('base64').replace(/=+$/u, '');
-  const done = Buffer.alloc(256, 2).toString('base64').replace(/=+$/u, '');
+  const added = encrypted(1);
+  const done = encrypted(2);
   const sent: RequestInit[] = [];
   const responses = [replayResponse(added, done), completedResponse()];
   const fetchLike: typeof fetch = async (_input, init) => {

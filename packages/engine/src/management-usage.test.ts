@@ -62,9 +62,6 @@ async function recordUsage(model: string): Promise<void> {
     model,
     dialect: 'responses',
     method: 'POST',
-    url: 'https://api.openai.com/v1/responses',
-    headers: new Headers(),
-    body: new Uint8Array(),
   };
   const response = Response.json({
     usage: { input_tokens: 3, output_tokens: 2, total_tokens: 5 },

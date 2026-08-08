@@ -9,7 +9,7 @@ describe('credentialed provider observability', () => {
     providerObservability().clear();
   });
 
-  it('should record the normalized request, response metadata, and usage', async () => {
+  it('should record safe request metadata and usage', async () => {
     const fetchLike: typeof fetch = async () =>
       Promise.resolve(
         Response.json(
@@ -49,10 +49,12 @@ describe('credentialed provider observability', () => {
       usage: { inputTokens: 3, outputTokens: 2, totalTokens: 5 },
       generate: true,
     });
-    expect(record?.url).toBe(
-      'https://generativelanguage.googleapis.com/v1beta/models/gpt-5-mini:generateContent',
-    );
-    expect(record?.responseHeaders.get('x-upstream-request-id')).toBe('gemini-request-1');
-    expect(new TextDecoder().decode(record?.body)).toContain('"contents"');
+    expect(record?.upstreamRequestIdHash).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(record).not.toHaveProperty('url');
+    expect(record).not.toHaveProperty('headers');
+    expect(record).not.toHaveProperty('body');
+    expect(record).not.toHaveProperty('responseHeaders');
+    expect(JSON.stringify(record)).not.toContain('gemini-request-1');
+    expect(JSON.stringify(record)).not.toContain('hello');
   });
 });

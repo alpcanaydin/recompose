@@ -9,7 +9,10 @@ import { translateRequestToGemini } from '../dialect/gemini-bridge';
 import { requestSessions } from '../gateway-session';
 import { ingressPayload, isJsonObject, jsonResponse, refusalResponse } from '../gateway-wire';
 import { emptyConversation } from '../refusals';
+import { decodeClaudeResponse } from '../subscription/claude-compression';
 import { reachAntigravityCount } from '../subscription/reach-count';
+import { credentialedRequestHeaders } from './credentialed-target';
+import { kimiProviderBody } from './kimi-request';
 import {
   parseVertexCredential,
   vertexCountBody,
@@ -18,6 +21,7 @@ import {
 } from './vertex-request';
 
 type ResolvedGrant = Extract<SpendGrant, { verdict: 'resolved' }>;
+type CredentialedSpend = Extract<ResolvedGrant['spend'], { custody: 'credentialed' }>;
 
 export async function nativeProviderCount(
   c: Context,
@@ -29,7 +33,7 @@ export async function nativeProviderCount(
   aiStudio?: AIStudioRelay,
 ): Promise<Response | null> {
   if (grant.spend.custody === 'credentialed') {
-    return credentialedCount(raw, grant, providerModel, fetchLike, aiStudio);
+    return credentialedCount(c, raw, grant, grant.spend, providerModel, fetchLike, aiStudio);
   }
 
   return grant.spend.custody === 'subscription' && grant.spend.provider === 'antigravity'
@@ -38,25 +42,71 @@ export async function nativeProviderCount(
 }
 
 function credentialedCount(
+  c: Context,
   raw: JsonObject,
   grant: ResolvedGrant,
+  spend: CredentialedSpend,
   providerModel: string,
   fetchLike: typeof fetch,
   aiStudio?: AIStudioRelay,
 ): Promise<Response> | null {
-  if (grant.spend.custody !== 'credentialed') return null;
-
-  if (grant.spend.provider === 'gemini') {
-    return geminiCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
+  if (spend.provider === 'gemini') {
+    return geminiCount(raw, grant.providerOrigin, spend.credential, providerModel, fetchLike);
   }
 
-  if (grant.spend.provider === 'vertex') {
-    return vertexCount(raw, grant.providerOrigin, grant.spend.credential, providerModel, fetchLike);
+  if (spend.provider === 'vertex') {
+    return vertexCount(raw, grant.providerOrigin, spend.credential, providerModel, fetchLike);
   }
 
-  return grant.spend.provider === 'aistudio'
-    ? aiStudioCount(raw, grant, providerModel, aiStudio)
-    : null;
+  if (spend.provider === 'kimi') {
+    return kimiCount(c, raw, grant.providerOrigin, spend, providerModel, fetchLike);
+  }
+
+  return spend.provider === 'aistudio' ? aiStudioCount(raw, grant, providerModel, aiStudio) : null;
+}
+
+async function kimiCount(
+  c: Context,
+  raw: JsonObject,
+  providerOrigin: string,
+  spend: CredentialedSpend,
+  providerModel: string,
+  fetchLike: typeof fetch,
+): Promise<Response> {
+  const crossing = countCrossing(raw, providerModel, c.req.header('anthropic-beta'));
+  const origin = providerOrigin.replace(/\/+$/u, '');
+  const answer = await fetchLike(`${origin}/v1/messages/count_tokens?beta=true`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...credentialedRequestHeaders(spend, crossing),
+    },
+    body: JSON.stringify(kimiProviderBody(raw, providerModel, 'anthropic')),
+  });
+
+  return decodedKimiCountAnswer(answer);
+}
+
+async function decodedKimiCountAnswer(answer: Response): Promise<Response> {
+  const decoded = await decodeClaudeResponse(answer);
+
+  try {
+    const body = await decoded.arrayBuffer();
+
+    return new Response(body, {
+      status: decoded.status,
+      statusText: decoded.statusText,
+      headers: decoded.headers,
+    });
+  } catch {
+    return jsonResponse(
+      {
+        type: 'error',
+        error: { type: 'api_error', message: 'failed to decode error response body' },
+      },
+      answer.status,
+    );
+  }
 }
 
 async function aiStudioCount(
@@ -152,13 +202,14 @@ async function vertexCount(
   return geminiCountAnswer(answer, await answer.json());
 }
 
-function countCrossing(raw: JsonObject, providerModel: string): Crossing {
+function countCrossing(raw: JsonObject, providerModel: string, anthropicBeta?: string): Crossing {
   return {
     dialect: 'anthropic',
     raw,
     gatewayName: '',
     virtualModel: '',
     providerModel,
+    anthropicBeta,
   };
 }
 

@@ -76,6 +76,7 @@ type ClassifiedEntry =
   | { kind: 'model'; value: string }
   | { kind: 'stream'; value: boolean }
   | { kind: 'field'; name: string; value: string }
+  | { kind: 'existingImage'; value: string }
   | { kind: 'image'; value: string }
   | { kind: 'mask'; value: string }
   | { kind: 'ignored' };
@@ -83,6 +84,7 @@ type ClassifiedEntry =
 function textEntry(name: string, value: string): ClassifiedEntry {
   if (name === 'model') return { kind: 'model', value };
   if (name === 'stream') return { kind: 'stream', value: value.trim().toLowerCase() === 'true' };
+  if (name === 'images') return { kind: 'existingImage', value };
 
   return { kind: 'field', name, value };
 }
@@ -118,7 +120,9 @@ function streamValue(entries: ClassifiedEntry[]): boolean {
 }
 
 function withMedia(body: JsonObject, entries: ClassifiedEntry[], stream: boolean): JsonObject {
-  const images = entriesOfKind(entries, 'image').map((entry) => ({ image_url: entry.value }));
+  const existing = entriesOfKind(entries, 'existingImage').map((entry) => entry.value);
+  const uploaded = entriesOfKind(entries, 'image').map((entry) => ({ image_url: entry.value }));
+  const images = [...existing, ...uploaded];
   const mask = entriesOfKind(entries, 'mask')[0]?.value;
 
   if (images.length > 0) body['images'] = images;

@@ -99,4 +99,21 @@ describe('replay session namespaces', () => {
       scope: 'claude:metadata-session:agent:main',
     });
   });
+
+  it('TestCodexExecutorReasoningReplaySessionKeyCanonicalizesSessionHeaderAliases', async () => {
+    for (const name of ['Session_id', 'session_id', 'Session-Id']) {
+      await expect(replayScopeFrom({}, { [name]: 'session-alias' })).resolves.toEqual({
+        scope: 'responses:session-alias',
+      });
+    }
+  });
+
+  it('TestCodexExecutorReasoningReplaySessionKeyCanonicalizesWindowHeaderWithPayload', async () => {
+    await expect(
+      replayScopeFrom({ client_metadata: { 'x-codex-window-id': 'window-1' } }),
+    ).resolves.toEqual({ scope: 'window:window-1' });
+    await expect(replayScopeFrom({}, { 'x-codex-window-id': 'window-1' })).resolves.toEqual({
+      scope: 'window:window-1',
+    });
+  });
 });

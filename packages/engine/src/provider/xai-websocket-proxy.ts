@@ -12,6 +12,13 @@ import { restoreXAIToolPayload } from './xai-tool-response';
 import { XAIWebSocketCompaction, type XAITranscriptTurn } from './xai-websocket-compaction';
 import { messageTooBigPayload, parseXAIWebSocketError } from './xai-websocket-error';
 import { prepareXAIWebSocketTarget } from './xai-websocket-prepare';
+import { xaiWebSocketReady } from './xai-websocket-ready';
+import {
+  normalizeXAIReasoningEvent,
+  requiresXAIWebSocketReplay,
+  XAIWebSocketResponseIDs,
+  xaiResponseIDsFor,
+} from './xai-websocket-response';
 import {
   upstreamXAIWebSocketUrl,
   xaiWebSocketErrorPayload,
@@ -35,14 +42,6 @@ type ActiveConnection = {
   pending: XAITranscriptTurn | undefined;
 };
 
-async function readyPromise(socket: WebSocket): Promise<void> {
-  return new Promise<void>((resolve) => {
-    socket.once('open', resolve);
-    socket.once('error', resolve);
-    socket.once('unexpected-response', resolve);
-  });
-}
-
 function canSend(current: ActiveConnection | undefined, candidate: ActiveConnection): boolean {
   return current === candidate && candidate.socket.readyState === WebSocket.OPEN;
 }
@@ -53,6 +52,8 @@ export class XAIWebSocketProxy {
   private readonly gateway: EngineGateway;
   private readonly spendGrantFor: SpendGrantFor;
   private readonly compaction: XAIWebSocketCompaction;
+  private readonly requiredUpstreamWebSocket: boolean;
+  private readonly responseIDs = new Map<string, XAIWebSocketResponseIDs>();
   private terminal = false;
   private turn: Promise<void> = Promise.resolve();
 
@@ -61,11 +62,13 @@ export class XAIWebSocketProxy {
     gateway: EngineGateway,
     spendGrantFor: SpendGrantFor,
     fetchLike: typeof fetch,
+    options: { requiredUpstreamWebSocket?: boolean } = {},
   ) {
     this.downstream = downstream;
     this.gateway = gateway;
     this.spendGrantFor = spendGrantFor;
     this.compaction = new XAIWebSocketCompaction(fetchLike);
+    this.requiredUpstreamWebSocket = options.requiredUpstreamWebSocket === true;
   }
 
   public async receive(text: string): Promise<void> {
@@ -110,6 +113,18 @@ export class XAIWebSocketProxy {
     }
 
     if (this.compaction.isTrigger(prepared.normalized)) {
+      if (requiresXAIWebSocketReplay(prepared.normalized, this.requiredUpstreamWebSocket)) {
+        this.downstream.send(
+          JSON.stringify({
+            type: 'error',
+            status: 409,
+            error: { code: 'upstream_websocket_replay_required' },
+          }),
+        );
+
+        return null;
+      }
+
       const event = await this.compaction.compact(
         prepared.grant,
         prepared.crossing,
@@ -136,12 +151,13 @@ export class XAIWebSocketProxy {
 
   private async send(prepared: PreparedRequest): Promise<void> {
     const active = this.connectionFor(prepared);
+    const body = xaiResponseIDsFor(this.responseIDs, prepared.key).prepareRequest(prepared.body);
 
     active.crossing = prepared.crossing;
-    active.pending = { request: prepared.body, reset: prepared.transcriptReset };
+    active.pending = { request: body, reset: prepared.transcriptReset };
     await active.ready;
 
-    if (canSend(this.active, active)) active.socket.send(JSON.stringify(prepared.body));
+    if (canSend(this.active, active)) active.socket.send(JSON.stringify(body));
   }
 
   private connectionFor(prepared: PreparedRequest): ActiveConnection {
@@ -166,7 +182,7 @@ export class XAIWebSocketProxy {
     const active: ActiveConnection = {
       socket,
       key: prepared.key,
-      ready: readyPromise(socket),
+      ready: xaiWebSocketReady(socket),
       crossing: prepared.crossing,
       pending: undefined,
     };
@@ -198,11 +214,22 @@ export class XAIWebSocketProxy {
 
     if (this.handleUpstreamError(active, value)) return;
 
-    const restored = restoreXAIToolPayload(value, active.crossing.xaiNamespaceTools ?? {});
     const synthetic = this.observeTranscript(active, value);
 
-    this.downstream.send(JSON.stringify(restored));
+    this.forwardNormalized(active, value);
+
     if (synthetic !== undefined) this.downstream.send(JSON.stringify(synthetic));
+  }
+
+  private forwardNormalized(active: ActiveConnection, value: unknown): void {
+    const ids = xaiResponseIDsFor(this.responseIDs, active.key);
+
+    for (const normalized of normalizeXAIReasoningEvent(value)) {
+      const rewritten = ids.rewrite(normalized);
+      const restored = restoreXAIToolPayload(rewritten, active.crossing.xaiNamespaceTools ?? {});
+
+      this.downstream.send(JSON.stringify(restored));
+    }
   }
 
   private acceptsMessage(active: ActiveConnection): boolean {

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { isJsonObject, parsedJson } from './gateway-wire';
 import { pluginMethods } from './plugin-abi';
 import { pluginBytes, pluginHeaders, webHeaders } from './plugin-wire';
-import { providerObservability } from './provider/provider-observability';
+import { providerObservability, providerRequestId } from './provider/provider-observability';
 
 export type PluginHostHTTPRequest = {
   method: string;
@@ -150,9 +150,7 @@ function observedTransport(
     model: '',
     dialect: 'chat-completions',
     method: request.method,
-    url: request.url,
-    headers: webHeaders(request.headers),
-    body: request.body,
+    requestId: providerRequestId(webHeaders(request.headers)),
   });
   const response = transport(request);
 

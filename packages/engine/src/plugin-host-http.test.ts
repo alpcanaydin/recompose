@@ -45,8 +45,8 @@ describe('PluginHost HTTP callback', () => {
       provider: 'plugin:http-plugin',
       status: 202,
       method: 'POST',
-      url: 'https://example.test/v1/data',
     });
+    expect(providerObservability().snapshot()[0]).not.toHaveProperty('url');
   });
 
   it('should return error envelopes for unsafe URLs and unknown methods', async () => {

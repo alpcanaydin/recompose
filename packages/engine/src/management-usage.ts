@@ -22,6 +22,10 @@ function usageRecord(record: ProviderObservation) {
     ttft_ms: record.ttftMs,
     status: record.status,
     generate: record.generate,
+    ...(record.requestIdHash === undefined ? {} : { request_id_hash: record.requestIdHash }),
+    ...(record.upstreamRequestIdHash === undefined
+      ? {}
+      : { upstream_request_id_hash: record.upstreamRequestIdHash }),
     usage: {
       input_tokens: record.usage.inputTokens,
       output_tokens: record.usage.outputTokens,

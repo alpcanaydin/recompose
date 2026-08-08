@@ -89,6 +89,8 @@ describe('hydrating streaming Codex completions', () => {
     expect(events.at(-1)).toEqual({
       type: 'error',
       code: 'upstream_stream_incomplete',
+      scope: 'request',
+      status: 408,
       message:
         'stream error: stream disconnected before completion: stream closed before response.completed',
     });
