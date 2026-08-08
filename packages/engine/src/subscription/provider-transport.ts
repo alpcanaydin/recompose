@@ -189,10 +189,14 @@ export async function sendSubscriptionRequest(
   return restoredProviderResponse(provider, request, decoded);
 }
 
-function isClaudeOAuthUrl(url: string): boolean {
-  const hostname = new URL(url).hostname;
+function isHostWithin(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
 
-  return hostname.endsWith('claude.com') || hostname.endsWith('anthropic.com');
+function isClaudeOAuthUrl(url: string): boolean {
+  const { hostname } = new URL(url);
+
+  return isHostWithin(hostname, 'claude.com') || isHostWithin(hostname, 'anthropic.com');
 }
 
 export function subscriptionRefreshTransportOptions(
