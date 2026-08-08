@@ -43,3 +43,36 @@ describe('Gemini response decoding', () => {
     });
   });
 });
+
+describe('Gemini response decoding of parts the hub cannot place', () => {
+  test('ends the turn on a finish reason the hub does not know', () => {
+    const translated = decodeResponse({
+      candidates: [{ content: { role: 'model', parts: [{ text: 'hello' }] }, finishReason: 'NEW' }],
+    });
+
+    expect(translated.value.stopReason).toBe('end');
+  });
+
+  test('gives a function call with no arguments an empty input', () => {
+    const translated = decodeResponse({
+      candidates: [{ content: { role: 'model', parts: [{ functionCall: { name: 'ping' } }] } }],
+    });
+
+    expect(translated.value.content).toEqual([
+      { type: 'tool_use', id: 'call_0', name: 'ping', input: {} },
+    ]);
+  });
+
+  test('records a part carrying neither text nor a structured block as absent', () => {
+    const translated = decodeResponse({
+      candidates: [{ content: { role: 'model', parts: [{}, { text: 'hello' }] } }],
+    });
+
+    expect(translated.value.content).toEqual([{ type: 'text', text: 'hello' }]);
+    expect(translated.fates).toContainEqual({
+      field: 'candidates.0.content.parts.0',
+      disposition: 'mapped',
+      to: 'absent',
+    });
+  });
+});

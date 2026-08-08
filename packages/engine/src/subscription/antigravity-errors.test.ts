@@ -22,6 +22,18 @@ describe('Antigravity retry delay parsing', () => {
 
     expect(antigravityRetryDelayMilliseconds(body)).toBeCloseTo(479.417207);
   });
+
+  it('should parse a bare millisecond delay', () => {
+    const body = rateLimitBody('250ms');
+
+    expect(antigravityRetryDelayMilliseconds(body)).toBe(250);
+  });
+
+  it.each(['soon', 'in 5s', '5 gallons'])('should ignore the unreadable delay %s', (delay) => {
+    const body = rateLimitBody(delay);
+
+    expect(antigravityRetryDelayMilliseconds(body)).toBeNull();
+  });
 });
 
 describe('Antigravity same-target retry decisions', () => {
@@ -48,6 +60,26 @@ describe('Antigravity same-target retry decisions', () => {
 
   it('should not retry explicit quota exhaustion', async () => {
     const response = new Response(reasonBody('QUOTA_EXHAUSTED'), { status: 429 });
+
+    await expect(antigravitySameTargetRetryDelay(response)).resolves.toBeNull();
+  });
+
+  it('should retry at once when the rate limit already elapsed', async () => {
+    const response = new Response(rateLimitBody('0s'), { status: 429 });
+
+    await expect(antigravitySameTargetRetryDelay(response)).resolves.toBe(0);
+  });
+
+  it('should fall back to the soft delay when a rate limit names no delay', async () => {
+    const response = new Response(reasonBody('RATE_LIMIT_EXCEEDED'), { status: 429 });
+
+    await expect(antigravitySameTargetRetryDelay(response)).resolves.toBe(500);
+  });
+
+  it('should leave an unavailable target that reports no capacity problem', async () => {
+    const response = new Response(JSON.stringify({ error: { message: 'upstream is down' } }), {
+      status: 503,
+    });
 
     await expect(antigravitySameTargetRetryDelay(response)).resolves.toBeNull();
   });

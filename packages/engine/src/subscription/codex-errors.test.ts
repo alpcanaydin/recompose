@@ -138,6 +138,23 @@ describe('Codex known error classification', () => {
     await expect(answer.json()).resolves.toMatchObject({ error: { type, code } });
   });
 
+  it('should name the status when a rejection carries no words at all', async () => {
+    const answer = await normalizeCodexError(new Response('', { status: 401 }), NOW);
+
+    expect(answer.status).toBe(401);
+    await expect(answer.json()).resolves.toEqual({
+      error: { message: 'HTTP 401', type: 'authentication_error', code: 'auth_unavailable' },
+    });
+  });
+
+  it('should ignore an error message that is not a string', async () => {
+    const answer = await normalized(401, { error: { message: { detail: 'nope' } } });
+
+    await expect(answer.json()).resolves.toMatchObject({
+      error: { message: '{"error":{"message":{"detail":"nope"}}}' },
+    });
+  });
+
   it('should preserve an unclassified error byte for byte', async () => {
     const body =
       '{"error":{"message":"documentation mentions too many tokens, but this is billing","type":"server_error","code":"billing_config_error"}}';
