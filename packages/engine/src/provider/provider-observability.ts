@@ -1,15 +1,13 @@
+import { createHash } from 'node:crypto';
+
 import type { ProviderDialect } from '../gateway-wire';
+import type { ProviderMediaLog } from './provider-log-types';
+import type { ProviderUsage } from './provider-usage';
 
-import { isJsonObject, parsedJson } from '../gateway-wire';
+import { emptyProviderUsage, providerUsageFrom } from './provider-usage';
 
-export type ProviderUsage = {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-  reasoningTokens: number;
-};
+export { providerUsageFrom } from './provider-usage';
+export type { ProviderUsage } from './provider-usage';
 
 export type ProviderRequestLog = {
   provider: string;
@@ -17,20 +15,40 @@ export type ProviderRequestLog = {
   accountId?: string | undefined;
   dialect: ProviderDialect;
   method: string;
-  url: string;
-  headers: Headers;
-  body: Uint8Array;
+  requestId?: string | undefined;
   generate?: boolean | undefined;
+  version?: string | undefined;
+  media?: ProviderMediaLog | undefined;
 };
 
-export type ProviderObservation = ProviderRequestLog & {
+export type ProviderObservation = {
+  provider: string;
+  model: string;
+  accountId?: string | undefined;
+  dialect: ProviderDialect;
+  method: string;
+  requestIdHash?: string | undefined;
+  upstreamRequestIdHash?: string | undefined;
   startedAt: number;
   durationMs: number;
   ttftMs: number;
   status: number;
-  responseHeaders: Headers;
   usage: ProviderUsage;
   generate: boolean;
+  version?: string | undefined;
+  media?: ProviderMediaLog | undefined;
+};
+
+type ProviderObservationRequest = {
+  provider: string;
+  model: string;
+  accountId?: string | undefined;
+  dialect: ProviderDialect;
+  method: string;
+  requestIdHash?: string | undefined;
+  generate?: boolean | undefined;
+  version?: string | undefined;
+  media?: ProviderMediaLog | undefined;
 };
 
 type ObservabilityOptions = {
@@ -39,123 +57,83 @@ type ObservabilityOptions = {
 };
 type ObservationListener = (record: ProviderObservation) => void;
 
-const emptyUsage = (): ProviderUsage => ({
-  inputTokens: 0,
-  outputTokens: 0,
-  totalTokens: 0,
-  cacheReadTokens: 0,
-  cacheWriteTokens: 0,
-  reasoningTokens: 0,
-});
+const outboundRequestIdHeaders = ['x-request-id', 'x-client-request-id', 'x-cpa-trace-id'] as const;
+const upstreamRequestIdHeaders = [
+  'x-upstream-request-id',
+  'x-request-id',
+  'request-id',
+  'openai-request-id',
+  'x-goog-request-id',
+  'x-amzn-requestid',
+] as const;
 
-function numberAt(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+function firstHeader(headers: Headers, names: readonly string[]): string | undefined {
+  for (const name of names) {
+    const value = headers.get(name)?.trim();
+
+    if (value !== undefined && value !== '') return value;
+  }
+
+  return undefined;
 }
 
-function usageObject(body: unknown): Record<string, unknown> {
-  return isJsonObject(body) && isJsonObject(body['usage']) ? body['usage'] : {};
+export function providerRequestId(headers: Headers): string | undefined {
+  return firstHeader(headers, outboundRequestIdHeaders);
 }
 
-function detailsAt(
-  usage: Record<string, unknown>,
-  primary: string,
-  fallback: string,
-): Record<string, unknown> {
-  const preferred = usage[primary];
-  const alternate = usage[fallback];
+function requestIdHash(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
 
-  if (isJsonObject(preferred)) return preferred;
+  if (normalized === undefined || normalized === '') return undefined;
 
-  return isJsonObject(alternate) ? alternate : {};
+  return `sha256:${createHash('sha256').update(normalized).digest('hex')}`;
 }
 
-function openAIUsage(body: unknown): ProviderUsage {
-  const usage = usageObject(body);
-  const input = numberAt(usage['prompt_tokens'] ?? usage['input_tokens']);
-  const output = numberAt(usage['completion_tokens'] ?? usage['output_tokens']);
-  const inputDetails = detailsAt(usage, 'input_tokens_details', 'prompt_tokens_details');
-  const outputDetails = detailsAt(usage, 'output_tokens_details', 'completion_tokens_details');
+function clonedMedia(media: ProviderMediaLog | undefined): ProviderMediaLog | undefined {
+  if (media === undefined) return undefined;
 
   return {
-    ...emptyUsage(),
-    inputTokens: input,
-    outputTokens: output,
-    totalTokens: numberAt(usage['total_tokens']) || input + output,
-    cacheReadTokens: numberAt(inputDetails['cached_tokens']),
-    reasoningTokens: numberAt(outputDetails['reasoning_tokens']),
+    connection: media.connection,
+    proxyScheme: media.proxyScheme,
+    remoteTransport: media.remoteTransport,
+    sessionId: media.sessionId,
+    callId: media.callId,
+    peer: media.peer,
+    state: media.state,
   };
 }
 
-function anthropicUsage(body: unknown): ProviderUsage {
-  const usage = usageObject(body);
-  const input = numberAt(usage['input_tokens']);
-  const output = numberAt(usage['output_tokens']);
-  const cacheRead = numberAt(usage['cache_read_input_tokens']);
-  const cacheWrite = numberAt(usage['cache_creation_input_tokens']);
-  const outputDetails = usage['output_tokens_details'];
-  const reasoning = isJsonObject(outputDetails)
-    ? numberAt(outputDetails['thinking_tokens'])
-    : numberAt(usage['thinking_tokens']);
-
+function observationRequest(request: ProviderRequestLog): ProviderObservationRequest {
   return {
-    inputTokens: input,
-    outputTokens: output,
-    totalTokens: input + output + cacheRead + cacheWrite,
-    cacheReadTokens: cacheRead,
-    cacheWriteTokens: cacheWrite,
-    reasoningTokens: reasoning,
+    provider: request.provider,
+    model: request.model,
+    accountId: request.accountId,
+    dialect: request.dialect,
+    method: request.method,
+    requestIdHash: requestIdHash(request.requestId),
+    generate: request.generate,
+    version: request.version,
+    media: clonedMedia(request.media),
   };
 }
 
-function geminiUsage(body: unknown): ProviderUsage {
-  const usage = isJsonObject(body) ? body['usageMetadata'] : undefined;
-
-  if (!isJsonObject(usage)) return emptyUsage();
-
-  const input = numberAt(usage['promptTokenCount']) + numberAt(usage['toolUsePromptTokenCount']);
-  const output = numberAt(usage['candidatesTokenCount']);
-  const reasoning = numberAt(usage['thoughtsTokenCount']);
-
+function clonedObservation(record: ProviderObservation): ProviderObservation {
   return {
-    inputTokens: input,
-    outputTokens: output,
-    totalTokens: numberAt(usage['totalTokenCount']) || input + output + reasoning,
-    cacheReadTokens: numberAt(usage['cachedContentTokenCount']),
-    cacheWriteTokens: 0,
-    reasoningTokens: reasoning,
-  };
-}
-
-function parsedUsage(dialect: ProviderDialect, value: unknown): ProviderUsage {
-  if (dialect === 'gemini') return geminiUsage(value);
-  if (dialect === 'anthropic') return anthropicUsage(value);
-
-  return openAIUsage(value);
-}
-
-function mergeUsage(current: ProviderUsage, next: ProviderUsage): ProviderUsage {
-  return next.totalTokens === 0 ? current : next;
-}
-
-export function providerUsageFrom(dialect: ProviderDialect, text: string): ProviderUsage {
-  const direct = parsedJson(text);
-
-  if (direct !== undefined) return parsedUsage(dialect, direct);
-
-  return text.split('\n').reduce((usage, line) => {
-    if (!line.startsWith('data:')) return usage;
-
-    const value = parsedJson(line.slice(5).trim());
-
-    return mergeUsage(usage, parsedUsage(dialect, value));
-  }, emptyUsage());
-}
-
-function clonedRequest(request: ProviderRequestLog): ProviderRequestLog {
-  return {
-    ...request,
-    headers: new Headers(request.headers),
-    body: request.body.slice(),
+    provider: record.provider,
+    model: record.model,
+    accountId: record.accountId,
+    dialect: record.dialect,
+    method: record.method,
+    requestIdHash: record.requestIdHash,
+    upstreamRequestIdHash: record.upstreamRequestIdHash,
+    startedAt: record.startedAt,
+    durationMs: record.durationMs,
+    ttftMs: record.ttftMs,
+    status: record.status,
+    usage: { ...record.usage },
+    generate: record.generate,
+    version: record.version,
+    media: clonedMedia(record.media),
   };
 }
 
@@ -169,16 +147,11 @@ export class ProviderObservability {
   }
 
   public start(request: ProviderRequestLog): ProviderObservationSpan {
-    return new ProviderObservationSpan(this, clonedRequest(request), this.now());
+    return new ProviderObservationSpan(this, observationRequest(request), this.now());
   }
 
   public snapshot(): ProviderObservation[] {
-    return this.records.map((record) => ({
-      ...record,
-      headers: new Headers(record.headers),
-      responseHeaders: new Headers(record.responseHeaders),
-      body: record.body.slice(),
-    }));
+    return this.records.map(clonedObservation);
   }
 
   public popOldest(count: number): ProviderObservation[] {
@@ -200,12 +173,14 @@ export class ProviderObservability {
   }
 
   public publish(record: ProviderObservation): void {
-    this.records.push(record);
+    const safeRecord = clonedObservation(record);
+
+    this.records.push(safeRecord);
     const excess = this.records.length - (this.options.maxRecords ?? 10_000);
 
     if (excess > 0) this.records.splice(0, excess);
 
-    for (const listener of this.listeners) listener(record);
+    for (const listener of this.listeners) listener(clonedObservation(safeRecord));
   }
 
   public now(): number {
@@ -215,20 +190,26 @@ export class ProviderObservability {
 
 export class ProviderObservationSpan {
   private readonly owner: ProviderObservability;
-  private readonly request: ProviderRequestLog;
+  private readonly request: ProviderObservationRequest;
   private readonly startedAt: number;
 
-  public constructor(owner: ProviderObservability, request: ProviderRequestLog, startedAt: number) {
+  public constructor(
+    owner: ProviderObservability,
+    request: ProviderObservationRequest,
+    startedAt: number,
+  ) {
     this.owner = owner;
     this.request = request;
     this.startedAt = startedAt;
   }
 
   public observe(response: Response): Response {
-    const headers = new Headers(response.headers);
+    const upstreamRequestIdHash = requestIdHash(
+      firstHeader(response.headers, upstreamRequestIdHeaders),
+    );
 
     if (response.body === null) {
-      this.finish(response.status, headers, 0, emptyUsage());
+      this.finish(response.status, upstreamRequestIdHash, 0, emptyProviderUsage());
 
       return response;
     }
@@ -247,7 +228,7 @@ export class ProviderObservationSpan {
           text.push(decoder.decode());
           this.finish(
             response.status,
-            headers,
+            upstreamRequestIdHash,
             ttft,
             providerUsageFrom(this.request.dialect, text.join('')),
           );
@@ -266,22 +247,34 @@ export class ProviderObservationSpan {
   ): void {
     this.finish(
       status,
-      headers,
+      requestIdHash(firstHeader(headers, upstreamRequestIdHeaders)),
       ttftMs,
       providerUsageFrom(this.request.dialect, new TextDecoder().decode(body)),
     );
   }
 
-  private finish(status: number, headers: Headers, ttftMs: number, usage: ProviderUsage): void {
+  private finish(
+    status: number,
+    upstreamRequestIdHash: string | undefined,
+    ttftMs: number,
+    usage: ProviderUsage,
+  ): void {
     this.owner.publish({
-      ...this.request,
+      provider: this.request.provider,
+      model: this.request.model,
+      accountId: this.request.accountId,
+      dialect: this.request.dialect,
+      method: this.request.method,
+      requestIdHash: this.request.requestIdHash,
+      upstreamRequestIdHash,
       startedAt: this.startedAt,
       durationMs: this.owner.now() - this.startedAt,
       ttftMs,
       status,
-      responseHeaders: new Headers(headers),
       usage,
       generate: this.request.generate ?? true,
+      version: this.request.version,
+      media: clonedMedia(this.request.media),
     });
   }
 }

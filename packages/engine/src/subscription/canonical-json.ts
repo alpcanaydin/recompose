@@ -1,4 +1,6 @@
-import { isJsonObject } from '../gateway-wire';
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function canonicalValue(value: unknown): unknown {
   if (Array.isArray(value)) {

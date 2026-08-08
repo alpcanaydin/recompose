@@ -4,12 +4,10 @@
     "apps/desktop": {
       "entry": [
         "build/after-pack.cjs",
-        "e2e/playwright.config.ts",
         "e2e/fixtures.ts",
         "e2e/*.spec.ts",
         "e2e/steps/**/*.ts",
         "e2e/fake-tools/*.mts",
-        "scripts/generate-icons.mts",
         "vitest.mutation.config.ts"
       ],
       "ignoreDependencies": ["chromatic", "fast-check", "node-wreq"],
