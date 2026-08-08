@@ -59,6 +59,58 @@ describe('parsePluginRegistry identity validation', () => {
       }),
     ).toThrow('repository must be a GitHub repository URL');
   });
+
+  it('should reject a repository written as a bare owner and name', () => {
+    expect(() =>
+      parsePluginRegistry({
+        schema_version: 1,
+        plugins: [{ ...registryPlugin(), repository: 'author-name/sample-provider' }],
+      }),
+    ).toThrow('repository must be a GitHub repository URL');
+  });
+});
+
+describe('the platform an artifact runs on', () => {
+  it('should read every x86 spelling as amd64', () => {
+    for (const goarch of ['x64', 'x86_64', 'amd64']) {
+      const registry = parsePluginRegistry(directRegistry({ ...directArtifact(), goarch }));
+
+      expect(registry.plugins[0]?.install).toMatchObject({ artifacts: [{ goarch: 'amd64' }] });
+    }
+  });
+
+  it('should reject an operating system the app never ships to', () => {
+    expect(() =>
+      parsePluginRegistry(directRegistry({ ...directArtifact(), goos: 'freebsd' })),
+    ).toThrow('unsupported operating system');
+  });
+
+  it('should reject an architecture the app never ships to', () => {
+    expect(() =>
+      parsePluginRegistry(directRegistry({ ...directArtifact(), goarch: 's390x' })),
+    ).toThrow('unsupported architecture');
+  });
+
+  it('should reject an artifact address that is no URL at all', () => {
+    expect(() =>
+      parsePluginRegistry(directRegistry({ ...directArtifact(), url: 'downloads.example/a.zip' })),
+    ).toThrow('artifact URL is invalid');
+  });
+});
+
+describe('a direct install manifest', () => {
+  it('should be refused at schema version one', () => {
+    expect(() => pluginManifestSchema.parse({ ...directManifest(), schema_version: 1 })).toThrow(
+      'direct install requires schema_version 2',
+    );
+  });
+
+  it('should parse at schema version two without pinning a release tag', () => {
+    expect(pluginManifestSchema.parse(directManifest())).toMatchObject({
+      release_tag: '',
+      install: { type: 'direct' },
+    });
+  });
 });
 
 describe('direct plugin registry validation', () => {
@@ -134,4 +186,22 @@ function directArtifact() {
 
 function directInstall() {
   return { type: 'direct', artifacts: [directArtifact()] };
+}
+
+function directRegistry(artifact: unknown) {
+  return {
+    schema_version: 2,
+    plugins: [{ ...registryPlugin(), install: { type: 'direct', artifacts: [artifact] } }],
+  };
+}
+
+function directManifest() {
+  return {
+    schema_version: 2,
+    ...registryPlugin(),
+    source_id: 'official',
+    source_name: 'Official',
+    source_url: 'https://plugins.example/registry.json',
+    install: directInstall(),
+  };
 }
