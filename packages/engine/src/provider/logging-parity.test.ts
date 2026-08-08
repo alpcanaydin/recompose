@@ -1,4 +1,5 @@
-import { mkdir, stat, utimes, writeFile } from 'node:fs/promises';
+import { mkdtemp, stat, utimes, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
 
@@ -153,11 +154,7 @@ test('TestGinLogrusLoggerAddsRequestIDForCodexBackend', () => {
 });
 
 async function temporaryDirectory(): Promise<string> {
-  const directory = join('/private/tmp', `recompose-log-${crypto.randomUUID()}`);
-
-  await mkdir(directory, { recursive: true });
-
-  return directory;
+  return mkdtemp(join(tmpdir(), 'recompose-log-'));
 }
 
 async function logFile(path: string, size: number, seconds: number): Promise<void> {

@@ -1,4 +1,4 @@
-import { appendFile, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdtemp, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -98,9 +98,7 @@ describe('ProviderLogStore cursor reads', () => {
     const fixture = await logFixture(['first']);
     const initial = await fixture.store.read({ limit: 1 });
 
-    await appendFile(fixture.path, 'second\n', 'utf8');
-    await rename(fixture.path, `${fixture.path}.1`);
-    await writeFile(fixture.path, 'third\n', 'utf8');
+    await rotateActiveLog(fixture.path, 'second', 'third');
     const next = await fixture.store.read({ cursor: initial.nextCursor, limit: 10 });
 
     expect(next.lines).toEqual(['second', 'third']);
@@ -111,9 +109,7 @@ describe('ProviderLogStore cursor reads', () => {
     const fixture = await logFixture(['first line with enough bytes']);
     const initial = await fixture.store.read({ limit: 1 });
 
-    await appendFile(fixture.path, 'second\n', 'utf8');
-    await rename(fixture.path, `${fixture.path}.1`);
-    await writeFile(fixture.path, 'new\n', 'utf8');
+    await rotateActiveLog(fixture.path, 'second', 'new');
     const rotated = await fixture.store.read({ cursor: initial.nextCursor, limit: 1 });
     const current = await fixture.store.read({ cursor: rotated.nextCursor, limit: 1 });
 
@@ -136,6 +132,18 @@ describe('ProviderLogStore cursor reads', () => {
 });
 
 // Helpers
+
+async function rotateActiveLog(
+  activePath: string,
+  appended: string,
+  replacement: string,
+): Promise<void> {
+  await appendFile(activePath, `${appended}\n`, 'utf8');
+  await rename(activePath, `${activePath}.1`);
+  await writeFile(activePath, `${replacement}\n`, 'utf8');
+  await utimes(`${activePath}.1`, 1, 1);
+  await utimes(activePath, 2, 2);
+}
 
 function cursorFor(file: string): string {
   return Buffer.from(
