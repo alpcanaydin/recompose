@@ -1,4 +1,4 @@
-import type { Account, GatewayConfig, IpcRequest, VirtualModel } from '@recompose/contracts';
+import type { GatewayConfig, IpcRequest } from '@recompose/contracts';
 
 import { gatewayConfigSchemaAgainstAccounts } from '@recompose/contracts';
 
@@ -47,39 +47,6 @@ function conflictWith(stored: readonly GatewayConfig[], saving: GatewayConfig) {
   return null;
 }
 
-function subscriptionAmong(accounts: readonly Account[], accountId: string): Account | undefined {
-  const held = accounts.find((account) => account.id === accountId);
-
-  return held?.kind === 'subscription' ? held : undefined;
-}
-
-function readsAs(account: Account): string {
-  return 'label' in account ? account.label : account.provider;
-}
-
-function subscriptionBoundIn(
-  accounts: readonly Account[],
-  models: readonly VirtualModel[],
-): string | undefined {
-  for (const model of models) {
-    const account = subscriptionAmong(accounts, model.target.accountId);
-
-    if (account !== undefined) {
-      return `The virtual model "${model.displayName}" names the subscription account "${readsAs(account)}", and a subscription account never stands as a target.`;
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Whether the arriving document names a target the live registry refuses, and why.
- *
- * @summary The stored shape alone cannot tell a key from a plan, so the schema resolves against the
- * registry here, at the one boundary a definition arrives through. The picker never offers a
- * subscription, which makes this the contract behind that habit rather than a second copy of it,
- * and the sentence names the account a person would go and change.
- */
 async function refusedTarget(ctx: StorageIpcContext, paths: StoragePaths, config: GatewayConfig) {
   const registry = await loadAccountsFile(paths.accountsFile, ctx.onCorrupt);
   const parsed = gatewayConfigSchemaAgainstAccounts(registry.accounts).safeParse(config);
@@ -88,10 +55,7 @@ async function refusedTarget(ctx: StorageIpcContext, paths: StoragePaths, config
     return null;
   }
 
-  return ipcFailure(
-    'validation-failed',
-    subscriptionBoundIn(registry.accounts, config.virtualModels) ?? parsed.error.message,
-  );
+  return ipcFailure('validation-failed', parsed.error.message);
 }
 
 async function saveGateway(

@@ -1,17 +1,15 @@
-Feature: A subscription account never stands as a target
+Feature: Every stored account stands as a target
 
-  The target picker offers the key, aggregator, and local kinds. A subscription
-  account stands nowhere in it, and the stored definition refuses one at parse,
-  so the prohibition holds as a contract rather than a screen habit.
+  The target picker offers the subscription, key, aggregator, and local kinds
+  alike, and a stored definition naming any of them stands bound, so whether a
+  target can answer is decided per request rather than at write time.
 
-  Scenario: The picker offers three kinds and no subscription
+  Scenario: The picker offers every stored kind
     Given a gateway and a stored subscription, key, aggregator, and local account
     When the person opens the target picker for a new virtual model
-    Then the picker lists the key, the aggregator, and the local account
-    And no subscription account stands anywhere in it
+    Then the picker lists the subscription, the key, the aggregator, and the local account
 
-  Scenario: A stored definition refuses a subscription target at parse
+  Scenario: A stored subscription target stands bound
     Given a stored virtual model "fast" whose target names a subscription account
     When the gateway config loads
-    Then the config refuses the definition
-    And names the subscription target as the reason
+    Then the drawer reads "fast" over the subscription account

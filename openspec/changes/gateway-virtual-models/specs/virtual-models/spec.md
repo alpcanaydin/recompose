@@ -23,16 +23,21 @@ A gateway MUST let a person define a virtual model by name and bind it to exactl
 - Then the listing names both models
 - And it answers the same set in the Anthropic and the OpenAI shape
 
-### Requirement: A subscription account never stands as a target
+### Requirement: Every stored account stands as a target
 
-The target picker MUST offer the key, aggregator, and local kinds and MUST NOT offer a subscription account. The stored definition MUST refuse a subscription target at parse, so the prohibition holds as a contract rather than a screen habit.
+The target picker MUST offer the subscription, key, aggregator, and local kinds alike. A stored definition naming any stored account MUST stand bound, so each request decides whether its target can answer, not the write.
 
-#### Scenario: the picker holds no subscription account
+#### Scenario: the picker offers every stored kind
 
 - Given stored accounts of every kind
 - When a person picks a target for a virtual model
-- Then the picker lists the key, aggregator, and local accounts
-- And no subscription account stands anywhere in it
+- Then the picker lists the subscription, key, aggregator, and local accounts
+
+#### Scenario: a stored subscription target stands bound
+
+- Given a stored virtual model whose target names a subscription account
+- When the gateway config loads
+- Then the definition stands bound to the subscription account
 
 ### Requirement: The gateway proxies the virtual name to its target
 

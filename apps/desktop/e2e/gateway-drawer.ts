@@ -23,7 +23,7 @@ export function defineFlow(page: Page): Locator {
 }
 
 /** Picks a gateway out of the sidebar and waits for its inspector to stand. */
-async function openGatewayDrawer(page: Page, name: string): Promise<void> {
+export async function openGatewayDrawer(page: Page, name: string): Promise<void> {
   await gatewayRow(page, name).click();
   await expect(gatewayDrawer(page, name)).toBeVisible();
 }
