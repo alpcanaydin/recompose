@@ -10,13 +10,7 @@
     }
   ],
   "dictionaries": ["recompose-words", "typescript", "node", "npm", "softwareTerms", "html", "css"],
-  "ignoreRegExpList": [
-    "Base64MultiLine",
-    "Base64",
-    "hexValues",
-    "HashStrings",
-    "/[A-Za-z0-9+/]{20,}={0,2}/g"
-  ],
+  "ignoreRegExpList": ["/[A-Za-z0-9+/]{20,}={0,2}/g"],
   "ignorePaths": [
     "node_modules",
     ".agents",
