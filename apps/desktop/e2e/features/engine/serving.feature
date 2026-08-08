@@ -11,10 +11,10 @@ Feature: What a running gateway answers
     When a client checks the health of "codex"
     Then a success answers carrying the name "codex"
 
-  Scenario: A model request meets a typed refusal
-    When a client sends a model request to "codex"
-    Then a typed refusal answers
-    And it names "codex" and states that it holds no model
+  Scenario: A model request meets a typed refusal in the dialect it arrived on
+    When a client asks "codex" for the model "sonnet" on both dialects
+    Then each answers a typed refusal naming "sonnet"
+    And the Anthropic refusal carries an error type where the OpenAI one carries a code
 
   Scenario: Two running gateways keep to their own ports
     Given a running gateway named "gemini"

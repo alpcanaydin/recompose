@@ -3,15 +3,35 @@ import { describe, expect } from 'vitest';
 
 import { engineDirectiveSchema, engineGatewaySchema, engineReportSchema } from './engine-protocol';
 
-const gateway = { slug: 'personal', displayName: 'Personal', port: 8397 };
+const binding = {
+  id: 'fast',
+  displayName: 'Fast',
+  target: { standing: 'bound', providerModel: 'claude-sonnet-4-5' },
+};
+
+const gateway = {
+  slug: 'personal',
+  displayName: 'Personal',
+  port: 8397,
+  virtualModels: [binding],
+};
 
 describe('the gateway the parent hands the child', () => {
-  test('a gateway carries the slug, the name, and the port and nothing else', () => {
+  test('a gateway carries the slug, the name, the port, and the models it serves', () => {
     expect(engineGatewaySchema.parse(gateway)).toEqual(gateway);
   });
 
-  test('a gateway carries no virtual model, because the engine serves none yet', () => {
-    expect(() => engineGatewaySchema.parse({ ...gateway, virtualModels: [] })).toThrow();
+  test('a gateway serving no model yet carries an empty binding list', () => {
+    const serving = { ...gateway, virtualModels: [] };
+
+    expect(engineGatewaySchema.parse(serving)).toEqual(serving);
+  });
+
+  test('a gateway carrying no binding list is refused, because the child lists from the snapshot', () => {
+    const { virtualModels, ...withoutTheBindings } = gateway;
+
+    expect(virtualModels).toEqual([binding]);
+    expect(() => engineGatewaySchema.parse(withoutTheBindings)).toThrow();
   });
 
   test('a gateway carries no routing, so no secret can ride to the child', () => {
@@ -74,7 +94,7 @@ describe('the probe directive that asks a vendor about one stored key', () => {
   });
 
   test('a probe naming a provider no dialect covers is refused', () => {
-    expect(() => engineDirectiveSchema.parse({ ...probe, provider: 'gemini' })).toThrow();
+    expect(() => engineDirectiveSchema.parse({ ...probe, provider: 'xai' })).toThrow();
   });
 
   test('a probe carrying a blank key is refused, because it would ask about nothing', () => {
@@ -196,6 +216,17 @@ const directiveArb = fc.oneof(
       slug: slugArb,
       displayName: trimmedDisplayNameArb,
       port: fc.integer({ min: 1024, max: 65535 }),
+      virtualModels: fc.array(
+        fc.record({
+          id: slugArb,
+          displayName: trimmedDisplayNameArb,
+          target: fc.record({
+            standing: fc.constant('bound' as const),
+            providerModel: fc.stringMatching(/^[a-z0-9-]{3,20}$/),
+          }),
+        }),
+        { maxLength: 2 },
+      ),
     }),
   }),
   fc.record({ kind: fc.constant('stop' as const), id: directiveIdArb, slug: slugArb }),

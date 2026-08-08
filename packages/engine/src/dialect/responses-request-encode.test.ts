@@ -30,7 +30,11 @@ describe('encodeRequest: the request frame crosses back to Responses', () => {
       type: 'function',
       name: 'get_weather',
       description: 'Look up the weather for a city',
-      parameters: { type: 'object', properties: { city: { type: 'string' } } },
+      parameters: {
+        type: 'object',
+        properties: { city: { type: 'string' } },
+        additionalProperties: false,
+      },
     });
     expect(value.tool_choice).toEqual({ type: 'function', name: 'get_weather' });
     expect(value.input[0]).toEqual({
@@ -259,5 +263,22 @@ describe('encodeRequest drops a tool-result image toward Responses', () => {
     const { fates } = expectTranslation(encodeRequest(request));
 
     expect(fates.some((fate) => fate.field === 'tool_result_image')).toBe(false);
+  });
+});
+
+describe('encodeRequest carries a structured tool result toward Responses', () => {
+  it('sends a structured string result as the function output without re-encoding it', () => {
+    const request = aHubRequest({
+      messages: [
+        aHubMessage({
+          role: 'user',
+          content: [aHubToolResultBlock({ structuredResult: 'sunny, 21C' })],
+        }),
+      ],
+    });
+
+    const { value } = expectTranslation(encodeRequest(request));
+
+    expect(value.input[0]).toMatchObject({ type: 'function_call_output', output: 'sunny, 21C' });
   });
 });

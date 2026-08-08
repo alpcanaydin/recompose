@@ -26,23 +26,37 @@ const encryptedContentAbsent: Fate = {
   to: 'absent',
 };
 
-export function reasoningOutcome(item: ResponsesReasoningItem): ReasoningOutcome {
+export function reasoningOutcome(
+  item: ResponsesReasoningItem,
+  preserveIncompatible = false,
+): ReasoningOutcome {
+  if (item.encrypted_content === '' && !preserveIncompatible) return { blocks: [], fates: [] };
+
   const classified = classifyReasoningSignature(item.encrypted_content);
 
+  return classifiedOutcome(item, classified, preserveIncompatible);
+}
+
+function classifiedOutcome(
+  item: ResponsesReasoningItem,
+  classified: ReturnType<typeof classifyReasoningSignature>,
+  preserveIncompatible: boolean,
+): ReasoningOutcome {
   switch (classified.kind) {
     case 'none':
-      return thinkingOutcome(thinkingBlockOf(item), []);
+      return unsignedOutcome(item, preserveIncompatible);
     case 'compatible':
-      return thinkingOutcome(signedThinkingBlockOf(item, classified.signature), [
-        { field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' },
-      ]);
+      return {
+        blocks: [signedThinkingBlockOf(item, classified.signature)],
+        fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' }],
+      };
     case 'redacted':
       return {
         blocks: [redactedThinkingBlockOf(classified.data)],
         fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'redacted_thinking' }],
       };
     case 'foreign':
-      return thinkingOutcome(thinkingBlockOf(item), [encryptedContentAbsent]);
+      return foreignOutcome(item, preserveIncompatible);
 
     default: {
       const unhandled: never = classified;
@@ -52,8 +66,36 @@ export function reasoningOutcome(item: ResponsesReasoningItem): ReasoningOutcome
   }
 }
 
-export function foldReasoning(item: ResponsesReasoningItem): FoldedReasoning {
-  const { blocks, fates } = reasoningOutcome(item);
+function unsignedOutcome(
+  item: ResponsesReasoningItem,
+  preserveIncompatible: boolean,
+): ReasoningOutcome {
+  const block = thinkingBlockOf(item);
+
+  return preserveIncompatible && block.text === ''
+    ? { blocks: [{ ...block, text: '[reasoning unavailable]', signature: '' }], fates: [] }
+    : thinkingOutcome(block, []);
+}
+
+function foreignOutcome(
+  item: ResponsesReasoningItem,
+  preserveIncompatible: boolean,
+): ReasoningOutcome {
+  if (preserveIncompatible && item.encrypted_content !== undefined) {
+    return {
+      blocks: [signedThinkingBlockOf(item, item.encrypted_content)],
+      fates: [{ field: 'encrypted_content', disposition: 'mapped', to: 'thinking.signature' }],
+    };
+  }
+
+  return thinkingOutcome(thinkingBlockOf(item), [encryptedContentAbsent]);
+}
+
+export function foldReasoning(
+  item: ResponsesReasoningItem,
+  preserveIncompatible = false,
+): FoldedReasoning {
+  const { blocks, fates } = reasoningOutcome(item, preserveIncompatible);
 
   return { messages: blocks.length > 0 ? [{ role: 'assistant', content: blocks }] : [], fates };
 }

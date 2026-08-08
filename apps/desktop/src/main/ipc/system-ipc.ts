@@ -18,11 +18,16 @@ export type SystemIpcContext = {
   openFolder: (path: string) => Promise<string>;
   /** Moves the window controls to the band they now sit over. */
   placeWindowButtons: (position: { x: number; y: number }) => void;
+  /** Does what the person set a title-bar double-click to do, to the window they double-clicked. */
+  answerTitleBarDoubleClick: () => void;
 };
 
 export type SystemIpcHandlers = Pick<
   IpcHandlers,
-  'system:get' | 'system:open-config-folder' | 'system:window-band'
+  | 'system:get'
+  | 'system:open-config-folder'
+  | 'system:window-band'
+  | 'system:title-bar-double-click'
 >;
 
 function observeSystem(ctx: SystemIpcContext): SystemState {
@@ -56,5 +61,10 @@ export function createSystemIpcHandlers(ctx: SystemIpcContext): SystemIpcHandler
     'system:get': async () => Promise.resolve({ ok: true as const, value: observeSystem(ctx) }),
     'system:open-config-folder': async () => openConfigFolder(ctx),
     'system:window-band': async (band) => Promise.resolve(placedWindowButtons(ctx, band)),
+    'system:title-bar-double-click': async () => {
+      ctx.answerTitleBarDoubleClick();
+
+      return Promise.resolve({ ok: true as const, value: undefined });
+    },
   };
 }

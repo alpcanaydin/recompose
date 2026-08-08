@@ -54,9 +54,11 @@ export function mergeAdjacentSameRole(messages: readonly HubMessage[]): HubMessa
   const merged: HubMessage[] = [];
 
   for (const message of messages) {
+    if (message.content.length === 0) continue;
+
     const last = merged.at(-1);
 
-    if (last !== undefined && last.role === message.role) {
+    if (canMergeMessages(last, message)) {
       merged[merged.length - 1] = {
         role: last.role,
         content: [...last.content, ...message.content],
@@ -69,4 +71,13 @@ export function mergeAdjacentSameRole(messages: readonly HubMessage[]): HubMessa
   }
 
   return merged;
+}
+
+function canMergeMessages(last: HubMessage | undefined, next: HubMessage): last is HubMessage {
+  return (
+    last !== undefined &&
+    last.role === next.role &&
+    last.boundary === undefined &&
+    next.boundary === undefined
+  );
 }

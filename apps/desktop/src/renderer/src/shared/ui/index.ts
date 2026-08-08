@@ -9,6 +9,8 @@ export { Chip } from './chip/chip';
 export { CopyButton } from './copy-button/copy-button';
 export { FieldGroup } from './field-group/field-group';
 export { type IconName, Icon } from './icon/icon';
+export { InspectorToggle } from './inspector-toggle/inspector-toggle';
+export { PanelSeparator } from './panel-separator/panel-separator';
 export { placeFocus } from './place-focus';
 export { FieldRow } from './field-row/field-row';
 export { NumericField } from './numeric-field/numeric-field';

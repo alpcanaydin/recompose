@@ -18,6 +18,7 @@ export const Route = createFileRoute('/gateways/$slug')({
     parse: (params) => parseSlug(params.slug),
     stringify: (params) => params,
   },
+  remountDeps: ({ params }) => params.slug,
   component: GatewayCanvasRoute,
 });
 

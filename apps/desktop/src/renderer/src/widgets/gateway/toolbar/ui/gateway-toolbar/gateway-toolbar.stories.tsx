@@ -123,7 +123,6 @@ export const EveryControl = meta.story({
       'Tidy the canvas. Waits on the canvas.',
       'View as JSON. Waits on the config view.',
       'Request log. Waits on request logging.',
-      'Inspector. Waits on the inspector.',
     ]);
   },
 });

@@ -9,11 +9,15 @@ import type {
 } from '@recompose/contracts';
 
 import {
+  ACCOUNTS_VERSION,
   keyTail,
   runtimeAddressFor,
   runtimePortSchema,
   subscriptionProviders,
 } from '@recompose/contracts';
+
+/** A registry nobody has connected anything to, which every install starts as. */
+export const noAccounts: AccountsDocument = { schemaVersion: ACCOUNTS_VERSION, accounts: [] };
 
 type AccountHandlers = Pick<
   RecomposeIpc,

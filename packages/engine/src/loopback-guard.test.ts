@@ -2,13 +2,17 @@ import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
 import { createGatewayApp } from './gateway-app';
+import { grantsNothing, neverFetches } from './gateway-app.testkit';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 const LOOPBACK_ADDRESSES = ['127.0.0.1', 'localhost', '[::1]'];
 
 async function askCodexFrom(host: string, init?: RequestInit): Promise<Response> {
-  return createGatewayApp(codex).request(`http://${host}/health`, init);
+  return createGatewayApp(codex, grantsNothing, neverFetches).request(
+    `http://${host}/health`,
+    init,
+  );
 }
 
 const hostArb = fc.oneof(

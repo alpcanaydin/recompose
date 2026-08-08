@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { migrateDocument, type Migration } from './migration';
 import { nonBlankString } from './non-blank';
 
-export const GATEWAY_CONFIG_VERSION = 1;
+export const GATEWAY_CONFIG_VERSION = 2;
 
 export const GATEWAY_PORT_RANGE = { min: 1024, max: 65535 } as const;
 
@@ -67,41 +67,42 @@ export function slugFromName(displayName: string): string {
   return derived === '' ? FALLBACK_GATEWAY_SLUG : derived;
 }
 
-const targetSchema = z.strictObject({
-  kind: z.literal('target'),
-  id: nonBlankString,
+export const modelAliasSchema = z
+  .string()
+  .regex(/^[a-z0-9._-]+$/u, 'lowercase id of letters, digits, dots and dashes')
+  .refine((id) => !/^[._-]|[._-]$/u.test(id), 'a model id starts and ends with a letter or digit');
+
+/**
+ * The id a client sends as its `model`, read off the name a person gave the virtual model.
+ *
+ * @summary Unlike the gateway slug, this keeps the dots real model names carry, so `Claude 5.6 Sol`
+ * reaches a client as `claude-5.6-sol` rather than losing the dot to a dash. It folds the case
+ * down, turns each run of anything outside the id charset into one dash, collapses repeated
+ * separators, and trims the ends, so every id it derives is one the stored shape already accepts.
+ */
+export function modelAliasFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9._-]+/gu, '-')
+    .replaceAll(/[-._]{2,}/gu, '-')
+    .replace(/^[-._]/u, '')
+    .replace(/[-._]$/u, '');
+}
+
+export const targetSchema = z.strictObject({
   accountId: nonBlankString,
   providerModel: nonBlankString,
-  weight: z.int().min(0).max(100),
 });
 
-export type RoutingNode =
-  | z.infer<typeof targetSchema>
-  | {
-      kind: 'router';
-      id: string;
-      mode: 'failover' | 'round-robin';
-      children: RoutingNode[];
-    };
+export type Target = z.infer<typeof targetSchema>;
 
-const routingNodeSchema: z.ZodType<RoutingNode> = z.lazy(() =>
-  z.discriminatedUnion('kind', [
-    targetSchema,
-    z.strictObject({
-      kind: z.literal('router'),
-      id: nonBlankString,
-      mode: z.enum(['failover', 'round-robin']),
-      children: z.array(routingNodeSchema).min(1),
-    }),
-  ]),
-);
-
-const virtualModelSchema = z.strictObject({
-  id: nonBlankString,
-  slug: gatewaySlugSchema,
-  displayName: z.string().trim().min(1),
-  routing: routingNodeSchema,
+export const virtualModelSchema = z.strictObject({
+  id: modelAliasSchema,
+  displayName: nonBlankString,
+  target: targetSchema,
 });
+
+export type VirtualModel = z.infer<typeof virtualModelSchema>;
 
 const layoutSchema = z.strictObject({
   nodes: z.record(gatewaySlugSchema, z.strictObject({ x: z.number(), y: z.number() })),
@@ -121,7 +122,12 @@ export const gatewayConfigSchema = z.strictObject({
 
 export type GatewayConfig = z.infer<typeof gatewayConfigSchema>;
 
-const gatewayConfigMigrations: readonly Migration[] = [];
+const noStoredGatewayEverMintedAVirtualModel: Migration = {
+  from: 1,
+  migrate: (doc) => ({ ...doc, schemaVersion: 2 }),
+};
+
+const gatewayConfigMigrations: readonly Migration[] = [noStoredGatewayEverMintedAVirtualModel];
 
 export function loadGatewayConfig(doc: unknown): GatewayConfig {
   return gatewayConfigSchema.parse(

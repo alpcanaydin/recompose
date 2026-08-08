@@ -1,6 +1,8 @@
 import {
+  ACCOUNTS_VERSION,
   GATEWAY_CONFIG_VERSION,
   loadGatewayConfig,
+  type Account,
   type EngineGateway,
   type GatewayConfig,
   type IpcError,
@@ -13,6 +15,7 @@ import { describe, expect, test } from 'vitest';
 import type { EngineHost } from '../engine-host/engine-host';
 import type { EngineIpcContext } from './engine-ipc';
 
+import { keyRow } from '../engine-host/spend-grant.testkit';
 import { createEngineIpcHandlers } from './engine-ipc';
 
 function gatewayNamed(slug: string, port: number): GatewayConfig {
@@ -23,6 +26,15 @@ function gatewayNamed(slug: string, port: number): GatewayConfig {
     port,
     virtualModels: [],
     layout: { nodes: {} },
+  };
+}
+
+function gatewayServing(slug: string, port: number, accountId: string): GatewayConfig {
+  return {
+    ...gatewayNamed(slug, port),
+    virtualModels: [
+      { id: 'fast', displayName: 'fast', target: { accountId, providerModel: 'claude-sonnet-5' } },
+    ],
   };
 }
 
@@ -43,6 +55,7 @@ function hostAnswering(refusal?: Error) {
     onStatesChanged: () => () => undefined,
     probe: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     probeRuntime: async () => Promise.resolve({ verdict: 'unreachable' as const }),
+    listModels: async () => Promise.resolve({ standing: 'unlisted' as const }),
     dispose: () => undefined,
   };
 
@@ -53,6 +66,7 @@ async function freshContext(
   stored: readonly GatewayConfig[],
   host: EngineHost,
   probeFreePort: EngineIpcContext['probeFreePort'],
+  accounts: readonly Account[] = [],
 ): Promise<EngineIpcContext> {
   const userDataPath = await mkdtemp(join(tmpdir(), 'recompose-move-port-'));
   const gatewaysDir = join(userDataPath, 'gateways');
@@ -62,6 +76,12 @@ async function freshContext(
   for (const config of stored) {
     await writeFile(join(gatewaysDir, `${config.slug}.json`), JSON.stringify(config), 'utf8');
   }
+
+  await writeFile(
+    join(userDataPath, 'accounts.json'),
+    JSON.stringify({ schemaVersion: ACCOUNTS_VERSION, accounts }),
+    'utf8',
+  );
 
   return {
     userDataPath,
@@ -126,9 +146,33 @@ describe('moving a gateway off a port another process took', () => {
 
     await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
 
-    expect(recorded.restarted).toEqual([{ slug: 'codex', displayName: 'codex', port: 51234 }]);
+    expect(recorded.restarted).toEqual([
+      { slug: 'codex', displayName: 'codex', port: 51234, virtualModels: [] },
+    ]);
   });
 
+  test('the gateway that moved serves its bindings, resolved against the registry', async () => {
+    const recorded = hostAnswering();
+    const context = await freshContext(
+      [gatewayServing('codex', 8397, keyRow.id)],
+      recorded.host,
+      offeringTheFirstFreeOf([51234]),
+      [keyRow],
+    );
+
+    await createEngineIpcHandlers(context)['gateways:move-port']({ slug: 'codex' });
+
+    expect(recorded.restarted[0]?.virtualModels).toStrictEqual([
+      {
+        id: 'fast',
+        displayName: 'fast',
+        target: { standing: 'bound', providerModel: 'claude-sonnet-5' },
+      },
+    ]);
+  });
+});
+
+describe('the port a move abandons', () => {
   test('the port being abandoned is the one port the move never lands back on', async () => {
     const context = await freshContext(
       [gatewayNamed('codex', 8397)],

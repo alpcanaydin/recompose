@@ -81,17 +81,21 @@ describe('decodeRequest: an empty reasoning item never fabricates a thinking blo
     expect(value.messages.map((message) => message.role)).toEqual(['user']);
   });
 
-  it('drops an empty compatible reasoning item and marks its signature absent', () => {
+  it('keeps an empty compatible reasoning item because its signature is replayable state', () => {
     const item = aCompatibleReasoningItem('sig-x', { summary: [] });
     const { value, fates } = expectTranslation(
       decodeRequest(aResponsesRequest({ input: [aResponsesUserMessage(), item] })),
     );
 
-    expect(thinkingOf(value.messages)).toHaveLength(0);
+    expect(thinkingOf(value.messages)).toContainEqual({
+      type: 'thinking',
+      text: '',
+      signature: 'sig-x',
+    });
     expect(fateFor(fates, 'encrypted_content')).toEqual({
       field: 'encrypted_content',
       disposition: 'mapped',
-      to: 'absent',
+      to: 'thinking.signature',
     });
   });
 });

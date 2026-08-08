@@ -21,14 +21,14 @@ describe('encodeRequest records the image a Chat Completions tool message cannot
 
     const tool = value.messages.find((message) => message.role === 'tool');
 
-    expect(tool?.content).toBe('the chart shows growth');
-    expect(JSON.stringify(value)).not.toContain('aGVsbG8=');
-    expect(fates).toContainEqual({
-      field: 'tool_result_image',
-      disposition: 'mapped',
-      to: 'absent',
-      costBearing: true,
-    });
+    expect(tool?.content).toEqual([
+      { type: 'text', text: 'the chart shows growth' },
+      {
+        type: 'image_url',
+        image_url: { url: 'data:image/png;base64,aGVsbG8=' },
+      },
+    ]);
+    expect(fates).not.toContainEqual(expect.objectContaining({ field: 'tool_result_image' }));
   });
 
   it('records no image drop when the tool result carries only text', () => {

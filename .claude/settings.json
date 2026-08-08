@@ -28,10 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/workflows/hooks/launch-gate.mjs"
-            ],
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/workflows/hooks/launch-gate.mjs\"",
             "timeout": 120,
             "statusMessage": "test-first gate"
           }
@@ -64,10 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": [
-              "${CLAUDE_PROJECT_DIR}/.claude/workflows/hooks/format-edit.mts"
-            ],
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/workflows/hooks/format-edit.mts\"",
             "timeout": 60,
             "statusMessage": "oxfmt + oxlint"
           }

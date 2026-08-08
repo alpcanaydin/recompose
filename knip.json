@@ -4,15 +4,13 @@
     "apps/desktop": {
       "entry": [
         "build/after-pack.cjs",
-        "e2e/playwright.config.ts",
         "e2e/fixtures.ts",
         "e2e/*.spec.ts",
         "e2e/steps/**/*.ts",
         "e2e/fake-tools/*.mts",
-        "scripts/generate-icons.mts",
         "vitest.mutation.config.ts"
       ],
-      "ignoreDependencies": ["chromatic", "fast-check"],
+      "ignoreDependencies": ["chromatic", "fast-check", "koffi", "node-wreq"],
       "ignoreBinaries": ["dpkg-deb"],
       "ignore": ["src/renderer/src/app/routeTree.gen.ts"]
     },
@@ -22,7 +20,8 @@
     },
     "packages/engine": {
       "entry": ["src/dialect/index.ts", "src/**/*.test-d.ts", "vitest.mutation.config.ts"],
-      "ignoreDependencies": ["fast-check"]
+      "ignoreDependencies": ["fast-check"],
+      "ignoreBinaries": ["cc"]
     },
     ".": {
       "entry": ["steiger.config.ts", "probity.config.ts"],

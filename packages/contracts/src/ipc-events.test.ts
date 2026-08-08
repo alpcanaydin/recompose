@@ -5,9 +5,9 @@ import { ipcChannels, ipcEvents, type IpcEvent } from './ipc';
 const runningState = { status: 'running' };
 
 describe('the lifecycle push', () => {
-  const eventNames: IpcEvent[] = ['engine:state'];
+  const eventNames: IpcEvent[] = ['engine:state', 'accounts:changed'];
 
-  test('exactly one event exists, and it is the state push', () => {
+  test('exactly the state and account-change pushes exist', () => {
     expect(Object.keys(ipcEvents)).toEqual(eventNames);
   });
 
@@ -29,5 +29,12 @@ describe('the lifecycle push', () => {
 
   test('the push rides beside the invoke surface rather than inside it', () => {
     expect(Object.keys(ipcChannels)).not.toContain('engine:state');
+  });
+
+  test('an account change carries no stale registry snapshot', () => {
+    expect(ipcEvents['accounts:changed'].payload.parse('changed')).toBe('changed');
+    expect(() => {
+      ipcEvents['accounts:changed'].payload.parse({ accounts: [] });
+    }).toThrow();
   });
 });

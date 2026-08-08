@@ -6,12 +6,12 @@ import { join } from 'node:path';
 import { describe, expect, vi } from 'vitest';
 
 import type { SecretCodec } from '../storage/safe-storage-codec';
-import type { IpcHandlers } from './dispatch';
 import type { AllowedOrigins, TrustedSender } from './sender-trust';
 import type { StorageIpcContext } from './storage-context';
 import type { StorageIpcHandlers } from './storage-ipc';
 
 import { dispatchIpc } from './dispatch';
+import { handlersWith } from './ipc-handlers.testkit';
 import { checkHandlersOver, connectedKeyId } from './key-check-ipc.testkit';
 import { carriesAnyWindowOf } from './secret-windows.testkit';
 import { createStorageIpcHandlers } from './storage-ipc';
@@ -36,33 +36,10 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    restartGateway: () => undefined,
+    isServing: () => true,
     releaseSubscription: async () => Promise.resolve({ ok: true }),
     ...overrides,
-  };
-}
-
-function handlersForDispatch(storage: StorageIpcHandlers): IpcHandlers {
-  const absent = async (): Promise<never> => Promise.reject(new Error('not under test'));
-
-  return {
-    ...storage,
-    'accounts:check-key': absent,
-    'accounts:connect-local': absent,
-    'accounts:detect-runtime': absent,
-    'accounts:check-runtime': absent,
-    'system:get': absent,
-    'system:open-config-folder': absent,
-    'system:window-band': absent,
-    'gateways:offer-port': absent,
-    'gateways:move-port': absent,
-    'engine:start': absent,
-    'engine:stop': absent,
-    'engine:states': absent,
-    'subscriptions:list': absent,
-    'subscriptions:tools': absent,
-    'subscriptions:sign-in': absent,
-    'subscriptions:restore': absent,
-    'subscriptions:activate': absent,
   };
 }
 
@@ -141,7 +118,7 @@ describe('storage ipc handlers: accounts connect secret hygiene', () => {
     const malformedRequest = { ...connectRequest, kind: 'oauth' };
 
     const result = await dispatchIpc(
-      handlersForDispatch(handlers),
+      handlersWith(handlers),
       'accounts:connect',
       malformedRequest,
       trustedSender,

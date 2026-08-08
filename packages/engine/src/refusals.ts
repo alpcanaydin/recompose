@@ -1,38 +1,15 @@
-export type Dialect = 'anthropic' | 'chat-completions' | 'responses';
+import type {
+  AnthropicRefusal,
+  Dialect,
+  OpenAiCode,
+  OpenAiRefusal,
+  RenderedRefusal,
+  ResponsesRefusal,
+} from './refusal-wire';
 
-export type AnthropicRefusal = {
-  type: 'error';
-  error: {
-    type: 'not_found_error' | 'permission_error' | 'invalid_request_error';
-    message: string;
-  };
-};
+import { geminiRefusal } from './gemini-refusal';
 
-type OpenAiCode =
-  | 'model_not_found'
-  | 'unmappable_stop_reason'
-  | 'unrepairable_tool_call'
-  | 'unsupported_field'
-  | 'empty_conversation'
-  | 'tool_id_collision';
-
-export type OpenAiRefusal = {
-  error: {
-    message: string;
-    type: 'invalid_request_error';
-    param: null;
-    code: OpenAiCode;
-  };
-};
-
-type ResponsesRefusal = {
-  error: {
-    message: string;
-    type: 'invalid_request_error';
-    code: OpenAiCode;
-    param: null;
-  };
-};
+export type { AnthropicRefusal, Dialect, OpenAiRefusal, RenderedRefusal } from './refusal-wire';
 
 export type TranslationRefusal =
   | { reason: 'unknown-model'; model: string }
@@ -40,12 +17,10 @@ export type TranslationRefusal =
   | { reason: 'unrepairable-tool-call'; unmatchedId: string }
   | { reason: 'unsupported-field'; field: string }
   | { reason: 'empty-conversation' }
-  | { reason: 'tool-id-collision'; sanitizedId: string };
-
-export type RenderedRefusal = {
-  status: number;
-  body: AnthropicRefusal | OpenAiRefusal | ResponsesRefusal;
-};
+  | { reason: 'tool-id-collision'; sanitizedId: string }
+  | { reason: 'missing-target'; displayName: string; model: string }
+  | { reason: 'missing-credential'; displayName: string; model: string }
+  | { reason: 'invalid-json'; message: string };
 
 function missingModelMessage(displayName: string): string {
   return `The gateway "${displayName}" holds no virtual model.`;
@@ -124,6 +99,18 @@ export function toolIdCollision(sanitizedId: string): TranslationRefusal {
   return { reason: 'tool-id-collision', sanitizedId };
 }
 
+export function missingTarget(displayName: string, model: string): TranslationRefusal {
+  return { reason: 'missing-target', displayName, model };
+}
+
+export function missingCredential(displayName: string, model: string): TranslationRefusal {
+  return { reason: 'missing-credential', displayName, model };
+}
+
+export function invalidJson(message: string): TranslationRefusal {
+  return { reason: 'invalid-json', message };
+}
+
 type RefusalFacts = {
   status: number;
   message: string;
@@ -133,7 +120,7 @@ type RefusalFacts = {
 
 type ClientErrorRefusal = Extract<
   TranslationRefusal,
-  { reason: 'unsupported-field' | 'empty-conversation' | 'tool-id-collision' }
+  { reason: 'unsupported-field' | 'empty-conversation' | 'tool-id-collision' | 'invalid-json' }
 >;
 
 function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
@@ -159,6 +146,13 @@ function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
         code: 'tool_id_collision',
         anthropicType: 'invalid_request_error',
       };
+    case 'invalid-json':
+      return {
+        status: 400,
+        message: refusal.message,
+        code: 'invalid_json',
+        anthropicType: 'invalid_request_error',
+      };
 
     default: {
       const unhandled: never = refusal;
@@ -166,6 +160,33 @@ function clientErrorFacts(refusal: ClientErrorRefusal): RefusalFacts {
       throw new Error(`unhandled client-error refusal: ${JSON.stringify(unhandled)}`);
     }
   }
+}
+
+type ConfigFaultRefusal = Extract<
+  TranslationRefusal,
+  { reason: 'missing-target' | 'missing-credential' }
+>;
+
+function configFaultFacts(refusal: ConfigFaultRefusal): RefusalFacts {
+  if (refusal.reason === 'missing-target') {
+    return {
+      status: 502,
+      message: `The gateway "${refusal.displayName}" holds no target for the virtual model "${refusal.model}".`,
+      code: 'missing_target',
+      anthropicType: 'api_error',
+    };
+  }
+
+  return {
+    status: 502,
+    message: `The gateway "${refusal.displayName}" holds no credential for the virtual model "${refusal.model}".`,
+    code: 'missing_credential',
+    anthropicType: 'api_error',
+  };
+}
+
+function isConfigFault(refusal: TranslationRefusal): refusal is ConfigFaultRefusal {
+  return refusal.reason === 'missing-target' || refusal.reason === 'missing-credential';
 }
 
 function factsOf(refusal: TranslationRefusal): RefusalFacts {
@@ -196,6 +217,10 @@ function factsOf(refusal: TranslationRefusal): RefusalFacts {
     };
   }
 
+  if (isConfigFault(refusal)) {
+    return configFaultFacts(refusal);
+  }
+
   return clientErrorFacts(refusal);
 }
 
@@ -215,17 +240,27 @@ function responsesBody(facts: RefusalFacts): ResponsesRefusal {
   };
 }
 
-function bodyInDialect(dialect: Dialect, facts: RefusalFacts): RenderedRefusal['body'] {
+function bodyOutsideGemini(
+  dialect: Exclude<Dialect, 'gemini'>,
+  facts: RefusalFacts,
+): RenderedRefusal['body'] {
   switch (dialect) {
     case 'anthropic':
       return anthropicBody(facts);
     case 'chat-completions':
       return chatCompletionsBody(facts);
     case 'responses':
+    case 'interactions':
       return responsesBody(facts);
     default:
       throw new Error(`unhandled dialect: ${String(dialect)}`);
   }
+}
+
+function bodyInDialect(dialect: Dialect, facts: RefusalFacts): RenderedRefusal['body'] {
+  return dialect === 'gemini'
+    ? geminiRefusal(facts.status, facts.message)
+    : bodyOutsideGemini(dialect, facts);
 }
 
 export function renderRefusal(dialect: Dialect, refusal: TranslationRefusal): RenderedRefusal {

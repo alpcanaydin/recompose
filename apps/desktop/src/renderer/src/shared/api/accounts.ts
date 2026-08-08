@@ -1,4 +1,5 @@
-import type { IpcRequest, LocalRuntimeId } from '@recompose/contracts';
+import type { IpcRequest, LocalRuntimeId, RecomposeIpcEvents } from '@recompose/contracts';
+import type { QueryClient } from '@tanstack/react-query';
 
 import { documentedRuntimePort } from '@recompose/contracts';
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +10,18 @@ export const accountsQueryOptions = queryOptions({
   queryKey: ['accounts'],
   queryFn: async () => unwrapIpcResult(await window.recompose['accounts:list']()),
 });
+
+export function bindAccountChangesToCache(
+  queryClient: QueryClient,
+  subscribe: RecomposeIpcEvents['accounts:changed'] = window.recomposeEvents['accounts:changed'],
+): () => void {
+  return subscribe(() => {
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: accountsQueryOptions.queryKey }),
+      queryClient.invalidateQueries({ queryKey: ['provider-models'] }),
+    ]);
+  });
+}
 
 /**
  * Whether a runtime answers at the loopback host on the chosen port, read before anything stores.

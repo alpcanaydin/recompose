@@ -1,0 +1,268 @@
+import type { PluginRoutingHost, PluginRoutingRecord } from './plugin-routing';
+
+import { isJsonObject } from './gateway-wire';
+import { pluginMethods } from './plugin-abi';
+import { pluginBytes, pluginHeaders, webHeaders } from './plugin-wire';
+
+export type PluginExecutorRequest = {
+  authId: string;
+  authProvider: string;
+  model: string;
+  format: string;
+  stream: boolean;
+  alt: string;
+  headers: Record<string, string[]>;
+  query: Record<string, string[]>;
+  originalRequest: Uint8Array;
+  sourceFormat: string;
+  payload: Uint8Array;
+  metadata: Record<string, unknown>;
+  storageJSON: Uint8Array;
+  authMetadata: Record<string, unknown>;
+  authAttributes: Record<string, string>;
+};
+
+export type PluginExecutorResponse = {
+  payload: Uint8Array;
+  headers: Headers;
+  metadata: Record<string, unknown>;
+};
+
+type PluginExecutorChunk = { payload: Uint8Array; error?: string | undefined };
+export type PluginExecutorStream = { headers: Headers; chunks: PluginExecutorChunk[] };
+export type PluginExecutorHTTPRequest = {
+  authId: string;
+  authProvider: string;
+  method: string;
+  url: string;
+  headers: Record<string, string[]>;
+  body: Uint8Array;
+  storageJSON: Uint8Array;
+  metadata: Record<string, unknown>;
+  attributes: Record<string, string>;
+};
+export type PluginExecutorHTTPResponse = {
+  statusCode: number;
+  headers: Headers;
+  body: Uint8Array;
+};
+
+function record(value: unknown): Record<string, unknown> {
+  return isJsonObject(value) ? structuredClone(value) : {};
+}
+
+function field(value: Record<string, unknown>, lower: string, upper: string): unknown {
+  return value[lower] ?? value[upper];
+}
+
+function executorResponse(value: unknown): PluginExecutorResponse {
+  if (!isJsonObject(value)) throw new Error('plugin executor response is not an object');
+
+  return {
+    payload: pluginBytes(field(value, 'payload', 'Payload')),
+    headers: webHeaders(pluginHeaders(field(value, 'headers', 'Headers'))),
+    metadata: record(field(value, 'metadata', 'Metadata')),
+  };
+}
+
+function streamChunk(value: unknown): PluginExecutorChunk | null {
+  if (!isJsonObject(value)) return null;
+
+  const error = field(value, 'error', 'Error');
+
+  return {
+    payload: pluginBytes(field(value, 'payload', 'Payload')),
+    ...(typeof error === 'string' && error !== '' ? { error } : {}),
+  };
+}
+
+function executorStream(value: unknown): PluginExecutorStream {
+  if (!isJsonObject(value)) throw new Error('plugin executor stream response is not an object');
+
+  const rawChunks = field(value, 'chunks', 'Chunks');
+  const chunks = Array.isArray(rawChunks)
+    ? rawChunks.map(streamChunk).filter((chunk): chunk is PluginExecutorChunk => chunk !== null)
+    : [];
+
+  return { headers: webHeaders(pluginHeaders(field(value, 'headers', 'Headers'))), chunks };
+}
+
+function identifierResponse(value: unknown): string {
+  if (!isJsonObject(value)) throw new Error('plugin executor identifier is not an object');
+
+  const identifier = field(value, 'identifier', 'Identifier');
+
+  if (typeof identifier !== 'string' || identifier.trim() === '') {
+    throw new Error('plugin executor identifier is empty');
+  }
+
+  return identifier.trim().toLowerCase();
+}
+
+function httpResponse(value: unknown): PluginExecutorHTTPResponse {
+  if (!isJsonObject(value)) throw new Error('plugin HTTP response is not an object');
+
+  const status = field(value, 'status_code', 'StatusCode');
+
+  if (typeof status !== 'number' || !Number.isInteger(status)) {
+    throw new Error('plugin HTTP response status is invalid');
+  }
+
+  return {
+    statusCode: status,
+    headers: webHeaders(pluginHeaders(field(value, 'headers', 'Headers'))),
+    body: pluginBytes(field(value, 'body', 'Body')),
+  };
+}
+
+function executorWire(request: PluginExecutorRequest) {
+  return {
+    AuthID: request.authId,
+    AuthProvider: request.authProvider,
+    Model: request.model,
+    Format: request.format,
+    Stream: request.stream,
+    Alt: request.alt,
+    Headers: structuredClone(request.headers),
+    Query: structuredClone(request.query),
+    OriginalRequest: Buffer.from(request.originalRequest).toString('base64'),
+    SourceFormat: request.sourceFormat,
+    Payload: Buffer.from(request.payload).toString('base64'),
+    Metadata: structuredClone(request.metadata),
+    StorageJSON: Buffer.from(request.storageJSON).toString('base64'),
+    AuthMetadata: structuredClone(request.authMetadata),
+    AuthAttributes: structuredClone(request.authAttributes),
+  };
+}
+
+function httpWire(request: PluginExecutorHTTPRequest) {
+  return {
+    AuthID: request.authId,
+    AuthProvider: request.authProvider,
+    Method: request.method,
+    URL: request.url,
+    Headers: structuredClone(request.headers),
+    Body: Buffer.from(request.body).toString('base64'),
+    StorageJSON: Buffer.from(request.storageJSON).toString('base64'),
+    Metadata: structuredClone(request.metadata),
+    Attributes: structuredClone(request.attributes),
+  };
+}
+
+function executorRecord(host: PluginRoutingHost, pluginId: string): PluginRoutingRecord {
+  const found = host.routingRecords().find(({ id, executor }) => id === pluginId && executor);
+
+  if (found === undefined) throw new Error(`plugin ${pluginId} has no active executor`);
+
+  return found;
+}
+
+export class PluginExecutorAdapter {
+  private readonly host: PluginRoutingHost;
+  private readonly pluginId: string;
+
+  public constructor(host: PluginRoutingHost, pluginId: string) {
+    executorRecord(host, pluginId);
+    this.host = host;
+    this.pluginId = pluginId;
+  }
+
+  public formats(): { input: string[]; output: string[]; scope: 'static' | 'oauth' | 'both' } {
+    const current = executorRecord(this.host, this.pluginId);
+
+    return {
+      input: [...current.executorInputFormats],
+      output: [...current.executorOutputFormats],
+      scope: current.executorModelScope,
+    };
+  }
+
+  public id(): string {
+    return this.pluginId;
+  }
+
+  public async identifier(signal?: AbortSignal): Promise<string> {
+    return this.host.call(this.pluginId, 'executor.identifier', {}, identifierResponse, signal);
+  }
+
+  public async execute(
+    request: PluginExecutorRequest,
+    signal?: AbortSignal,
+  ): Promise<PluginExecutorResponse> {
+    const response = await this.host.call(
+      this.pluginId,
+      pluginMethods.executorExecute,
+      executorWire(request),
+      executorResponse,
+      signal,
+    );
+
+    return response;
+  }
+
+  public async executeStream(
+    request: PluginExecutorRequest,
+    signal?: AbortSignal,
+  ): Promise<PluginExecutorStream> {
+    const response = await this.host.call(
+      this.pluginId,
+      pluginMethods.executorStream,
+      executorWire({ ...request, stream: true }),
+      executorStream,
+      signal,
+    );
+
+    return response;
+  }
+
+  public async countTokens(
+    request: PluginExecutorRequest,
+    signal?: AbortSignal,
+  ): Promise<PluginExecutorResponse> {
+    const response = await this.host.call(
+      this.pluginId,
+      pluginMethods.executorCountTokens,
+      executorWire(request),
+      executorResponse,
+      signal,
+    );
+
+    return response;
+  }
+
+  public async httpRequest(
+    request: PluginExecutorHTTPRequest,
+    signal?: AbortSignal,
+  ): Promise<PluginExecutorHTTPResponse> {
+    const response = await this.host.call(
+      this.pluginId,
+      pluginMethods.executorHTTPRequest,
+      httpWire(request),
+      httpResponse,
+      signal,
+    );
+
+    return response;
+  }
+}
+
+export async function pluginExecutorForProvider(
+  host: PluginRoutingHost,
+  provider: string,
+): Promise<PluginExecutorAdapter | null> {
+  const expected = provider.trim().toLowerCase();
+
+  for (const record of host.routingRecords()) {
+    if (!record.executor) continue;
+
+    const adapter = new PluginExecutorAdapter(host, record.id);
+
+    try {
+      if ((await adapter.identifier()) === expected) return adapter;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}

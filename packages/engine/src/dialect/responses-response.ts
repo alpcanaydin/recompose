@@ -8,41 +8,26 @@ import type {
 } from './responses-wire';
 
 import { unmappableStopReason } from '../refusals';
-import { reasoningOutcome } from './responses-reasoning-decode';
 import {
-  functionCallItemOf,
+  responsesItemForGeminiTextSignature,
+  responsesItemsForGeminiToolUse,
+} from './responses-gemini-carrier';
+import { responsesReasoningEncryptedContent } from './responses-reasoning-signature';
+import { outputOutcomeOf } from './responses-response-output';
+import {
   statusFromStopReason,
   stopReasonFromResponse,
-  thinkingDropFate,
   toHubUsage,
-  toolUseBlockOf,
   toResponsesUsage,
   translatedResponseId,
 } from './responses-shared';
 
-type OutputOutcome = { blocks: HubContentBlock[]; fates: Fate[] };
-
-function outputOutcomeOf(item: ResponsesOutputItem): OutputOutcome {
-  switch (item.type) {
-    case 'message':
-      return { blocks: item.content.map((part) => ({ type: 'text', text: part.text })), fates: [] };
-    case 'function_call':
-      return { blocks: [toolUseBlockOf(item)], fates: [] };
-    case 'reasoning':
-      return reasoningOutcome(item);
-
-    default: {
-      const unhandled: never = item;
-
-      throw new Error(`unhandled responses output item: ${JSON.stringify(unhandled)}`);
-    }
-  }
-}
-
 export function decodeResponse(
   response: ResponsesResponse,
 ): TranslateResult<HubResponse, TranslationRefusal> {
-  const hasFunctionCall = response.output.some((item) => item.type === 'function_call');
+  const hasFunctionCall = response.output.some(
+    (item) => item.type === 'function_call' || item.type === 'custom_tool_call',
+  );
   const outcome = stopReasonFromResponse(
     response.status,
     hasFunctionCall,
@@ -57,18 +42,58 @@ export function decodeResponse(
 
   return {
     value: {
+      id: response.id,
+      ...(response.model === undefined ? {} : { model: response.model }),
       content: outcomes.flatMap((entry) => entry.blocks),
-      stopReason: outcome.stopReason,
+      ...responseStop(response, outcome.stopReason),
       usage: toHubUsage(response.usage),
     },
     fates: outcomes.flatMap((entry) => entry.fates),
   };
 }
 
+function responseStop(
+  response: ResponsesResponse,
+  fallback: HubResponse['stopReason'],
+): Pick<HubResponse, 'stopReason' | 'stopSequence'> {
+  return response.stop_sequence === undefined
+    ? { stopReason: fallback }
+    : { stopReason: 'stop_sequence', stopSequence: response.stop_sequence };
+}
+
 type EncodedOutput = { output: ResponsesOutputItem[]; fates: Fate[] };
 
 function droppedBlockFate(kind: string): Fate {
   return { field: kind, disposition: 'mapped', to: 'absent' };
+}
+
+function reasoningItem(
+  block: HubContentBlock,
+  index: number,
+): Extract<ResponsesOutputItem, { type: 'reasoning' }> | null {
+  if (block.type === 'thinking') {
+    return {
+      type: 'reasoning',
+      id: `rs_${String(index)}`,
+      summary: block.text === '' ? [] : [{ type: 'summary_text', text: block.text }],
+      content: null,
+      ...responsesReasoningEncryptedContent(
+        block.signature,
+        block.carrierDirection,
+        block.carrierTarget,
+      ),
+    };
+  }
+
+  return block.type === 'redacted_thinking'
+    ? {
+        type: 'reasoning',
+        id: `rs_${String(index)}`,
+        summary: [],
+        content: null,
+        encrypted_content: `claude-redacted-thinking:${block.data}`,
+      }
+    : null;
 }
 
 function encodeOutput(content: readonly HubContentBlock[]): EncodedOutput {
@@ -85,20 +110,70 @@ function encodeOutput(content: readonly HubContentBlock[]): EncodedOutput {
 
   for (const block of content) {
     if (block.type === 'text') {
-      texts.push({ type: 'output_text', text: block.text });
-    } else if (block.type === 'tool_use') {
+      appendTextBlock(output, texts, block, flush);
+
+      continue;
+    }
+
+    if (block.type === 'tool_use') {
       flush();
-      output.push(functionCallItemOf(block));
-    } else if (block.type === 'thinking') {
-      fates.push(thinkingDropFate());
+      output.push(...responsesItemsForGeminiToolUse(block, true));
     } else {
-      fates.push(droppedBlockFate(block.type));
+      const reasoning = reasoningItem(block, output.length);
+
+      if (reasoning === null) {
+        fates.push(droppedBlockFate(block.type));
+
+        continue;
+      }
+
+      flush();
+      output.push(reasoning);
     }
   }
 
   flush();
 
   return { output, fates };
+}
+
+function appendTextBlock(
+  output: ResponsesOutputItem[],
+  texts: ResponsesOutputTextPart[],
+  block: Extract<HubContentBlock, { type: 'text' }>,
+  flush: () => void,
+): void {
+  const direction = block.signatureDirection ?? 'previous';
+  const carrier = responsesItemForGeminiTextSignature(block.signature, direction);
+
+  appendLeadingCarrier(output, carrier, direction, flush);
+
+  texts.push({ type: 'output_text', text: block.text });
+  appendTrailingCarrier(output, carrier, direction, flush);
+}
+
+function appendLeadingCarrier(
+  output: ResponsesOutputItem[],
+  carrier: ResponsesOutputItem | null,
+  direction: 'previous' | 'next',
+  flush: () => void,
+): void {
+  if (carrier === null || direction !== 'next') return;
+
+  flush();
+  output.push(carrier);
+}
+
+function appendTrailingCarrier(
+  output: ResponsesOutputItem[],
+  carrier: ResponsesOutputItem | null,
+  direction: 'previous' | 'next',
+  flush: () => void,
+): void {
+  if (carrier === null || direction === 'next') return;
+
+  flush();
+  output.push(carrier);
 }
 
 function lossyStopFate(): Fate {
@@ -118,7 +193,7 @@ export function encodeResponse(
   const fates: Fate[] = [...encoded.fates, ...(outcome.lossy === true ? [lossyStopFate()] : [])];
 
   const value: ResponsesResponse = {
-    id: translatedResponseId,
+    ...responsesIdentity(response),
     status: outcome.status,
     output: encoded.output,
     ...(outcome.incompleteReason === undefined
@@ -128,4 +203,11 @@ export function encodeResponse(
   };
 
   return { value, fates };
+}
+
+function responsesIdentity(response: HubResponse): Pick<ResponsesResponse, 'id' | 'model'> {
+  return {
+    id: response.id ?? translatedResponseId,
+    ...(response.model === undefined ? {} : { model: response.model }),
+  };
 }

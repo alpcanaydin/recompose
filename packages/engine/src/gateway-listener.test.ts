@@ -1,8 +1,13 @@
+import type { WSEvents } from 'hono/ws';
+
+import { upgradeWebSocket } from '@hono/node-server';
 import { Hono } from 'hono';
 import { createServer, type Server } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
+import { WebSocket, type RawData } from 'ws';
 
 import { type GatewayListeners, openGatewayListeners } from './gateway-listener';
+import { reserveFreePort } from './gateway-listener.testkit';
 
 const openedListeners: GatewayListeners[] = [];
 const squatters: Server[] = [];
@@ -32,21 +37,6 @@ async function takePort(address: string, port = 0): Promise<number> {
   });
 }
 
-async function reserveFreePort(): Promise<number> {
-  const probe = createServer();
-
-  return new Promise<number>((settle, refuse) => {
-    probe.once('error', refuse);
-    probe.listen(0, '127.0.0.1', () => {
-      const reserved = portOf(probe.address());
-
-      probe.close(() => {
-        settle(reserved);
-      });
-    });
-  });
-}
-
 async function openAndTrack(app: Hono, port: number): Promise<GatewayListeners> {
   const outcome = await openGatewayListeners(app, port);
 
@@ -70,6 +60,34 @@ async function askHealthOf(address: string, port: number): Promise<string> {
 
   return answer.text();
 }
+
+async function websocketEcho(port: number, message: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const socket = new WebSocket(`ws://127.0.0.1:${String(port)}/ws`);
+
+    socket.once('open', () => {
+      socket.send(message);
+    });
+    socket.once('message', (data) => {
+      resolve(messageText(data));
+      socket.close();
+    });
+    socket.once('error', reject);
+  });
+}
+
+function messageText(data: RawData): string {
+  if (Array.isArray(data)) return Buffer.concat(data).toString();
+  if (data instanceof ArrayBuffer) return Buffer.from(new Uint8Array(data)).toString();
+
+  return Buffer.from(data).toString();
+}
+
+const echoEvents: WSEvents = {
+  onMessage(_event, socket) {
+    socket.send('recompose');
+  },
+};
 
 async function loopbackIpv6Exists(): Promise<boolean> {
   const probe = createServer();
@@ -181,4 +199,17 @@ describe('stopping a gateway', () => {
 
     await expect(askHealthOf('127.0.0.1', port)).rejects.toThrow();
   });
+});
+
+test('the gateway upgrades a real loopback WebSocket connection', async () => {
+  const port = await reserveFreePort();
+  const app = new Hono();
+
+  app.get(
+    '/ws',
+    upgradeWebSocket(() => echoEvents),
+  );
+  await openAndTrack(app, port);
+
+  await expect(websocketEcho(port, 'recompose')).resolves.toBe('recompose');
 });

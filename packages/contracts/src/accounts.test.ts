@@ -201,7 +201,7 @@ describe('the mask a key row publishes in place of its secret', () => {
 
 describe('what the accounts registry refuses to hold', () => {
   test('the default registry is empty and current-version', () => {
-    expect(defaultAccountsDocument()).toEqual({ schemaVersion: 4, accounts: [] });
+    expect(defaultAccountsDocument()).toEqual({ schemaVersion: 6, accounts: [] });
   });
 
   test('an account never carries a raw secret field', () => {

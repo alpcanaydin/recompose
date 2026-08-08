@@ -5,13 +5,31 @@ import { expect } from '@playwright/test';
 import type { GatewayAnswer } from '../gateway-client';
 
 import { Then, When } from '../fixtures';
-import { addressOfPort, namedGateway, postTo, readFrom, refusalSentence } from '../gateway-client';
+import {
+  addressOfPort,
+  anthropicListedIds,
+  anthropicRefusalType,
+  namedGateway,
+  openAiRefusalCode,
+  readFrom,
+  refusalSentence,
+  sendTurn,
+  turnUnder,
+} from '../gateway-client';
 import { storedGateway } from '../gateway-screen';
 
-/** A path no gateway serves, which is where an SDK habitually starts against a base URL. */
+/** Where an SDK habitually starts against a base URL, before it adds a path of its own. */
 const MODEL_LISTING = '/v1/models';
 
-const MODEL_REQUEST = '/v1/messages';
+/** Where an Anthropic client sends a turn. */
+const ANTHROPIC_TURN = '/v1/messages';
+
+/** Where an OpenAI client sends the same turn. */
+const OPENAI_TURN = '/v1/chat/completions';
+
+const BOTH_DIALECTS = 2;
+
+const NO_SUCH_MODEL = 404;
 
 type Exchange = { gateway: string; answer: GatewayAnswer };
 
@@ -31,14 +49,16 @@ function heldExchanges(page: Page): Exchange[] {
   return held;
 }
 
-function lastAnswer(page: Page): GatewayAnswer {
-  const last = heldExchanges(page).at(-1);
+/** The two answers one turn drew, the Anthropic reading first, in the order they were sent. */
+function bothDialects(page: Page): [GatewayAnswer, GatewayAnswer] {
+  const held = heldExchanges(page);
+  const [anthropic, openAi] = held;
 
-  if (last === undefined) {
-    throw new Error('the answers this scenario recorded vanished between its steps');
+  if (held.length !== BOTH_DIALECTS || anthropic === undefined || openAi === undefined) {
+    throw new Error('no step asked this gateway on both dialects');
   }
 
-  return last.answer;
+  return [anthropic.answer, openAi.answer];
 }
 
 function answerFrom(page: Page, gateway: string): GatewayAnswer {
@@ -69,8 +89,9 @@ When(
 Then('{string} answers the request', ({ page }, name: string) => {
   const answer = answerFrom(page, name);
 
+  expect(answer.status).toBe(200);
   expect(answer.contentType).toContain('application/json');
-  expect(refusalSentence(answer.body)).toContain(name);
+  expect(anthropicListedIds(answer.body)).toEqual([]);
 });
 
 When('a client checks the health of {string}', async ({ page }, name: string) => {
@@ -92,24 +113,35 @@ Then('a success answers carrying the name {string}', ({ page }, name: string) =>
   expect(namedGateway(answer.body)).toBe(name);
 });
 
-When('a client sends a model request to {string}', async ({ page }, name: string) => {
-  record(page, name, await postTo(await addressOf(page, name), MODEL_REQUEST));
+When(
+  'a client asks {string} for the model {string} on both dialects',
+  async ({ page }, name: string, model: string) => {
+    const address = await addressOf(page, name);
+
+    record(page, name, await sendTurn(address, ANTHROPIC_TURN, turnUnder(model)));
+    record(page, name, await sendTurn(address, OPENAI_TURN, turnUnder(model)));
+  },
+);
+
+Then('each answers a typed refusal naming {string}', ({ page }, model: string) => {
+  const answered = bothDialects(page);
+
+  for (const answer of answered) {
+    expect(answer.status).toBe(NO_SUCH_MODEL);
+    expect(answer.contentType).toContain('application/json');
+    expect(refusalSentence(answer.body)).toContain(model);
+  }
 });
 
-Then('a typed refusal answers', ({ page }) => {
-  const answer = lastAnswer(page);
+Then(
+  'the Anthropic refusal carries an error type where the OpenAI one carries a code',
+  ({ page }) => {
+    const [anthropic, openAi] = bothDialects(page);
 
-  expect(answer.status).toBe(404);
-  expect(answer.contentType).toContain('application/json');
-  expect(refusalSentence(answer.body)).not.toBe('');
-});
-
-Then('it names {string} and states that it holds no model', ({ page }, name: string) => {
-  const sentence = refusalSentence(answerFrom(page, name).body);
-
-  expect(sentence).toContain(name);
-  expect(sentence).toContain('holds no virtual model');
-});
+    expect(anthropicRefusalType(anthropic.body)).toBe('not_found_error');
+    expect(openAiRefusalCode(openAi.body)).toBe('model_not_found');
+  },
+);
 
 Then('each answers with its own name', ({ page }) => {
   for (const exchange of heldExchanges(page)) {

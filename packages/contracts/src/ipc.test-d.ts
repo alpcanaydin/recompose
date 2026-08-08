@@ -182,10 +182,11 @@ describe('bridge surface totality', () => {
     expectTypeOf<keyof RecomposeIpc>().toEqualTypeOf<IpcChannel>();
   });
 
-  test('the surface is exactly these twenty-four channels, so a twenty-fifth arrives red', () => {
+  test('the surface is exactly these twenty-seven channels, so a twenty-eighth arrives red', () => {
     expectTypeOf<IpcChannel>().toEqualTypeOf<
       | 'gateways:list'
       | 'gateways:save'
+      | 'gateways:update'
       | 'gateways:offer-port'
       | 'gateways:move-port'
       | 'settings:get'
@@ -197,9 +198,11 @@ describe('bridge surface totality', () => {
       | 'accounts:connect-local'
       | 'accounts:detect-runtime'
       | 'accounts:check-runtime'
+      | 'accounts:list-models'
       | 'system:get'
       | 'system:open-config-folder'
       | 'system:window-band'
+      | 'system:title-bar-double-click'
       | 'engine:start'
       | 'engine:stop'
       | 'engine:states'
@@ -228,8 +231,8 @@ describe('push surface totality', () => {
     expectTypeOf<keyof RecomposeIpcEvents>().toEqualTypeOf<IpcEvent>();
   });
 
-  test('one event exists, and it is the state push', () => {
-    expectTypeOf<IpcEvent>().toEqualTypeOf<'engine:state'>();
+  test('the state and account-change pushes are the complete event vocabulary', () => {
+    expectTypeOf<IpcEvent>().toEqualTypeOf<'engine:state' | 'accounts:changed'>();
   });
 
   test('the push carries the whole snapshot rather than one gateway', () => {
@@ -240,6 +243,10 @@ describe('push surface totality', () => {
     expectTypeOf<RecomposeIpcEvents['engine:state']>().toEqualTypeOf<
       (listener: (payload: EngineStates) => void) => () => void
     >();
+  });
+
+  test('the account change carries only its fresh-read signal', () => {
+    expectTypeOf<IpcEventPayload<'accounts:changed'>>().toEqualTypeOf<'changed'>();
   });
 });
 

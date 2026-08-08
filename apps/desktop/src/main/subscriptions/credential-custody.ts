@@ -29,6 +29,8 @@ export type CredentialCustody = {
   clear: () => Promise<CustodyOutcome>;
   parkedStands: (slot: string) => Promise<boolean>;
   vendorStands: () => Promise<boolean>;
+  readFor: (slot: string, active: boolean) => Promise<string | null>;
+  writeFor: (slot: string, active: boolean, blob: string) => Promise<void>;
 };
 
 export function custodyOver(
@@ -117,5 +119,11 @@ export function credentialCustody(keychain: KeychainSeam, osUser: string): Crede
     parkedStands: async (slot) => lane(async () => stands(parkedItem(slot))),
 
     vendorStands: async () => lane(async () => stands(vendorItem)),
+
+    readFor: async (slot, active) =>
+      lane(async () => keychain.read(active ? vendorItem : parkedItem(slot))),
+
+    writeFor: async (slot, active, blob) =>
+      lane(async () => keychain.write(active ? vendorItem : parkedItem(slot), blob)),
   };
 }

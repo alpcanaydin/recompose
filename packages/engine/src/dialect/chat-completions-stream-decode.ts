@@ -3,32 +3,38 @@ import type {
   ChatCompletionChunk,
   ChatStreamError,
   ChatStreamFrame,
-  ChatToolCallDelta,
 } from './chat-completions-wire';
 import type { HubStopReason, HubStreamEvent, HubUsage } from './hub';
 
 import { hubStopFrom } from './chat-completions-stops';
+import {
+  applyToolCalls,
+  flushPendingTools,
+  initialToolState,
+  markToolsClosed,
+  type ChatToolDecodeState,
+} from './chat-completions-stream-tools';
 import { hubUsageFromChat } from './chat-completions-usage';
 
-type DecodeState = {
+type DecodeState = ChatToolDecodeState & {
   begun: boolean;
   nextIndex: number;
   currentOpen: number | undefined;
   textIndex: number | undefined;
-  toolIndexMap: Map<string, number>;
-  syntheticIdCount: number;
   stopReason: HubStopReason;
   usage: HubUsage;
 };
 
-function initialDecodeState(): DecodeState {
+function initialDecodeState(responsesTarget: boolean): DecodeState {
   return {
     begun: false,
     nextIndex: 0,
+    nextUnindexedTool: 0,
+    responseId: undefined,
+    responsesTarget,
     currentOpen: undefined,
     textIndex: undefined,
-    toolIndexMap: new Map(),
-    syntheticIdCount: 0,
+    ...initialToolState(),
     stopReason: 'end',
     usage: {},
   };
@@ -37,12 +43,6 @@ function initialDecodeState(): DecodeState {
 function forgetClosedBlock(state: DecodeState, closedIndex: number): void {
   if (state.textIndex === closedIndex) {
     state.textIndex = undefined;
-  }
-
-  for (const [key, hubIndex] of state.toolIndexMap) {
-    if (hubIndex === closedIndex) {
-      state.toolIndexMap.delete(key);
-    }
   }
 }
 
@@ -84,111 +84,55 @@ function applyContent(
   events.push({ type: 'block-delta', index, delta: { kind: 'text', text: content } });
 }
 
-function toolName(delta: ChatToolCallDelta): string | undefined {
-  const name = delta.function?.name;
-
-  return name !== undefined && name !== '' ? name : undefined;
-}
-
-function toolId(state: DecodeState, delta: ChatToolCallDelta): string {
-  if (delta.id !== undefined && delta.id !== '') {
-    return delta.id;
-  }
-
-  return `toolu_${state.syntheticIdCount++}`;
-}
-
-function toolCorrelationKey(state: DecodeState, delta: ChatToolCallDelta): string {
-  if (delta.index !== undefined) {
-    return `idx:${String(delta.index)}`;
-  }
-
-  if (delta.id !== undefined && delta.id !== '') {
-    return `id:${delta.id}`;
-  }
-
-  return `syn:${String(state.syntheticIdCount++)}`;
-}
-
-function openToolBlock(
-  state: DecodeState,
-  key: string,
-  delta: ChatToolCallDelta,
-  events: HubStreamEvent[],
-): number {
-  const existing = state.toolIndexMap.get(key);
-
-  if (existing !== undefined) {
-    return existing;
-  }
-
-  closeCurrent(state, events);
-
-  const hubIndex = state.nextIndex++;
-
-  state.toolIndexMap.set(key, hubIndex);
-  state.currentOpen = hubIndex;
-  events.push({
-    type: 'block-open',
-    index: hubIndex,
-    opening: {
-      kind: 'tool',
-      id: toolId(state, delta),
-      name: toolName(delta) ?? `tool_${String(hubIndex)}`,
-    },
-  });
-
-  return hubIndex;
-}
-
-function applyToolDelta(
-  state: DecodeState,
-  delta: ChatToolCallDelta,
-  events: HubStreamEvent[],
-): void {
-  const hubIndex = openToolBlock(state, toolCorrelationKey(state, delta), delta, events);
-  const args = delta.function?.arguments;
-
-  if (args !== undefined && args !== '') {
-    events.push({
-      type: 'block-delta',
-      index: hubIndex,
-      delta: { kind: 'json-args', partialJson: args },
-    });
-  }
-}
-
-function applyToolCalls(
-  state: DecodeState,
-  toolCalls: readonly ChatToolCallDelta[] | undefined,
-  events: HubStreamEvent[],
-): void {
-  for (const delta of toolCalls ?? []) {
-    applyToolDelta(state, delta, events);
-  }
-}
-
 function applyFinish(state: DecodeState, finishReason: ChatChunkChoice['finish_reason']): void {
   if (finishReason === undefined || finishReason === null) {
     return;
   }
 
-  state.stopReason = hubStopFrom(finishReason);
+  const mapped = hubStopFrom(finishReason);
+
+  state.stopReason = mapped === 'tool_use' && state.emittedToolCount === 0 ? 'end' : mapped;
 }
 
-function ensureBegun(state: DecodeState, events: HubStreamEvent[]): void {
+function ensureBegun(
+  state: DecodeState,
+  events: HubStreamEvent[],
+  chunk: ChatCompletionChunk,
+): void {
   if (state.begun) {
     return;
   }
 
   state.begun = true;
-  events.push({ type: 'message-begin' });
+  state.responseId = chunk.id;
+  events.push({
+    type: 'message-begin',
+    ...(chunk.id === undefined ? {} : { id: chunk.id }),
+    ...(chunk.model === undefined ? {} : { model: chunk.model }),
+  });
 }
 
 function applyChoice(state: DecodeState, choice: ChatChunkChoice, events: HubStreamEvent[]): void {
   applyContent(state, choice.delta.content, events);
-  applyToolCalls(state, choice.delta.tool_calls, events);
-  applyFinish(state, choice.finish_reason);
+
+  const close = (): void => {
+    closeCurrent(state, events);
+  };
+
+  applyToolCalls(state, choiceToolCalls(choice), events, close);
+
+  if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
+    flushPendingTools(state, events, close);
+    applyFinish(state, choice.finish_reason);
+    closeCurrent(state, events);
+    markToolsClosed(state);
+  }
+}
+
+function choiceToolCalls(choice: ChatChunkChoice) {
+  return choice.delta.tool_calls?.map((call) =>
+    call.index === undefined ? call : { ...call, index: choice.index * 1_000 + call.index },
+  );
 }
 
 function decodeChunk(
@@ -196,13 +140,9 @@ function decodeChunk(
   chunk: ChatCompletionChunk,
   events: HubStreamEvent[],
 ): void {
-  ensureBegun(state, events);
+  ensureBegun(state, events, chunk);
 
-  const choice = chunk.choices[0];
-
-  if (choice !== undefined) {
-    applyChoice(state, choice, events);
-  }
+  for (const choice of chunk.choices) applyChoice(state, choice, events);
 
   if (chunk.usage !== undefined && chunk.usage !== null) {
     state.usage = hubUsageFromChat(chunk.usage);
@@ -249,8 +189,9 @@ function decodeFrame(
 
 export async function* decodeStream(
   frames: AsyncIterable<ChatStreamFrame>,
+  responsesTarget = false,
 ): AsyncIterable<HubStreamEvent> {
-  const state = initialDecodeState();
+  const state = initialDecodeState(responsesTarget);
 
   for await (const frame of frames) {
     const events: HubStreamEvent[] = [];
@@ -264,4 +205,10 @@ export async function* decodeStream(
       return;
     }
   }
+}
+
+export function decodeStreamForResponses(
+  frames: AsyncIterable<ChatStreamFrame>,
+): AsyncIterable<HubStreamEvent> {
+  return decodeStream(frames, true);
 }

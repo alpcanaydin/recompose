@@ -9,6 +9,7 @@ allowBuilds:
   esbuild: true
   '@swc/core': true
   '@fission-ai/openspec': false
+  koffi: true
 
 minimumReleaseAge: 4320
 

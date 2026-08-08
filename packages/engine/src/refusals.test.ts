@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   emptyConversation,
+  missingCredential,
   missingModelInAnthropicDialect,
   missingModelInOpenAiDialect,
+  missingTarget,
   renderRefusal,
   toolIdCollision,
   unmappableStopReason,
@@ -114,6 +116,72 @@ describe('renderRefusal splits the other refusals by meaning', () => {
   });
 });
 
+describe('renderRefusal renders a missing target as a 502 in both dialects', () => {
+  it('names the gateway and the virtual model in the anthropic envelope', () => {
+    const rendered = renderRefusal('anthropic', missingTarget('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      type: 'error',
+      error: {
+        type: 'api_error',
+        message: 'The gateway "Codex" holds no target for the virtual model "fast".',
+      },
+    });
+  });
+
+  it('names the gateway and the virtual model in the OpenAI envelope', () => {
+    const rendered = renderRefusal('chat-completions', missingTarget('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      error: {
+        message: 'The gateway "Codex" holds no target for the virtual model "fast".',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'missing_target',
+      },
+    });
+  });
+});
+
+describe('renderRefusal renders a missing credential as a 502 in both dialects', () => {
+  it('names the gateway and the virtual model in the anthropic envelope', () => {
+    const rendered = renderRefusal('anthropic', missingCredential('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      type: 'error',
+      error: {
+        type: 'api_error',
+        message: 'The gateway "Codex" holds no credential for the virtual model "fast".',
+      },
+    });
+  });
+
+  it('names the gateway and the virtual model in the OpenAI envelope', () => {
+    const rendered = renderRefusal('chat-completions', missingCredential('Codex', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toEqual({
+      error: {
+        message: 'The gateway "Codex" holds no credential for the virtual model "fast".',
+        type: 'invalid_request_error',
+        param: null,
+        code: 'missing_credential',
+      },
+    });
+  });
+});
+
+describe('renderRefusal keeps an absent model apart from broken backing', () => {
+  it('answers 404 for an unknown model and 502 for each config fault', () => {
+    expect(renderRefusal('anthropic', unknownModel('ghost')).status).toBe(404);
+    expect(renderRefusal('anthropic', missingTarget('Codex', 'ghost')).status).toBe(502);
+    expect(renderRefusal('anthropic', missingCredential('Codex', 'ghost')).status).toBe(502);
+  });
+});
+
 describe('renderRefusal refuses a structurally invalid conversation as a 400', () => {
   it('renders an empty conversation as a 400 in the OpenAI envelope', () => {
     const rendered = renderRefusal('chat-completions', emptyConversation());
@@ -140,5 +208,34 @@ describe('renderRefusal refuses a structurally invalid conversation as a 400', (
         message: 'Two tool calls share the sanitized id "a_1", so their pairing is ambiguous.',
       },
     });
+  });
+});
+
+describe('a refusal rendered for a Gemini caller', () => {
+  it('names an unknown model as a Gemini not-found error', () => {
+    const rendered = renderRefusal('gemini', unknownModel('gemini-9'));
+
+    expect(rendered.status).toBe(404);
+    expect(rendered.body).toEqual({
+      error: {
+        code: 404,
+        message: 'No model named "gemini-9" is defined.',
+        status: 'NOT_FOUND',
+      },
+    });
+  });
+
+  it('names a missing target as a Gemini internal error', () => {
+    const rendered = renderRefusal('gemini', missingTarget('Work', 'fast'));
+
+    expect(rendered.status).toBe(502);
+    expect(rendered.body).toHaveProperty('error.status', 'INTERNAL');
+  });
+
+  it('names an empty conversation as a Gemini invalid-argument error', () => {
+    expect(renderRefusal('gemini', emptyConversation()).body).toHaveProperty(
+      'error.status',
+      'INVALID_ARGUMENT',
+    );
   });
 });

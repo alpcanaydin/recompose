@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Suspense, useSyncExternalStore } from 'react';
 
 import { sidebarHidden, subscribeToSidebarVisibility } from '../../shared/lib';
-import { SidebarToggle } from '../../shared/ui';
+import { InspectorToggle, SidebarToggle } from '../../shared/ui';
 import { GatewayToolbar } from '../../widgets/gateway/toolbar';
 
 const emptyChrome = <div aria-hidden className="h-toolbar" />;
@@ -41,9 +41,10 @@ export function AppToolbar({ slug, trailing }: AppToolbarProps) {
             <SidebarToggle where="standing" />
           </span>
         )}
-        {trailing != null && (
-          <span className="app-no-drag ms-auto flex items-center pe-3.5">{trailing}</span>
-        )}
+        <span className="app-no-drag ms-auto flex items-center gap-2 pe-3.5">
+          <InspectorToggle available={false} where="standing" />
+          {trailing}
+        </span>
       </div>
     );
   }

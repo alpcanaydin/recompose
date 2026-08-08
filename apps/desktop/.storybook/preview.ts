@@ -1,10 +1,19 @@
 import addonA11y from '@storybook/addon-a11y';
 import addonThemes, { withThemeByClassName } from '@storybook/addon-themes';
 import { definePreview } from '@storybook/react-vite';
+import isChromatic from 'chromatic/isChromatic';
 
 import '../src/renderer/src/app/styles/main.css';
 import './preview.css';
 import { withRecomposeBridge } from './recompose-bridge';
+
+if (isChromatic()) {
+  const motionOff = document.createElement('style');
+
+  motionOff.textContent =
+    '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; transition-delay: 0s !important; }';
+  document.head.append(motionOff);
+}
 
 const schemes = { light: 'scheme-light', dark: 'scheme-dark' };
 

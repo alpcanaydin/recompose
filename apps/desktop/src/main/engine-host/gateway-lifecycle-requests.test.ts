@@ -1,5 +1,7 @@
 import {
+  ACCOUNTS_VERSION,
   GATEWAY_CONFIG_VERSION,
+  type Account,
   type EngineGateway,
   type GatewayConfig,
 } from '@recompose/contracts';
@@ -11,6 +13,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { EngineHost } from './engine-host';
 
 import { createGatewayLifecycleRequests } from './gateway-lifecycle-requests';
+import { keyRow } from './spend-grant.testkit';
 
 function gatewayNamed(slug: string, port: number): GatewayConfig {
   return {
@@ -20,6 +23,15 @@ function gatewayNamed(slug: string, port: number): GatewayConfig {
     port,
     virtualModels: [],
     layout: { nodes: {} },
+  };
+}
+
+function gatewayServing(slug: string, port: number, accountId: string): GatewayConfig {
+  return {
+    ...gatewayNamed(slug, port),
+    virtualModels: [
+      { id: 'fast', displayName: 'fast', target: { accountId, providerModel: 'claude-sonnet-5' } },
+    ],
   };
 }
 
@@ -48,14 +60,19 @@ function recordingHost() {
     onStatesChanged: () => () => undefined,
     probe: async () => Promise.resolve({ verdict: 'could-not-check' as const }),
     probeRuntime: async () => Promise.resolve({ verdict: 'unreachable' as const }),
+    listModels: async () => Promise.resolve({ standing: 'unlisted' as const }),
     dispose: () => undefined,
   };
 
   return { host, started, stopped, restarted };
 }
 
-async function directoryHolding(stored: readonly GatewayConfig[]): Promise<string> {
-  const gatewaysDir = join(await mkdtemp(join(tmpdir(), 'recompose-lifecycle-')), 'gateways');
+async function directoryHolding(
+  stored: readonly GatewayConfig[],
+  accounts: readonly Account[] = [],
+): Promise<string> {
+  const userDataPath = await mkdtemp(join(tmpdir(), 'recompose-lifecycle-'));
+  const gatewaysDir = join(userDataPath, 'gateways');
 
   await mkdir(gatewaysDir, { recursive: true });
 
@@ -63,23 +80,83 @@ async function directoryHolding(stored: readonly GatewayConfig[]): Promise<strin
     await writeFile(join(gatewaysDir, `${config.slug}.json`), JSON.stringify(config), 'utf8');
   }
 
-  return gatewaysDir;
+  await writeFile(
+    join(userDataPath, 'accounts.json'),
+    JSON.stringify({ schemaVersion: ACCOUNTS_VERSION, accounts }),
+    'utf8',
+  );
+
+  return userDataPath;
 }
 
 function complained(spy: { mock: { calls: unknown[][] } }): string {
   return spy.mock.calls.flat().map(String).join(' ');
 }
 
-function requestsOver(host: EngineHost | null, gatewaysDir: string) {
+function requestsOver(host: EngineHost | null, userDataPath: string) {
   return createGatewayLifecycleRequests({
     host: () => host,
-    gatewaysDir: () => gatewaysDir,
+    userDataPath: () => userDataPath,
     onCorrupt: () => undefined,
   });
 }
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+const boundToTheStoredModel = [
+  {
+    id: 'fast',
+    displayName: 'fast',
+    target: { standing: 'bound', providerModel: 'claude-sonnet-5' },
+  },
+];
+
+describe('the snapshot a slug-only request serves under', () => {
+  test('starting hands the engine a target the registry still holds, bound', async () => {
+    const recorded = recordingHost();
+    const requests = requestsOver(
+      recorded.host,
+      await directoryHolding([gatewayServing('codex', 8397, keyRow.id)], [keyRow]),
+    );
+
+    requests.start('codex');
+
+    await vi.waitFor(() => {
+      expect(recorded.started[0]?.virtualModels).toStrictEqual(boundToTheStoredModel);
+    });
+  });
+
+  test('restarting hands the engine a target the registry still holds, bound', async () => {
+    const recorded = recordingHost();
+    const requests = requestsOver(
+      recorded.host,
+      await directoryHolding([gatewayServing('codex', 8397, keyRow.id)], [keyRow]),
+    );
+
+    requests.restart('codex');
+
+    await vi.waitFor(() => {
+      expect(recorded.restarted[0]?.virtualModels).toStrictEqual(boundToTheStoredModel);
+    });
+  });
+
+  test('starting hands the engine a target the registry lost, removed', async () => {
+    const recorded = recordingHost();
+    const requests = requestsOver(
+      recorded.host,
+      await directoryHolding([gatewayServing('codex', 8397, keyRow.id)], []),
+    );
+
+    requests.start('codex');
+
+    await vi.waitFor(() => {
+      expect(recorded.started[0]?.virtualModels).toStrictEqual([
+        { id: 'fast', displayName: 'fast', target: { standing: 'removed' } },
+      ]);
+    });
+  });
 });
 
 describe('asking the engine to act on a gateway named only by its slug', () => {
@@ -93,7 +170,9 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
     requests.start('codex');
 
     await vi.waitFor(() => {
-      expect(recorded.started).toEqual([{ slug: 'codex', displayName: 'codex', port: 8397 }]);
+      expect(recorded.started).toEqual([
+        { slug: 'codex', displayName: 'codex', port: 8397, virtualModels: [] },
+      ]);
     });
   });
 
@@ -118,7 +197,9 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
     requests.restart('codex');
 
     await vi.waitFor(() => {
-      expect(recorded.restarted).toEqual([{ slug: 'codex', displayName: 'codex', port: 8397 }]);
+      expect(recorded.restarted).toEqual([
+        { slug: 'codex', displayName: 'codex', port: 8397, virtualModels: [] },
+      ]);
     });
   });
 
@@ -132,7 +213,9 @@ describe('asking the engine to act on a gateway named only by its slug', () => {
     requests.start('gemini');
 
     await vi.waitFor(() => {
-      expect(recorded.started).toEqual([{ slug: 'gemini', displayName: 'gemini', port: 8398 }]);
+      expect(recorded.started).toEqual([
+        { slug: 'gemini', displayName: 'gemini', port: 8398, virtualModels: [] },
+      ]);
     });
   });
 });
@@ -157,7 +240,7 @@ describe('a request the engine cannot answer', () => {
     const recorded = recordingHost();
     const requests = createGatewayLifecycleRequests({
       host: () => null,
-      gatewaysDir: () => tmpdir(),
+      userDataPath: () => tmpdir(),
       onCorrupt: () => undefined,
     });
 

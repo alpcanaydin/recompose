@@ -48,7 +48,7 @@ describe('the key the connect channel carries', () => {
 describe('what the connect channel answers', () => {
   test('responses cannot smuggle the secret back', () => {
     const registry = {
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [
         {
           id: 'a1',
@@ -61,7 +61,7 @@ describe('what the connect channel answers', () => {
       ],
     };
     const smuggled = {
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [{ ...registry.accounts[0], secret: 'sk-abc' }],
     };
 

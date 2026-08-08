@@ -1,9 +1,81 @@
-/** The surface a selected gateway composes on, dotted the way a canvas reads. */
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { notFound } from '@tanstack/react-router';
+import { useRef, useSyncExternalStore } from 'react';
+
+import { gatewaysQueryOptions } from '../../../../shared/api';
+import {
+  inspectorOpen,
+  keepPanelWidth,
+  panelBounds,
+  setPanelWidth,
+  subscribeToInspectorVisibility,
+  subscribeToPanelWidths,
+  toggleInspector,
+} from '../../../../shared/lib';
+import { PanelSeparator } from '../../../../shared/ui';
+import { inspectorWidth } from '../../lib/inspector-width';
+import { useHeldDraft } from '../../lib/use-held-draft';
+import { useInspectorReveal } from '../../lib/use-inspector-reveal';
+import { usePressAway } from '../../lib/use-press-away';
+import { GatewayDrawer } from '../gateway-drawer/gateway-drawer';
+import { GatewayStage } from '../gateway-stage/gateway-stage';
+
+/**
+ * The selected gateway: the stage it will be composed on, and the inspector that changes it.
+ *
+ * @summary Reach for it from the gateway route. Selecting the gateway node opens its inspector and
+ * letting the node go closes it, which hands the stage its full width, so the drawer is a thing a
+ * person opens rather than a wall the screen always carries. A draft in flight outlives that close:
+ * it is held here rather than inside the drawer, so shutting the inspector mid-definition puts the
+ * work down instead of throwing it away. A slug no stored gateway holds lands on the same not-found
+ * state a mistyped address does, because a gateway that was deleted and one that never existed are
+ * the same fact to the person reading, and a blank surface says neither.
+ */
 export function GatewayCanvasPage({ slug }: { slug: string }) {
+  const { data: gateways } = useSuspenseQuery(gatewaysQueryOptions);
+  const selected = useSyncExternalStore(subscribeToInspectorVisibility, inspectorOpen);
+  const width = useSyncExternalStore(subscribeToPanelWidths, inspectorWidth);
+  const inspector = useInspectorReveal(selected);
+  const surface = useRef<HTMLDivElement>(null);
+  const { standing: drafting, startDrafting, keepDrafting, leaveDrafting } = useHeldDraft();
+
+  usePressAway(surface, selected, toggleInspector);
+
+  const gateway = gateways.find((held) => held.slug === slug);
+
+  if (gateway === undefined) {
+    throw notFound();
+  }
+
   return (
-    <section className="h-full p-6 dot-grid">
-      <h1 className="text-ink-secondary">{slug}</h1>
-      <p>Canvas coming soon.</p>
-    </section>
+    <div className="flex h-full min-h-0" ref={surface}>
+      <GatewayStage gateway={gateway} onToggleSelected={toggleInspector} selected={selected} />
+      {inspector.rendered ? (
+        <PanelSeparator
+          bounds={panelBounds.inspector}
+          label="Inspector width"
+          onCollapse={toggleInspector}
+          onResize={(asked) => {
+            setPanelWidth('inspector', asked);
+          }}
+          onRestore={toggleInspector}
+          onSettled={() => {
+            keepPanelWidth('inspector');
+          }}
+          panelEdge="leading"
+          width={width}
+        />
+      ) : null}
+      {inspector.rendered ? (
+        <GatewayDrawer
+          drafting={drafting}
+          gateway={gateway}
+          leaving={inspector.leaving}
+          onKeepDrafting={keepDrafting}
+          onLeaveDrafting={leaveDrafting}
+          onStartDrafting={startDrafting}
+        />
+      ) : null}
+    </div>
   );
 }

@@ -35,3 +35,8 @@ export function accountKindTitle(kind: AccountKind): string {
 export function accountsOfKind(accounts: StoredAccounts, kind: AccountKind): StoredAccounts {
   return accounts.filter((account) => account.kind === kind);
 }
+
+/** The stored accounts a virtual model's target can name, which is what the target picker offers. */
+export function accountsStandingAsTarget(accounts: StoredAccounts): StoredAccounts {
+  return accounts;
+}

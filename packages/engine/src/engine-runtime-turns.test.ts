@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'vitest';
 
 import { createEngineRuntime, type OpenListeners } from './engine-runtime';
+import { grantsNothing } from './gateway-app.testkit';
 
-const codex = { slug: 'codex', displayName: 'Codex', port: 8397 };
+const codex = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
 
 function aLoopbackThatClosesSlowly() {
   const serving = new Set<number>();
@@ -40,7 +41,7 @@ function aLoopbackThatClosesSlowly() {
 describe('a start arriving while the last stop is still closing', () => {
   test('it waits for the port to come back rather than reporting it taken', async () => {
     const loopback = aLoopbackThatClosesSlowly();
-    const runtime = createEngineRuntime(loopback.openListeners);
+    const runtime = createEngineRuntime(loopback.openListeners, grantsNothing);
 
     await runtime.start(codex);
 
@@ -60,7 +61,7 @@ describe('a start arriving while the last stop is still closing', () => {
 describe('two stops arriving at once', () => {
   test('the second joins the first rather than closing a listener already gone', async () => {
     const loopback = aLoopbackThatClosesSlowly();
-    const runtime = createEngineRuntime(loopback.openListeners);
+    const runtime = createEngineRuntime(loopback.openListeners, grantsNothing);
 
     await runtime.start(codex);
 
@@ -81,7 +82,7 @@ describe('a listener that blows up rather than answering', () => {
   const blowsUp: OpenListeners = async () => Promise.reject(new Error('the loopback gave way'));
 
   test('a stop after a failed start still reports the gateway stopped', async () => {
-    const runtime = createEngineRuntime(blowsUp);
+    const runtime = createEngineRuntime(blowsUp, grantsNothing);
 
     await expect(runtime.start(codex)).rejects.toThrow('the loopback gave way');
 
@@ -89,7 +90,7 @@ describe('a listener that blows up rather than answering', () => {
   });
 
   test('a start after a failed stop tries again rather than waiting on the wreck', async () => {
-    const runtime = createEngineRuntime(blowsUp);
+    const runtime = createEngineRuntime(blowsUp, grantsNothing);
     const failing = runtime.start(codex);
 
     await expect(runtime.stop(codex.slug)).resolves.toEqual({ status: 'stopped' });
@@ -101,7 +102,7 @@ describe('a listener that blows up rather than answering', () => {
 describe('a stop that follows a start, both arriving during an older stop', () => {
   test('the gateway is really down once that stop reports it, rather than coming back up behind it', async () => {
     const loopback = aLoopbackThatClosesSlowly();
-    const runtime = createEngineRuntime(loopback.openListeners);
+    const runtime = createEngineRuntime(loopback.openListeners, grantsNothing);
 
     await runtime.start(codex);
 

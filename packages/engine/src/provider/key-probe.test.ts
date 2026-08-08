@@ -3,9 +3,11 @@ import type { KeyCheckVerdict } from '@recompose/contracts';
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
 
-import { probeKey } from './key-probe';
+import { authHeadersFor, probeKey } from './key-probe';
 
 const aKey = 'sk-ant-api03-1f2e3d4c';
+
+type StoredProviderProbe = { headersFor(provider: string, key: string): Record<string, string> };
 
 type SentRequest = { url: string; init: RequestInit };
 
@@ -73,6 +75,19 @@ describe('the request the probe sends', () => {
     expect(headers.get('anthropic-version')).toBeNull();
   });
 
+  test('a Gemini probe uses the Generative Language catalog and Google key header', async () => {
+    const { sent, fetchLike } = fetchAnswering(200);
+
+    await probeKey(fetchLike, 'gemini', aKey);
+
+    const request = onlyRequestOf(sent);
+    const headers = new Headers(request.init.headers);
+
+    expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
+    expect(headers.get('x-goog-api-key')).toBe(aKey);
+    expect(headers.get('authorization')).toBeNull();
+  });
+
   test('a given origin substitutes for the vendor host', async () => {
     const { sent, fetchLike } = fetchAnswering(200);
 
@@ -98,6 +113,36 @@ describe('the request the probe sends', () => {
     await probeKey(fetchLike, 'anthropic', 'sk-ant-legacy-tail\n');
 
     expect(JSON.stringify(onlyRequestOf(sent).init.headers)).toContain('sk-ant-legacy-tail\\n');
+  });
+});
+
+describe('the Gemini Interactions probe', () => {
+  test('shares the native catalog and key header', async () => {
+    const { sent, fetchLike } = fetchAnswering(200);
+
+    await probeKey(fetchLike, 'gemini-interactions', aKey);
+
+    const request = onlyRequestOf(sent);
+    const headers = new Headers(request.init.headers);
+
+    expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models');
+    expect(headers.get('x-goog-api-key')).toBe(aKey);
+  });
+});
+
+describe('a provider name the probe does not speak to', () => {
+  test('a stored provider name no vendor answers is refused by name', () => {
+    const stored: StoredProviderProbe = { headersFor: authHeadersFor };
+
+    expect(() => stored.headersFor('mistral', aKey)).toThrow(
+      'no probe speaks to the provider: mistral',
+    );
+  });
+
+  test('the refusal names the provider it was handed, whatever it was', () => {
+    const stored: StoredProviderProbe = { headersFor: authHeadersFor };
+
+    expect(() => stored.headersFor('anthropic-legacy', aKey)).toThrow('anthropic-legacy');
   });
 });
 

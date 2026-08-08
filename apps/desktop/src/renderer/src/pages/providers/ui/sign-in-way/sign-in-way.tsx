@@ -6,6 +6,7 @@ import { useId } from 'react';
 
 import { subscriptionToolsQueryOptions } from '../../../../shared/api';
 import { SheetActionSlot } from '../../../../shared/ui';
+import { subscriptionMarkFor } from '../../model/provider-catalog';
 import { PickedIdentity } from '../picked-identity/picked-identity';
 import { SignInAction } from '../sign-in-action/sign-in-action';
 
@@ -31,7 +32,7 @@ export function SignInWay({ name, provider, onConnected }: SignInWayProps) {
 
   return (
     <div className="mx-auto flex w-80 flex-col items-center gap-2.5 py-4 text-center">
-      <PickedIdentity provider={provider} title={`An account for ${toolName}`}>
+      <PickedIdentity provider={subscriptionMarkFor(provider)} title={`An account for ${toolName}`}>
         <p className="text-detail text-ink-secondary">
           {toolName} signs in on its own and spends your {name} plan, under {name}&apos;s terms.
           {` ${toolName} serves one account at a time.`}

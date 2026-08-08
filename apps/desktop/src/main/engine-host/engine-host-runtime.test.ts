@@ -3,7 +3,7 @@ import { localRuntimes, runtimeLookBoundMs, type RuntimeReachability } from '@re
 import { afterEach, describe, expect, vi } from 'vitest';
 
 import { createEngineHost, PROBE_TIMEOUT_MS } from './engine-host';
-import { hostOver, nothing, scriptedChild } from './engine-host.testkit';
+import { grantsNothing, hostOver, nothing, scriptedChild } from './engine-host.testkit';
 
 const ollama = localRuntimes.ollama.address;
 const key = 'sk-ant-api03-long-secret-7f2c';
@@ -157,6 +157,7 @@ describe('a runtime look that never draws an answer', () => {
     const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const host = createEngineHost({
       knownSlugs: [],
+      grantFor: grantsNothing,
       spawnChild: () => {
         throw new Error('the engine bundle is missing');
       },

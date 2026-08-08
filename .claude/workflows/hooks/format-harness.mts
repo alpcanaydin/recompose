@@ -107,22 +107,14 @@ function readList(value: unknown): readonly unknown[] {
   return isList(value) ? value : [];
 }
 
-function readStrings(value: unknown): readonly string[] {
-  return readList(value).filter((item): item is string => typeof item === 'string');
-}
-
 type ConfiguredHook = {
   readonly command: string;
-  readonly args: readonly string[] | undefined;
 };
 
 function hookNamesTarget(candidate: unknown, marker: string): boolean {
   const command = readProperty(candidate, 'command');
-  const launcher = typeof command === 'string' ? [command] : [];
 
-  return [...launcher, ...readStrings(readProperty(candidate, 'args'))].some((piece) =>
-    piece.includes(marker),
-  );
+  return typeof command === 'string' && command.includes(marker);
 }
 
 function matchedHooks(event: string, matcher: string): readonly unknown[] {
@@ -143,9 +135,7 @@ export function configuredHook(event: string, matcher: string, marker: string): 
     throw new Error(`.claude/settings.json carries no ${matcher} ${event} hook running ${marker}`);
   }
 
-  const args = readProperty(hook, 'args');
-
-  return { command, args: isList(args) ? readStrings(args) : undefined };
+  return { command };
 }
 
 function withProjectDirectory(value: string): string {
@@ -157,13 +147,12 @@ export function runHook(
   workingDirectory: string,
   payload: string,
 ): HookOutcome {
-  const args = hook.args?.map(withProjectDirectory);
-  const run = spawnSync(withProjectDirectory(hook.command), args ?? [], {
+  const run = spawnSync(withProjectDirectory(hook.command), {
     cwd: workingDirectory,
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_PROJECT_DIR: REPOSITORY_ROOT },
     input: payload,
-    shell: args === undefined,
+    shell: true,
   });
 
   if (run.status === null) {

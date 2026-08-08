@@ -2,49 +2,33 @@ import type { HubStreamEvent } from './hub';
 import type {
   ResponsesKnownStreamEvent,
   ResponsesStreamEvent,
-  ResponsesStreamItem,
   ResponsesStreamResponse,
 } from './responses-wire';
 
+import { codexEventError, codexEventErrorCode } from '../provider/codex-event-error';
 import { stopReasonFromResponse, toHubUsage } from './responses-shared';
-import { sanitizeToolId } from './tool-id';
+import { decodeKnownResponsesBlockEvent } from './responses-stream-blocks';
+import { hydrateResponsesBlocksAtTerminal } from './responses-stream-completion';
+import { responsesImageEvents } from './responses-stream-images';
+import { newResponsesBlockState, type ResponsesBlockState } from './responses-stream-state';
+import { responsesTerminalDetails } from './responses-stream-terminal';
 
 const knownStreamTypes = new Set<string>([
   'response.created',
   'response.output_item.added',
   'response.output_text.delta',
   'response.reasoning_summary_text.delta',
+  'response.image_generation_call.partial_image',
   'response.function_call_arguments.delta',
   'response.output_item.done',
   'response.completed',
   'response.incomplete',
+  'response.failed',
   'error',
 ]);
 
 function isKnownStreamEvent(event: ResponsesStreamEvent): event is ResponsesKnownStreamEvent {
   return knownStreamTypes.has(event.type);
-}
-
-function synthesizedToolId(item: { id?: string; call_id?: string }, index: number): string {
-  return sanitizeToolId(item.call_id ?? item.id ?? `toolu_stream_${String(index)}`);
-}
-
-function blockOpenOf(index: number, item: ResponsesStreamItem): HubStreamEvent | undefined {
-  switch (item.type) {
-    case 'message':
-      return { type: 'block-open', index, opening: { kind: 'text' } };
-    case 'function_call':
-      return {
-        type: 'block-open',
-        index,
-        opening: { kind: 'tool', id: synthesizedToolId(item, index), name: item.name ?? '' },
-      };
-    case 'reasoning':
-      return { type: 'block-open', index, opening: { kind: 'thinking' } };
-
-    default:
-      return undefined;
-  }
 }
 
 function terminalStatus(
@@ -68,124 +52,186 @@ function messageEndOf(response: ResponsesStreamResponse): HubStreamEvent {
     };
   }
 
-  return { type: 'message-end', stopReason: outcome.stopReason, usage: toHubUsage(response.usage) };
-}
-
-type ResponsesBlockEvent = Extract<
-  ResponsesKnownStreamEvent,
-  {
-    type:
-      | 'response.output_item.added'
-      | 'response.output_text.delta'
-      | 'response.reasoning_summary_text.delta'
-      | 'response.function_call_arguments.delta'
-      | 'response.output_item.done';
-  }
->;
-
-function openBlock(
-  event: ResponsesBlockEvent & { type: 'response.output_item.added' },
-  skipped: Set<number>,
-): HubStreamEvent[] {
-  const open = blockOpenOf(event.output_index, event.item);
-
-  if (open === undefined) {
-    skipped.add(event.output_index);
-
-    return [];
-  }
-
-  return [open];
-}
-
-function decodeDeltaOrClose(
-  event: Exclude<ResponsesBlockEvent, { type: 'response.output_item.added' }>,
-): HubStreamEvent[] {
-  switch (event.type) {
-    case 'response.output_text.delta':
-      return [
-        {
-          type: 'block-delta',
-          index: event.output_index,
-          delta: { kind: 'text', text: event.delta },
-        },
-      ];
-    case 'response.reasoning_summary_text.delta':
-      return [
-        {
-          type: 'block-delta',
-          index: event.output_index,
-          delta: { kind: 'thinking', text: event.delta },
-        },
-      ];
-    case 'response.function_call_arguments.delta':
-      return [
-        {
-          type: 'block-delta',
-          index: event.output_index,
-          delta: { kind: 'json-args', partialJson: event.delta },
-        },
-      ];
-    case 'response.output_item.done':
-      return [{ type: 'block-close', index: event.output_index }];
-
-    default: {
-      const unhandled: never = event;
-
-      throw new Error(`unhandled responses block event: ${JSON.stringify(unhandled)}`);
-    }
-  }
-}
-
-function decodeBlockEvent(event: ResponsesBlockEvent, skipped: Set<number>): HubStreamEvent[] {
-  if (event.type === 'response.output_item.added') {
-    return openBlock(event, skipped);
-  }
-
-  return skipped.has(event.output_index) ? [] : decodeDeltaOrClose(event);
+  return {
+    type: 'message-end',
+    ...responsesTerminalDetails(response, outcome.stopReason),
+    usage: toHubUsage(response.usage),
+  };
 }
 
 function decodeKnownEvent(
   event: ResponsesKnownStreamEvent,
-  skipped: Set<number>,
+  blocks: ResponsesBlockState,
 ): HubStreamEvent[] {
-  if (event.type === 'response.created') {
-    return [{ type: 'message-begin' }];
-  }
+  const images = responsesImageEvents(event, blocks);
 
-  if (event.type === 'response.completed' || event.type === 'response.incomplete') {
-    return [messageEndOf(event.response)];
+  return images ?? decodeStandardEvent(event, blocks);
+}
+
+function decodeStandardEvent(
+  event: ResponsesKnownStreamEvent,
+  blocks: ResponsesBlockState,
+): HubStreamEvent[] {
+  if (event.type === 'response.created') return [createdMessageBegin(event)];
+
+  if (isTerminalResponseEvent(event)) {
+    return [...hydrateResponsesBlocksAtTerminal(blocks, event.response), ...terminalEvents(event)];
   }
 
   if (event.type === 'error') {
-    return [{ type: 'stream-error', error: { type: event.code, message: event.message } }];
+    return [streamErrorEvent(event)];
   }
 
-  return decodeBlockEvent(event, skipped);
+  if (isSupplementalDoneEvent(event)) return [];
+
+  return decodeKnownResponsesBlockEvent(blocks, event);
+}
+
+function createdMessageBegin(
+  event: Extract<ResponsesKnownStreamEvent, { type: 'response.created' }>,
+): HubStreamEvent {
+  return {
+    type: 'message-begin',
+    id: event.response.id,
+    ...(event.response.model === undefined ? {} : { model: event.response.model }),
+  };
+}
+
+const supplementalDoneTypes = new Set([
+  'response.function_call_arguments.done',
+  'response.custom_tool_call_input.delta',
+  'response.custom_tool_call_input.done',
+  'response.output_text.done',
+  'response.content_part.done',
+]);
+
+type SupplementalDoneEvent = Extract<
+  ResponsesKnownStreamEvent,
+  {
+    type:
+      | 'response.function_call_arguments.done'
+      | 'response.custom_tool_call_input.delta'
+      | 'response.custom_tool_call_input.done'
+      | 'response.output_text.done'
+      | 'response.content_part.done';
+  }
+>;
+
+function isSupplementalDoneEvent(event: ResponsesKnownStreamEvent): event is SupplementalDoneEvent {
+  return supplementalDoneTypes.has(event.type);
+}
+
+type TerminalResponseEvent = Extract<
+  ResponsesKnownStreamEvent,
+  { type: 'response.completed' | 'response.incomplete' | 'response.failed' }
+>;
+
+function isTerminalResponseEvent(event: ResponsesKnownStreamEvent): event is TerminalResponseEvent {
+  return terminalResponseTypes.has(event.type);
+}
+
+const terminalResponseTypes = new Set([
+  'response.completed',
+  'response.incomplete',
+  'response.failed',
+]);
+
+function terminalEvents(event: TerminalResponseEvent): HubStreamEvent[] {
+  if (event.type !== 'response.failed') {
+    return [messageEndOf(event.response)];
+  }
+
+  return [failedResponseEvent(event.response)];
+}
+
+function failedResponseEvent(response: ResponsesStreamResponse): HubStreamEvent {
+  const parsed = codexEventError({ type: 'response.failed', response });
+
+  return {
+    type: 'stream-error',
+    error: {
+      type: parsed === null ? 'api_error' : codexEventErrorCode(parsed),
+      message: parsed?.message ?? 'Codex response failed',
+    },
+  };
+}
+
+function streamErrorEvent(event: ResponsesKnownStreamEvent & { type: 'error' }): HubStreamEvent {
+  const parsed = codexEventError(event);
+
+  return {
+    type: 'stream-error',
+    error: {
+      type: parsed === null ? 'api_error' : codexEventErrorCode(parsed),
+      message: parsed?.message ?? 'Codex response failed',
+    },
+  };
 }
 
 function isTerminal(event: HubStreamEvent): boolean {
   return event.type === 'stream-error' || event.type === 'message-end';
 }
 
-export async function* decodeStream(
+type DecodeLifecycle = { terminal: boolean };
+
+async function* decodedSource(
   source: AsyncIterable<ResponsesStreamEvent>,
+  lifecycle: DecodeLifecycle,
 ): AsyncIterable<HubStreamEvent> {
-  const skipped = new Set<number>();
+  const blocks = newResponsesBlockState();
 
   for await (const event of source) {
     if (!isKnownStreamEvent(event)) {
       continue;
     }
 
-    const hubEvents = decodeKnownEvent(event, skipped);
+    const hubEvents = decodeKnownEvent(event, blocks);
 
     for (const hubEvent of hubEvents) {
       yield hubEvent;
     }
 
     if (hubEvents.some(isTerminal)) {
+      lifecycle.terminal = true;
+
       return;
     }
   }
+}
+
+function sourceFailure(failure: unknown): HubStreamEvent {
+  return {
+    type: 'stream-error',
+    error: {
+      type: 'upstream_stream_error',
+      message: failure instanceof Error ? failure.message : 'Codex upstream stream failed',
+    },
+  };
+}
+
+function incompleteStream(): HubStreamEvent {
+  return {
+    type: 'stream-error',
+    error: {
+      type: 'upstream_stream_incomplete',
+      message:
+        'stream error: stream disconnected before completion: stream closed before response.completed',
+    },
+  };
+}
+
+export async function* decodeStream(
+  source: AsyncIterable<ResponsesStreamEvent>,
+): AsyncIterable<HubStreamEvent> {
+  const lifecycle: DecodeLifecycle = { terminal: false };
+
+  try {
+    yield* decodedSource(source, lifecycle);
+  } catch (failure) {
+    yield sourceFailure(failure);
+
+    return;
+  }
+
+  if (!lifecycle.terminal) yield incompleteStream();
 }

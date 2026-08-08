@@ -15,6 +15,7 @@ const channelNames: IpcChannel[] = [
   'system:get',
   'system:open-config-folder',
   'system:window-band',
+  'system:title-bar-double-click',
   'gateways:offer-port',
   'gateways:move-port',
   'engine:start',
@@ -28,10 +29,12 @@ const channelNames: IpcChannel[] = [
   'accounts:connect-local',
   'accounts:detect-runtime',
   'accounts:check-runtime',
+  'accounts:list-models',
+  'gateways:update',
 ];
 
 describe('ipc channel registry', () => {
-  test('exactly the twenty-four specified channels exist', () => {
+  test('exactly the twenty-seven specified channels exist', () => {
     expect(Object.keys(ipcChannels).sort()).toEqual([...channelNames].sort());
   });
 
@@ -68,16 +71,9 @@ describe('gateways:list channel', () => {
       port: 8397,
       virtualModels: [
         {
-          id: 'vm1',
-          slug: 'fast',
+          id: 'fast',
           displayName: 'fast',
-          routing: {
-            kind: 'target',
-            id: 't1',
-            accountId: 'a1',
-            providerModel: 'claude-sonnet-5',
-            weight: 100,
-          },
+          target: { accountId: 'a1', providerModel: 'claude-sonnet-5' },
         },
       ],
       layout: { nodes: {} },

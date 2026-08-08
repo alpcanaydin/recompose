@@ -27,6 +27,8 @@ async function contextHoldingAFutureRegistry(): Promise<StorageIpcContext> {
     onCorrupt: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    restartGateway: () => undefined,
+    isServing: () => true,
     applySettings: () => undefined,
     releaseSubscription: async () => Promise.resolve({ ok: true }),
   };

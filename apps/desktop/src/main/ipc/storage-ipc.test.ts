@@ -38,6 +38,8 @@ async function freshContext(
     applySettings: () => undefined,
     readLoginItem: () => false,
     startGateway: () => undefined,
+    restartGateway: () => undefined,
+    isServing: () => true,
     releaseSubscription: subscriptionRelease(
       subscriptionHomes(userDataPath, process.platform),
       null,
@@ -53,16 +55,9 @@ const gateway: GatewayConfig = {
   port: 8397,
   virtualModels: [
     {
-      id: 'vm1',
-      slug: 'fast',
+      id: 'fast',
       displayName: 'fast',
-      routing: {
-        kind: 'target',
-        id: 't1',
-        accountId: 'a1',
-        providerModel: 'claude-sonnet-5',
-        weight: 100,
-      },
+      target: { accountId: 'a1', providerModel: 'claude-sonnet-5' },
     },
   ],
   layout: { nodes: {} },

@@ -46,28 +46,28 @@ describe('a stored version 1 document, written while a subscription held a paste
     };
 
     expect(loadAccountsDocument(storedUnderVersionOne)).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [{ ...subscriptionRow, kind: 'api-key', credentialRef: 'cred-7f3a' }],
     });
   });
 
   test('a key row travels untouched', () => {
     expect(loadAccountsDocument({ schemaVersion: 1, accounts: [keyRow] })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [keyRow],
     });
   });
 
   test('an aggregator row travels untouched', () => {
     expect(loadAccountsDocument({ schemaVersion: 1, accounts: [aggregatorRow] })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [aggregatorRow],
     });
   });
 
   test('an empty registry crosses the version with nothing invented', () => {
     expect(loadAccountsDocument({ schemaVersion: 1, accounts: [] })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [],
     });
   });
@@ -99,7 +99,7 @@ describe('every version 1 document a machine could hold', () => {
       const migrated = loadAccountsDocument(storedUnderVersionOne);
       const stored = storedUnderVersionOne.accounts;
 
-      expect(migrated.schemaVersion).toBe(4);
+      expect(migrated.schemaVersion).toBe(6);
       expect(migrated.accounts.map((account) => account.id)).toEqual(stored.map((row) => row.id));
       expect(migrated.accounts.map(labelOf)).toEqual(stored.map((row) => row.label));
       expect(migrated.accounts.map(vaultReferenceOf)).toEqual(
@@ -111,21 +111,21 @@ describe('every version 1 document a machine could hold', () => {
 });
 
 describe('a stored version 2 document, written before a row published a mask', () => {
-  test('the document restamps to version 4 and hands back the rows it held', () => {
+  test('the document restamps to version 6 and hands back the rows it held', () => {
     const storedUnderVersionTwo = {
       schemaVersion: 2,
       accounts: [subscriptionRow, keyRow, aggregatorRow],
     };
 
     expect(loadAccountsDocument(storedUnderVersionTwo)).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [subscriptionRow, keyRow, aggregatorRow],
     });
   });
 
   test('an empty registry crosses the version with nothing invented', () => {
     expect(loadAccountsDocument({ schemaVersion: 2, accounts: [] })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [],
     });
   });
@@ -138,21 +138,21 @@ describe('a stored version 2 document, written before a row published a mask', (
 });
 
 describe('a stored version 3 document, written before a runtime could stand as a row', () => {
-  test('the document restamps to version 4 and hands back the rows it held', () => {
+  test('the document restamps to version 6 and hands back the rows it held', () => {
     const storedUnderVersionThree = {
       schemaVersion: 3,
       accounts: [subscriptionRow, keyRow, aggregatorRow],
     };
 
     expect(loadAccountsDocument(storedUnderVersionThree)).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [subscriptionRow, keyRow, aggregatorRow],
     });
   });
 
   test('an empty registry crosses the version with nothing invented', () => {
     expect(loadAccountsDocument({ schemaVersion: 3, accounts: [] })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [],
     });
   });
@@ -167,7 +167,7 @@ describe('a stored version 3 document, written before a runtime could stand as a
     const masked = { ...keyRow, keyTail: '9f2c' };
 
     expect(loadAccountsDocument({ schemaVersion: 3, accounts: [masked] })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 6,
       accounts: [masked],
     });
   });
@@ -197,11 +197,11 @@ describe('every version 3 document a machine could hold', () => {
   });
 
   test.prop([versionThreeDocuments])(
-    'it reaches version 4 with every row byte-identical to the one stored',
+    'it reaches version 6 with every row byte-identical to the one stored',
     (storedUnderVersionThree) => {
       const migrated = loadAccountsDocument(storedUnderVersionThree);
 
-      expect(migrated.schemaVersion).toBe(4);
+      expect(migrated.schemaVersion).toBe(6);
       expect(JSON.stringify(migrated.accounts)).toBe(
         JSON.stringify(storedUnderVersionThree.accounts),
       );
@@ -232,11 +232,11 @@ describe('every version 2 document a machine could hold', () => {
   });
 
   test.prop([versionTwoDocuments])(
-    'it reaches version 4 with every row byte-identical to the one stored',
+    'it reaches version 6 with every row byte-identical to the one stored',
     (storedUnderVersionTwo) => {
       const migrated = loadAccountsDocument(storedUnderVersionTwo);
 
-      expect(migrated.schemaVersion).toBe(4);
+      expect(migrated.schemaVersion).toBe(6);
       expect(JSON.stringify(migrated.accounts)).toBe(
         JSON.stringify(storedUnderVersionTwo.accounts),
       );

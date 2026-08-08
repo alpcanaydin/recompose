@@ -3,8 +3,13 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { hostOver, nothing, running, scriptedChild } from './engine-host.testkit';
 
-const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397 };
-const gemini: EngineGateway = { slug: 'gemini', displayName: 'Gemini', port: 8398 };
+const codex: EngineGateway = { slug: 'codex', displayName: 'Codex', port: 8397, virtualModels: [] };
+const gemini: EngineGateway = {
+  slug: 'gemini',
+  displayName: 'Gemini',
+  port: 8398,
+  virtualModels: [],
+};
 
 afterEach(() => {
   vi.useRealTimers();

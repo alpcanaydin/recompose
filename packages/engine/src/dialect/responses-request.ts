@@ -6,50 +6,59 @@ import type {
   HubSampling,
   HubTool,
   HubToolChoice,
-  HubToolSchema,
+  HubWebSearchTool,
 } from './hub';
-import type { ResponsesDrop } from './responses-drops';
 import type {
   ResponsesFunctionCallItem,
   ResponsesFunctionCallOutputItem,
+  ResponsesFunctionTool,
   ResponsesInputItem,
   ResponsesRequest,
   ResponsesTool,
   ResponsesToolChoice,
-  ResponsesToolParameters,
 } from './responses-wire';
 
-import {
-  emptyConversation,
-  toolIdCollision,
-  unrepairableToolCall,
-  unsupportedField,
-} from '../refusals';
+import { emptyConversation, toolIdCollision, unrepairableToolCall } from '../refusals';
 import { mergeAdjacentSameRole } from './hub-build';
-import { responsesRequestDrops } from './responses-drops';
+import {
+  mergeResponsesMessagesForChat,
+  restoreResponsesChatToolIds,
+} from './responses-chat-decode';
+import { isResponsesExtensionItem, normalizeResponsesExtensions } from './responses-extended-tools';
+import { foldResponsesInputWithGeminiCarriers } from './responses-gemini-carrier';
+import { responsesMessageContent } from './responses-message';
 import { foldReasoning } from './responses-reasoning-decode';
-import { toHubContentBlocks, toolResultBlockOf, toolUseBlockOf } from './responses-shared';
-import { firstToolIdCollision } from './tool-id';
+import { responsesDropFates, responsesTopLevelFates } from './responses-request-fates';
+import { responsesHistory } from './responses-request-history';
+import { hubOptionsFromResponses } from './responses-request-options';
+import { toolUseBlockOf } from './responses-shared';
+import { isResponsesSystemMessage, responsesSystem } from './responses-system';
+import { toolResultBlockOf } from './responses-tool-result';
+import { responsesToolChoiceName } from './responses-tools-wire';
+import { strictHubToolSchemaFrom } from './tool-schema';
 
-function normalizeSchema(parameters: ResponsesToolParameters): HubToolSchema {
-  return {
-    type: 'object',
-    properties: parameters.properties ?? {},
-    ...(parameters.required === undefined ? {} : { required: parameters.required }),
-  };
-}
-
-function toHubTool(tool: ResponsesTool): HubTool {
+function toHubTool(tool: ResponsesFunctionTool): HubTool {
   return {
     name: tool.name,
     ...(tool.description === undefined ? {} : { description: tool.description }),
-    inputSchema: normalizeSchema(tool.parameters),
+    inputSchema: strictHubToolSchemaFrom(tool.parameters),
+  };
+}
+
+function toHubWebSearchTool(
+  tool: Extract<ResponsesTool, { type: 'web_search' }>,
+): HubWebSearchTool {
+  return {
+    type: 'web_search',
+    name: 'web_search',
+    ...(tool.filters === undefined ? {} : { allowedDomains: tool.filters.allowed_domains }),
+    ...(tool.user_location === undefined ? {} : { userLocation: tool.user_location }),
   };
 }
 
 function toHubToolChoice(choice: ResponsesToolChoice): HubToolChoice {
   if (typeof choice === 'object') {
-    return { type: 'tool', name: choice.name };
+    return objectToolChoice(choice);
   }
 
   switch (choice) {
@@ -66,6 +75,14 @@ function toHubToolChoice(choice: ResponsesToolChoice): HubToolChoice {
       throw new Error(`unhandled responses tool choice: ${String(unhandled)}`);
     }
   }
+}
+
+function objectToolChoice(
+  choice: Extract<ResponsesToolChoice, object>,
+): Extract<HubToolChoice, { type: 'tool' | 'web_search' }> {
+  return choice.type === 'web_search'
+    ? { type: 'web_search' }
+    : { type: 'tool', name: responsesToolChoiceName(choice) };
 }
 
 function toHubSampling(request: ResponsesRequest): HubSampling | undefined {
@@ -87,35 +104,52 @@ function toHubSampling(request: ResponsesRequest): HubSampling | undefined {
 }
 
 type FoldedItems = { messages: HubMessage[]; fates: Fate[] };
+type FoldContext = {
+  answeredCalls: ReadonlySet<string>;
+  callNames: ReadonlyMap<string, string>;
+  preserveIncompatibleReasoning: boolean;
+  preserveDanglingCalls: boolean;
+};
 
-function foldFunctionCall(
-  item: ResponsesFunctionCallItem,
-  answeredCalls: ReadonlySet<string>,
-): FoldedItems {
-  if (answeredCalls.has(item.call_id)) {
+function foldFunctionCall(item: ResponsesFunctionCallItem, context: FoldContext): FoldedItems {
+  if (context.answeredCalls.has(item.call_id) || context.preserveDanglingCalls) {
     return { messages: [{ role: 'assistant', content: [toolUseBlockOf(item)] }], fates: [] };
   }
 
   return { messages: [], fates: [{ field: item.call_id, disposition: 'mapped', to: 'absent' }] };
 }
 
-function foldFunctionCallOutput(item: ResponsesFunctionCallOutputItem): FoldedItems {
-  return { messages: [{ role: 'user', content: [toolResultBlockOf(item)] }], fates: [] };
+function foldFunctionCallOutput(
+  item: ResponsesFunctionCallOutputItem,
+  context: FoldContext,
+): FoldedItems {
+  const block = toolResultBlockOf(item, context.callNames.get(item.call_id));
+
+  return { messages: [{ role: 'user', content: [block] }], fates: [] };
 }
 
-function foldInputItem(item: ResponsesInputItem, answeredCalls: ReadonlySet<string>): FoldedItems {
+function foldInputItem(item: ResponsesInputItem, context: FoldContext): FoldedItems {
+  if (isResponsesExtensionItem(item)) return { messages: [], fates: [] };
+
+  return foldCoreInputItem(item, context);
+}
+
+function foldCoreInputItem(
+  item: Exclude<
+    ResponsesInputItem,
+    { type: 'additional_tools' | 'custom_tool_call' | 'custom_tool_call_output' }
+  >,
+  context: FoldContext,
+): FoldedItems {
   switch (item.type) {
     case 'message':
-      return {
-        messages: [{ role: item.role, content: toHubContentBlocks(item.content) }],
-        fates: [],
-      };
+      return foldMessageItem(item);
     case 'function_call':
-      return foldFunctionCall(item, answeredCalls);
+      return foldFunctionCall(item, context);
     case 'function_call_output':
-      return foldFunctionCallOutput(item);
+      return foldFunctionCallOutput(item, context);
     case 'reasoning':
-      return foldReasoning(item);
+      return foldReasoning(item, context.preserveIncompatibleReasoning);
 
     default: {
       const unhandled: never = item;
@@ -125,97 +159,49 @@ function foldInputItem(item: ResponsesInputItem, answeredCalls: ReadonlySet<stri
   }
 }
 
-const topLevelDestinations: readonly [keyof ResponsesRequest, string][] = [
-  ['model', 'routing'],
-  ['instructions', 'system'],
-  ['tools', 'tools'],
-  ['tool_choice', 'toolChoice'],
-  ['temperature', 'sampling.temperature'],
-  ['top_p', 'sampling.topP'],
-  ['max_output_tokens', 'sampling.maxOutputTokens'],
-];
+function foldMessageItem(item: Extract<ResponsesInputItem, { type: 'message' }>): FoldedItems {
+  if (isResponsesSystemMessage(item)) return { messages: [], fates: [] };
+  if (item.role !== 'user' && item.role !== 'assistant') return { messages: [], fates: [] };
 
-function topLevelFates(request: ResponsesRequest): Fate[] {
-  const named: Fate[] = [{ field: 'input', disposition: 'mapped', to: 'messages' }];
-
-  for (const [field, to] of topLevelDestinations) {
-    if (field in request) {
-      named.push({ field, disposition: 'mapped', to });
-    }
-  }
-
-  return named;
-}
-
-function dropFateOf(drop: ResponsesDrop): Fate {
   return {
-    field: drop.field,
-    disposition: 'mapped',
-    to: 'absent',
-    ...(drop.costBearing ? { costBearing: true } : {}),
+    messages: [{ role: item.role, content: responsesMessageContent(item) }],
+    fates: [],
   };
 }
 
-function dropFates(request: ResponsesRequest): Fate[] {
-  return responsesRequestDrops.flatMap((drop) => (drop.field in request ? [dropFateOf(drop)] : []));
-}
+function foldInput(
+  request: ResponsesRequest,
+  preserveIncompatibleReasoning: boolean,
+  preserveDanglingCalls: boolean,
+): FoldedItems {
+  const history = responsesHistory(request.input);
+  const context: FoldContext = { ...history, preserveIncompatibleReasoning, preserveDanglingCalls };
 
-function answeredCallsOf(input: readonly ResponsesInputItem[]): Set<string> {
-  const answered = new Set<string>();
-
-  for (const item of input) {
-    if (item.type === 'function_call_output') {
-      answered.add(item.call_id);
-    }
-  }
-
-  return answered;
-}
-
-function firstOutputViolation(input: readonly ResponsesInputItem[]): string | undefined {
-  const standing = new Set<string>();
-
-  for (const item of input) {
-    if (item.type === 'function_call') {
-      standing.add(item.call_id);
-    }
-
-    if (item.type === 'function_call_output' && !standing.delete(item.call_id)) {
-      return item.call_id;
-    }
-  }
-
-  return undefined;
-}
-
-function foldInput(request: ResponsesRequest): FoldedItems {
-  const answeredCalls = answeredCallsOf(request.input);
-
-  const messages: HubMessage[] = [];
-  const fates: Fate[] = [];
-
-  for (const item of request.input) {
-    const outcome = foldInputItem(item, answeredCalls);
-
-    messages.push(...outcome.messages);
-    fates.push(...outcome.fates);
-  }
-
-  return { messages, fates };
+  return foldResponsesInputWithGeminiCarriers(
+    request.input,
+    context.answeredCalls,
+    context.preserveDanglingCalls,
+    (item) => foldInputItem(item, context),
+  );
 }
 
 function assembleHubRequest(
   request: ResponsesRequest,
   messages: readonly HubMessage[],
+  system: HubRequest['system'],
 ): HubRequest {
-  const value: HubRequest = { messages };
+  const value: HubRequest = { messages, ...hubOptionsFromResponses(request) };
 
-  if (request.instructions !== undefined) {
-    value.system = [{ text: request.instructions }];
-  }
+  if (system !== undefined) value.system = system;
 
   if (request.tools !== undefined) {
-    value.tools = request.tools.map(toHubTool);
+    const tools = request.tools.filter(
+      (tool): tool is ResponsesFunctionTool => tool.type === 'function',
+    );
+    const serverTools = request.tools.filter((tool) => tool.type === 'web_search');
+
+    value.tools = tools.map(toHubTool);
+    value.serverTools = serverTools.map(toHubWebSearchTool);
   }
 
   if (request.tool_choice !== undefined) {
@@ -231,40 +217,72 @@ function assembleHubRequest(
   return value;
 }
 
-function toolIdsOf(input: readonly ResponsesInputItem[]): string[] {
-  return input.flatMap((item) =>
-    item.type === 'function_call' || item.type === 'function_call_output' ? [item.call_id] : [],
-  );
-}
-
 export function decodeRequest(
   request: ResponsesRequest,
+  preserveIncompatibleReasoning = false,
+  preserveDanglingCalls = false,
 ): TranslateResult<HubRequest, TranslationRefusal> {
-  if (request.previous_response_id !== undefined) {
-    return { refusal: unsupportedField('previous_response_id') };
-  }
+  const normalized = normalizeResponsesExtensions(request);
+  const history = responsesHistory(normalized.input);
+  const refusal = historyRefusal(history);
 
-  const collision = firstToolIdCollision(toolIdsOf(request.input));
+  if (refusal !== undefined) return { refusal };
 
-  if (collision !== undefined) {
-    return { refusal: toolIdCollision(collision) };
-  }
-
-  const violation = firstOutputViolation(request.input);
-
-  if (violation !== undefined) {
-    return { refusal: unrepairableToolCall(violation) };
-  }
-
-  const folded = foldInput(request);
-  const messages = mergeAdjacentSameRole(folded.messages);
+  const folded = foldInput(normalized, preserveIncompatibleReasoning, preserveDanglingCalls);
+  const system = responsesSystem(normalized);
+  const messages = finalizedMessages(folded.messages, system, preserveDanglingCalls);
 
   if (messages.length === 0) {
     return { refusal: emptyConversation() };
   }
 
-  const value = assembleHubRequest(request, messages);
-  const fates: Fate[] = [...topLevelFates(request), ...dropFates(request), ...folded.fates];
+  const value = assembleHubRequest(normalized, messages, system);
+  const fates: Fate[] = [
+    ...responsesTopLevelFates(request),
+    ...responsesDropFates(request),
+    ...folded.fates,
+  ];
 
   return { value, fates };
+}
+
+function finalizedMessages(
+  source: readonly HubMessage[],
+  system: HubRequest['system'],
+  preserveUserBoundaries: boolean,
+): HubMessage[] {
+  const messages = preserveUserBoundaries
+    ? mergeResponsesMessagesForChat(source)
+    : mergeAdjacentSameRole(source);
+
+  if (messages.length === 0 && system !== undefined) {
+    messages.push({ role: 'user', content: [{ type: 'text', text: '' }] });
+  }
+
+  return messages;
+}
+
+export function decodeRequestWithCompat(
+  request: ResponsesRequest,
+): TranslateResult<HubRequest, TranslationRefusal> {
+  return decodeRequest(request, true);
+}
+
+export function decodeRequestForChat(
+  request: ResponsesRequest,
+): TranslateResult<HubRequest, TranslationRefusal> {
+  const decoded = decodeRequest(request, true, true);
+
+  if ('refusal' in decoded) return decoded;
+
+  return { ...decoded, value: restoreResponsesChatToolIds(decoded.value, request) };
+}
+
+function historyRefusal(
+  history: ReturnType<typeof responsesHistory>,
+): TranslationRefusal | undefined {
+  if (history.collision !== undefined) return toolIdCollision(history.collision);
+  if (history.unmatchedOutput !== undefined) return unrepairableToolCall(history.unmatchedOutput);
+
+  return undefined;
 }

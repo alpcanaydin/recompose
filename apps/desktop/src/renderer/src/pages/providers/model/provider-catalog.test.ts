@@ -16,6 +16,7 @@ import {
   offerFor,
   offeredUnder,
   signInProviderOf,
+  subscriptionMarkFor,
   subscriptionTitleFor,
   keyShapeHintFor,
 } from './provider-catalog';
@@ -120,6 +121,8 @@ test('a way keeps the providers that connect by it and drops the rest', () => {
 test('a stored subscription reads as the plan product its provider sells', () => {
   expect(subscriptionTitleFor('anthropic')).toBe('Claude');
   expect(subscriptionTitleFor('openai')).toBe('Codex');
+  expect(subscriptionTitleFor('antigravity')).toBe('Gemini');
+  expect(subscriptionMarkFor('antigravity')).toBe('gemini');
   expect(subscriptionTitleFor('openrouter')).toBe('OpenRouter');
 });
 

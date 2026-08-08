@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { accountsDocumentSchema, credentialedAccountKindSchema } from './accounts';
 import { keyCheckReportSchema, pastedKeySchema } from './api-keys';
+import { modelListingSchema } from './engine-protocol';
 import { engineStatesSchema, gatewayEngineStateSchema } from './engine-state';
 import { gatewayConfigSchema, gatewayPortSchema, gatewaySlugSchema } from './gateway-config';
 import {
@@ -69,6 +70,10 @@ export const ipcChannels = {
     request: gatewayConfigSchema,
     response: ipcResult(z.array(gatewayConfigSchema)),
   },
+  'gateways:update': {
+    request: gatewayConfigSchema,
+    response: ipcResult(z.array(gatewayConfigSchema)),
+  },
   'settings:get': { request: z.void(), response: ipcResult(settingsSchema) },
   'settings:save': { request: settingsPatchSchema, response: ipcResult(settingsSchema) },
   'accounts:list': { request: z.void(), response: ipcResult(accountsDocumentSchema) },
@@ -96,9 +101,14 @@ export const ipcChannels = {
     request: z.strictObject({ id: nonBlankString }),
     response: ipcResult(runtimeReachabilitySchema),
   },
+  'accounts:list-models': {
+    request: z.strictObject({ id: nonBlankString }),
+    response: ipcResult(modelListingSchema),
+  },
   'system:get': { request: z.void(), response: ipcResult(systemStateSchema) },
   'system:open-config-folder': { request: z.void(), response: ipcResult(z.void()) },
   'system:window-band': { request: z.enum(['sidebar', 'toolbar']), response: ipcResult(z.void()) },
+  'system:title-bar-double-click': { request: z.void(), response: ipcResult(z.void()) },
   'gateways:offer-port': { request: z.void(), response: ipcResult(gatewayPortSchema) },
   'gateways:move-port': {
     request: z.strictObject({ slug: gatewaySlugSchema }),
@@ -146,6 +156,7 @@ export type RecomposeIpc = {
 
 export const ipcEvents = {
   'engine:state': { payload: engineStatesSchema },
+  'accounts:changed': { payload: z.literal('changed') },
 } as const;
 
 export type IpcEvent = keyof typeof ipcEvents;

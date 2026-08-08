@@ -1,10 +1,11 @@
-import type { EngineGateway, GatewayConfig } from '@recompose/contracts';
+import type { GatewayConfig } from '@recompose/contracts';
 
 import type { EngineHost } from '../engine-host/engine-host';
 import type { IpcHandlers } from './dispatch';
 
-import { storedEngineGateway } from '../engine-host/stored-gateway';
+import { engineGatewayOf, storedEngineGateway } from '../engine-host/stored-gateway';
 import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
+import { inGatewayWriteOrder } from '../storage/gateway-write-order';
 import { storagePathsFor } from './storage-context';
 import { ipcFailure, storageFailure } from './storage-envelope';
 
@@ -20,10 +21,6 @@ export type EngineIpcHandlers = Pick<
   IpcHandlers,
   'gateways:offer-port' | 'gateways:move-port' | 'engine:start' | 'engine:stop' | 'engine:states'
 >;
-
-function asEngineGateway(config: GatewayConfig): EngineGateway {
-  return { slug: config.slug, displayName: config.displayName, port: config.port };
-}
 
 function noSuchGateway(slug: string) {
   return ipcFailure(
@@ -51,6 +48,13 @@ async function offerPort(ctx: EngineIpcContext) {
   }
 }
 
+/**
+ * Moves a gateway that lost its port onto a free one, and serves it there.
+ *
+ * @summary It rewrites a gateway document, so it takes the same lane the create and the rewrite
+ * take. Without that, a definition stored between this read and this write would be erased by the
+ * stale copy held here, and the caller who stored it would already have read success.
+ */
 async function movePort(ctx: EngineIpcContext, slug: string) {
   try {
     const stored = await storedGateways(ctx);
@@ -62,7 +66,7 @@ async function movePort(ctx: EngineIpcContext, slug: string) {
 
     const moved = { ...moving, port: await portFreeOf(ctx, stored) };
 
-    await ctx.host.restart(asEngineGateway(moved));
+    await ctx.host.restart(await engineGatewayOf(ctx.userDataPath, ctx.onCorrupt, moved));
     await saveGatewayConfig(storagePathsFor(ctx.userDataPath).gatewaysDir, moved);
 
     return { ok: true as const, value: await storedGateways(ctx) };
@@ -73,11 +77,7 @@ async function movePort(ctx: EngineIpcContext, slug: string) {
 
 async function startGateway(ctx: EngineIpcContext, slug: string) {
   try {
-    const starting = await storedEngineGateway(
-      storagePathsFor(ctx.userDataPath).gatewaysDir,
-      ctx.onCorrupt,
-      slug,
-    );
+    const starting = await storedEngineGateway(ctx.userDataPath, ctx.onCorrupt, slug);
 
     if (starting === undefined) {
       return noSuchGateway(slug);
@@ -100,7 +100,7 @@ async function stopGateway(ctx: EngineIpcContext, slug: string) {
 export function createEngineIpcHandlers(ctx: EngineIpcContext): EngineIpcHandlers {
   return {
     'gateways:offer-port': async () => offerPort(ctx),
-    'gateways:move-port': async ({ slug }) => movePort(ctx, slug),
+    'gateways:move-port': async ({ slug }) => inGatewayWriteOrder(async () => movePort(ctx, slug)),
     'engine:start': async ({ slug }) => startGateway(ctx, slug),
     'engine:stop': async ({ slug }) => stopGateway(ctx, slug),
     'engine:states': async () => Promise.resolve({ ok: true as const, value: ctx.host.states() }),

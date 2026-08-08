@@ -15,13 +15,19 @@
   "dependencies": {
     "@hono/node-server": "2.0.12",
     "@recompose/contracts": "workspace:*",
-    "hono": "4.12.32"
+    "fflate": "0.8.3",
+    "hono": "4.12.32",
+    "js-tiktoken": "1.0.21",
+    "koffi": "3.1.4",
+    "node-wreq": "3.1.0",
+    "ws": "8.21.1"
   },
   "devDependencies": {
     "@fast-check/vitest": "0.4.1",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "24.13.3",
+    "@types/ws": "8.18.1",
     "@vitest/coverage-v8": "4.1.10",
     "fast-check": "4.9.0",
     "oxlint": "1.75.0",

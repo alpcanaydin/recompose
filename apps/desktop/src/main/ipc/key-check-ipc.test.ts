@@ -1,58 +1,23 @@
 import type { KeyCheckReport } from '@recompose/contracts';
 
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import type { SecretCodec } from '../storage/safe-storage-codec';
-import type { StorageIpcContext } from './storage-context';
-
 import { PROBE_TIMEOUT_MS } from '../engine-host/engine-host';
 import { createKeyCheckIpcHandlers } from './key-check-ipc';
-import { checkHandlersOver, connectedKeyId } from './key-check-ipc.testkit';
+import {
+  checkCodec,
+  checkedSecret as secret,
+  checkHandlersOver,
+  connectKeyIn as connectKey,
+  storageContextOver,
+  tempKeyStorage as tempStorage,
+} from './key-check-ipc.testkit';
 import { createStorageIpcHandlers } from './storage-ipc';
 
-const fakeCodec: SecretCodec = {
-  encrypt: (plain) => Buffer.from(plain, 'utf8').toString('base64'),
-  decrypt: (encrypted) => Buffer.from(encrypted, 'base64').toString('utf8'),
-  isPlaintextFallback: false,
-};
-
-const secret = 'sk-ant-api03-long-secret-7f2c';
-
-function storageContext(userDataPath: string): StorageIpcContext {
-  return {
-    userDataPath,
-    homeFolder: '/Users/ada',
-    getCodec: () => fakeCodec,
-    isEncryptionAvailable: () => true,
-    onCorrupt: () => undefined,
-    applySettings: () => undefined,
-    readLoginItem: () => false,
-    startGateway: () => undefined,
-    releaseSubscription: async () => Promise.resolve({ ok: true }),
-  };
-}
-
-async function tempStorage(): Promise<string> {
-  return mkdtemp(join(tmpdir(), 'recompose-key-check-'));
-}
-
-async function connectKey(
-  userDataPath: string,
-  provider = 'anthropic',
-  kind: 'api-key' | 'aggregator' = 'api-key',
-): Promise<string> {
-  const storage = createStorageIpcHandlers(storageContext(userDataPath));
-
-  return connectedKeyId(
-    await storage['accounts:connect']({ provider, kind, label: 'build', secret }),
-  );
-}
-
 function checkOver(userDataPath: string, answerProbe: () => KeyCheckReport | null) {
-  return checkHandlersOver(userDataPath, fakeCodec, answerProbe);
+  return checkHandlersOver(userDataPath, checkCodec, answerProbe);
 }
 
 afterEach(() => {
@@ -260,7 +225,7 @@ describe('where the check stands in the vault queue', () => {
     vi.useFakeTimers();
 
     const checking = handlers['accounts:check-key']({ id });
-    const storage = createStorageIpcHandlers(storageContext(userDataPath));
+    const storage = createStorageIpcHandlers(storageContextOver(userDataPath));
 
     const connected = await storage['accounts:connect']({
       provider: 'openai',
@@ -287,7 +252,7 @@ describe('the probe leg of a check', () => {
     const handlers = createKeyCheckIpcHandlers({
       userDataPath,
       homeFolder: '/Users/ada',
-      getCodec: () => fakeCodec,
+      getCodec: () => checkCodec,
       onCorrupt: () => undefined,
       probe: async () => Promise.reject(new Error('the child died reading /Users/ada/library')),
     });

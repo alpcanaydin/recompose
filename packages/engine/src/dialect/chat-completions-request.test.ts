@@ -53,7 +53,7 @@ describe('decodeRequest folds a Chat Completions request into the hub', () => {
     expect(value.tools?.[0]?.inputSchema).toEqual({ type: 'object', properties: {} });
   });
 
-  it('collapses system and developer messages to one leading system prompt joined by a newline', () => {
+  it('preserves system and developer messages as ordered system blocks', () => {
     const request = aChatRequest({
       messages: [
         aChatSystemMessage({ content: 'Be concise' }),
@@ -64,7 +64,7 @@ describe('decodeRequest folds a Chat Completions request into the hub', () => {
 
     const { value } = decodedValue(request);
 
-    expect(value.system).toEqual([{ text: 'Be concise\nAnswer in English' }]);
+    expect(value.system).toEqual([{ text: 'Be concise' }, { text: 'Answer in English' }]);
   });
 });
 

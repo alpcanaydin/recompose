@@ -14,17 +14,40 @@ export async function fetchOfferedPort(): Promise<number> {
   return unwrapIpcResult(await window.recompose['gateways:offer-port']());
 }
 
-/** Stores a new gateway, refusing a slug or a port a stored gateway already holds. */
-export function useSaveGateway() {
+type GatewayWrite = (gateway: GatewayConfig) => Promise<GatewayConfig[]>;
+
+function useStoredGatewaysAfter(write: GatewayWrite) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (gateway: GatewayConfig) =>
-      unwrapIpcResult(await window.recompose['gateways:save'](gateway)),
+    mutationFn: write,
     onSuccess: (gateways) => {
       queryClient.setQueryData(gatewaysQueryOptions.queryKey, gateways);
     },
   });
+}
+
+const storeNewGateway: GatewayWrite = async (gateway) =>
+  unwrapIpcResult(await window.recompose['gateways:save'](gateway));
+
+const rewriteStoredGateway: GatewayWrite = async (gateway) =>
+  unwrapIpcResult(await window.recompose['gateways:update'](gateway));
+
+/** Stores a new gateway, refusing a slug or a port a stored gateway already holds. */
+export function useSaveGateway() {
+  return useStoredGatewaysAfter(storeNewGateway);
+}
+
+/**
+ * Stores the gateway that now carries one more virtual model.
+ *
+ * @summary The one place a definition reaches disk, so the whole Models surface is written against
+ * this act rather than against the channel under it. It rewrites a gateway that already stands
+ * rather than creating one, because the create channel exists to refuse a slug already held and
+ * that refusal is exactly what a second virtual model must not read.
+ */
+export function useDefineVirtualModel() {
+  return useStoredGatewaysAfter(rewriteStoredGateway);
 }
 
 /**

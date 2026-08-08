@@ -1,8 +1,9 @@
-import type { SubscriptionAccountView } from '@recompose/contracts';
+import type { SubscriptionAccountView, VirtualModel } from '@recompose/contracts';
 
 import { expect, test } from 'vitest';
 
-import { gatewaySeed, installFakeBridge } from './fake-bridge';
+import { installFakeBridge } from './fake-bridge';
+import { gatewaySeed } from './fake-gateways';
 
 async function saving(gateway: ReturnType<typeof gatewaySeed>) {
   return window.recompose['gateways:save'](gateway);
@@ -13,6 +14,18 @@ async function storedGateways() {
 
   return answer.ok ? answer.value : [];
 }
+
+async function reportedStates() {
+  const answer = await window.recompose['engine:states']();
+
+  return answer.ok ? answer.value : {};
+}
+
+const fast: VirtualModel = {
+  id: 'fast',
+  displayName: 'fast',
+  target: { accountId: 'acc-key', providerModel: 'claude-sonnet-5' },
+};
 
 const claudeMax: SubscriptionAccountView = {
   id: 's1',
@@ -55,6 +68,36 @@ test('a gateway the contract accepts still stores', async () => {
 
   expect(answer.ok).toBe(true);
   expect(await storedGateways()).toMatchObject([{ slug: 'codex', port: 51234 }]);
+});
+
+test('an update to a stopped gateway leaves it stopped, the way an explicit stop stands', async () => {
+  const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
+
+  installFakeBridge({ gateways: [codex], engineStates: { codex: { status: 'stopped' } } });
+
+  await window.recompose['gateways:update']({ ...codex, virtualModels: [fast] });
+
+  expect(await reportedStates()).toEqual({ codex: { status: 'stopped' } });
+});
+
+test('an update to a running gateway leaves it running, because its snapshot is stale', async () => {
+  const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
+
+  installFakeBridge({ gateways: [codex], engineStates: { codex: { status: 'running' } } });
+
+  await window.recompose['gateways:update']({ ...codex, virtualModels: [fast] });
+
+  expect(await reportedStates()).toEqual({ codex: { status: 'running' } });
+});
+
+test('an update to a stopped gateway still rewrites its stored document', async () => {
+  const codex = gatewaySeed({ slug: 'codex', displayName: 'Codex', port: 51234 });
+
+  installFakeBridge({ gateways: [codex], engineStates: { codex: { status: 'stopped' } } });
+
+  await window.recompose['gateways:update']({ ...codex, virtualModels: [fast] });
+
+  expect(await storedGateways()).toMatchObject([{ slug: 'codex', virtualModels: [fast] }]);
 });
 
 test('a seeded subscription is the one the surface reads back', async () => {

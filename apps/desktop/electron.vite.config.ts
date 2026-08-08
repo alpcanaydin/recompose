@@ -18,7 +18,13 @@ function cspTransform() {
 }
 
 export default defineConfig({
-  main: {},
+  main: {
+    build: {
+      rolldownOptions: {
+        external: ['node-wreq', /^@node-wreq\//u, 'koffi'],
+      },
+    },
+  },
   preload: {},
   renderer: {
     resolve: {

@@ -72,7 +72,7 @@ test('a gateway saved from the sheet reaches the sidebar as a running row', asyn
 test('a selected gateway puts its address and its control in the toolbar', async () => {
   const screen = await renderAt('/gateways/codex', { gateways: [codex] });
 
-  await expect.element(screen.getByText('localhost:51234')).toBeVisible();
+  await expect.element(screen.getByText('localhost:51234', { exact: true })).toBeVisible();
   await expect.element(screen.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
   await expect.element(screen.getByRole('button', { name: 'Copy address' })).toBeVisible();
 });
@@ -158,7 +158,7 @@ test('the way back stays in reach once the sidebar has gone', async () => {
 test('one control puts the sidebar away, wherever the person stands', async () => {
   const screen = await renderAt('/gateways/codex', { gateways: [codex] });
 
-  await expect.element(screen.getByText('localhost:51234')).toBeVisible();
+  await expect.element(screen.getByText('localhost:51234', { exact: true })).toBeVisible();
   expect(reachableSidebarControls(screen.container)).toHaveLength(1);
 });
 
@@ -236,22 +236,25 @@ test('a sign-in that lands is counted by the sidebar without a reload', async ()
     .toBeVisible();
 });
 
-test('the edge answers the arrow keys, so a pointer is not the only way', async () => {
+test('the edge sizes the sidebar from the keyboard, so a pointer is not the only way', async () => {
   const screen = await renderAt('/', { gateways: [codex] });
-  const edge = screen.container.querySelector<HTMLElement>('[aria-label="Sidebar edge"]');
+  const edge = screen.getByRole('separator', { name: 'Sidebar width' });
+  const widest = edge.element().getAttribute('aria-valuemax');
 
-  edge?.focus();
-  await userEvent.keyboard('{ArrowLeft}');
+  edge.element().focus();
+  await userEvent.keyboard('{End}');
+
+  await expect.element(edge).toHaveAttribute('aria-valuenow', widest);
+});
+
+test('Enter on the edge puts the sidebar away, which the arrow keys used to do', async () => {
+  const screen = await renderAt('/', { gateways: [codex] });
+
+  screen.getByRole('separator', { name: 'Sidebar width' }).element().focus();
+  await userEvent.keyboard('{Enter}');
 
   const settings = screen.getByRole('link', { name: 'Settings' }).element();
 
   settings.focus();
   expect(document.activeElement).not.toBe(settings);
-
-  await userEvent.keyboard('{ArrowRight}');
-
-  const back = screen.getByRole('link', { name: 'Settings' }).element();
-
-  back.focus();
-  expect(document.activeElement).toBe(back);
 });

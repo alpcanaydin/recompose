@@ -1,7 +1,6 @@
 import type {
   Account,
   AccountsDocument,
-  GatewayConfig,
   IpcRequest,
   SettingsPatch,
   SubscriptionAccount,
@@ -12,8 +11,6 @@ import { withSettingsPatch } from '@recompose/contracts';
 import type { IpcHandlers } from './dispatch';
 
 import { amendAccountsFile, loadAccountsFile } from '../storage/accounts-store';
-import { listGatewayConfigs, saveGatewayConfig } from '../storage/gateway-store';
-import { oneAtATime } from '../storage/one-at-a-time';
 import {
   loadSettingsFile,
   saveSettingsFile,
@@ -22,6 +19,7 @@ import {
 import { deleteSecret, saveVaultFile } from '../storage/vault';
 import { inVaultOrder } from '../storage/vault-order';
 import { connectAccount } from './connect-account';
+import { createGatewayStorageHandlers } from './gateway-storage-ipc';
 import { openVault } from './open-vault';
 import { storagePathsFor, type StorageIpcContext, type StoragePaths } from './storage-context';
 import { ipcFailure, storageFailure } from './storage-envelope';
@@ -31,59 +29,6 @@ async function readAccounts(
   paths: StoragePaths,
 ): Promise<AccountsDocument> {
   return loadAccountsFile(paths.accountsFile, ctx.onCorrupt);
-}
-
-async function listGateways(ctx: StorageIpcContext, paths: StoragePaths) {
-  try {
-    return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
-  } catch (error) {
-    return storageFailure(error, ctx.homeFolder);
-  }
-}
-
-function conflictWith(stored: readonly GatewayConfig[], saving: GatewayConfig) {
-  const namesake = stored.find((one) => one.slug === saving.slug);
-
-  if (namesake !== undefined) {
-    return ipcFailure(
-      'name-conflict',
-      `Another gateway already holds the name "${namesake.displayName}".`,
-    );
-  }
-
-  const holder = stored.find((one) => one.port === saving.port);
-
-  if (holder !== undefined) {
-    return ipcFailure('port-conflict', `${holder.slug} already holds this port.`);
-  }
-
-  return null;
-}
-
-async function saveGateway(
-  ctx: StorageIpcContext,
-  paths: StoragePaths,
-  config: IpcRequest<'gateways:save'>,
-) {
-  try {
-    const stored = await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt);
-    const conflict = conflictWith(stored, config);
-
-    if (conflict !== null) {
-      return conflict;
-    }
-
-    await saveGatewayConfig(paths.gatewaysDir, config);
-    ctx.startGateway({
-      slug: config.slug,
-      displayName: config.displayName,
-      port: config.port,
-    });
-
-    return { ok: true as const, value: await listGatewayConfigs(paths.gatewaysDir, ctx.onCorrupt) };
-  } catch (error) {
-    return storageFailure(error, ctx.homeFolder);
-  }
 }
 
 function settingsFailure(error: unknown, home: string) {
@@ -236,6 +181,7 @@ export type StorageIpcHandlers = Pick<
   IpcHandlers,
   | 'gateways:list'
   | 'gateways:save'
+  | 'gateways:update'
   | 'settings:get'
   | 'settings:save'
   | 'accounts:list'
@@ -245,11 +191,9 @@ export type StorageIpcHandlers = Pick<
 
 export function createStorageIpcHandlers(ctx: StorageIpcContext): StorageIpcHandlers {
   const paths = storagePathsFor(ctx.userDataPath);
-  const inSaveOrder = oneAtATime();
 
   return {
-    'gateways:list': async () => listGateways(ctx, paths),
-    'gateways:save': async (config) => inSaveOrder(async () => saveGateway(ctx, paths, config)),
+    ...createGatewayStorageHandlers(ctx, paths),
     'settings:get': async () => getSettings(ctx, paths),
     'settings:save': async (settings) => saveSettings(ctx, paths, settings),
     'accounts:list': async () => listAccounts(ctx, paths),

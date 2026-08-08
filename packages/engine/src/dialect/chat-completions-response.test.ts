@@ -75,7 +75,7 @@ describe('the codec maps response usage exactly both ways', () => {
 
     expect(value).toEqual({
       choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
-      usage: { prompt_tokens: 3, completion_tokens: 4 },
+      usage: { prompt_tokens: 3, completion_tokens: 4, total_tokens: 7 },
     });
   });
 });
@@ -129,7 +129,7 @@ describe('encodeResponse folds the hub answer back into Chat Completions', () =>
   it('maps usage counts back to the Chat Completions token names', () => {
     const { value } = encodedValue(aHubResponse({ usage: { inputTokens: 9, outputTokens: 4 } }));
 
-    expect(value.usage).toEqual({ prompt_tokens: 9, completion_tokens: 4 });
+    expect(value.usage).toEqual({ prompt_tokens: 9, completion_tokens: 4, total_tokens: 13 });
   });
 
   it('drops a thinking block from the answer with a cost-bearing fate', () => {
@@ -249,6 +249,7 @@ describe('encodeResponse counts the sparser answers', () => {
     expect(encodedValue(aHubResponse({ usage: {} })).value.usage).toEqual({
       prompt_tokens: 0,
       completion_tokens: 0,
+      total_tokens: 0,
     });
   });
 

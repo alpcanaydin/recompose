@@ -31,6 +31,7 @@ function eventEntry<Event extends IpcEvent>(event: Event) {
 const recompose: RecomposeIpc = Object.freeze({
   'gateways:list': bridgeEntry('gateways:list'),
   'gateways:save': bridgeEntry('gateways:save'),
+  'gateways:update': bridgeEntry('gateways:update'),
   'settings:get': bridgeEntry('settings:get'),
   'settings:save': bridgeEntry('settings:save'),
   'accounts:list': bridgeEntry('accounts:list'),
@@ -40,9 +41,11 @@ const recompose: RecomposeIpc = Object.freeze({
   'accounts:connect-local': bridgeEntry('accounts:connect-local'),
   'accounts:detect-runtime': bridgeEntry('accounts:detect-runtime'),
   'accounts:check-runtime': bridgeEntry('accounts:check-runtime'),
+  'accounts:list-models': bridgeEntry('accounts:list-models'),
   'system:get': bridgeEntry('system:get'),
   'system:open-config-folder': bridgeEntry('system:open-config-folder'),
   'system:window-band': bridgeEntry('system:window-band'),
+  'system:title-bar-double-click': bridgeEntry('system:title-bar-double-click'),
   'gateways:offer-port': bridgeEntry('gateways:offer-port'),
   'gateways:move-port': bridgeEntry('gateways:move-port'),
   'engine:start': bridgeEntry('engine:start'),
@@ -57,6 +60,7 @@ const recompose: RecomposeIpc = Object.freeze({
 
 const recomposeEvents: RecomposeIpcEvents = Object.freeze({
   'engine:state': eventEntry('engine:state'),
+  'accounts:changed': eventEntry('accounts:changed'),
 });
 
 contextBridge.exposeInMainWorld('recompose', recompose);

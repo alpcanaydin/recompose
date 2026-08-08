@@ -128,3 +128,13 @@ describe('test-first gate hook: a tool call made from a working directory outsid
     assert.match(outcome.stderr, /the test-first gate never ran/);
   });
 });
+
+describe('Claude command hook configuration', () => {
+  it('keeps each script in the command string Claude Code executes', () => {
+    const preToolUse = configuredHook('PreToolUse', GATED_TOOL_MATCHER, LAUNCHER_SCRIPT_NAME);
+    const postToolUse = configuredHook('PostToolUse', 'Edit|Write', 'format-edit.mts');
+
+    assert.match(preToolUse.command, /^node .+launch-gate\.mjs/u);
+    assert.match(postToolUse.command, /^node .+format-edit\.mts/u);
+  });
+});

@@ -1,0 +1,295 @@
+import { expect, test, vi } from 'vitest';
+
+import type { ProviderRequest } from './claude-request';
+
+import {
+  CLAUDE_OAUTH_TLS_FINGERPRINT,
+  CLAUDE_TLS_FINGERPRINT,
+  fetchClaudeProfile,
+  sendSubscriptionRequest,
+  subscriptionRefreshTransportOptions,
+  subscriptionTransportOptions,
+} from './provider-transport';
+
+const request: ProviderRequest = {
+  url: 'https://api.anthropic.com/v1/messages?beta=true',
+  headers: [
+    ['Accept', 'application/json'],
+    ['Authorization', 'Bearer token'],
+  ],
+  body: '{}',
+};
+
+test('the Claude transport carries the captured 2.1.220 TLS fingerprint', () => {
+  expect(CLAUDE_TLS_FINGERPRINT).toEqual({
+    clientHelloLength: 508,
+    ja3: '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49161-49171-49162-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-21,29-23-24,0',
+    ja3Md5: 'd871d02cecbde59abbf8f4806134addf',
+    cipherSuites: [
+      4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49161, 49171, 49162, 49172, 156,
+      157, 47, 53,
+    ],
+    extensionTypes: [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 21],
+    supportedGroups: [29, 23, 24],
+    signatureAlgorithms: [1027, 2052, 1025, 1283, 2053, 1281, 2054, 1537, 513],
+  });
+});
+
+test('Claude uses HTTP/1.1 with the captured TLS controls and no injected headers', () => {
+  expect(subscriptionTransportOptions('anthropic')).toMatchObject({
+    http1Only: true,
+    disableDefaultHeaders: true,
+    tlsSessionCacheCapacity: 32,
+    tlsOptions: {
+      alpnProtocols: ['HTTP1'],
+      minTlsVersion: 'TLS1.2',
+      maxTlsVersion: 'TLS1.3',
+      curvesList: 'X25519:P-256:P-384',
+      keyShares: ['X25519'],
+      keySharesLimit: 1,
+      sessionTicket: true,
+      preSharedKey: true,
+      pskDheKe: true,
+      enableOcspStapling: true,
+      enableSignedCertTimestamps: true,
+      extensionPermutation: CLAUDE_TLS_FINGERPRINT.extensionTypes,
+    },
+  });
+});
+
+test('the Claude OAuth transport carries the captured control-plane fingerprint', () => {
+  expect(CLAUDE_OAUTH_TLS_FINGERPRINT).toEqual({
+    clientHelloLength: 245,
+    ja3: '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49161-49171-49162-49172-156-157-47-53,0-23-65281-10-11-35-13-51-45-43,29-23-24,0',
+    ja3Md5: '203503b7023848ab87b9836c336b8e81',
+    extensionTypes: [0, 23, 65281, 10, 11, 35, 13, 51, 45, 43],
+  });
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token'),
+  ).toMatchObject({
+    http1Only: true,
+    disableDefaultHeaders: true,
+    tlsSessionCacheCapacity: 8,
+    tlsOptions: {
+      extensionPermutation: CLAUDE_OAUTH_TLS_FINGERPRINT.extensionTypes,
+    },
+  });
+});
+
+test('TestUtlsRoundTripperBoundsTLSHandshake', () => {
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token'),
+  ).toMatchObject({ connectTimeout: 10_000 });
+});
+
+test('TestNewCodexAuthWithProxyURL_OverrideDirectDisablesProxy', () => {
+  expect(subscriptionTransportOptions('openai', { mode: 'direct' })).toMatchObject({
+    proxy: false,
+  });
+  expect(
+    subscriptionRefreshTransportOptions('https://auth.openai.com/oauth/token', {
+      mode: 'direct',
+    }),
+  ).toMatchObject({ proxy: false });
+});
+
+test('TestNewCodexAuthWithProxyURL_OverrideProxyTakesPrecedence', () => {
+  const policy = { mode: 'proxy', url: 'http://override.example.com:8081' } as const;
+
+  expect(subscriptionTransportOptions('openai', policy)).toMatchObject({ proxy: policy.url });
+  expect(
+    subscriptionRefreshTransportOptions('https://auth.openai.com/oauth/token', policy),
+  ).toMatchObject({ proxy: policy.url });
+});
+
+test('TestNewClaudeAuthWithProxyURL_OverrideDirectTakesPrecedence', () => {
+  expect(subscriptionTransportOptions('anthropic', { mode: 'direct' })).toMatchObject({
+    proxy: false,
+  });
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token', {
+      mode: 'direct',
+    }),
+  ).toMatchObject({ proxy: false });
+});
+
+test('TestNewClaudeAuthWithProxyURL_OverrideProxyAppliedWithoutConfig', () => {
+  const policy = { mode: 'proxy', url: 'socks5://proxy.example.com:1080' } as const;
+
+  expect(subscriptionTransportOptions('anthropic', policy)).toMatchObject({ proxy: policy.url });
+  expect(
+    subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token', policy),
+  ).toMatchObject({ proxy: policy.url });
+});
+
+test('TestClaudeOAuthTLSResumptionIsWireSafe', () => {
+  const first = subscriptionRefreshTransportOptions('https://platform.claude.com/v1/oauth/token');
+  const second = subscriptionRefreshTransportOptions('https://api.anthropic.com/api/oauth/profile');
+
+  expect(first).toMatchObject({
+    tlsSessionCacheCapacity: 8,
+    tlsOptions: { sessionTicket: true, preSharedKey: true, pskDheKe: true },
+  });
+  expect(second).toMatchObject(first);
+});
+
+test('Claude profile lookup uses the native OAuth request shape', async () => {
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return Response.json({ account: { uuid: 'account-uuid' } });
+  });
+
+  await expect(fetchClaudeProfile('access-token', fetchLike)).resolves.toEqual({
+    account: { uuid: 'account-uuid' },
+  });
+  expect(fetchLike).toHaveBeenCalledWith(
+    'https://api.anthropic.com/api/oauth/profile',
+    expect.objectContaining({
+      method: 'GET',
+      headers: [
+        ['Accept', 'application/json, text/plain, */*'],
+        ['Authorization', 'Bearer access-token'],
+        ['Content-Type', 'application/json'],
+        ['Cache-Control', 'no-cache'],
+        ['User-Agent', 'axios/1.15.2'],
+        ['Accept-Encoding', 'gzip, compress, deflate, br'],
+        ['Connection', 'close'],
+      ],
+      retry: 0,
+      throwHttpErrors: false,
+    }),
+  );
+});
+
+test('Codex uses the Chrome transport profile used for its browser-facing API', () => {
+  expect(subscriptionTransportOptions('openai')).toMatchObject({
+    browser: { mode: 'fixed', profile: 'chrome_149', platform: 'macos' },
+    disableDefaultHeaders: true,
+  });
+});
+
+test('Antigravity uses HTTP/1.1 and falls back from daily to production on 429', async () => {
+  const antigravityRequest: ProviderRequest = {
+    ...request,
+    url: 'https://daily-cloudcode-pa.googleapis.com/v1internal:generateContent',
+  };
+  const fetchLike = vi
+    .fn()
+    .mockResolvedValueOnce(new Response('limited', { status: 429 }))
+    .mockResolvedValueOnce(Response.json({ response: { candidates: [] } }));
+
+  const response = await sendSubscriptionRequest('antigravity', antigravityRequest, fetchLike);
+
+  expect(subscriptionTransportOptions('antigravity')).toEqual({
+    http1Only: true,
+    disableDefaultHeaders: true,
+  });
+  expect(fetchLike).toHaveBeenNthCalledWith(
+    2,
+    'https://cloudcode-pa.googleapis.com/v1internal:generateContent',
+    expect.objectContaining({ http1Only: true, retry: 0 }),
+  );
+  await expect(response.json()).resolves.toEqual({ candidates: [] });
+});
+
+test('Antigravity falls back after a daily endpoint transport failure', async () => {
+  const antigravityRequest: ProviderRequest = {
+    ...request,
+    url: 'https://daily-cloudcode-pa.googleapis.com/v1internal:generateContent',
+  };
+  const fetchLike = vi
+    .fn()
+    .mockRejectedValueOnce(new Error('daily unavailable'))
+    .mockResolvedValueOnce(Response.json({ response: { candidates: [] } }));
+
+  await expect(
+    sendSubscriptionRequest('antigravity', antigravityRequest, fetchLike),
+  ).resolves.toBeInstanceOf(Response);
+  expect(fetchLike).toHaveBeenCalledTimes(2);
+});
+
+test('the native transport receives the exact ordered headers and streams its response', async () => {
+  const upstream = new Response('answer', {
+    status: 201,
+    headers: { 'content-type': 'text/event-stream' },
+  });
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return upstream;
+  });
+
+  const response = await sendSubscriptionRequest('anthropic', request, fetchLike);
+
+  expect(fetchLike).toHaveBeenCalledWith(request.url, {
+    ...subscriptionTransportOptions('anthropic'),
+    method: 'POST',
+    headers: request.headers,
+    body: request.body,
+    retry: 0,
+    throwHttpErrors: false,
+  });
+  expect(response.status).toBe(201);
+  await expect(response.text()).resolves.toBe('answer');
+});
+
+test('Claude restores request-local MCP aliases in a JSON response', async () => {
+  const aliasedRequest: ProviderRequest = {
+    ...request,
+    reverseToolNames: { mcp__server__search: 'Search_Web' },
+  };
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return new Response(
+      JSON.stringify({
+        content: [
+          { type: 'tool_use', id: 'one', name: 'mcp__server__search', input: {} },
+          { type: 'tool_use', id: 'two', name: 'Bash', input: {} },
+        ],
+      }),
+      { headers: { 'content-type': 'application/json', 'content-length': '100' } },
+    );
+  });
+
+  const response = await sendSubscriptionRequest('anthropic', aliasedRequest, fetchLike);
+
+  expect(await response.json()).toEqual({
+    content: [
+      { type: 'tool_use', id: 'one', name: 'Search_Web', input: {} },
+      { type: 'tool_use', id: 'two', name: 'Bash', input: {} },
+    ],
+  });
+  expect(response.headers.has('content-length')).toBe(false);
+});
+
+test('Claude restores request-local MCP aliases across fragmented SSE chunks', async () => {
+  const encoder = new TextEncoder();
+  const source = [
+    'event: content_block_start\ndata: {"type":"content_block_start","content_block":{"type":"tool_use",',
+    '"name":"mcp__server__search"}}\n\ndata: {"type":"message_stop"}\n\n',
+  ];
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of source) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+
+      controller.close();
+    },
+  });
+  const fetchLike = vi.fn(async () => {
+    await Promise.resolve();
+
+    return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+  });
+
+  const response = await sendSubscriptionRequest(
+    'anthropic',
+    { ...request, reverseToolNames: { mcp__server__search: 'Search_Web' } },
+    fetchLike,
+  );
+
+  await expect(response.text()).resolves.toContain('"name":"Search_Web"');
+});

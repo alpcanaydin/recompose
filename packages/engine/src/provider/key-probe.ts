@@ -5,18 +5,30 @@ const probeFetchBoundMs = 10_000;
 export const firstPartyProbeOrigins: Readonly<Record<KeyProviderId, string>> = {
   anthropic: 'https://api.anthropic.com',
   openai: 'https://api.openai.com',
+  gemini: 'https://generativelanguage.googleapis.com',
+  'gemini-interactions': 'https://generativelanguage.googleapis.com',
 };
 
 const modelsPath = '/v1/models';
 
 const anthropicVersion = '2023-06-01';
 
-function authHeadersFor(provider: KeyProviderId, key: string): Record<string, string> {
+/**
+ * The headers one first-party vendor reads its own key from.
+ *
+ * @summary Anthropic answers `x-api-key` beside the version it was written against and turns a
+ * bearer token away, so the header is picked per vendor rather than assumed. The model-list look
+ * reads the same `GET /v1/models` this probe does, so both spell the credential from here.
+ */
+export function authHeadersFor(provider: KeyProviderId, key: string): Record<string, string> {
   switch (provider) {
     case 'anthropic':
       return { 'x-api-key': key, 'anthropic-version': anthropicVersion };
     case 'openai':
       return { Authorization: `Bearer ${key}` };
+    case 'gemini':
+    case 'gemini-interactions':
+      return { 'x-goog-api-key': key };
 
     default: {
       const unknownProvider: never = provider;
@@ -24,6 +36,12 @@ function authHeadersFor(provider: KeyProviderId, key: string): Record<string, st
       throw new Error(`no probe speaks to the provider: ${String(unknownProvider)}`);
     }
   }
+}
+
+function modelsPathFor(provider: KeyProviderId): string {
+  return provider === 'gemini' || provider === 'gemini-interactions'
+    ? '/v1beta/models'
+    : modelsPath;
 }
 
 function verdictFor(status: number): KeyCheckVerdict {
@@ -45,7 +63,7 @@ export async function probeKey(
   origin: string = firstPartyProbeOrigins[provider],
 ): Promise<KeyCheckReport> {
   try {
-    const response = await fetchLike(`${origin}${modelsPath}`, {
+    const response = await fetchLike(`${origin}${modelsPathFor(provider)}`, {
       method: 'GET',
       headers: authHeadersFor(provider, key),
       redirect: 'error',

@@ -16,6 +16,7 @@ function systemContext(overrides: Partial<SystemIpcContext> = {}): SystemIpcCont
     isMenuBarVisible: () => false,
     openFolder: async () => Promise.resolve(''),
     placeWindowButtons: () => undefined,
+    answerTitleBarDoubleClick: () => undefined,
     ...overrides,
   };
 }
@@ -73,6 +74,24 @@ describe('the system state behind the settings screen', () => {
 
     expect(before).toMatchObject({ ok: true, value: { menuBarVisible: false } });
     expect(after).toMatchObject({ ok: true, value: { menuBarVisible: true } });
+  });
+});
+
+describe('a double-click on the title bar', () => {
+  test('is carried through to the window action the renderer cannot reach', async () => {
+    let answered = 0;
+    const handlers = createSystemIpcHandlers(
+      systemContext({
+        answerTitleBarDoubleClick: () => {
+          answered += 1;
+        },
+      }),
+    );
+
+    const result = await handlers['system:title-bar-double-click'](undefined);
+
+    expect(answered).toBe(1);
+    expect(result).toEqual({ ok: true, value: undefined });
   });
 });
 

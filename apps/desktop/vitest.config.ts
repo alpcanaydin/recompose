@@ -9,7 +9,10 @@ const chromium = () => ({
   enabled: true,
   headless: true,
   provider: playwright({
-    contextOptions: { permissions: ['clipboard-read', 'clipboard-write'] },
+    contextOptions: {
+      permissions: ['clipboard-read', 'clipboard-write'],
+      reducedMotion: 'reduce',
+    },
   }),
   instances: [{ browser: 'chromium' as const }],
 });

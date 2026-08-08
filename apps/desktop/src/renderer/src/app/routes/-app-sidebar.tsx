@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
 import { Link } from '@tanstack/react-router';
-import { Suspense, useId } from 'react';
+import { Suspense, useId, useSyncExternalStore } from 'react';
 
+import { panelWidth, subscribeToPanelWidths } from '../../shared/lib';
 import { Icon } from '../../shared/ui';
 import { GatewaySidebar } from '../../widgets/gateway/sidebar';
 import { GetStartedPanel } from '../../widgets/get-started';
@@ -19,17 +20,31 @@ type AppSidebarProps = {
   away: boolean;
 };
 
-/** The shell's standing navigation, with the coaching checklist standing under it. */
+/**
+ * The shell's standing navigation, with the coaching checklist standing under it.
+ *
+ * @summary The width a person dragged to says how wide the sidebar stands, and the slot says
+ * whether it stands at all, so the width is only spoken while the sidebar is here. Spoken over the
+ * collapse it would outrank it, and the control that puts the sidebar away would leave it painted
+ * while the toolbar cleared the window controls beside it.
+ */
+function sidebarWidth(): number {
+  return panelWidth('sidebar');
+}
+
 export function AppSidebar({ away, band, onNewGateway, restoreGetStarted }: AppSidebarProps) {
   const systemId = useId();
+  const width = useSyncExternalStore(subscribeToPanelWidths, sidebarWidth);
+  const standing = away ? undefined : { width };
 
   return (
     <aside
       className="sidebar-slot border-e border-line-subtle bg-surface-sidebar text-body text-ink-secondary"
       data-away={away ? '' : undefined}
       inert={away}
+      style={standing}
     >
-      <div className="app-drag flex h-full w-60 flex-col px-2.5 pb-2.5">
+      <div className="app-drag flex h-full flex-col px-2.5 pb-2.5" style={{ width }}>
         <div className="flex h-window-controls shrink-0 items-center justify-end">
           <span className="app-no-drag flex">{band}</span>
         </div>

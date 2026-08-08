@@ -1,11 +1,14 @@
 import { z } from 'zod';
 
+import { credentialPolicySchema } from './credential-policy';
 import { localRuntimeIdSchema, loopbackAddressSchema } from './local-runtimes';
 import { migrateDocument, type Migration } from './migration';
+import { providerModelPoliciesSchema } from './model-policy';
 import { nonBlankString } from './non-blank';
 import { subscriptionProviderIdSchema } from './subscriptions';
+import { accountTransportPolicySchema } from './transport-policy';
 
-export const ACCOUNTS_VERSION = 4;
+export const ACCOUNTS_VERSION = 6;
 
 export const accountKindSchema = z.enum(['subscription', 'api-key', 'aggregator', 'local']);
 
@@ -20,6 +23,8 @@ const subscriptionAccountSchema = z.strictObject({
   provider: subscriptionProviderIdSchema,
   kind: z.literal('subscription'),
   label: z.string().trim().min(1),
+  credentialPolicy: credentialPolicySchema.optional(),
+  transportPolicy: accountTransportPolicySchema.optional(),
 });
 
 export type SubscriptionAccount = z.infer<typeof subscriptionAccountSchema>;
@@ -56,6 +61,7 @@ export const accountsDocumentSchema = z
   .strictObject({
     schemaVersion: z.literal(ACCOUNTS_VERSION),
     accounts: z.array(accountSchema),
+    modelPolicies: providerModelPoliciesSchema.optional(),
   })
   .refine(
     (doc) => new Set(doc.accounts.map((account) => account.id)).size === doc.accounts.length,
@@ -95,10 +101,22 @@ const rowsPredateTheRuntimeArmNoMigrationCanMint: Migration = {
   migrate: (doc) => ({ ...doc, schemaVersion: 4 }),
 };
 
+const rowsPredateProviderModelPolicy: Migration = {
+  from: 4,
+  migrate: (doc) => ({ ...doc, schemaVersion: 5 }),
+};
+
+const rowsPredateAccountTransportPolicy: Migration = {
+  from: 5,
+  migrate: (doc) => ({ ...doc, schemaVersion: 6 }),
+};
+
 const accountsMigrations: readonly Migration[] = [
   subscriptionRowsHeldPastedSecrets,
   rowsPredateTheMaskNoMigrationCanMint,
   rowsPredateTheRuntimeArmNoMigrationCanMint,
+  rowsPredateProviderModelPolicy,
+  rowsPredateAccountTransportPolicy,
 ];
 
 export function loadAccountsDocument(doc: unknown): AccountsDocument {

@@ -76,11 +76,14 @@ describe('decodeRequest: consecutive tool results reach a strict target grouped'
   });
 });
 
-describe('decodeRequest: a message-less request has no honest hub form', () => {
-  it('refuses a request whose input yields no hub message rather than fabricating a turn', () => {
+describe('decodeRequest: a system-only request receives a fallback turn', () => {
+  it('preserves instructions and adds the empty user message Claude requires', () => {
     const request = aResponsesRequest({ instructions: 'be brief', input: [] });
 
-    expect(expectRefusal(decodeRequest(request))).toEqual({ reason: 'empty-conversation' });
+    const { value } = expectTranslation(decodeRequest(request));
+
+    expect(value.system).toEqual([{ text: 'be brief' }]);
+    expect(value.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: '' }] }]);
   });
 });
 
@@ -94,7 +97,11 @@ describe('decodeRequest: a root schema union normalizes for a strict target', ()
 
     const { value } = expectTranslation(decodeRequest(aResponsesRequest({ tools: [tool] })));
 
-    expect(value.tools?.[0]?.inputSchema).toEqual({ type: 'object', properties: {} });
+    expect(value.tools?.[0]?.inputSchema).toEqual({
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    });
   });
 });
 

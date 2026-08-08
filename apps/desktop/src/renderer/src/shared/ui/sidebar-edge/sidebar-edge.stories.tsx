@@ -1,133 +1,132 @@
+import type { ReactNode } from 'react';
+
+import { useSyncExternalStore } from 'react';
 import { expect } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
-import { showSidebar, sidebarHidden } from '../../lib/sidebar-visibility';
+import {
+  panelBounds,
+  panelWidth,
+  setPanelWidth,
+  showSidebar,
+  sidebarHidden,
+  subscribeToPanelWidths,
+  subscribeToSidebarVisibility,
+} from '../../lib';
+import { paintedStyle, pressedByKeyboard } from '../../testing';
 import { SidebarEdge } from './sidebar-edge';
+
+const bounds = panelBounds.sidebar;
+
+function SidebarBeside({ children }: { children: ReactNode }) {
+  const width = useSyncExternalStore(subscribeToPanelWidths, () => panelWidth('sidebar'));
+  const away = useSyncExternalStore(subscribeToSidebarVisibility, sidebarHidden);
+
+  return (
+    <div className="flex h-40 bg-surface-content">
+      <aside
+        className="shrink-0 overflow-hidden border-e border-line-subtle bg-surface-sidebar p-3"
+        style={{ width: away ? 0 : width }}
+      >
+        <p className="text-caption font-bold text-ink-secondary">Sidebar</p>
+      </aside>
+      {children}
+      <div className="flex-1" />
+    </div>
+  );
+}
 
 const meta = preview.meta({
   beforeEach: () => {
     showSidebar();
+    setPanelWidth('sidebar', bounds.standing);
 
     return () => {
       showSidebar();
+      setPanelWidth('sidebar', bounds.standing);
     };
   },
   component: SidebarEdge,
   decorators: [
     (Story) => (
-      <div className="flex h-40 bg-surface-content">
+      <SidebarBeside>
         <Story />
-      </div>
+      </SidebarBeside>
     ),
   ],
 });
 
-type PointerStep = {
-  coords?: { clientX: number; clientY: number };
-  keys?: string;
-  target?: Element;
-};
-
-type Drags = {
-  pointer: (steps: PointerStep[]) => Promise<void>;
-};
-
-type Finds = {
-  findByRole: (role: string, options?: { name: string }) => Promise<HTMLElement>;
-};
-
-/** Finds the edge and drags it by the distance given, positive being away from the sidebar. */
-async function dragTheEdge(canvas: Finds, userEvent: Drags, travel: number): Promise<void> {
-  const edge = await canvas.findByRole('separator', { name: 'Sidebar edge' });
-
-  await dragBy(edge, userEvent, travel);
-}
-
-/** Drags the edge from its own middle by the distance given, positive being away from the sidebar. */
-async function dragBy(edge: HTMLElement, userEvent: Drags, travel: number): Promise<void> {
-  const box = edge.getBoundingClientRect();
-  const from = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 };
-
-  await userEvent.pointer([
-    { keys: '[MouseLeft>]', target: edge, coords: from },
-    { coords: { clientX: from.clientX + travel, clientY: from.clientY } },
-    { keys: '[/MouseLeft]' },
-  ]);
-}
+const theEdge = { role: 'separator', name: 'Sidebar width' };
 
 /**
- * The edge dragged towards the sidebar, which is the gesture that puts the sidebar away.
+ * The edge at the sidebar's standing width, which is where a person meets it.
  *
- * @summary The direction carries the meaning, so nothing has to be aimed at. The gesture reads
- * the same whether the sidebar stands or has gone, because the edge travels with it.
+ * @summary The edge is the sidebar's own border rather than a control parked beside it, and it
+ * carries the resize cursor so a person learns it can be dragged before they try.
  */
-export const DragTowardsTheSidebar = meta.story({
-  play: async ({ canvas, userEvent }) => {
-    await dragTheEdge(canvas, userEvent, -90);
-
-    await expect(sidebarHidden()).toBe(true);
-  },
-});
-
-/** The same edge dragged out from the sidebar, which brings it back. */
-export const DragAwayFromTheSidebar = meta.story({
-  play: async ({ canvas, userEvent }) => {
-    await dragTheEdge(canvas, userEvent, -90);
-    await dragTheEdge(canvas, userEvent, 90);
-
-    await expect(sidebarHidden()).toBe(false);
-  },
-});
-
-/**
- * A nudge too small to mean anything, which leaves the sidebar where it stands.
- *
- * @summary A pointer wanders a few pixels while a person presses, so a gesture that acts on the
- * first pixel of travel would flip the sidebar every time somebody grazed the edge.
- */
-export const NudgeTooSmallToMeanAnything = meta.story({
-  play: async ({ canvas, userEvent }) => {
-    await dragTheEdge(canvas, userEvent, -12);
-
-    await expect(sidebarHidden()).toBe(false);
-  },
-});
-
-/** The edge under the pointer, which reports that it is the thing you drag. */
-export const EdgeShowsTheResizeCursor = meta.story({
+export const Standing = meta.story({
   play: async ({ canvas }) => {
-    const edge = await canvas.findByRole('separator', { name: 'Sidebar edge' });
+    const edge = await canvas.findByRole('separator', { name: theEdge.name });
 
-    await expect(getComputedStyle(edge).cursor).toBe('ew-resize');
+    await expect(paintedStyle(edge).cursor).toBe('ew-resize');
+    await expect(edge).toHaveAttribute('aria-orientation', 'vertical');
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.standing));
+  },
+});
+
+/** The edge sizing the sidebar from the keyboard, one step per press. */
+export const SizedByKeyboard = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{ArrowRight}');
+
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.standing + bounds.step));
+  },
+});
+
+/** The edge reaching the widest the sidebar may stand, where the pattern says End goes. */
+export const Widest = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{End}');
+
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.max));
   },
 });
 
 /**
- * A second pointer arriving mid-drag, which the gesture ignores.
+ * The edge once the sidebar has gone, waiting at the window's leading edge for the way back.
  *
- * @summary A trackpad or a touch screen can report more than one pointer at a time. The drag
- * follows the one that started it, so another one moving across the window neither carries the
- * sidebar away nor ends the gesture that is under way.
+ * @summary The sidebar takes no room, so this border is all that is left of it, and it has to keep
+ * standing rather than leaving with the panel. A strip announcing a width against a sidebar of none
+ * would be worse than no strip at all.
  */
-export const ASecondPointerIsNotTheDrag = meta.story({
+export const SidebarShut = meta.story({
   play: async ({ canvas, userEvent }) => {
-    const edge = await canvas.findByRole('separator', { name: 'Sidebar edge' });
-    const box = edge.getBoundingClientRect();
-    const from = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 };
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{Enter}');
 
-    await userEvent.pointer([{ keys: '[MouseLeft>]', target: edge, coords: from }]);
-
-    window.dispatchEvent(
-      new PointerEvent('pointermove', {
-        bubbles: true,
-        clientX: from.clientX - 400,
-        pointerId: 99,
-      }),
-    );
-
-    await expect(sidebarHidden()).toBe(false);
-
-    await userEvent.pointer([{ keys: '[/MouseLeft]' }]);
+    await expect(edge).toHaveAttribute('aria-valuenow', '0');
+    await expect(paintedStyle(edge).cursor).toBe('ew-resize');
   },
 });
+
+/**
+ * The sidebar brought back out of shut, at the width its owner had chosen.
+ *
+ * @summary The gesture that put the sidebar away is the one that returns it, and the width it stood
+ * at outlives the collapse, so nobody loses a sizing by closing the panel they had just sized.
+ */
+export const SidebarBroughtBack = meta.story({
+  play: async ({ canvas, userEvent }) => {
+    const edge = await pressedByKeyboard(canvas, theEdge, userEvent.keyboard, '{End}');
+
+    await userEvent.keyboard('{Enter}');
+    await expect(edge).toHaveAttribute('aria-valuenow', '0');
+
+    await userEvent.keyboard('{ArrowRight}');
+
+    await expect(edge).toHaveAttribute('aria-valuenow', String(bounds.max));
+  },
+});
+
+/** The edge in the dark scheme, where the border it sits on has to stay findable. */
+export const DarkScheme = meta.story({ globals: { theme: 'dark' } });

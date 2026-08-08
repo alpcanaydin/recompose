@@ -202,6 +202,33 @@ export const SidebarControlTakesTheWindowControlCentre = meta.story({
 });
 
 /**
+ * The sidebar once a person has put it away, which has to take no room at all.
+ *
+ * @summary The slot owns whether the sidebar stands, and the width a person dragged it to only
+ * says how wide it stands while it does. A width that outranked the collapse would leave the
+ * sidebar painted after its control said to put it away, and the toolbar clearing the window
+ * controls beside it, so the reading measures the slot rather than trusting the class. What is
+ * left is the hairline the slot's own border draws, which is the surface edge rather than the
+ * sidebar.
+ */
+export const SidebarAwayTakesNoRoom = meta.story({
+  parameters: { bridge: { engineStates: {}, gateways: [codex] } },
+  beforeEach: () => {
+    hideSidebar();
+  },
+  render: () => (
+    <RouterContextProvider router={createAppRouter({ queryClient: createQueryClient() })}>
+      <AppSidebar away band={null} onNewGateway={() => undefined} />
+    </RouterContextProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(paintedBox(canvasElement.firstElementChild?.firstElementChild).width).toBeLessThan(
+      2,
+    );
+  },
+});
+
+/**
  * The region every route scrolls inside, which paints no texture of its own.
  *
  * @summary The dot grid belongs to the canvas routes rather than to the shell, so a route that

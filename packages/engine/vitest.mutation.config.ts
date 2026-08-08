@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    testTimeout: 30_000,
   },
   // @ts-expect-error Vite's OxcOptions type omits tsconfig; runtime still honors it to skip broken sandboxed tsconfig auto-discovery.
   oxc: { tsconfig: false },

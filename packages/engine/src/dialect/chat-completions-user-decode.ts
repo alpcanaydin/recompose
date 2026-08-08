@@ -3,6 +3,7 @@ import type { Fate } from './fates';
 import type { HubCacheBreakpoint, HubContentBlock } from './hub';
 
 import { hubBreakpointFrom } from './chat-completions-cache';
+import { hubMediaFromChat } from './chat-completions-media';
 import { imageSourceFromUrl } from './hub-build';
 
 function textBlock(
@@ -26,11 +27,17 @@ function partBlock(
   messageBreakpoint: HubCacheBreakpoint | undefined,
   fates: Fate[],
 ): readonly HubContentBlock[] {
+  const media = hubMediaFromChat(part);
+
+  if (media !== null) return media;
+
   if (part.type === 'text') {
     return textBlock(part.text, hubBreakpointFrom(part.cache_control) ?? messageBreakpoint, fates);
   }
 
-  return [{ type: 'image', source: imageSourceFromUrl(part.image_url.url) }];
+  return part.type === 'image_url'
+    ? [{ type: 'image', source: imageSourceFromUrl(part.image_url.url) }]
+    : [];
 }
 
 export function userBlocks(message: ChatUserMessage, fates: Fate[]): readonly HubContentBlock[] {

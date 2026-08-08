@@ -22,12 +22,17 @@ const surroundingWhitespace = fc.string({
 const controlCodePoints = [0, 7, 27, 127, 155];
 
 describe('the providers a stored key can name', () => {
-  test('exactly the two providers a probe knows how to ask', () => {
-    expect(keyProviderIdSchema.options).toEqual(['anthropic', 'openai']);
+  test('exactly the first-party providers a probe knows how to ask', () => {
+    expect(keyProviderIdSchema.options).toEqual([
+      'anthropic',
+      'openai',
+      'gemini',
+      'gemini-interactions',
+    ]);
   });
 
   test('a provider no probe speaks to is refused', () => {
-    expect(() => keyProviderIdSchema.parse('gemini')).toThrow();
+    expect(() => keyProviderIdSchema.parse('xai')).toThrow();
   });
 });
 

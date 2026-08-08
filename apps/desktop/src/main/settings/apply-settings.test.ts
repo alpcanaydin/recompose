@@ -1,10 +1,15 @@
 import { fc, test as propertyTest } from '@fast-check/vitest';
 import { defaultSettings, type Settings } from '@recompose/contracts';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import type { SettingsEffects } from './apply-settings';
 
-import { applyBootSettings, applyChosenSettings } from './apply-settings';
+import {
+  applyBootSettings,
+  applyBootSettingsOrComplain,
+  applyChosenSettings,
+  applyChosenSettingsOrComplain,
+} from './apply-settings';
 
 type Applied = {
   themeSource: Settings['theme'] | null;
@@ -139,5 +144,65 @@ describe('the login item a save does not touch', () => {
     applyChosenSettings(effects, { ...stored, launchAtLogin: false }, false);
 
     expect(applied.loginItem).toBe(false);
+  });
+});
+
+function effectsRefusing(reason: Error): SettingsEffects {
+  return {
+    setThemeSource: () => {
+      throw reason;
+    },
+    setMenuBarVisible: () => undefined,
+    setLoginItem: () => undefined,
+  };
+}
+
+describe('an effect the machine refuses', () => {
+  test('a refused save is written down rather than thrown back at the caller', () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      applyChosenSettingsOrComplain(
+        effectsRefusing(new Error('the theme source would not take')),
+        defaultSettings(),
+        true,
+      );
+
+      expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('stored the settings');
+    } finally {
+      complaint.mockRestore();
+    }
+  });
+
+  test('a refused boot is written down rather than taking the window down', () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      applyBootSettingsOrComplain(
+        effectsRefusing(new Error('the theme source would not take')),
+        defaultSettings(),
+      );
+
+      expect(complaint.mock.calls.flat().map(String).join(' ')).toContain('at boot');
+    } finally {
+      complaint.mockRestore();
+    }
+  });
+
+  test('an effect that takes leaves nothing to complain about', () => {
+    const complaint = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      const { effects, applied } = recordingEffects();
+
+      applyChosenSettingsOrComplain(effects, { ...defaultSettings(), theme: 'dark' }, true);
+      applyBootSettingsOrComplain(effects, { ...defaultSettings(), theme: 'light' });
+
+      expect(applied.themeSource).toBe('light');
+      expect(applied.loginItem).toBe(true);
+      expect(complaint).not.toHaveBeenCalled();
+    } finally {
+      complaint.mockRestore();
+    }
   });
 });
