@@ -1,4 +1,4 @@
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 
 import preview from '#.storybook/preview';
 
@@ -33,10 +33,11 @@ export const Open = meta.story({
   play: async ({ canvas }) => {
     standAs(true);
 
-    await expect(await canvas.findByRole('button', { name: 'Inspector' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    const toggle = await canvas.findByRole('button', { name: 'Inspector' });
+
+    await waitFor(async () => {
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    });
   },
 });
 
@@ -45,10 +46,11 @@ export const Closed = meta.story({
   play: async ({ canvas }) => {
     standAs(false);
 
-    await expect(await canvas.findByRole('button', { name: 'Inspector' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
+    const toggle = await canvas.findByRole('button', { name: 'Inspector' });
+
+    await waitFor(async () => {
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    });
 
     standAs(true);
   },
