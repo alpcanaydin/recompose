@@ -13,6 +13,8 @@ import {
   shouldRefreshUnauthorized,
 } from './reach-credential';
 
+type AntigravitySpend = Extract<ResolvedGrant['spend'], { custody: 'subscription' }>;
+
 function countRequestFor(
   grant: ResolvedGrant,
   body: JsonObject,
@@ -88,34 +90,31 @@ export async function reachAntigravityCount(
     replayScopeId,
   );
 
-  return sendAntigravityCount(grant, replayed, runtime);
+  return sendAntigravityCount(grant, grant.spend, replayed, runtime);
 }
 
 async function sendAntigravityCount(
   grant: ResolvedGrant,
+  spend: AntigravitySpend,
   body: JsonObject,
   runtime: SubscriptionRuntime,
 ): Promise<Response> {
-  if (grant.spend.custody !== 'subscription' || grant.spend.provider !== 'antigravity') {
-    throw new Error('a non-Antigravity subscription reached its token-count sender');
-  }
-
-  const ready = await readySubscriptionCredential(grant.spend, runtime);
+  const ready = await readySubscriptionCredential(spend, runtime);
   const answer = await runtime.send(
     'antigravity',
     antigravityCountRequest(grant, body, ready.credential, runtime.antigravitySensitiveWords),
-    grant.spend.transportPolicy,
+    spend.transportPolicy,
   );
 
   if (!shouldRefreshUnauthorized(answer, ready.credential)) {
     return answer;
   }
 
-  const retried = await refreshedAndPersisted(grant.spend, ready.blob, runtime);
+  const retried = await refreshedAndPersisted(spend, ready.blob, runtime);
 
   return runtime.send(
     'antigravity',
     antigravityCountRequest(grant, body, retried.credential, runtime.antigravitySensitiveWords),
-    grant.spend.transportPolicy,
+    spend.transportPolicy,
   );
 }
