@@ -85,7 +85,8 @@ export function modelAliasFromName(name: string): string {
     .toLowerCase()
     .replaceAll(/[^a-z0-9._-]+/gu, '-')
     .replaceAll(/[-._]{2,}/gu, '-')
-    .replaceAll(/^[-._]+|[-._]+$/gu, '');
+    .replace(/^[-._]/u, '')
+    .replace(/[-._]$/u, '');
 }
 
 export const targetSchema = z.strictObject({
